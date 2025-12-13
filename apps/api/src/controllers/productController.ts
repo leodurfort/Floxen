@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { ProductStatus, SyncStatus } from '@prisma/client';
 import { buildFeedPreview, getProduct as getProductRecord, listProducts as listProductsForShop, markEnrichmentQueued, updateProduct as updateProductRecord } from '../services/productService';
+import { aiEnrichmentQueue, productSyncQueue } from '../jobs';
 
 const updateProductSchema = z.object({
   status: z.nativeEnum(ProductStatus).optional(),
@@ -55,6 +56,7 @@ export function triggerEnrichment(req: Request, res: Response) {
   markEnrichmentQueued(id, pid)
     .then((product) => {
       if (!product) return res.status(404).json({ error: 'Product not found' });
+      aiEnrichmentQueue?.queue.add('enrich', { productId: product.id }, { removeOnComplete: true });
       return res.json({ product, message: 'Enrichment queued (stub)' });
     })
     .catch((err) => res.status(500).json({ error: err.message }));
@@ -79,12 +81,19 @@ export function bulkAction(req: Request, res: Response) {
   }
   const { action, productIds } = parse.data;
   Promise.all(
-    productIds.map((pid) =>
-      updateProductRecord(req.params.id, pid, {
+    productIds.map(async (pid) => {
+      const updated = await updateProductRecord(req.params.id, pid, {
         feedEnableSearch: action === 'enable_search' ? true : action === 'disable_search' ? false : undefined,
         syncStatus: action === 'sync' ? 'PENDING' : undefined,
-      }).then((p) => ({ id: pid, updated: Boolean(p) })),
-    ),
+      });
+      if (action === 'enrich' && updated) {
+        aiEnrichmentQueue?.queue.add('enrich', { productId: pid }, { removeOnComplete: true });
+      }
+      if (action === 'sync' && updated) {
+        productSyncQueue?.queue.add('sync', { shopId: req.params.id, productId: pid }, { removeOnComplete: true });
+      }
+      return { id: pid, updated: Boolean(updated) };
+    }),
   )
     .then((results) => res.json({ action, results }))
     .catch((err) => res.status(500).json({ error: err.message }));

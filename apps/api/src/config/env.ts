@@ -15,7 +15,9 @@ export const env = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
   encryptionKey: process.env.ENCRYPTION_KEY || '',
   databaseUrl: process.env.DATABASE_URL || '',
+  databasePublicUrl: process.env.DATABASE_PUBLIC_URL || '',
   redisUrl: process.env.REDIS_URL || '',
+  redisPublicUrl: process.env.REDIS_PUBLIC_URL || '',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   qdrantUrl: process.env.QDRANT_URL || '',
   qdrantApiKey: process.env.QDRANT_API_KEY || '',
@@ -25,6 +27,7 @@ export const env = {
   s3: {
     bucket: process.env.S3_BUCKET || '',
     region: process.env.S3_REGION || '',
+    endpoint: process.env.S3_ENDPOINT || '',
   },
   corsOrigin: process.env.CORS_ORIGIN || '*',
 };

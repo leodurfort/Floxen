@@ -22,6 +22,7 @@ export interface Shop {
   syncStatus: SyncStatus;
   syncEnabled: boolean;
   openaiEnabled: boolean;
+  wooStoreUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

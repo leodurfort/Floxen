@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { SyncStatus } from '@prisma/client';
+import { productSyncQueue, feedGenerationQueue } from '../jobs';
 
 const history = [
   {
@@ -21,7 +22,10 @@ export function triggerSync(req: Request, res: Response) {
       where: { id: req.params.id },
       data: { syncStatus: SyncStatus.SYNCING, lastSyncAt: new Date() },
     })
-    .then((shop) => res.json({ shopId: shop.id, status: 'QUEUED', syncType: req.body?.type || 'FULL' }))
+    .then((shop) => {
+      productSyncQueue?.queue.add('sync', { shopId: shop.id, type: req.body?.type || 'FULL' }, { removeOnComplete: true });
+      return res.json({ shopId: shop.id, status: 'QUEUED', syncType: req.body?.type || 'FULL' });
+    })
     .catch(() => res.status(404).json({ error: 'Shop not found' }));
 }
 
@@ -49,6 +53,7 @@ export function pushFeed(req: Request, res: Response) {
     .findUnique({ where: { id: req.params.id } })
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      feedGenerationQueue?.queue.add('feed', { shopId: shop.id }, { removeOnComplete: true });
       return res.json({ shopId: shop.id, pushed: true, feedUrl: `https://cdn.productsynch.dev/${shop.id}/feed.json` });
     })
     .catch((err) => res.status(500).json({ error: err.message }));
