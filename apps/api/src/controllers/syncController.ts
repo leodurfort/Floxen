@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { mockStore } from '../services/mockStore';
+import { prisma } from '../lib/prisma';
+import { SyncStatus } from '@prisma/client';
 
 const history = [
   {
@@ -15,21 +16,28 @@ const history = [
 ];
 
 export function triggerSync(req: Request, res: Response) {
-  const shop = mockStore.getShop(req.params.id);
-  if (!shop) return res.status(404).json({ error: 'Shop not found' });
-  mockStore.updateShop(shop.id, { syncStatus: 'SYNCING' });
-  return res.json({ shopId: shop.id, status: 'QUEUED', syncType: req.body?.type || 'FULL' });
+  prisma.shop
+    .update({
+      where: { id: req.params.id },
+      data: { syncStatus: SyncStatus.SYNCING, lastSyncAt: new Date() },
+    })
+    .then((shop) => res.json({ shopId: shop.id, status: 'QUEUED', syncType: req.body?.type || 'FULL' }))
+    .catch(() => res.status(404).json({ error: 'Shop not found' }));
 }
 
 export function getSyncStatus(req: Request, res: Response) {
-  const shop = mockStore.getShop(req.params.id);
-  if (!shop) return res.status(404).json({ error: 'Shop not found' });
-  return res.json({
-    shopId: shop.id,
-    status: shop.syncStatus,
-    lastSyncAt: shop.lastSyncAt,
-    queuedBatches: history.length,
-  });
+  prisma.shop
+    .findUnique({ where: { id: req.params.id } })
+    .then((shop) => {
+      if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      return res.json({
+        shopId: shop.id,
+        status: shop.syncStatus,
+        lastSyncAt: shop.lastSyncAt,
+        queuedBatches: history.length,
+      });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function getSyncHistory(_req: Request, res: Response) {
@@ -37,28 +45,40 @@ export function getSyncHistory(_req: Request, res: Response) {
 }
 
 export function pushFeed(req: Request, res: Response) {
-  const shop = mockStore.getShop(req.params.id);
-  if (!shop) return res.status(404).json({ error: 'Shop not found' });
-  return res.json({ shopId: shop.id, pushed: true, feedUrl: `https://cdn.productsynch.dev/${shop.id}/feed.json` });
+  prisma.shop
+    .findUnique({ where: { id: req.params.id } })
+    .then((shop) => {
+      if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      return res.json({ shopId: shop.id, pushed: true, feedUrl: `https://cdn.productsynch.dev/${shop.id}/feed.json` });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function previewFeed(req: Request, res: Response) {
-  const products = mockStore.getProducts(req.params.id);
-  return res.json({
-    shopId: req.params.id,
-    products: products.map((p) => ({
-      id: p.id,
-      title: p.wooTitle,
-      price: p.wooPrice,
-    })),
-  });
+  prisma.product
+    .findMany({ where: { shopId: req.params.id }, take: 50, orderBy: { updatedAt: 'desc' } })
+    .then((products) =>
+      res.json({
+        shopId: req.params.id,
+        products: products.map((p) => ({
+          id: p.id,
+          title: p.wooTitle,
+          price: p.wooPrice,
+        })),
+      }),
+    )
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function downloadFeed(req: Request, res: Response) {
-  const products = mockStore.getProducts(req.params.id);
-  return res.json({
-    generatedAt: new Date().toISOString(),
-    count: products.length,
-    items: products,
-  });
+  prisma.product
+    .findMany({ where: { shopId: req.params.id } })
+    .then((products) =>
+      res.json({
+        generatedAt: new Date().toISOString(),
+        count: products.length,
+        items: products,
+      }),
+    )
+    .catch((err) => res.status(500).json({ error: err.message }));
 }

@@ -1,11 +1,11 @@
 # ProductSynch Monorepo
 
-This repository follows the ProductSynch technical specification (see `ProductSynch-Technical-Specification.md`). It is organized as a monorepo with a TypeScript Express API and a Next.js App Router frontend.
+This repository follows the ProductSynch technical specification (see `ProductSynch-Technical-Specification.md`). It is organized as a monorepo with a TypeScript Express API and a Next.js App Router frontend. Infra targets Railway (Postgres + Redis), Qdrant for embeddings, and Resend for email.
 
 ## Structure
 
-- `apps/api` — Express + TypeScript API skeleton with JWT auth stubs, WooCommerce connection placeholders, sync/feed/analytics endpoints, and mock in-memory data.
-- `apps/web` — Next.js 14 dashboard shell (Tailwind CSS) with hero, sync stats, catalog table, and feed summary inspired by the spec.
+- `apps/api` — Express + TypeScript API with Prisma schema, JWT auth, WooCommerce connection placeholders, sync/feed/analytics endpoints, queue stubs, and OpenAI/Qdrant/Resend hooks.
+- `apps/web` — Next.js 14 dashboard shell (Tailwind CSS) with hero, sync stats, catalog table, and feed summary inspired by the spec. (Needs wiring to the API once auth/shop flows are complete.)
 - `packages/shared` — Shared types (User, Shop, Product, enums) consumed by both apps.
 - `tsconfig.base.json` — Base TS config and path aliases.
 

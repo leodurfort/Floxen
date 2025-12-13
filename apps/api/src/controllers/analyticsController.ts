@@ -1,43 +1,49 @@
 import { Request, Response } from 'express';
-import { mockStore } from '../services/mockStore';
+import { prisma } from '../lib/prisma';
 
 export function getOverview(req: Request, res: Response) {
   const shopId = req.params.id;
-  const products = mockStore.getProducts(shopId);
   const period = (req.query.period as string) || '30d';
-
-  const synced = products.filter((p) => p.syncStatus === 'COMPLETED').length;
-  const enriched = products.filter((p) => p.aiEnriched).length;
-
-  return res.json({
-    period,
-    totalProducts: products.length,
-    syncedProducts: synced,
-    enrichedProducts: enriched,
-    chatgpt: {
-      impressions: 15000,
-      clicks: 750,
-      conversions: 42,
-      traffic: 680,
-      revenue: 4500.0,
-    },
-    changes: {
-      impressions: 12.5,
-      clicks: 8.3,
-      conversions: 15.2,
-    },
-  });
+  prisma.product
+    .findMany({ where: { shopId } })
+    .then((products) => {
+      const synced = products.filter((p) => p.syncStatus === 'COMPLETED').length;
+      const enriched = products.filter((p) => p.aiEnriched).length;
+      return res.json({
+        period,
+        totalProducts: products.length,
+        syncedProducts: synced,
+        enrichedProducts: enriched,
+        chatgpt: {
+          impressions: 15000,
+          clicks: 750,
+          conversions: 42,
+          traffic: 680,
+          revenue: 4500.0,
+        },
+        changes: {
+          impressions: 12.5,
+          clicks: 8.3,
+          conversions: 15.2,
+        },
+      });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function getProductAnalytics(req: Request, res: Response) {
-  const products = mockStore.getProducts(req.params.id);
-  const top = products.map((p) => ({
-    productId: p.id,
-    title: p.wooTitle,
-    chatgptImpressions: Math.floor(Math.random() * 1000),
-    chatgptClicks: Math.floor(Math.random() * 200),
-  }));
-  return res.json({ products: top });
+  prisma.product
+    .findMany({ where: { shopId: req.params.id }, take: 50 })
+    .then((products) => {
+      const top = products.map((p) => ({
+        productId: p.id,
+        title: p.wooTitle,
+        chatgptImpressions: Math.floor(Math.random() * 1000),
+        chatgptClicks: Math.floor(Math.random() * 200),
+      }));
+      return res.json({ products: top });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function getTimeline(req: Request, res: Response) {

@@ -3,8 +3,8 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { env } from '../config/env';
-import { mockStore } from '../services/mockStore';
 import { JwtUser } from '../middleware/auth';
+import { createUser, findUserByEmail, validateUser } from '../services/userService';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -30,7 +30,7 @@ function signTokens(user: { id: string; email: string; subscriptionTier: string 
   );
   const refreshToken = jwt.sign(
     { ...basePayload, type: 'refresh', jti: crypto.randomUUID() },
-    env.jwtSecret,
+    env.jwtRefreshSecret,
     { expiresIn: '7d' },
   );
   return { accessToken, refreshToken };
@@ -43,14 +43,19 @@ export function register(req: Request, res: Response) {
   }
 
   const { email, password, name } = parse.data;
-  const existing = mockStore.findUserByEmail(email);
-  if (existing) {
-    return res.status(409).json({ error: 'Email already registered' });
-  }
-
-  const user = mockStore.createUser(email, password, name);
-  const tokens = signTokens(user);
-  return res.status(201).json({ user, tokens });
+  findUserByEmail(email)
+    .then((existing) => {
+      if (existing) {
+        return res.status(409).json({ error: 'Email already registered' });
+      }
+      return createUser({ email, password, name });
+    })
+    .then((user) => {
+      if (!user) return;
+      const tokens = signTokens(user);
+      res.status(201).json({ user, tokens });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function login(req: Request, res: Response) {
@@ -60,13 +65,15 @@ export function login(req: Request, res: Response) {
   }
 
   const { email, password } = parse.data;
-  const user = mockStore.validateUser(email, password);
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-
-  const tokens = signTokens(user);
-  return res.json({ user, tokens });
+  validateUser(email, password)
+    .then((user) => {
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      const tokens = signTokens(user);
+      return res.json({ user, tokens });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function refresh(req: Request, res: Response) {
@@ -76,14 +83,15 @@ export function refresh(req: Request, res: Response) {
   }
 
   try {
-    const payload = jwt.verify(parse.data.refreshToken, env.jwtSecret) as JwtUser & { type?: string };
+    const payload = jwt.verify(parse.data.refreshToken, env.jwtRefreshSecret) as JwtUser & { type?: string };
     if (payload.type !== 'refresh') throw new Error('Invalid token type');
-    const user = mockStore.findUserByEmail(payload.email);
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-    const tokens = signTokens(user);
-    return res.json({ tokens });
+    findUserByEmail(payload.email).then((user) => {
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+      const tokens = signTokens(user);
+      return res.json({ tokens });
+    });
   } catch (err) {
     return res.status(401).json({ error: 'Invalid refresh token' });
   }
@@ -94,9 +102,12 @@ export function me(req: Request, res: Response) {
   if (!userPayload) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  const user = mockStore.findUserByEmail(userPayload.email);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  return res.json({ user });
+  findUserByEmail(userPayload.email)
+    .then((user) => {
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      return res.json({ user });
+    })
+    .catch(() => res.status(500).json({ error: 'Internal error' }));
 }

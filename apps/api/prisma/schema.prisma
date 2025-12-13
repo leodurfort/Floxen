@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum ProductStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  SYNCED
+  EXCLUDED
+  ERROR
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCING
+  COMPLETED
+  FAILED
+  PAUSED
+}
+
+enum SyncType {
+  FULL
+  INCREMENTAL
+  SINGLE_PRODUCT
+  MANUAL
+}
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique
+  passwordHash     String          @map("password_hash")
+  name             String?
+  emailVerified    Boolean         @default(false) @map("email_verified")
+  subscriptionTier SubscriptionTier @default(FREE) @map("subscription_tier")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  shops    Shop[]
+  settings UserSettings?
+}
+
+model UserSettings {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  timezone  String? 
+  locale    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Shop {
+  id                String     @id @default(cuid())
+  userId            String     @map("user_id")
+  wooStoreUrl       String     @map("woo_store_url")
+  wooConsumerKey    String?    @map("woo_consumer_key")
+  wooConsumerSecret String?    @map("woo_consumer_secret")
+  shopName          String     @map("shop_name")
+  shopCurrency      String     @default("USD") @map("shop_currency")
+  isConnected       Boolean    @default(false) @map("is_connected")
+  lastSyncAt        DateTime?  @map("last_sync_at")
+  syncStatus        SyncStatus @default(PENDING) @map("sync_status")
+  syncEnabled       Boolean    @default(true) @map("sync_enabled")
+  openaiMerchantId  String?    @map("openai_merchant_id")
+  openaiEndpoint    String?    @map("openai_endpoint")
+  openaiToken       String?    @map("openai_token")
+  openaiEnabled     Boolean    @default(false) @map("openai_enabled")
+  sellerName        String?    @map("seller_name")
+  sellerUrl         String?    @map("seller_url")
+  sellerPrivacyPolicy String?  @map("seller_privacy_policy")
+  sellerTos         String?    @map("seller_tos")
+  returnPolicy      String?    @map("return_policy")
+  returnWindow      Int?       @map("return_window")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  user         User             @relation(fields: [userId], references: [id])
+  products     Product[]
+  syncBatches  SyncBatch[]
+  analytics    ShopAnalytics[]
+
+  @@index([userId])
+}
+
+model Product {
+  id                  String        @id @default(cuid())
+  shopId              String        @map("shop_id")
+  wooProductId        Int           @map("woo_product_id")
+  wooTitle            String        @map("woo_title")
+  wooDescription      String?       @map("woo_description")
+  wooSku              String?       @map("woo_sku")
+  wooPrice            Decimal?      @map("woo_price")
+  wooSalePrice        Decimal?      @map("woo_sale_price")
+  wooStockStatus      String?       @map("woo_stock_status")
+  wooStockQuantity    Int?          @map("woo_stock_quantity")
+  wooCategories       Json?         @map("woo_categories")
+  wooImages           Json?         @map("woo_images")
+  wooAttributes       Json?         @map("woo_attributes")
+  wooPermalink        String?       @map("woo_permalink")
+  wooRawJson          Json?         @map("woo_raw_json")
+
+  feedId              String?       @map("feed_id")
+  feedTitle           String?       @map("feed_title")
+  feedDescription     String?       @map("feed_description")
+  feedPrice           String?       @map("feed_price")
+  feedAvailability    String?       @map("feed_availability")
+  feedCategory        String?       @map("feed_category")
+  feedBrand           String?       @map("feed_brand")
+  feedImageLink       String?       @map("feed_image_link")
+  feedEnableSearch    Boolean       @default(true) @map("feed_enable_search")
+  feedEnableCheckout  Boolean       @default(false) @map("feed_enable_checkout")
+  feedDataJson        Json?         @map("feed_data_json")
+
+  aiEnriched          Boolean       @default(false) @map("ai_enriched")
+  aiTitle             String?       @map("ai_title")
+  aiDescription       String?       @map("ai_description")
+  aiKeywords          String[]      @map("ai_keywords")
+  aiQAndA             Json?         @map("ai_q_and_a")
+  aiSuggestedCategory String?       @map("ai_suggested_category")
+  aiEnrichedAt        DateTime?     @map("ai_enriched_at")
+
+  manualOverride      Boolean       @default(false) @map("manual_override")
+  manualTitle         String?       @map("manual_title")
+  manualDescription   String?       @map("manual_description")
+  manualCategory      String?       @map("manual_category")
+  manualKeywords      String[]      @map("manual_keywords")
+  manualQAndA         Json?         @map("manual_q_and_a")
+  manualEditedAt      DateTime?     @map("manual_edited_at")
+
+  status              ProductStatus @default(DRAFT)
+  syncStatus          SyncStatus    @default(PENDING) @map("sync_status")
+  lastSyncedAt        DateTime?     @map("last_synced_at")
+  syncError           String?       @map("sync_error")
+  checksum            String?
+  isValid             Boolean       @default(false) @map("is_valid")
+  validationErrors    Json?         @map("validation_errors")
+
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  shop       Shop            @relation(fields: [shopId], references: [id])
+  variants   ProductVariant[]
+  analytics  ProductAnalytics[]
+
+  @@unique([shopId, wooProductId])
+  @@index([shopId])
+}
+
+model ProductVariant {
+  id             String   @id @default(cuid())
+  productId      String   @map("product_id")
+  title          String
+  sku            String?
+  price          Decimal?
+  attributes     Json?
+  availability   String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+}
+
+model ProductAnalytics {
+  id                 String   @id @default(cuid())
+  productId          String   @map("product_id")
+  date               DateTime @db.Date
+  chatgptImpressions Int      @default(0) @map("chatgpt_impressions")
+  chatgptClicks      Int      @default(0) @map("chatgpt_clicks")
+  chatgptConversions Int      @default(0) @map("chatgpt_conversions")
+  chatgptRevenue     Decimal? @db.Decimal(10, 2) @map("chatgpt_revenue")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([productId, date])
+}
+
+model ShopAnalytics {
+  id                 String   @id @default(cuid())
+  shopId             String   @map("shop_id")
+  date               DateTime @db.Date
+  totalProducts      Int      @default(0) @map("total_products")
+  syncedProducts     Int      @default(0) @map("synced_products")
+  enrichedProducts   Int      @default(0) @map("enriched_products")
+  chatgptImpressions Int      @default(0) @map("chatgpt_impressions")
+  chatgptClicks      Int      @default(0) @map("chatgpt_clicks")
+  chatgptConversions Int      @default(0) @map("chatgpt_conversions")
+  chatgptTraffic     Int      @default(0) @map("chatgpt_traffic")
+  chatgptRevenue     Decimal? @db.Decimal(10, 2) @map("chatgpt_revenue")
+
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, date])
+}
+
+model SyncBatch {
+  id             String     @id @default(cuid())
+  shopId         String     @map("shop_id")
+  status         SyncStatus @default(PENDING)
+  syncType       SyncType   @map("sync_type")
+  totalProducts  Int        @default(0) @map("total_products")
+  syncedProducts Int        @default(0) @map("synced_products")
+  failedProducts Int        @default(0) @map("failed_products")
+  startedAt      DateTime?  @map("started_at")
+  completedAt    DateTime?  @map("completed_at")
+  errorLog       Json?
+  feedFileUrl    String?    @map("feed_file_url")
+  triggeredBy    String?    @map("triggered_by")
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+}

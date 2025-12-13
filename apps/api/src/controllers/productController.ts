@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { mockStore } from '../services/mockStore';
+import { buildFeedPreview, getProduct as getProductRecord, listProducts as listProductsForShop, markEnrichmentQueued, updateProduct as updateProductRecord } from '../services/productService';
 
 const updateProductSchema = z.object({
   status: z.string().optional(),
@@ -18,28 +18,21 @@ const bulkActionSchema = z.object({
 
 export function listProducts(req: Request, res: Response) {
   const { id } = req.params;
-  const products = mockStore.getProducts(id);
   const page = Number(req.query.page || 1);
   const limit = Number(req.query.limit || 20);
-  const start = (page - 1) * limit;
-  const data = products.slice(start, start + limit);
-
-  return res.json({
-    products: data,
-    pagination: {
-      page,
-      limit,
-      total: products.length,
-      totalPages: Math.ceil(products.length / limit),
-    },
-  });
+  listProductsForShop(id, page, limit)
+    .then((result) => res.json(result))
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function getProduct(req: Request, res: Response) {
   const { id, pid } = req.params;
-  const product = mockStore.getProduct(id, pid);
-  if (!product) return res.status(404).json({ error: 'Product not found' });
-  return res.json({ product });
+  getProductRecord(id, pid)
+    .then((product) => {
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+      return res.json({ product });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function updateProduct(req: Request, res: Response) {
@@ -48,35 +41,34 @@ export function updateProduct(req: Request, res: Response) {
   if (!parse.success) {
     return res.status(400).json({ error: parse.error.flatten() });
   }
-  const product = mockStore.updateProduct(id, pid, parse.data);
-  if (!product) return res.status(404).json({ error: 'Product not found' });
-  return res.json({ product });
+  updateProductRecord(id, pid, parse.data)
+    .then((product) => {
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+      return res.json({ product });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function triggerEnrichment(req: Request, res: Response) {
   const { id, pid } = req.params;
-  const product = mockStore.updateProduct(id, pid, {
-    aiEnriched: true,
-    status: 'PENDING_REVIEW',
-    syncStatus: 'PENDING',
-  });
-  if (!product) return res.status(404).json({ error: 'Product not found' });
-  return res.json({ product, message: 'Enrichment queued (stub)' });
+  markEnrichmentQueued(id, pid)
+    .then((product) => {
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+      return res.json({ product, message: 'Enrichment queued (stub)' });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function previewFeed(req: Request, res: Response) {
   const { id, pid } = req.params;
-  const product = mockStore.getProduct(id, pid);
-  if (!product) return res.status(404).json({ error: 'Product not found' });
-  return res.json({
-    feed: {
-      id: `${id}-${product.wooProductId}`,
-      title: product.wooTitle,
-      description: product.wooDescription,
-      availability: product.syncStatus === 'COMPLETED' ? 'in_stock' : 'preorder',
-      price: product.wooPrice ? `${product.wooPrice} USD` : null,
-    },
-  });
+  getProductRecord(id, pid)
+    .then((product) => {
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+      return res.json({
+        feed: buildFeedPreview(product, id),
+      });
+    })
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
 
 export function bulkAction(req: Request, res: Response) {
@@ -85,12 +77,14 @@ export function bulkAction(req: Request, res: Response) {
     return res.status(400).json({ error: parse.error.flatten() });
   }
   const { action, productIds } = parse.data;
-  const results = productIds.map((pid) => {
-    const updated = mockStore.updateProduct(req.params.id, pid, {
-      feedEnableSearch: action === 'enable_search' ? true : action === 'disable_search' ? false : undefined,
-      syncStatus: action === 'sync' ? 'PENDING' : undefined,
-    });
-    return { id: pid, updated: Boolean(updated) };
-  });
-  return res.json({ action, results });
+  Promise.all(
+    productIds.map((pid) =>
+      updateProductRecord(req.params.id, pid, {
+        feedEnableSearch: action === 'enable_search' ? true : action === 'disable_search' ? false : undefined,
+        syncStatus: action === 'sync' ? 'PENDING' : undefined,
+      }).then((p) => ({ id: pid, updated: Boolean(p) })),
+    ),
+  )
+    .then((results) => res.json({ action, results }))
+    .catch((err) => res.status(500).json({ error: err.message }));
 }
