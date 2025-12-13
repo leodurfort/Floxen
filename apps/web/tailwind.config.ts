@@ -1,0 +1,22 @@
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: ['./src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        ink: '#0b1021',
+        panel: '#0e1327',
+        accent: '#5df0c0',
+        amber: '#f2c94c',
+      },
+      fontFamily: {
+        display: ['"Space Grotesk"', 'Inter', 'system-ui', 'sans-serif'],
+        body: ['"Manrope"', 'Inter', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+};
+
+export default config;
