@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { ProductStatus, SyncStatus } from '@prisma/client';
 import { buildFeedPreview, getProduct as getProductRecord, listProducts as listProductsForShop, markEnrichmentQueued, updateProduct as updateProductRecord } from '../services/productService';
 
 const updateProductSchema = z.object({
-  status: z.string().optional(),
-  syncStatus: z.string().optional(),
+  status: z.nativeEnum(ProductStatus).optional(),
+  syncStatus: z.nativeEnum(SyncStatus).optional(),
   manualTitle: z.string().optional(),
   manualDescription: z.string().optional(),
   feedEnableSearch: z.boolean().optional(),

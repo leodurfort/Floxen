@@ -18,9 +18,9 @@ export function createQueue(name: string) {
   return { queue, events };
 }
 
-export function createWorker(
+export function createWorker<T = any>(
   name: string,
-  processor: Parameters<typeof Worker>[1],
+  processor: (job: any) => Promise<T>,
 ) {
   if (!redisConnection) {
     logger.warn(`Redis not configured; worker ${name} disabled`);
