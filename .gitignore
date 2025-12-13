@@ -9,5 +9,6 @@ node_modules
 coverage
 dist
 build
+*.tsbuildinfo
 .DS_Store
 npm-debug.log*

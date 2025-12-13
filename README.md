@@ -5,7 +5,7 @@ This repository follows the ProductSynch technical specification (see `ProductSy
 ## Structure
 
 - `apps/api` — Express + TypeScript API with Prisma schema, JWT auth, WooCommerce connection placeholders, sync/feed/analytics endpoints, queue stubs, and OpenAI/Qdrant/Resend hooks.
-- `apps/web` — Next.js 14 dashboard shell (Tailwind CSS) with hero, sync stats, catalog table, and feed summary inspired by the spec. (Needs wiring to the API once auth/shop flows are complete.)
+- `apps/web` — Next.js 14 dashboard shell (Tailwind CSS) with hero, auth pages, basic dashboard wired to API for shops/products, and feed summary inspired by the spec.
 - `packages/shared` — Shared types (User, Shop, Product, enums) consumed by both apps.
 - `tsconfig.base.json` — Base TS config and path aliases.
 
@@ -15,6 +15,7 @@ This repository follows the ProductSynch technical specification (see `ProductSy
 - `npm run dev:web` — start the Next.js dev server.
 - `npm run build` — build both apps.
 - `npm --workspace <app> run ...` — run scripts within a workspace.
+- Set `NEXT_PUBLIC_API_URL` (e.g., http://localhost:3001) for the web app to call the API.
 
 > Note: Network installs are restricted in this environment. To run locally, install dependencies first: `npm install` (root) then `npm run dev:api` and `npm run dev:web`.
 
