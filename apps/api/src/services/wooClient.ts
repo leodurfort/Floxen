@@ -53,3 +53,15 @@ export async function fetchModifiedProducts(api: WooCommerceRestApi, after: Date
   logger.info('woo:fetch modified products complete', { count: all.length });
   return all;
 }
+
+export async function fetchStoreCurrency(api: WooCommerceRestApi) {
+  try {
+    const response = await api.get('settings/general/woocommerce_currency');
+    const value = response.data?.[0]?.value || response.data?.value;
+    logger.info('woo:fetch currency', { value });
+    return typeof value === 'string' ? value : null;
+  } catch (err) {
+    logger.warn('woo:fetch currency failed', err);
+    return null;
+  }
+}
