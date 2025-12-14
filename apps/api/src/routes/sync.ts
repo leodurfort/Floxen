@@ -6,6 +6,7 @@ import {
   previewFeed,
   pushFeed,
   triggerSync,
+  latestFeed,
 } from '../controllers/syncController';
 import { requireAuth } from '../middleware/auth';
 
@@ -17,5 +18,6 @@ router.get('/history', requireAuth, getSyncHistory);
 router.post('/push', requireAuth, pushFeed);
 router.get('/feed/preview', requireAuth, previewFeed);
 router.get('/feed/download', requireAuth, downloadFeed);
+router.get('/feed/latest', requireAuth, latestFeed);
 
 export default router;

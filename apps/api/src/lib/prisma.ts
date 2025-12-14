@@ -19,6 +19,10 @@ if (env.nodeEnv !== 'production') {
   global.prisma = prisma;
 }
 
-prisma.$connect().catch((err) => {
-  logger.error('Failed to connect to database', err);
-});
+if (env.nodeEnv === 'test') {
+  logger.info('Prisma connection skipped in test environment');
+} else {
+  prisma.$connect().catch((err) => {
+    logger.error('Failed to connect to database', err);
+  });
+}

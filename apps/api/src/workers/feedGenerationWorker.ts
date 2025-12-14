@@ -2,6 +2,7 @@ import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { generateFeedPayload } from '../services/feedService';
 import { logger } from '../lib/logger';
+import { uploadJsonToStorage } from '../services/storage';
 
 export async function feedGenerationProcessor(job: Job) {
   const { shopId } = job.data as { shopId: string };
@@ -10,6 +11,33 @@ export async function feedGenerationProcessor(job: Job) {
   if (!shop) return;
   const products = await prisma.product.findMany({ where: { shopId } });
   const payload = generateFeedPayload(shop, products);
-  logger.info(`Generated feed payload for shop ${shopId} (items: ${products.length})`, { size: JSON.stringify(payload).length });
-  return payload;
+  const body = JSON.stringify(payload, null, 2);
+
+  try {
+    const key = `${shopId}/feed.json`;
+    const url = await uploadJsonToStorage(key, body);
+    await prisma.syncBatch.create({
+      data: {
+        shopId,
+        status: 'COMPLETED',
+        syncType: 'FULL',
+        totalProducts: products.length,
+        syncedProducts: products.length,
+        failedProducts: 0,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        feedFileUrl: url,
+        triggeredBy: job.data?.triggeredBy || 'manual',
+      },
+    });
+    await prisma.shop.update({
+      where: { id: shopId },
+      data: { syncStatus: 'COMPLETED', lastSyncAt: new Date() },
+    });
+    logger.info(`Generated feed payload for shop ${shopId} (items: ${products.length})`, { url });
+    return { url };
+  } catch (err) {
+    logger.error(`feed-generation failed for shop ${shopId}`, err);
+    throw err;
+  }
 }

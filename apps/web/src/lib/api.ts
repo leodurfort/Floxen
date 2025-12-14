@@ -62,3 +62,23 @@ export async function requestProduct(shopId: string, productId: string, token: s
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export async function triggerProductEnrich(shopId: string, productId: string, token: string) {
+  return request<{ product: Product; message: string }>(`/api/v1/shops/${shopId}/products/${productId}/enrich`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function triggerProductSync(shopId: string, token: string) {
+  return request<{ shopId: string; status: string }>(`/api/v1/shops/${shopId}/sync`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function latestFeed(shopId: string, token: string) {
+  return request<{ feedUrl: string; completedAt: string; totalProducts: number }>(`/api/v1/shops/${shopId}/sync/feed/latest`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

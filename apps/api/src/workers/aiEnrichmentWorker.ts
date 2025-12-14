@@ -1,6 +1,6 @@
 import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
-import { enrichProduct } from '../services/aiEnrichment';
+import { enrichProduct, storeEmbeddingInQdrant } from '../services/aiEnrichment';
 import { logger } from '../lib/logger';
 
 export async function aiEnrichmentProcessor(job: Job) {
@@ -22,6 +22,7 @@ export async function aiEnrichmentProcessor(job: Job) {
         updatedAt: new Date(),
       },
     });
+    await storeEmbeddingInQdrant(productId, `${result.title}\n${result.description}`);
     logger.info(`ai-enrichment complete for product ${productId}`);
   } catch (err) {
     logger.error(`ai-enrichment failed for product ${productId}`, err);

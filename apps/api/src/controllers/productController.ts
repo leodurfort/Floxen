@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ProductStatus, SyncStatus } from '@prisma/client';
 import { buildFeedPreview, getProduct as getProductRecord, listProducts as listProductsForShop, markEnrichmentQueued, updateProduct as updateProductRecord } from '../services/productService';
 import { aiEnrichmentQueue, productSyncQueue } from '../jobs';
+import { logger } from '../lib/logger';
 
 const updateProductSchema = z.object({
   status: z.nativeEnum(ProductStatus).optional(),
@@ -23,8 +24,14 @@ export function listProducts(req: Request, res: Response) {
   const page = Number(req.query.page || 1);
   const limit = Number(req.query.limit || 20);
   listProductsForShop(id, page, limit)
-    .then((result) => res.json(result))
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .then((result) => {
+      logger.info('products:list', { shopId: id, page, count: result.products.length });
+      res.json(result);
+    })
+    .catch((err) => {
+      logger.error('products:list error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function getProduct(req: Request, res: Response) {
@@ -32,23 +39,32 @@ export function getProduct(req: Request, res: Response) {
   getProductRecord(id, pid)
     .then((product) => {
       if (!product) return res.status(404).json({ error: 'Product not found' });
+      logger.info('products:get', { shopId: id, productId: pid });
       return res.json({ product });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('products:get error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function updateProduct(req: Request, res: Response) {
   const { id, pid } = req.params;
   const parse = updateProductSchema.safeParse(req.body);
   if (!parse.success) {
+    logger.warn('products:update invalid', parse.error.flatten());
     return res.status(400).json({ error: parse.error.flatten() });
   }
   updateProductRecord(id, pid, parse.data)
     .then((product) => {
       if (!product) return res.status(404).json({ error: 'Product not found' });
+      logger.info('products:update', { shopId: id, productId: pid });
       return res.json({ product });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('products:update error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function triggerEnrichment(req: Request, res: Response) {
@@ -57,9 +73,13 @@ export function triggerEnrichment(req: Request, res: Response) {
     .then((product) => {
       if (!product) return res.status(404).json({ error: 'Product not found' });
       aiEnrichmentQueue?.queue.add('enrich', { productId: product.id }, { removeOnComplete: true });
+      logger.info('products:enrich queued', { shopId: id, productId: pid });
       return res.json({ product, message: 'Enrichment queued (stub)' });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('products:enrich error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function previewFeed(req: Request, res: Response) {
@@ -77,6 +97,7 @@ export function previewFeed(req: Request, res: Response) {
 export function bulkAction(req: Request, res: Response) {
   const parse = bulkActionSchema.safeParse(req.body);
   if (!parse.success) {
+    logger.warn('products:bulk invalid', parse.error.flatten());
     return res.status(400).json({ error: parse.error.flatten() });
   }
   const { action, productIds } = parse.data;
@@ -95,6 +116,12 @@ export function bulkAction(req: Request, res: Response) {
       return { id: pid, updated: Boolean(updated) };
     }),
   )
-    .then((results) => res.json({ action, results }))
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .then((results) => {
+      logger.info('products:bulk', { shopId: req.params.id, action, count: results.length });
+      res.json({ action, results });
+    })
+    .catch((err) => {
+      logger.error('products:bulk error', err);
+      res.status(500).json({ error: err.message });
+    });
 }

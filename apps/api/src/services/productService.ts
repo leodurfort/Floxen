@@ -1,5 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { ProductStatus, SyncStatus } from '@prisma/client';
+import crypto from 'crypto';
+import { logger } from '../lib/logger';
 
 export async function listProducts(shopId: string, page = 1, limit = 20) {
   const skip = (page - 1) * limit;
@@ -57,5 +59,32 @@ export function buildFeedPreview(product: { wooProductId: number; wooTitle: stri
     description: product.wooDescription,
     availability: product.syncStatus === SyncStatus.COMPLETED ? 'in_stock' : 'preorder',
     price: product.wooPrice ? `${product.wooPrice} USD` : null,
+  };
+}
+
+export function checksum(data: unknown) {
+  return crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
+}
+
+export function transformWooProduct(woo: any, shopCurrency: string) {
+  logger.info('woo:transform product', { wooProductId: woo?.id, title: woo?.name });
+  return {
+    wooProductId: woo.id,
+    wooTitle: woo.name,
+    wooDescription: woo.description,
+    wooSku: woo.sku,
+    wooPrice: woo.price ? Number(woo.price) : null,
+    wooSalePrice: woo.sale_price ? Number(woo.sale_price) : null,
+    wooStockStatus: woo.stock_status,
+    wooStockQuantity: woo.stock_quantity,
+    wooCategories: woo.categories,
+    wooImages: woo.images,
+    wooAttributes: woo.attributes,
+    wooPermalink: woo.permalink,
+    wooRawJson: woo,
+    feedPrice: woo.price ? `${woo.price} ${shopCurrency}` : null,
+    feedAvailability: woo.stock_status === 'instock' ? 'in_stock' : woo.stock_status,
+    checksum: checksum(woo),
+    updatedAt: new Date(),
   };
 }
