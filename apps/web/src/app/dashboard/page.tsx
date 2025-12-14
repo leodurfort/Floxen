@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { listProducts, listShops } from '@/lib/api';
+import { latestFeed, listProducts, listShops } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { Product, Shop } from '@productsynch/shared';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feedInfo, setFeedInfo] = useState<{ feedUrl: string; completedAt: string; totalProducts: number } | null>(null);
 
   useEffect(() => {
     hydrate();
@@ -31,8 +32,12 @@ export default function DashboardPage() {
           const first = shopsRes.shops[0];
           const prodRes = await listProducts(first.id, accessToken);
           setProducts(prodRes.products);
+          latestFeed(first.id, accessToken)
+            .then((info) => setFeedInfo(info))
+            .catch(() => setFeedInfo(null));
         } else {
           setProducts([]);
+          setFeedInfo(null);
         }
       } catch (err: any) {
         setError(err.message);
@@ -114,6 +119,17 @@ export default function DashboardPage() {
             </Link>
           )}
         </div>
+        {feedInfo && (
+          <div className="stat-card">
+            <p className="subtle text-sm">Latest feed</p>
+            <p className="text-sm text-white underline">
+              <a href={feedInfo.feedUrl} target="_blank" rel="noreferrer">
+                {feedInfo.feedUrl}
+              </a>
+            </p>
+            <p className="subtle text-sm">Updated {new Date(feedInfo.completedAt).toLocaleString()}</p>
+          </div>
+        )}
         {loading && <div className="subtle">Loading products...</div>}
         {!loading && !products.length && <div className="subtle">No products found.</div>}
         {products.length > 0 && (

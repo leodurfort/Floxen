@@ -7,8 +7,11 @@ import {
   disconnectShop as disconnect,
   getShop as getShopRecord,
   listShopsByUser,
+  setWooCredentials,
   updateShop as updateShopRecord,
 } from '../services/shopService';
+import { productSyncQueue } from '../jobs';
+import { logger } from '../lib/logger';
 
 const createShopSchema = z.object({
   storeUrl: z.string().url(),
@@ -37,8 +40,14 @@ export function listShops(req: Request, res: Response) {
   const userId = userIdFromReq(req);
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
   listShopsByUser(userId)
-    .then((shops) => res.json({ shops }))
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .then((shops) => {
+      logger.info('shops:list', { userId, count: shops.length });
+      return res.json({ shops });
+    })
+    .catch((err) => {
+      logger.error('shops:list error', err);
+      return res.status(500).json({ error: err.message });
+    });
 }
 
 export function createShop(req: Request, res: Response) {
@@ -57,57 +66,87 @@ export function createShop(req: Request, res: Response) {
   })
     .then((shop) => {
       const authUrl = buildWooAuthUrl(parse.data.storeUrl, userId);
+      logger.info('shops:create', { userId, shopId: shop.id, storeUrl: parse.data.storeUrl });
       res.status(201).json({ shop, authUrl });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('shops:create error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function getShop(req: Request, res: Response) {
   getShopRecord(req.params.id)
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      logger.info('shops:get', { shopId: shop.id });
       return res.json({ shop });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('shops:get error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function updateShop(req: Request, res: Response) {
   const parse = updateShopSchema.safeParse(req.body);
   if (!parse.success) {
+    logger.warn('shops:update invalid', parse.error.flatten());
     return res.status(400).json({ error: parse.error.flatten() });
   }
   updateShopRecord(req.params.id, parse.data)
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      logger.info('shops:update', { shopId: shop.id });
       return res.json({ shop });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('shops:update error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function disconnectShop(req: Request, res: Response) {
   disconnect(req.params.id)
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      logger.info('shops:disconnect', { shopId: shop.id });
       return res.json({ shop, message: 'Disconnected' });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('shops:disconnect error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function oauthCallback(req: Request, res: Response) {
-  return res.json({
-    message: 'OAuth callback received',
-    shopId: req.params.id,
-    query: req.query,
-  });
+  const { consumer_key, consumer_secret } = req.query;
+  if (!consumer_key || !consumer_secret || Array.isArray(consumer_key) || Array.isArray(consumer_secret)) {
+    return res.status(400).json({ error: 'Missing consumer_key or consumer_secret' });
+  }
+  setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret))
+    .then((shop) => {
+      productSyncQueue?.queue.add('sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
+      logger.info('shops:oauth callback stored creds', { shopId: shop.id });
+      return res.json({ shop, message: 'Connection verified, sync queued' });
+    })
+    .catch((err) => {
+      logger.error('shops:oauth error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function verifyConnection(req: Request, res: Response) {
   getShopRecord(req.params.id)
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      logger.info('shops:verify', { shopId: shop.id, isConnected: shop.isConnected });
       return res.json({ shopId: shop.id, verified: true, status: 'connected' });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('shops:verify error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function configureOpenAI(req: Request, res: Response) {
@@ -122,7 +161,11 @@ export function configureOpenAI(req: Request, res: Response) {
   })
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      logger.info('shops:configure openai', { shopId: shop.id, enabled: shop.openaiEnabled });
       return res.json({ shop });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('shops:configure openai error', err);
+      res.status(500).json({ error: err.message });
+    });
 }

@@ -63,3 +63,16 @@ export function buildWooAuthUrl(storeUrl: string, userId: string) {
   url.searchParams.set('callback_url', callback);
   return url.toString();
 }
+
+export async function setWooCredentials(shopId: string, consumerKey: string, consumerSecret: string) {
+  return prisma.shop.update({
+    where: { id: shopId },
+    data: {
+      wooConsumerKey: encrypt(consumerKey),
+      wooConsumerSecret: encrypt(consumerSecret),
+      isConnected: true,
+      syncStatus: 'PENDING',
+      updatedAt: new Date(),
+    },
+  });
+}

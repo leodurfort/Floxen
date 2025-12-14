@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { SyncStatus } from '@prisma/client';
 import { productSyncQueue, feedGenerationQueue } from '../jobs';
+import { logger } from '../lib/logger';
 
 const history = [
   {
@@ -24,9 +25,13 @@ export function triggerSync(req: Request, res: Response) {
     })
     .then((shop) => {
       productSyncQueue?.queue.add('sync', { shopId: shop.id, type: req.body?.type || 'FULL' }, { removeOnComplete: true });
+      logger.info('sync:trigger', { shopId: shop.id, type: req.body?.type || 'FULL' });
       return res.json({ shopId: shop.id, status: 'QUEUED', syncType: req.body?.type || 'FULL' });
     })
-    .catch(() => res.status(404).json({ error: 'Shop not found' }));
+    .catch((err) => {
+      logger.error('sync:trigger error', err);
+      res.status(404).json({ error: 'Shop not found' });
+    });
 }
 
 export function getSyncStatus(req: Request, res: Response) {
@@ -34,6 +39,7 @@ export function getSyncStatus(req: Request, res: Response) {
     .findUnique({ where: { id: req.params.id } })
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
+      logger.info('sync:status', { shopId: shop.id, status: shop.syncStatus });
       return res.json({
         shopId: shop.id,
         status: shop.syncStatus,
@@ -41,7 +47,10 @@ export function getSyncStatus(req: Request, res: Response) {
         queuedBatches: history.length,
       });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('sync:status error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function getSyncHistory(_req: Request, res: Response) {
@@ -54,9 +63,13 @@ export function pushFeed(req: Request, res: Response) {
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
       feedGenerationQueue?.queue.add('feed', { shopId: shop.id }, { removeOnComplete: true });
-      return res.json({ shopId: shop.id, pushed: true, feedUrl: `https://cdn.productsynch.dev/${shop.id}/feed.json` });
+      logger.info('feed:push', { shopId: shop.id });
+      return res.json({ shopId: shop.id, pushed: true });
     })
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      logger.error('feed:push error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
 
 export function previewFeed(req: Request, res: Response) {
@@ -86,4 +99,25 @@ export function downloadFeed(req: Request, res: Response) {
       }),
     )
     .catch((err) => res.status(500).json({ error: err.message }));
+}
+
+export function latestFeed(req: Request, res: Response) {
+  prisma.syncBatch
+    .findFirst({
+      where: { shopId: req.params.id, feedFileUrl: { not: null } },
+      orderBy: { completedAt: 'desc' },
+    })
+    .then((batch) => {
+      if (!batch) return res.status(404).json({ error: 'No feed found' });
+      logger.info('feed:latest', { shopId: batch.shopId, feedUrl: batch.feedFileUrl });
+      return res.json({
+        feedUrl: batch.feedFileUrl,
+        completedAt: batch.completedAt,
+        totalProducts: batch.totalProducts,
+      });
+    })
+    .catch((err) => {
+      logger.error('feed:latest error', err);
+      res.status(500).json({ error: err.message });
+    });
 }
