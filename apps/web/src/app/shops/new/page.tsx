@@ -10,8 +10,6 @@ export default function NewShopPage() {
   const { accessToken, hydrate, hydrated } = useAuth();
   const router = useRouter();
   const [storeUrl, setStoreUrl] = useState('');
-  const [shopName, setShopName] = useState('');
-  const [shopCurrency, setShopCurrency] = useState('USD');
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +30,7 @@ export default function NewShopPage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await createShop({ storeUrl, shopName, shopCurrency }, accessToken);
+      const result = await createShop({ storeUrl }, accessToken);
       setAuthUrl(result.authUrl);
     } catch (err: any) {
       setError(err.message);
@@ -51,14 +49,6 @@ export default function NewShopPage() {
           <label className="flex flex-col gap-2">
             <span className="subtle text-sm">Store URL</span>
             <input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="https://mystore.com" required />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="subtle text-sm">Shop name</span>
-            <input value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="My Store" />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="subtle text-sm">Currency</span>
-            <input value={shopCurrency} onChange={(e) => setShopCurrency(e.target.value)} placeholder="USD" />
           </label>
           {error && <div className="text-sm text-red-300">{error}</div>}
           <button className="btn btn--primary" type="submit" disabled={loading || !accessToken}>

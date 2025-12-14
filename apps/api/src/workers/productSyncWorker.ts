@@ -1,7 +1,7 @@
 import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { createWooClient, fetchAllProducts, fetchModifiedProducts } from '../services/wooClient';
+import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency } from '../services/wooClient';
 import { transformWooProduct, checksum } from '../services/productService';
 
 export async function productSyncProcessor(job: Job) {
@@ -35,6 +35,17 @@ export async function productSyncProcessor(job: Job) {
       consumerKey: shop.wooConsumerKey,
       consumerSecret: shop.wooConsumerSecret,
     });
+
+    // Pull currency if not set yet.
+    if (!shop.shopCurrency) {
+      const currency = await fetchStoreCurrency(client);
+      if (currency) {
+        await prisma.shop.update({ where: { id: shopId }, data: { shopCurrency: currency } });
+        logger.info('product-sync: currency updated from Woo', { shopId, currency });
+        shop.shopCurrency = currency;
+      }
+    }
+
     const products = shop.lastSyncAt
       ? await fetchModifiedProducts(client, shop.lastSyncAt)
       : await fetchAllProducts(client);
