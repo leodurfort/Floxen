@@ -56,11 +56,16 @@ export async function disconnectShop(shopId: string) {
 export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string) {
   const baseCallback = env.wooRedirectUri || 'http://localhost:3001/api/v1/shops/:id/oauth/callback';
   const callback = baseCallback.replace(':id', shopId);
+
+  // return_url: where to redirect user after approval (frontend)
+  // callback_url: where to POST credentials (API)
+  const returnUrl = `http://localhost:3000/dashboard?shop=${shopId}&connected=true`;
+
   const url = new URL('/wc-auth/v1/authorize', storeUrl);
   url.searchParams.set('app_name', 'ProductSynch');
   url.searchParams.set('scope', 'read_write');
   url.searchParams.set('user_id', userId);
-  url.searchParams.set('return_url', callback);
+  url.searchParams.set('return_url', returnUrl);
   url.searchParams.set('callback_url', callback);
   return url.toString();
 }
