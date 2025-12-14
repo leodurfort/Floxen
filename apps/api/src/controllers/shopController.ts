@@ -65,7 +65,7 @@ export function createShop(req: Request, res: Response) {
     shopCurrency: parse.data.shopCurrency,
   })
     .then((shop) => {
-      const authUrl = buildWooAuthUrl(parse.data.storeUrl, userId);
+      const authUrl = buildWooAuthUrl(parse.data.storeUrl, userId, shop.id);
       logger.info('shops:create', { userId, shopId: shop.id, storeUrl: parse.data.storeUrl });
       res.status(201).json({ shop, authUrl });
     })
@@ -120,18 +120,41 @@ export function disconnectShop(req: Request, res: Response) {
 }
 
 export function oauthCallback(req: Request, res: Response) {
-  const { consumer_key, consumer_secret } = req.query;
+  logger.info('shops:oauth callback START', {
+    shopId: req.params.id,
+    query: req.query,
+    body: req.body,
+    headers: req.headers,
+    method: req.method,
+    url: req.url
+  });
+
+  // WooCommerce can send credentials in either query params or POST body
+  const consumer_key = req.query.consumer_key || req.body?.consumer_key;
+  const consumer_secret = req.query.consumer_secret || req.body?.consumer_secret;
+
   if (!consumer_key || !consumer_secret || Array.isArray(consumer_key) || Array.isArray(consumer_secret)) {
+    logger.warn('shops:oauth callback missing credentials', {
+      hasConsumerKey: !!consumer_key,
+      hasConsumerSecret: !!consumer_secret,
+      query: req.query
+    });
     return res.status(400).json({ error: 'Missing consumer_key or consumer_secret' });
   }
+
+  logger.info('shops:oauth callback credentials received', {
+    shopId: req.params.id,
+    consumerKeyLength: String(consumer_key).length
+  });
+
   setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret))
     .then((shop) => {
       productSyncQueue?.queue.add('sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
-      logger.info('shops:oauth callback stored creds', { shopId: shop.id });
+      logger.info('shops:oauth callback SUCCESS - stored creds', { shopId: shop.id });
       return res.json({ shop, message: 'Connection verified, sync queued' });
     })
     .catch((err) => {
-      logger.error('shops:oauth error', err);
+      logger.error('shops:oauth callback ERROR', { shopId: req.params.id, error: err.message, stack: err.stack });
       res.status(500).json({ error: err.message });
     });
 }
