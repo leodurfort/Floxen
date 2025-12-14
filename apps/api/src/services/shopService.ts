@@ -53,8 +53,9 @@ export async function disconnectShop(shopId: string) {
   });
 }
 
-export function buildWooAuthUrl(storeUrl: string, userId: string) {
-  const callback = env.wooRedirectUri || `${storeUrl}/wc-auth/callback`;
+export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string) {
+  const baseCallback = env.wooRedirectUri || 'http://localhost:3001/api/v1/shops/:id/oauth/callback';
+  const callback = baseCallback.replace(':id', shopId);
   const url = new URL('/wc-auth/v1/authorize', storeUrl);
   url.searchParams.set('app_name', 'ProductSynch');
   url.searchParams.set('scope', 'read_write');
