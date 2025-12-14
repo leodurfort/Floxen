@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+// Load .env from monorepo root (../../ from apps/api/src)
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 function toNumber(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
