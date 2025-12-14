@@ -7,4 +7,5 @@ const app = createApp();
 
 app.listen(env.port, () => {
   logger.info(`API listening on http://localhost:${env.port}`);
+  logger.info(`CORS origin: ${env.corsOrigin}`);
 });
