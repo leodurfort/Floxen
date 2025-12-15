@@ -53,6 +53,53 @@ export async function disconnectShop(shopId: string) {
   });
 }
 
+export async function deleteShop(shopId: string) {
+  // Delete all related data in the correct order to respect foreign key constraints
+  // First, delete ProductVariants (they reference Products)
+  await prisma.productVariant.deleteMany({
+    where: {
+      product: {
+        shopId: shopId,
+      },
+    },
+  });
+
+  // Delete ProductAnalytics (they reference Products)
+  await prisma.productAnalytics.deleteMany({
+    where: {
+      product: {
+        shopId: shopId,
+      },
+    },
+  });
+
+  // Delete Products (they reference Shop)
+  await prisma.product.deleteMany({
+    where: {
+      shopId: shopId,
+    },
+  });
+
+  // Delete SyncBatches (they reference Shop)
+  await prisma.syncBatch.deleteMany({
+    where: {
+      shopId: shopId,
+    },
+  });
+
+  // Delete ShopAnalytics (they reference Shop)
+  await prisma.shopAnalytics.deleteMany({
+    where: {
+      shopId: shopId,
+    },
+  });
+
+  // Finally, delete the Shop itself
+  return prisma.shop.delete({
+    where: { id: shopId },
+  });
+}
+
 export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string) {
   const baseCallback = env.wooRedirectUri || 'http://localhost:3001/api/v1/shops/:id/oauth/callback';
   const callback = baseCallback.replace(':id', shopId);

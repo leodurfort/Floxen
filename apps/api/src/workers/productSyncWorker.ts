@@ -3,6 +3,8 @@ import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency } from '../services/wooClient';
 import { transformWooProduct, checksum } from '../services/productService';
+import { AutoFillService } from '../services/autoFillService';
+import { ValidationService } from '../services/validationService';
 
 export async function productSyncProcessor(job: Job) {
   logger.info(`product-sync job received`, job.data);
@@ -58,19 +60,52 @@ export async function productSyncProcessor(job: Job) {
       if (existing && existing.checksum === data.checksum) {
         continue;
       }
+
+      // Auto-fill all 63 OpenAI attributes from WooCommerce data
+      const autoFillService = new AutoFillService(shop);
+      const openaiAutoFilled = autoFillService.autoFillProduct(wooProd);
+
+      // Validate the product with auto-filled values
+      const validationService = new ValidationService();
+      const validation = validationService.validateProduct(
+        openaiAutoFilled,
+        existing?.openaiEdited as Record<string, any> || {},
+        {
+          aiTitle: existing?.aiTitle || undefined,
+          aiDescription: existing?.aiDescription || undefined,
+          aiCategory: existing?.aiSuggestedCategory || undefined,
+          aiQAndA: existing?.aiQAndA || undefined,
+        },
+        existing?.selectedSources as Record<string, 'ai' | 'woo'> || {},
+        existing?.feedEnableCheckout || false
+      );
+
       await prisma.product.upsert({
         where: { shopId_wooProductId: { shopId, wooProductId: wooProd.id } },
         create: {
           shopId,
           status: existing?.status || 'PENDING_REVIEW',
           syncStatus: 'PENDING',
+          openaiAutoFilled: openaiAutoFilled as any,
+          isValid: validation.isValid,
+          validationErrors: validation.errors as any,
           ...data,
         },
         update: {
+          openaiAutoFilled: openaiAutoFilled as any,
+          isValid: validation.isValid,
+          validationErrors: validation.errors as any,
           ...data,
           status: existing?.status || 'PENDING_REVIEW',
           syncStatus: 'PENDING',
         },
+      });
+
+      logger.info('product-sync: auto-filled and validated', {
+        shopId,
+        wooProductId: wooProd.id,
+        isValid: validation.isValid,
+        errorCount: Object.keys(validation.errors).length,
       });
     }
 
