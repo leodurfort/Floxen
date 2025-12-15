@@ -49,6 +49,7 @@ export default function ProductDetailPage() {
   const [enriching, setEnriching] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [editValidationError, setEditValidationError] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['basic_product_data', 'pricing', 'images'])
   );
@@ -95,55 +96,151 @@ export default function ProductDetailPage() {
     }
   }
 
+  function validateField(fieldName: string, value: any, spec: any): string | null {
+    if (!spec) return null;
+
+    // Empty value validation
+    if (spec.requirement === 'Required' && (!value || (typeof value === 'string' && value.trim() === ''))) {
+      return `${fieldName} is required`;
+    }
+
+    // Skip validation for empty optional fields
+    if (!value || (typeof value === 'string' && value.trim() === '')) {
+      return null;
+    }
+
+    // Validate each rule
+    for (const rule of spec.validationRules) {
+      // Character length validation
+      if (rule.includes('Max') && rule.includes('characters') && typeof value === 'string') {
+        const match = rule.match(/Max (\d+) characters/);
+        if (match) {
+          const max = parseInt(match[1]);
+          if (value.length > max) {
+            return `Must be ${max} characters or less (currently ${value.length})`;
+          }
+        }
+      }
+
+      if (rule.includes('Min') && rule.includes('characters') && typeof value === 'string') {
+        const match = rule.match(/Min (\d+) characters/);
+        if (match) {
+          const min = parseInt(match[1]);
+          if (value.length < min) {
+            return `Must be at least ${min} characters (currently ${value.length})`;
+          }
+        }
+      }
+
+      // Array length validation
+      if (rule.includes('Max') && rule.includes('items') && Array.isArray(value)) {
+        const match = rule.match(/Max (\d+) items/);
+        if (match) {
+          const max = parseInt(match[1]);
+          if (value.length > max) {
+            return `Must have ${max} items or less (currently ${value.length})`;
+          }
+        }
+      }
+
+      if (rule.includes('Min') && rule.includes('items') && Array.isArray(value)) {
+        const match = rule.match(/Min (\d+) items/);
+        if (match) {
+          const min = parseInt(match[1]);
+          if (value.length < min) {
+            return `Must have at least ${min} items (currently ${value.length})`;
+          }
+        }
+      }
+
+      // URL validation
+      if (rule.includes('Valid URL') && typeof value === 'string') {
+        try {
+          new URL(value);
+        } catch {
+          return 'Must be a valid URL';
+        }
+      }
+
+      // Numeric validation
+      if (rule.includes('Positive number') && typeof value === 'number') {
+        if (value < 0) {
+          return 'Must be a positive number';
+        }
+      }
+
+      // Date format validation (ISO 8601)
+      if (rule.includes('ISO 8601') && typeof value === 'string') {
+        const iso8601Regex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
+        if (!iso8601Regex.test(value)) {
+          return 'Must be in ISO 8601 format (e.g., 2024-01-15 or 2024-01-15T10:30:00Z)';
+        }
+      }
+    }
+
+    // Enum validation
+    if (spec.supportedValues && typeof value === 'string') {
+      const allowedValues = spec.supportedValues.split(',').map((v: string) => v.trim());
+      if (!allowedValues.includes(value)) {
+        return `Must be one of: ${allowedValues.join(', ')}`;
+      }
+    }
+
+    return null;
+  }
+
   async function handleEditField(fieldName: string, isEnrichable: boolean) {
     if (!accessToken || !params?.id || !params?.pid || !data) return;
 
     try {
       // Parse value based on field type
-      let value: any = editValue;
+      let value: any = editValue.trim();
 
-      // Simple validation
       const spec = OPENAI_FEED_SPEC.find(s => s.attribute === fieldName);
-      if (spec) {
-        // Check character limits
-        const maxCharRule = spec.validationRules.find(r => r.includes('Max') && r.includes('characters'));
-        if (maxCharRule && typeof value === 'string') {
-          const match = maxCharRule.match(/Max (\d+) characters/);
-          if (match) {
-            const max = parseInt(match[1]);
-            if (value.length > max) {
-              setError(`${fieldName}: max ${max} characters`);
-              return;
-            }
-          }
-        }
+      if (!spec) {
+        setError('Field specification not found');
+        return;
       }
 
-      // Special handling for arrays
-      if (fieldName === 'ai_keywords' || fieldName === 'additional_image_links') {
-        value = editValue.split('\n').map(s => s.trim()).filter(Boolean);
-      }
-
-      // Special handling for Q&A
-      if (fieldName === 'q_and_a') {
-        try {
-          value = JSON.parse(editValue);
-          if (!Array.isArray(value) || value.length < 3 || value.length > 5) {
-            setError('Q&A: must have 3-5 pairs');
-            return;
-          }
-        } catch {
-          setError('Q&A: invalid JSON format');
+      // Type conversion based on dataType
+      if (spec.dataType === 'number' || spec.dataType === 'integer' || spec.dataType === 'decimal') {
+        const parsed = parseFloat(value);
+        if (value !== '' && isNaN(parsed)) {
+          setError('Must be a valid number');
           return;
         }
+        value = parsed;
+      } else if (spec.dataType === 'boolean') {
+        value = value.toLowerCase() === 'true' || value === '1';
+      } else if (spec.dataType === 'array') {
+        // Handle arrays (split by newline or comma)
+        if (fieldName === 'q_and_a') {
+          try {
+            value = JSON.parse(editValue);
+            if (!Array.isArray(value)) {
+              setError('Q&A must be a JSON array');
+              return;
+            }
+          } catch {
+            setError('Q&A: invalid JSON format');
+            return;
+          }
+        } else {
+          value = editValue.split('\n').map((s: string) => s.trim()).filter(Boolean);
+        }
+      }
+
+      // Validate the field
+      const validationError = validateField(fieldName, value, spec);
+      if (validationError) {
+        setError(validationError);
+        return;
       }
 
       // Update based on field type
       if (isEnrichable) {
-        // Use the manual field update endpoint for enrichable fields
         await updateProductManualField(params.id, params.pid, fieldName, value, accessToken);
       } else {
-        // Use the openai field update endpoint for non-enrichable fields
         await updateOpenAIField(params.id, params.pid, fieldName, value, accessToken);
       }
 
@@ -172,6 +269,7 @@ export default function ProductDetailPage() {
 
     const effectiveValue = getEffectiveValue(fieldName);
     setEditingField(fieldName);
+    setEditValidationError(null);
 
     if (Array.isArray(effectiveValue)) {
       setEditValue(effectiveValue.join('\n'));
@@ -180,6 +278,29 @@ export default function ProductDetailPage() {
     } else {
       setEditValue(effectiveValue || '');
     }
+  }
+
+  function handleEditValueChange(newValue: string, fieldName: string) {
+    setEditValue(newValue);
+
+    // Real-time validation
+    const spec = OPENAI_FEED_SPEC.find(s => s.attribute === fieldName);
+    if (!spec) return;
+
+    // Convert value for validation
+    let valueToValidate: any = newValue.trim();
+
+    if (spec.dataType === 'number' || spec.dataType === 'integer' || spec.dataType === 'decimal') {
+      const parsed = parseFloat(valueToValidate);
+      if (valueToValidate !== '' && !isNaN(parsed)) {
+        valueToValidate = parsed;
+      }
+    } else if (spec.dataType === 'array' && fieldName !== 'q_and_a') {
+      valueToValidate = newValue.split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    const error = validateField(fieldName, valueToValidate, spec);
+    setEditValidationError(error);
   }
 
   function getEffectiveValue(fieldName: string): any {
@@ -310,13 +431,42 @@ export default function ProductDetailPage() {
                   <div key={fieldName} className="border border-white/10 rounded-lg p-4 space-y-3">
                     {/* Field Header */}
                     <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold">
-                          {spec.attribute}
-                          {spec.requirement === 'Required' && <span className="text-red-400 ml-1">*</span>}
-                          {spec.requirement === 'Conditional' && <span className="text-yellow-400 ml-1">†</span>}
-                          {isEnrichable && <span className="text-blue-400 ml-2 text-xs">AI Enrichable</span>}
-                        </h3>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm font-semibold">
+                            {spec.attribute}
+                            {spec.requirement === 'Required' && <span className="text-red-400 ml-1">*</span>}
+                          </h3>
+
+                          {/* Requirement Label */}
+                          {spec.requirement === 'Optional' && (
+                            <span className="text-xs text-white/40 px-2 py-0.5 bg-white/5 rounded">Optional</span>
+                          )}
+                          {spec.requirement === 'Recommended' && (
+                            <span className="text-xs text-blue-300/60 px-2 py-0.5 bg-blue-500/10 rounded">Recommended</span>
+                          )}
+
+                          {/* Conditional Info Icon with Tooltip */}
+                          {spec.requirement === 'Conditional' && (
+                            <div className="relative group">
+                              <span className="text-yellow-400 cursor-help text-sm">ℹ️</span>
+                              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 p-3 bg-gray-900 border border-yellow-400/30 rounded-lg shadow-lg text-xs text-white/80">
+                                <div className="font-semibold text-yellow-300 mb-1">Conditional Field</div>
+                                {spec.dependencies ? (
+                                  <>
+                                    <div className="mb-1">Required when:</div>
+                                    <div className="text-white/60">{spec.dependencies}</div>
+                                  </>
+                                ) : (
+                                  <div>Required under certain conditions</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* AI Enrichable Badge */}
+                          {isEnrichable && <span className="text-blue-400 text-xs">AI Enrichable</span>}
+                        </div>
                         <p className="text-xs text-white/40 mt-1">{spec.description}</p>
                         {spec.validationRules.length > 0 && (
                           <p className="text-xs text-white/30 mt-1">Rules: {spec.validationRules.join(', ')}</p>
@@ -350,16 +500,25 @@ export default function ProductDetailPage() {
                         {editingField === fieldName ? (
                           <div className="space-y-2">
                             <textarea
-                              className="w-full p-2 bg-black/50 border border-white/20 rounded text-xs font-mono"
+                              className={`w-full p-2 bg-black/50 border rounded text-xs font-mono ${
+                                editValidationError ? 'border-red-500' : 'border-white/20'
+                              }`}
                               rows={6}
                               value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
+                              onChange={(e) => handleEditValueChange(e.target.value, fieldName)}
                               placeholder={`Edit ${fieldName}...`}
                             />
+                            {editValidationError && (
+                              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded p-2">
+                                ⚠️ {editValidationError}
+                              </div>
+                            )}
                             <div className="flex gap-2">
                               <button
                                 className="text-xs btn btn--primary btn--sm"
                                 onClick={() => handleEditField(fieldName, isEnrichable)}
+                                disabled={!!editValidationError}
+                                title={editValidationError || undefined}
                               >
                                 Save
                               </button>
@@ -368,6 +527,7 @@ export default function ProductDetailPage() {
                                 onClick={() => {
                                   setEditingField(null);
                                   setEditValue('');
+                                  setEditValidationError(null);
                                 }}
                               >
                                 Cancel

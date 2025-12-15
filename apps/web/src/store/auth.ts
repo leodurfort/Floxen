@@ -6,6 +6,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   setSession: (user: User, accessToken: string, refreshToken: string) => void;
+  updateTokens: (accessToken: string, refreshToken?: string) => void;
   clear: () => void;
   hydrated: boolean;
   hydrate: () => void;
@@ -23,6 +24,18 @@ export const useAuth = create<AuthState>((set) => ({
       localStorage.setItem('productsynch.refresh', refreshToken);
     }
     set({ user, accessToken, refreshToken });
+  },
+  updateTokens: (accessToken, refreshToken) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('productsynch.access', accessToken);
+      if (refreshToken) {
+        localStorage.setItem('productsynch.refresh', refreshToken);
+      }
+    }
+    set((state) => ({
+      accessToken,
+      refreshToken: refreshToken || state.refreshToken,
+    }));
   },
   clear: () => {
     if (typeof window !== 'undefined') {

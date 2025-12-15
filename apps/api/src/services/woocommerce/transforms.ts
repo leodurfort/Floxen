@@ -94,11 +94,34 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
 
   /**
    * Add unit to dimension value
+   * Validates that all three dimensions (length, width, height) are present
+   * Returns null if only some dimensions are filled (enforces all-or-nothing)
    */
   addUnit: (value, wooProduct, shop) => {
     if (!value) return null;
-    const unit = wooProduct.dimensions?.unit || 'in';
-    return `${value} ${unit}`;
+
+    // Check if all three dimensions exist
+    const dimensions = wooProduct.dimensions || {};
+    const length = dimensions.length;
+    const width = dimensions.width;
+    const height = dimensions.height;
+
+    // Count how many dimensions are filled
+    const filledCount = [length, width, height].filter(d => d && d !== '0' && d !== 0).length;
+
+    // If only some are filled (1 or 2), return null (enforce all-or-nothing)
+    if (filledCount > 0 && filledCount < 3) {
+      return null;
+    }
+
+    // If all three are filled, return with unit
+    if (filledCount === 3) {
+      const unit = dimensions.unit || 'in';
+      return `${value} ${unit}`;
+    }
+
+    // If none are filled, return null
+    return null;
   },
 
   /**

@@ -92,6 +92,7 @@ model Shop {
   products     Product[]
   syncBatches  SyncBatch[]
   analytics    ShopAnalytics[]
+  feedSnapshot FeedSnapshot?
 
   @@index([userId])
 }
@@ -113,6 +114,7 @@ model Product {
   wooImages           Json?         @map("woo_images")
   wooAttributes       Json?         @map("woo_attributes")
   wooPermalink        String?       @map("woo_permalink")
+  wooDateModified     DateTime?     @map("woo_date_modified")
   wooRawJson          Json?         @map("woo_raw_json")
 
   // OpenAI Feed Data (V2 Model with JSON Storage)
@@ -242,4 +244,19 @@ model SyncBatch {
   shop Shop @relation(fields: [shopId], references: [id])
 
   @@index([shopId])
+}
+
+model FeedSnapshot {
+  id           String   @id @default(cuid())
+  shopId       String   @unique @map("shop_id")
+  feedData     Json     @map("feed_data")
+  productCount Int      @map("product_count")
+  generatedAt  DateTime @map("generated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@map("feed_snapshots")
 }

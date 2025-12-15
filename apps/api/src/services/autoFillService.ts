@@ -57,11 +57,13 @@ export class AutoFillService {
       value = this.extractValue(wooProduct, mapping.fallback);
     }
 
-    // Apply transform function if specified and value exists
-    if (value !== null && value !== undefined && mapping.transform) {
+    // Apply transform function if specified
+    // For default transforms (like defaultToNew), run even when value is null
+    if (mapping.transform) {
       const transformFn = TRANSFORMS[mapping.transform];
       if (transformFn) {
         try {
+          // Run transform even if value is null (for default value transforms)
           value = transformFn(value, wooProduct, this.shop);
         } catch (error) {
           console.error(`Transform error for ${spec.attribute}:`, error);
