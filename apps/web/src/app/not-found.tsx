@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-[#0d0f1a] flex items-center justify-center">
