@@ -4,6 +4,7 @@ import { JwtUser } from '../middleware/auth';
 import {
   buildWooAuthUrl,
   createShop as createShopRecord,
+  deleteShop as deleteShopRecord,
   disconnectShop as disconnect,
   getShop as getShopRecord,
   listShopsByUser,
@@ -107,14 +108,14 @@ export function updateShop(req: Request, res: Response) {
 }
 
 export function disconnectShop(req: Request, res: Response) {
-  disconnect(req.params.id)
+  deleteShopRecord(req.params.id)
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
-      logger.info('shops:disconnect', { shopId: shop.id });
-      return res.json({ shop, message: 'Disconnected' });
+      logger.info('shops:delete', { shopId: shop.id });
+      return res.json({ shop, message: 'Shop deleted successfully' });
     })
     .catch((err) => {
-      logger.error('shops:disconnect error', err);
+      logger.error('shops:delete error', err);
       res.status(500).json({ error: err.message });
     });
 }

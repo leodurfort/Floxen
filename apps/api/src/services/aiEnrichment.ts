@@ -65,16 +65,23 @@ export async function storeEmbeddingInQdrant(productId: string, content: string)
 }
 
 function buildPrompt(product: Product) {
+  // Use manual edits if they exist, otherwise fallback to WooCommerce
+  const currentTitle = product.manualTitle || product.wooTitle;
+  const currentDescription = product.manualDescription || product.wooDescription || 'No description';
+  const hasManualEdits = Boolean(product.manualTitle || product.manualDescription || product.manualCategory);
+
   return `Enhance this product listing for ChatGPT shopping discovery:
 
-ORIGINAL PRODUCT DATA:
-- Title: ${product.wooTitle}
-- Description: ${product.wooDescription || 'No description'}
+${hasManualEdits ? 'NOTE: This product has user edits. Please consider them in your suggestions.\n' : ''}
+CURRENT PRODUCT DATA (includes user edits if any):
+- Title: ${currentTitle}${product.manualTitle ? ' (user edited)' : ''}
+- Description: ${currentDescription}${product.manualDescription ? ' (user edited)' : ''}
 - Price: ${product.wooPrice ?? 'N/A'}
 - SKU: ${product.wooSku || 'None'}
 - Categories: ${JSON.stringify(product.wooCategories)}
 - Attributes: ${JSON.stringify(product.wooAttributes)}
 
+${product.manualCategory ? `User's preferred category: ${product.manualCategory}\n` : ''}
 Provide enhanced content in this JSON format:
 {
   "enhanced_title": "Clear, descriptive title under 150 characters",

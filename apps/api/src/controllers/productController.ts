@@ -4,6 +4,7 @@ import { ProductStatus, SyncStatus } from '@prisma/client';
 import { buildFeedPreview, getProduct as getProductRecord, listProducts as listProductsForShop, markEnrichmentQueued, updateProduct as updateProductRecord } from '../services/productService';
 import { aiEnrichmentQueue, productSyncQueue } from '../jobs';
 import { logger } from '../lib/logger';
+import { FeedValueResolver } from '../services/feedValueResolver';
 
 const updateProductSchema = z.object({
   status: z.nativeEnum(ProductStatus).optional(),
@@ -17,6 +18,28 @@ const updateProductSchema = z.object({
 const bulkActionSchema = z.object({
   action: z.enum(['enable_search', 'disable_search', 'sync', 'enrich']).default('sync'),
   productIds: z.array(z.string()).min(1),
+});
+
+// Schema for updating manual fields
+const updateManualFieldSchema = z.object({
+  field: z.enum(['title', 'description', 'category', 'keywords', 'q_and_a']),
+  value: z.union([
+    z.string().max(5000),  // For title, description, category
+    z.array(z.string()).max(10),  // For keywords
+    z.array(z.object({ q: z.string(), a: z.string() })).min(3).max(5),  // For q_and_a
+  ]),
+});
+
+// Schema for updating selected source
+const updateSelectedSourceSchema = z.object({
+  field: z.enum(['title', 'description', 'category', 'keywords', 'q_and_a']),
+  source: z.enum(['manual', 'ai']),
+});
+
+// Schema for updating any OpenAI field in the openaiEdited JSON
+const updateOpenAIFieldSchema = z.object({
+  field: z.string(),
+  value: z.any(),
 });
 
 export function listProducts(req: Request, res: Response) {
@@ -124,4 +147,209 @@ export function bulkAction(req: Request, res: Response) {
       logger.error('products:bulk error', err);
       res.status(500).json({ error: err.message });
     });
+}
+
+/**
+ * Update a single manual field with validation
+ */
+export async function updateManualField(req: Request, res: Response) {
+  const { id, pid } = req.params;
+  const parse = updateManualFieldSchema.safeParse(req.body);
+
+  if (!parse.success) {
+    logger.warn('products:update-manual-field invalid', parse.error.flatten());
+    return res.status(400).json({ error: parse.error.flatten() });
+  }
+
+  const { field, value } = parse.data;
+
+  // Additional validation for specific fields
+  if (field === 'title' && typeof value === 'string' && value.length > 150) {
+    return res.status(400).json({ error: 'Title must be 150 characters or less' });
+  }
+
+  if (field === 'description' && typeof value === 'string' && value.length > 5000) {
+    return res.status(400).json({ error: 'Description must be 5000 characters or less' });
+  }
+
+  try {
+    const updateData: any = { manualEditedAt: new Date() };
+
+    // Map field to the correct manual* column
+    switch (field) {
+      case 'title':
+        updateData.manualTitle = value as string;
+        break;
+      case 'description':
+        updateData.manualDescription = value as string;
+        break;
+      case 'category':
+        updateData.manualCategory = value as string;
+        break;
+      case 'keywords':
+        updateData.manualKeywords = value as string[];
+        break;
+      case 'q_and_a':
+        updateData.manualQAndA = value as Array<{ q: string; a: string }>;
+        break;
+    }
+
+    const product = await updateProductRecord(id, pid, updateData);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    logger.info('products:update-manual-field', { shopId: id, productId: pid, field });
+    return res.json({ product });
+  } catch (err: any) {
+    logger.error('products:update-manual-field error', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Update selected source for a field
+ */
+export async function updateSelectedSource(req: Request, res: Response) {
+  const { id, pid } = req.params;
+  const parse = updateSelectedSourceSchema.safeParse(req.body);
+
+  if (!parse.success) {
+    logger.warn('products:update-selected-source invalid', parse.error.flatten());
+    return res.status(400).json({ error: parse.error.flatten() });
+  }
+
+  const { field, source } = parse.data;
+
+  try {
+    const product = await getProductRecord(id, pid);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    // Get current selectedSources or initialize
+    const currentSources = (product.selectedSources as any) || {};
+    const updatedSources = { ...currentSources, [field]: source };
+
+    const updated = await updateProductRecord(id, pid, {
+      selectedSources: updatedSources as any,
+    });
+
+    logger.info('products:update-selected-source', { shopId: id, productId: pid, field, source });
+    return res.json({ product: updated });
+  } catch (err: any) {
+    logger.error('products:update-selected-source error', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Get resolved values (what will appear in the feed)
+ */
+export async function getResolvedValues(req: Request, res: Response) {
+  const { id, pid } = req.params;
+
+  try {
+    const product = await getProductRecord(id, pid);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    const resolver = new FeedValueResolver(product);
+    const resolved = resolver.resolveAll();
+
+    logger.info('products:resolved-values', { shopId: id, productId: pid });
+    return res.json({ resolved });
+  } catch (err: any) {
+    logger.error('products:resolved-values error', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Get product with 3-column data structure for enrichment UI
+ * Returns: OpenAI spec reference, WooCommerce/Manual data, AI suggestions, resolved values
+ */
+export async function getProductEnrichmentData(req: Request, res: Response) {
+  const { id, pid } = req.params;
+
+  try {
+    const product = await getProductRecord(id, pid);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    // Auto-filled values from WooCommerce
+    const autoFilled = (product.openaiAutoFilled as Record<string, any>) || {};
+
+    // User's manual edits
+    const edited = (product.openaiEdited as Record<string, any>) || {};
+
+    // AI enrichment (only 4 fields)
+    const aiData = {
+      title: product.aiTitle,
+      description: product.aiDescription,
+      category: product.aiSuggestedCategory,
+      keywords: product.aiKeywords,
+      q_and_a: product.aiQAndA,
+    };
+
+    // Current source selection
+    const selectedSources = (product.selectedSources as any) || {};
+
+    // Resolved values (what will appear in feed)
+    const resolver = new FeedValueResolver(product);
+    const resolved = resolver.resolveAll();
+
+    // Validation result
+    const validationErrors = (product.validationErrors as any) || {};
+
+    logger.info('products:enrichment-data', { shopId: id, productId: pid });
+    return res.json({
+      product: {
+        id: product.id,
+        wooProductId: product.wooProductId,
+        status: product.status,
+        isValid: product.isValid,
+        feedEnableSearch: product.feedEnableSearch,
+        feedEnableCheckout: product.feedEnableCheckout,
+      },
+      autoFilled,      // Column 2: WooCommerce auto-filled data
+      edited,          // Column 2: User's manual edits (override autoFilled)
+      aiData,          // Column 3: AI suggestions
+      selectedSources, // Which source user selected per field
+      resolved,        // What will appear in feed
+      validationErrors,
+    });
+  } catch (err: any) {
+    logger.error('products:enrichment-data error', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Update any OpenAI field in the openaiEdited JSON
+ * Used for editing non-enrichable fields in Column 2
+ */
+export async function updateOpenAIField(req: Request, res: Response) {
+  const { id, pid } = req.params;
+  const parse = updateOpenAIFieldSchema.safeParse(req.body);
+
+  if (!parse.success) {
+    logger.warn('products:update-openai-field invalid', parse.error.flatten());
+    return res.status(400).json({ error: parse.error.flatten() });
+  }
+
+  const { field, value } = parse.data;
+
+  try {
+    const product = await getProductRecord(id, pid);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    // Get current openaiEdited or initialize
+    const currentEdited = (product.openaiEdited as any) || {};
+    const updatedEdited = { ...currentEdited, [field]: value };
+
+    const updated = await updateProductRecord(id, pid, {
+      openaiEdited: updatedEdited as any,
+    });
+
+    logger.info('products:update-openai-field', { shopId: id, productId: pid, field });
+    return res.json({ product: updated });
+  } catch (err: any) {
+    logger.error('products:update-openai-field error', err);
+    res.status(500).json({ error: err.message });
+  }
 }
