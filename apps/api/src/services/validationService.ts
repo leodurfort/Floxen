@@ -77,6 +77,14 @@ export class ValidationService {
         continue;
       }
 
+      // Special validation for availability_date
+      if (spec.attribute === 'availability_date') {
+        const availability = effectiveValues['availability'];
+        if (availability !== 'preorder' && this.hasValue(value)) {
+          fieldErrors.push('availability_date must be null when availability is not "preorder"');
+        }
+      }
+
       // Apply validation rules
       for (const rule of spec.validationRules) {
         const error = this.applyValidationRule(rule, value, spec);
@@ -120,9 +128,9 @@ export class ValidationService {
       return feedEnableCheckout;
     }
 
-    // GTIN/MPN dependency: mpn required if gtin missing
+    // GTIN/MPN dependency: mpn required if gtin is filled
     if (spec.attribute === 'mpn' && deps.includes('gtin')) {
-      return !this.hasValue(effectiveValues['gtin']);
+      return this.hasValue(effectiveValues['gtin']);
     }
 
     // Availability date required if availability = preorder
@@ -230,8 +238,13 @@ export class ValidationService {
 
     // ISO 4217 currency code check
     if (rule.includes('ISO 4217')) {
-      if (typeof value === 'string' && !/\b[A-Z]{3}\b/.test(value)) {
-        return 'Must include ISO 4217 currency code (e.g., USD, EUR)';
+      if (typeof value === 'string') {
+        // Check for format: "number currency_code" or "number.decimal currency_code"
+        // Examples: "79.99 USD", "100 EUR", "50.00 GBP"
+        const priceWithCurrencyRegex = /^\d+(\.\d{1,2})?\s+[A-Z]{3}$/;
+        if (!priceWithCurrencyRegex.test(value.trim())) {
+          return 'Must be in format: "amount CURRENCY" (e.g., "79.99 USD", "100 EUR")';
+        }
       }
     }
 
@@ -249,6 +262,12 @@ export class ValidationService {
       if (date <= new Date()) {
         return 'Must be a future date';
       }
+    }
+
+    // Availability date must be null if availability is not preorder
+    if (rule.includes('Must be null if availability is not preorder')) {
+      // This needs context from effectiveValues - will be handled in validateProduct
+      return null;
     }
 
     // Sale price must be ≤ regular price

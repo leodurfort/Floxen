@@ -130,7 +130,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     description: 'Manufacturer part number.',
     example: 'GPT5',
     requirement: 'Conditional',
-    dependencies: 'Required if gtin is missing',
+    dependencies: 'Required if gtin is filled',
     validationRules: ['Max 70 characters'],
     wooCommerceMapping: {
       field: 'sku',
@@ -541,11 +541,11 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     attribute: 'availability_date',
     dataType: 'Date',
     supportedValues: 'ISO 8601',
-    description: 'Availability date if preorder.',
+    description: 'Availability date if preorder. Must be null if availability is not preorder.',
     example: '2025-12-01',
     requirement: 'Conditional',
-    dependencies: 'Required if availability = preorder',
-    validationRules: ['Must be future date', 'ISO 8601 format'],
+    dependencies: 'Required if availability = preorder, must be null otherwise',
+    validationRules: ['Must be future date', 'ISO 8601 format', 'Must be null if availability is not preorder'],
     wooCommerceMapping: {
       field: 'meta_data._availability_date',
       fallback: 'backorders_allowed',

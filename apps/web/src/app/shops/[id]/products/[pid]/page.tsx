@@ -499,15 +499,34 @@ export default function ProductDetailPage() {
 
                         {editingField === fieldName ? (
                           <div className="space-y-2">
-                            <textarea
-                              className={`w-full p-2 bg-black/50 border rounded text-xs font-mono ${
-                                editValidationError ? 'border-red-500' : 'border-white/20'
-                              }`}
-                              rows={6}
-                              value={editValue}
-                              onChange={(e) => handleEditValueChange(e.target.value, fieldName)}
-                              placeholder={`Edit ${fieldName}...`}
-                            />
+                            {spec.dataType === 'Enum' && spec.supportedValues ? (
+                              // Render dropdown for enum fields
+                              <select
+                                className={`w-full p-2 bg-black/50 border rounded text-xs font-mono ${
+                                  editValidationError ? 'border-red-500' : 'border-white/20'
+                                }`}
+                                value={editValue}
+                                onChange={(e) => handleEditValueChange(e.target.value, fieldName)}
+                              >
+                                <option value="">-- Select or leave empty --</option>
+                                {spec.supportedValues.split(',').map((option: string) => (
+                                  <option key={option.trim()} value={option.trim()}>
+                                    {option.trim()}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              // Render textarea for other fields
+                              <textarea
+                                className={`w-full p-2 bg-black/50 border rounded text-xs font-mono ${
+                                  editValidationError ? 'border-red-500' : 'border-white/20'
+                                }`}
+                                rows={6}
+                                value={editValue}
+                                onChange={(e) => handleEditValueChange(e.target.value, fieldName)}
+                                placeholder={`Edit ${fieldName}...`}
+                              />
+                            )}
                             {editValidationError && (
                               <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded p-2">
                                 ⚠️ {editValidationError}
