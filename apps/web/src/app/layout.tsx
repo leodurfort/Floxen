@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   description: 'Sync WooCommerce catalogs to OpenAI product feeds with AI enrichment.',
 };
 
+// Force all pages to be dynamic to prevent SSR issues with Zustand
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
