@@ -47,6 +47,7 @@ export interface Product {
   wooSku?: string | null;
   wooPrice?: string | null;
   wooCategories?: any;
+  wooDateModified?: string | null;
 
   // AI enrichment fields
   aiEnriched?: boolean;

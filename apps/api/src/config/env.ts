@@ -34,4 +34,8 @@ export const env = {
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
   },
   corsOrigin: process.env.CORS_ORIGIN || '*',
+  scheduler: {
+    enableScheduledSync: process.env.ENABLE_SCHEDULED_SYNC === 'true',
+    syncIntervalMinutes: toNumber(process.env.SYNC_INTERVAL_MINUTES, 15),
+  },
 };

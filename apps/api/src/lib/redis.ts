@@ -30,3 +30,13 @@ export function createWorker<T = any>(
   worker.on('failed', (job, err) => logger.error(`Job failed (${name}:${job?.id})`, err));
   return worker;
 }
+
+// Create shared queue instance for sync jobs
+const syncQueueInstance = createQueue('sync');
+
+export const syncQueue = syncQueueInstance?.queue || {
+  add: async () => {
+    logger.warn('Redis not configured; queue operation skipped');
+    return null as any;
+  },
+};

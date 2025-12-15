@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Manrope, Space_Grotesk } from 'next/font/google';
 import './globals.css';
+import { AppLayout } from '@/components/AppLayout';
 
 const display = Space_Grotesk({
   variable: '--font-display',
@@ -24,7 +25,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${display.variable} ${body.variable} font-body`}>{children}</body>
+      <body className={`${display.variable} ${body.variable} font-body`}>
+        <AppLayout>{children}</AppLayout>
+      </body>
     </html>
   );
 }

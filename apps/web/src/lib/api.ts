@@ -2,7 +2,62 @@ import { ApiResponse, Product, Shop, User } from '@productsynch/shared';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
+
+/**
+ * Refresh the access token using the refresh token
+ */
+async function refreshAccessToken(): Promise<string> {
+  // Prevent multiple simultaneous refresh attempts
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = typeof window !== 'undefined'
+        ? localStorage.getItem('productsynch.refresh')
+        : null;
+
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to refresh token');
+      }
+
+      const data = await response.json();
+      const newAccessToken = data.tokens.accessToken;
+
+      // Update localStorage with new tokens
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('productsynch.access', newAccessToken);
+        if (data.tokens.refreshToken) {
+          localStorage.setItem('productsynch.refresh', data.tokens.refreshToken);
+        }
+      }
+
+      return newAccessToken;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+async function request<T>(path: string, options: RequestInit = {}, retryCount = 0): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
@@ -11,6 +66,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
     credentials: 'include',
   });
+
+  // Handle 401 Unauthorized - try to refresh token
+  if (res.status === 401 && retryCount === 0 && path !== '/api/v1/auth/refresh') {
+    try {
+      const newAccessToken = await refreshAccessToken();
+
+      // Retry the original request with new token
+      const newHeaders = { ...options.headers } as Record<string, string>;
+      if (newHeaders.Authorization) {
+        newHeaders.Authorization = `Bearer ${newAccessToken}`;
+      }
+
+      return request<T>(path, { ...options, headers: newHeaders }, retryCount + 1);
+    } catch (refreshError) {
+      // Refresh failed - clear auth and redirect to login
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('productsynch.user');
+        localStorage.removeItem('productsynch.access');
+        localStorage.removeItem('productsynch.refresh');
+        window.location.href = '/login';
+      }
+      throw new Error('Session expired. Please log in again.');
+    }
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -70,10 +149,11 @@ export async function triggerProductEnrich(shopId: string, productId: string, to
   });
 }
 
-export async function triggerProductSync(shopId: string, token: string) {
+export async function triggerProductSync(shopId: string, token: string, forceFull: boolean = false) {
   return request<{ shopId: string; status: string }>(`/api/v1/shops/${shopId}/sync`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ type: forceFull ? 'FULL' : undefined }),
   });
 }
 
@@ -87,6 +167,14 @@ export async function deleteShop(shopId: string, token: string) {
   return request<{ shop: Shop; message: string }>(`/api/v1/shops/${shopId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function toggleShopSync(shopId: string, syncEnabled: boolean, token: string) {
+  return request<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ syncEnabled }),
   });
 }
 

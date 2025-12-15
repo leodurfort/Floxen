@@ -56,6 +56,7 @@ export default function ShopProductsPage() {
                   <th>Price</th>
                   <th>AI</th>
                   <th>Status</th>
+                  <th>WooCommerce Last Modified</th>
                 </tr>
               </thead>
               <tbody>
@@ -70,6 +71,16 @@ export default function ShopProductsPage() {
                     <td>{p.wooPrice ? `$${p.wooPrice}` : '—'}</td>
                     <td>{p.aiEnriched ? <span className="badge badge--success">Enriched</span> : <span className="badge badge--warn">Pending</span>}</td>
                     <td className="subtle text-sm">{p.syncStatus}</td>
+                    <td className="subtle text-sm">
+                      {p.wooDateModified ? new Date(p.wooDateModified).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      }) : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

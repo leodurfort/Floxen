@@ -81,6 +81,7 @@ export function transformWooProduct(woo: any, shopCurrency: string) {
     wooImages: woo.images,
     wooAttributes: woo.attributes,
     wooPermalink: woo.permalink,
+    wooDateModified: woo.date_modified ? new Date(woo.date_modified) : null,
     wooRawJson: woo,
     feedPrice: woo.price ? `${woo.price} ${shopCurrency}` : null,
     feedAvailability: woo.stock_status === 'instock' ? 'in_stock' : woo.stock_status,

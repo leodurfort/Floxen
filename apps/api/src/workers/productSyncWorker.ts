@@ -8,7 +8,7 @@ import { ValidationService } from '../services/validationService';
 
 export async function productSyncProcessor(job: Job) {
   logger.info(`product-sync job received`, job.data);
-  const { shopId, productId } = job.data as { shopId: string; productId?: string };
+  const { shopId, productId, type } = job.data as { shopId: string; productId?: string; type?: 'FULL' | 'INCREMENTAL' };
   if (!shopId) return;
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) return;
@@ -48,17 +48,54 @@ export async function productSyncProcessor(job: Job) {
       }
     }
 
-    const products = shop.lastSyncAt
-      ? await fetchModifiedProducts(client, shop.lastSyncAt)
+    // Determine sync type: FULL if explicitly requested OR first sync
+    const isForcedFullSync = type === 'FULL';
+    const isIncrementalSync = !isForcedFullSync && shop.lastSyncAt;
+
+    const products = isIncrementalSync
+      ? await fetchModifiedProducts(client, shop.lastSyncAt!)
       : await fetchAllProducts(client);
+
+    logger.info(`product-sync: fetched products`, {
+      shopId,
+      count: products.length,
+      syncType: isForcedFullSync ? 'full (forced)' : isIncrementalSync ? 'incremental' : 'full (first sync)',
+      lastSyncAt: shop.lastSyncAt?.toISOString(),
+      requestedType: type || 'auto',
+    });
 
     for (const wooProd of products) {
       const data = transformWooProduct(wooProd, shop.shopCurrency);
       const existing = await prisma.product.findUnique({
         where: { shopId_wooProductId: { shopId, wooProductId: wooProd.id } },
       });
+
       if (existing && existing.checksum === data.checksum) {
+        logger.info(`product-sync: skipping unchanged product`, {
+          shopId,
+          wooProductId: wooProd.id,
+          title: wooProd.name,
+          wooDateModified: wooProd.date_modified,
+        });
         continue;
+      }
+
+      if (existing) {
+        logger.info(`product-sync: updating product (checksum changed)`, {
+          shopId,
+          wooProductId: wooProd.id,
+          title: wooProd.name,
+          wooDateModified: wooProd.date_modified,
+          oldChecksum: existing.checksum,
+          newChecksum: data.checksum,
+        });
+      } else {
+        logger.info(`product-sync: creating new product`, {
+          shopId,
+          wooProductId: wooProd.id,
+          title: wooProd.name,
+          wooDateModified: wooProd.date_modified,
+        });
       }
 
       // Auto-fill all 63 OpenAI attributes from WooCommerce data

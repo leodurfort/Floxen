@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { SyncStatus } from '@prisma/client';
-import { productSyncQueue, feedGenerationQueue } from '../jobs';
+import { syncQueue } from '../lib/redis';
 import { logger } from '../lib/logger';
 
 const history = [
@@ -24,7 +24,7 @@ export function triggerSync(req: Request, res: Response) {
       data: { syncStatus: SyncStatus.SYNCING, lastSyncAt: new Date() },
     })
     .then((shop) => {
-      productSyncQueue?.queue.add('sync', { shopId: shop.id, type: req.body?.type || 'FULL' }, { removeOnComplete: true });
+      syncQueue.add('product-sync', { shopId: shop.id, type: req.body?.type || 'FULL' }, { removeOnComplete: true, priority: 2 });
       logger.info('sync:trigger', { shopId: shop.id, type: req.body?.type || 'FULL' });
       return res.json({ shopId: shop.id, status: 'QUEUED', syncType: req.body?.type || 'FULL' });
     })
@@ -62,7 +62,7 @@ export function pushFeed(req: Request, res: Response) {
     .findUnique({ where: { id: req.params.id } })
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
-      feedGenerationQueue?.queue.add('feed', { shopId: shop.id }, { removeOnComplete: true });
+      syncQueue.add('feed-generation', { shopId: shop.id }, { removeOnComplete: true });
       logger.info('feed:push', { shopId: shop.id });
       return res.json({ shopId: shop.id, pushed: true });
     })
