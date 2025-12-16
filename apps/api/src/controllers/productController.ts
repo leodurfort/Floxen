@@ -149,36 +149,63 @@ export async function getProductWooData(req: Request, res: Response) {
 
     let wooData = await fetchSingleProduct(wooClient, product.wooProductId);
 
-    // For variation products, inherit description from parent if missing
-    if (product.wooParentId && (!wooData.description || wooData.description.trim() === '')) {
-      logger.info('Fetching parent product description for variation', {
-        shopId: id,
-        productId: pid,
-        wooProductId: product.wooProductId,
-        wooParentId: product.wooParentId,
-      });
+    // For variation products, inherit fields from parent if missing
+    if (product.wooParentId) {
+      const needsParentData =
+        (!wooData.description || wooData.description.trim() === '') ||
+        (!wooData.categories || wooData.categories.length === 0) ||
+        (!wooData.brands || wooData.brands.length === 0);
 
-      try {
-        const parentData = await fetchSingleProduct(wooClient, product.wooParentId);
-        if (parentData.description) {
-          wooData = {
-            ...wooData,
-            description: parentData.description,
-          };
-          logger.info('Inherited description from parent product', {
+      if (needsParentData) {
+        logger.info('Fetching parent product data for variation', {
+          shopId: id,
+          productId: pid,
+          wooProductId: product.wooProductId,
+          wooParentId: product.wooParentId,
+          missingFields: {
+            description: !wooData.description || wooData.description.trim() === '',
+            categories: !wooData.categories || wooData.categories.length === 0,
+            brands: !wooData.brands || wooData.brands.length === 0,
+          }
+        });
+
+        try {
+          const parentData = await fetchSingleProduct(wooClient, product.wooParentId);
+
+          // Inherit description if missing
+          if ((!wooData.description || wooData.description.trim() === '') && parentData.description) {
+            wooData.description = parentData.description;
+          }
+
+          // Inherit categories if missing
+          if ((!wooData.categories || wooData.categories.length === 0) && parentData.categories && parentData.categories.length > 0) {
+            wooData.categories = parentData.categories;
+          }
+
+          // Inherit brands if missing
+          if ((!wooData.brands || wooData.brands.length === 0) && parentData.brands && parentData.brands.length > 0) {
+            wooData.brands = parentData.brands;
+          }
+
+          logger.info('Inherited fields from parent product', {
             shopId: id,
             productId: pid,
             wooParentId: product.wooParentId,
+            inheritedFields: {
+              description: !!parentData.description,
+              categories: !!(parentData.categories && parentData.categories.length > 0),
+              brands: !!(parentData.brands && parentData.brands.length > 0),
+            }
           });
+        } catch (parentErr) {
+          logger.warn('Failed to fetch parent product data', {
+            shopId: id,
+            productId: pid,
+            wooParentId: product.wooParentId,
+            error: parentErr instanceof Error ? parentErr : new Error(String(parentErr)),
+          });
+          // Continue without parent data
         }
-      } catch (parentErr) {
-        logger.warn('Failed to fetch parent product description', {
-          shopId: id,
-          productId: pid,
-          wooParentId: product.wooParentId,
-          error: parentErr instanceof Error ? parentErr : new Error(String(parentErr)),
-        });
-        // Continue without parent description
       }
     }
 
