@@ -8,6 +8,8 @@ import {
   oauthCallback,
   updateShop,
   verifyConnection,
+  getFieldMappings,
+  updateFieldMappings,
 } from '../controllers/shopController';
 import { requireAuth } from '../middleware/auth';
 
@@ -22,5 +24,7 @@ router.get('/:id/oauth/callback', oauthCallback);
 router.post('/:id/oauth/callback', oauthCallback);
 router.post('/:id/verify', requireAuth, verifyConnection);
 router.put('/:id/openai-config', requireAuth, configureOpenAI);
+router.get('/:id/field-mappings', requireAuth, getFieldMappings);
+router.put('/:id/field-mappings', requireAuth, updateFieldMappings);
 
 export default router;

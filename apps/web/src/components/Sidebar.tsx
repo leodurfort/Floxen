@@ -58,9 +58,10 @@ export function Sidebar() {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { href: selectedShop ? `/shops/${selectedShop.id}/setup` : '/dashboard', label: 'Setup', icon: '⚙️' },
     { href: selectedShop ? `/shops/${selectedShop.id}/products` : '/dashboard', label: 'Products', icon: '📦' },
     { href: '/shops', label: 'Shops', icon: '🏪' },
-    { href: '/settings', label: 'Settings', icon: '⚙️' },
+    { href: '/settings', label: 'Settings', icon: '🔧' },
   ];
 
   return (
@@ -118,7 +119,9 @@ export function Sidebar() {
         {navItems.map((item) => {
           // More precise active state matching
           let isActive = false;
-          if (item.label === 'Products') {
+          if (item.label === 'Setup') {
+            isActive = pathname.includes('/setup');
+          } else if (item.label === 'Products') {
             isActive = pathname.includes('/products');
           } else if (item.label === 'Shops') {
             isActive = pathname === '/shops' || (pathname === '/shops' && !pathname.includes('/products'));
