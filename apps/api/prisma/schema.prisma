@@ -103,6 +103,7 @@ model Product {
 
   // WooCommerce Source Data
   wooProductId        Int           @map("woo_product_id")
+  wooParentId         Int?          @map("woo_parent_id")  // For variations, stores parent product ID
   wooTitle            String        @map("woo_title")
   wooDescription      String?       @map("woo_description")
   wooSku              String?       @map("woo_sku")

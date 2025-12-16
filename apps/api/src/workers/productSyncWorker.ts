@@ -1,10 +1,96 @@
 import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency } from '../services/wooClient';
-import { transformWooProduct, checksum } from '../services/productService';
+import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency, fetchProductVariations } from '../services/wooClient';
+import { transformWooProduct, mergeParentAndVariation, checksum } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { ValidationService } from '../services/validationService';
+import { Shop } from '@prisma/client';
+
+/**
+ * Process a single product (simple product or merged variation)
+ */
+async function processProduct(data: any, shop: Shop, shopId: string) {
+  const existing = await prisma.product.findUnique({
+    where: { shopId_wooProductId: { shopId, wooProductId: data.wooProductId } },
+  });
+
+  if (existing && existing.checksum === data.checksum) {
+    logger.info(`product-sync: skipping unchanged product`, {
+      shopId,
+      wooProductId: data.wooProductId,
+      wooParentId: data.wooParentId,
+      title: data.wooTitle,
+    });
+    return;
+  }
+
+  if (existing) {
+    logger.info(`product-sync: updating product (checksum changed)`, {
+      shopId,
+      wooProductId: data.wooProductId,
+      wooParentId: data.wooParentId,
+      title: data.wooTitle,
+      oldChecksum: existing.checksum,
+      newChecksum: data.checksum,
+    });
+  } else {
+    logger.info(`product-sync: creating new product`, {
+      shopId,
+      wooProductId: data.wooProductId,
+      wooParentId: data.wooParentId,
+      title: data.wooTitle,
+    });
+  }
+
+  // Auto-fill all 63 OpenAI attributes from WooCommerce data
+  const autoFillService = new AutoFillService(shop);
+  const openaiAutoFilled = autoFillService.autoFillProduct(data.wooRawJson);
+
+  // Validate the product with auto-filled values
+  const validationService = new ValidationService();
+  const validation = validationService.validateProduct(
+    openaiAutoFilled,
+    existing?.openaiEdited as Record<string, any> || {},
+    {
+      aiTitle: existing?.aiTitle || undefined,
+      aiDescription: existing?.aiDescription || undefined,
+      aiCategory: existing?.aiSuggestedCategory || undefined,
+      aiQAndA: existing?.aiQAndA || undefined,
+    },
+    existing?.selectedSources as Record<string, 'ai' | 'woo'> || {},
+    existing?.feedEnableCheckout || false
+  );
+
+  await prisma.product.upsert({
+    where: { shopId_wooProductId: { shopId, wooProductId: data.wooProductId } },
+    create: {
+      shopId,
+      status: existing?.status || 'PENDING_REVIEW',
+      syncStatus: 'PENDING',
+      openaiAutoFilled: openaiAutoFilled as any,
+      isValid: validation.isValid,
+      validationErrors: validation.errors as any,
+      ...data,
+    },
+    update: {
+      openaiAutoFilled: openaiAutoFilled as any,
+      isValid: validation.isValid,
+      validationErrors: validation.errors as any,
+      ...data,
+      status: existing?.status || 'PENDING_REVIEW',
+      syncStatus: 'PENDING',
+    },
+  });
+
+  logger.info('product-sync: auto-filled and validated', {
+    shopId,
+    wooProductId: data.wooProductId,
+    wooParentId: data.wooParentId,
+    isValid: validation.isValid,
+    errorCount: Object.keys(validation.errors).length,
+  });
+}
 
 export async function productSyncProcessor(job: Job) {
   logger.info(`product-sync job received`, job.data);
@@ -65,85 +151,43 @@ export async function productSyncProcessor(job: Job) {
     });
 
     for (const wooProd of products) {
-      const data = transformWooProduct(wooProd, shop.shopCurrency);
-      const existing = await prisma.product.findUnique({
-        where: { shopId_wooProductId: { shopId, wooProductId: wooProd.id } },
-      });
+      // Check if this is a variable product
+      const isVariable = wooProd.type === 'variable';
 
-      if (existing && existing.checksum === data.checksum) {
-        logger.info(`product-sync: skipping unchanged product`, {
+      if (isVariable) {
+        logger.info(`product-sync: detected variable product, fetching variations`, {
           shopId,
-          wooProductId: wooProd.id,
+          parentId: wooProd.id,
           title: wooProd.name,
-          wooDateModified: wooProd.date_modified,
         });
-        continue;
-      }
 
-      if (existing) {
-        logger.info(`product-sync: updating product (checksum changed)`, {
+        // Fetch all variations for this variable product
+        const variations = await fetchProductVariations(client, wooProd.id);
+
+        logger.info(`product-sync: processing ${variations.length} variations`, {
           shopId,
-          wooProductId: wooProd.id,
-          title: wooProd.name,
-          wooDateModified: wooProd.date_modified,
-          oldChecksum: existing.checksum,
-          newChecksum: data.checksum,
+          parentId: wooProd.id,
+        });
+
+        // Process each variation
+        for (const variation of variations) {
+          await processProduct(
+            mergeParentAndVariation(wooProd, variation, shop.shopCurrency),
+            shop,
+            shopId
+          );
+        }
+
+        // Skip creating an entry for the parent variable product
+        logger.info(`product-sync: skipped parent variable product`, {
+          shopId,
+          parentId: wooProd.id,
+          variationsCount: variations.length,
         });
       } else {
-        logger.info(`product-sync: creating new product`, {
-          shopId,
-          wooProductId: wooProd.id,
-          title: wooProd.name,
-          wooDateModified: wooProd.date_modified,
-        });
+        // Process simple products normally
+        await processProduct(transformWooProduct(wooProd, shop.shopCurrency), shop, shopId);
       }
-
-      // Auto-fill all 63 OpenAI attributes from WooCommerce data
-      const autoFillService = new AutoFillService(shop);
-      const openaiAutoFilled = autoFillService.autoFillProduct(wooProd);
-
-      // Validate the product with auto-filled values
-      const validationService = new ValidationService();
-      const validation = validationService.validateProduct(
-        openaiAutoFilled,
-        existing?.openaiEdited as Record<string, any> || {},
-        {
-          aiTitle: existing?.aiTitle || undefined,
-          aiDescription: existing?.aiDescription || undefined,
-          aiCategory: existing?.aiSuggestedCategory || undefined,
-          aiQAndA: existing?.aiQAndA || undefined,
-        },
-        existing?.selectedSources as Record<string, 'ai' | 'woo'> || {},
-        existing?.feedEnableCheckout || false
-      );
-
-      await prisma.product.upsert({
-        where: { shopId_wooProductId: { shopId, wooProductId: wooProd.id } },
-        create: {
-          shopId,
-          status: existing?.status || 'PENDING_REVIEW',
-          syncStatus: 'PENDING',
-          openaiAutoFilled: openaiAutoFilled as any,
-          isValid: validation.isValid,
-          validationErrors: validation.errors as any,
-          ...data,
-        },
-        update: {
-          openaiAutoFilled: openaiAutoFilled as any,
-          isValid: validation.isValid,
-          validationErrors: validation.errors as any,
-          ...data,
-          status: existing?.status || 'PENDING_REVIEW',
-          syncStatus: 'PENDING',
-        },
-      });
-
-      logger.info('product-sync: auto-filled and validated', {
-        shopId,
-        wooProductId: wooProd.id,
-        isValid: validation.isValid,
-        errorCount: Object.keys(validation.errors).length,
-      });
     }
 
     await prisma.shop.update({
