@@ -66,6 +66,61 @@ export async function fetchStoreCurrency(api: WooCommerceRestApi) {
   }
 }
 
+export interface StoreSettings {
+  shopName: string;
+  shopCurrency: string;
+  siteUrl?: string;
+  homeUrl?: string;
+  language?: string;
+}
+
+/**
+ * Fetch comprehensive store settings from WooCommerce API
+ * Retrieves: currency, site name, URLs, language
+ */
+export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<StoreSettings | null> {
+  try {
+    logger.info('woo:fetch store settings start');
+
+    // Fetch general settings group
+    const generalResponse = await api.get('settings/general');
+    const settings = Array.isArray(generalResponse.data) ? generalResponse.data : [];
+
+    // Extract settings
+    const currencySetting = settings.find((s: any) => s.id === 'woocommerce_currency');
+    const titleSetting = settings.find((s: any) => s.id === 'woocommerce_store_address');
+
+    // Fetch system status for additional info
+    let systemInfo: any = {};
+    try {
+      const systemResponse = await api.get('system_status');
+      systemInfo = systemResponse.data?.settings || {};
+    } catch {
+      logger.warn('woo:fetch system status failed, using defaults');
+    }
+
+    const storeSettings: StoreSettings = {
+      shopName: titleSetting?.value || systemInfo.site_name || 'Unknown Store',
+      shopCurrency: currencySetting?.value || 'USD',
+      siteUrl: systemInfo.site_url,
+      homeUrl: systemInfo.home_url,
+      language: systemInfo.language,
+    };
+
+    logger.info('woo:fetch store settings complete', {
+      shopName: storeSettings.shopName,
+      shopCurrency: storeSettings.shopCurrency,
+      hasSiteUrl: !!storeSettings.siteUrl,
+    });
+    return storeSettings;
+  } catch (err) {
+    logger.error('woo:fetch store settings failed', {
+      error: err instanceof Error ? err : new Error(String(err))
+    });
+    return null;
+  }
+}
+
 export async function fetchSingleProduct(api: WooCommerceRestApi, productId: number) {
   logger.info('woo:fetch single product start', { productId: String(productId) });
   try {

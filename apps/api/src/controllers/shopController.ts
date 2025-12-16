@@ -19,13 +19,9 @@ import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 
 const createShopSchema = z.object({
   storeUrl: z.string().url(),
-  shopName: z.string().optional(),
-  shopCurrency: z.string().optional(),
 });
 
 const updateShopSchema = z.object({
-  shopName: z.string().optional(),
-  shopCurrency: z.string().optional(),
   syncEnabled: z.boolean().optional(),
 });
 
@@ -65,8 +61,6 @@ export function createShop(req: Request, res: Response) {
   createShopRecord({
     userId,
     storeUrl: parse.data.storeUrl,
-    shopName: parse.data.shopName,
-    shopCurrency: parse.data.shopCurrency,
   })
     .then((shop) => {
       const authUrl = buildWooAuthUrl(parse.data.storeUrl, userId, shop.id);

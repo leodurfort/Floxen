@@ -172,7 +172,7 @@ export async function productSyncProcessor(job: Job) {
         // Process each variation
         for (const variation of variations) {
           await processProduct(
-            mergeParentAndVariation(wooProd, variation, shop.shopCurrency),
+            mergeParentAndVariation(wooProd, variation, shop.shopCurrency || 'USD'),
             shop,
             shopId
           );
@@ -186,7 +186,7 @@ export async function productSyncProcessor(job: Job) {
         });
       } else {
         // Process simple products normally
-        await processProduct(transformWooProduct(wooProd, shop.shopCurrency), shop, shopId);
+        await processProduct(transformWooProduct(wooProd, shop.shopCurrency || 'USD'), shop, shopId);
       }
     }
 
