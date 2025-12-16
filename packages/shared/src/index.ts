@@ -48,6 +48,7 @@ export interface Product {
   wooPrice?: string | null;
   wooCategories?: any;
   wooDateModified?: string | null;
+  wooRawJson?: any;  // Full WooCommerce product JSON for field mapping preview
 
   // AI enrichment fields
   aiEnriched?: boolean;
