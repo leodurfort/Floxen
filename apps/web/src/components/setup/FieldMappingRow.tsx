@@ -47,7 +47,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
   });
 
   return (
-    <div className="grid grid-cols-3 gap-6 py-4 border-b border-white/5 hover:bg-white/[0.02]">
+    <div className="grid grid-cols-[1fr_280px_1fr] gap-6 py-4 border-b border-white/5 hover:bg-white/[0.02] items-start">
       {/* Column 1: OpenAI Field Info */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
@@ -63,7 +63,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
       </div>
 
       {/* Column 2: WooCommerce Field Selector */}
-      <div className="flex items-center">
+      <div className="flex items-start pt-0">
         <WooCommerceFieldSelector
           value={currentMapping}
           onChange={(wooField) => onMappingChange(spec.attribute, wooField)}
@@ -72,11 +72,11 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
       </div>
 
       {/* Column 3: Preview Data */}
-      <div className="flex items-center">
-        <div className="w-full px-4 py-2 bg-[#1a1d29] rounded-lg border border-white/10">
-          <pre className={`text-xs ${previewStyle} whitespace-pre-wrap break-all max-h-32 overflow-y-auto`}>
+      <div className="flex items-start pt-0">
+        <div className="w-full h-[40px] px-4 py-2.5 bg-[#1a1d29] rounded-lg border border-white/10 flex items-center overflow-hidden group cursor-default" title={previewDisplay}>
+          <div className={`text-xs ${previewStyle} truncate w-full`}>
             {previewDisplay}
-          </pre>
+          </div>
         </div>
       </div>
     </div>

@@ -241,7 +241,7 @@ export default function SetupPage() {
           </div>
 
           {/* Column Headers */}
-          <div className="grid grid-cols-3 gap-6 mb-6 pb-4 border-b border-white/20">
+          <div className="grid grid-cols-[1fr_280px_1fr] gap-6 mb-6 pb-4 border-b border-white/20">
             <div className="text-sm font-semibold text-white/80">
               OpenAI Attribute
             </div>
