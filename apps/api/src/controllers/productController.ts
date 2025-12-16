@@ -151,10 +151,24 @@ export async function getProductWooData(req: Request, res: Response) {
 
     // For variation products, inherit fields from parent if missing
     if (product.wooParentId) {
+      // Helper to get meta_data value
+      const getMetaValue = (data: any, key: string) => {
+        if (!data.meta_data || !Array.isArray(data.meta_data)) return null;
+        const metaItem = data.meta_data.find((m: any) => m.key === key);
+        return metaItem?.value || null;
+      };
+
+      // Check which fields need parent data
+      const materialValue = getMetaValue(wooData, '_material');
       const needsParentData =
         (!wooData.description || wooData.description.trim() === '') ||
         (!wooData.categories || wooData.categories.length === 0) ||
-        (!wooData.brands || wooData.brands.length === 0);
+        (!wooData.brands || wooData.brands.length === 0) ||
+        !materialValue ||
+        !wooData.weight ||
+        !wooData.dimensions?.length ||
+        !wooData.dimensions?.width ||
+        !wooData.dimensions?.height;
 
       if (needsParentData) {
         logger.info('Fetching parent product data for variation', {
@@ -166,6 +180,9 @@ export async function getProductWooData(req: Request, res: Response) {
             description: !wooData.description || wooData.description.trim() === '',
             categories: !wooData.categories || wooData.categories.length === 0,
             brands: !wooData.brands || wooData.brands.length === 0,
+            material: !materialValue,
+            weight: !wooData.weight,
+            dimensions: !wooData.dimensions?.length || !wooData.dimensions?.width || !wooData.dimensions?.height,
           }
         });
 
@@ -187,6 +204,32 @@ export async function getProductWooData(req: Request, res: Response) {
             wooData.brands = parentData.brands;
           }
 
+          // Inherit material from meta_data if missing
+          if (!materialValue) {
+            const parentMaterial = getMetaValue(parentData, '_material');
+            if (parentMaterial) {
+              if (!wooData.meta_data) wooData.meta_data = [];
+              wooData.meta_data.push({ key: '_material', value: parentMaterial });
+            }
+          }
+
+          // Inherit weight if missing
+          if (!wooData.weight && parentData.weight) {
+            wooData.weight = parentData.weight;
+          }
+
+          // Inherit dimensions if missing
+          if (!wooData.dimensions) wooData.dimensions = {};
+          if (!wooData.dimensions.length && parentData.dimensions?.length) {
+            wooData.dimensions.length = parentData.dimensions.length;
+          }
+          if (!wooData.dimensions.width && parentData.dimensions?.width) {
+            wooData.dimensions.width = parentData.dimensions.width;
+          }
+          if (!wooData.dimensions.height && parentData.dimensions?.height) {
+            wooData.dimensions.height = parentData.dimensions.height;
+          }
+
           logger.info('Inherited fields from parent product', {
             shopId: id,
             productId: pid,
@@ -195,6 +238,9 @@ export async function getProductWooData(req: Request, res: Response) {
               description: !!parentData.description,
               categories: !!(parentData.categories && parentData.categories.length > 0),
               brands: !!(parentData.brands && parentData.brands.length > 0),
+              material: !!getMetaValue(parentData, '_material'),
+              weight: !!parentData.weight,
+              dimensions: !!(parentData.dimensions?.length || parentData.dimensions?.width || parentData.dimensions?.height),
             }
           });
         } catch (parentErr) {
