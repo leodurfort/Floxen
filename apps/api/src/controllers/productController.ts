@@ -48,11 +48,23 @@ export function listProducts(req: Request, res: Response) {
   const limit = Number(req.query.limit || 20);
   listProductsForShop(id, page, limit)
     .then((result) => {
-      logger.info('products:list', { shopId: id, page, count: result.products.length });
+      logger.info('Products list retrieved successfully', {
+        shopId: id,
+        page,
+        limit,
+        count: result.products.length,
+        total: result.total
+      });
       res.json(result);
     })
     .catch((err) => {
-      logger.error('products:list error', err);
+      logger.error('Failed to list products', {
+        error: err,
+        shopId: id,
+        page,
+        limit,
+        userId: (req as any).user?.id,
+      });
       res.status(500).json({ error: err.message });
     });
 }
@@ -61,12 +73,25 @@ export function getProduct(req: Request, res: Response) {
   const { id, pid } = req.params;
   getProductRecord(id, pid)
     .then((product) => {
-      if (!product) return res.status(404).json({ error: 'Product not found' });
-      logger.info('products:get', { shopId: id, productId: pid });
+      if (!product) {
+        logger.warn('Product not found', { shopId: id, productId: pid });
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      logger.info('Product retrieved successfully', {
+        shopId: id,
+        productId: pid,
+        status: product.status,
+        aiStatus: product.aiStatus
+      });
       return res.json({ product });
     })
     .catch((err) => {
-      logger.error('products:get error', err);
+      logger.error('Failed to get product', {
+        error: err,
+        shopId: id,
+        productId: pid,
+        userId: (req as any).user?.id,
+      });
       res.status(500).json({ error: err.message });
     });
 }
@@ -75,17 +100,36 @@ export function updateProduct(req: Request, res: Response) {
   const { id, pid } = req.params;
   const parse = updateProductSchema.safeParse(req.body);
   if (!parse.success) {
-    logger.warn('products:update invalid', parse.error.flatten());
+    logger.warn('Invalid product update request', {
+      shopId: id,
+      productId: pid,
+      validationErrors: parse.error.flatten(),
+      requestBody: req.body,
+    });
     return res.status(400).json({ error: parse.error.flatten() });
   }
   updateProductRecord(id, pid, parse.data)
     .then((product) => {
-      if (!product) return res.status(404).json({ error: 'Product not found' });
-      logger.info('products:update', { shopId: id, productId: pid });
+      if (!product) {
+        logger.warn('Product not found for update', { shopId: id, productId: pid });
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      logger.info('Product updated successfully', {
+        shopId: id,
+        productId: pid,
+        updatedFields: Object.keys(parse.data),
+        userId: (req as any).user?.id,
+      });
       return res.json({ product });
     })
     .catch((err) => {
-      logger.error('products:update error', err);
+      logger.error('Failed to update product', {
+        error: err,
+        shopId: id,
+        productId: pid,
+        updateData: parse.data,
+        userId: (req as any).user?.id,
+      });
       res.status(500).json({ error: err.message });
     });
 }
@@ -94,13 +138,25 @@ export function triggerEnrichment(req: Request, res: Response) {
   const { id, pid } = req.params;
   markEnrichmentQueued(id, pid)
     .then((product) => {
-      if (!product) return res.status(404).json({ error: 'Product not found' });
+      if (!product) {
+        logger.warn('Product not found for enrichment', { shopId: id, productId: pid });
+        return res.status(404).json({ error: 'Product not found' });
+      }
       aiEnrichmentQueue?.queue.add('enrich', { productId: product.id }, { removeOnComplete: true });
-      logger.info('products:enrich queued', { shopId: id, productId: pid });
+      logger.info('Product enrichment queued successfully', {
+        shopId: id,
+        productId: pid,
+        userId: (req as any).user?.id,
+      });
       return res.json({ product, message: 'Enrichment queued (stub)' });
     })
     .catch((err) => {
-      logger.error('products:enrich error', err);
+      logger.error('Failed to queue product enrichment', {
+        error: err,
+        shopId: id,
+        productId: pid,
+        userId: (req as any).user?.id,
+      });
       res.status(500).json({ error: err.message });
     });
 }

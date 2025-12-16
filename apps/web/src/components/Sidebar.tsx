@@ -31,7 +31,17 @@ export function Sidebar() {
         setSelectedShop(data.shops[0]);
       }
     } catch (err) {
-      console.error('Failed to load shops:', err);
+      // Log error with context for debugging
+      console.error('[Sidebar] Failed to load shops', {
+        error: err instanceof Error ? {
+          message: err.message,
+          name: err.name,
+          stack: err.stack,
+        } : err,
+        userId: user?.id,
+        timestamp: new Date().toISOString(),
+      });
+      // TODO: Show error toast/notification to user
     }
   }
 

@@ -35,7 +35,17 @@ export default function DashboardPage() {
       const shopsRes = await listShops(accessToken);
       setShops(shopsRes.shops);
     } catch (err) {
-      console.error('Failed to load shops:', err);
+      // Log error with context for debugging
+      console.error('[Dashboard] Failed to load shops', {
+        error: err instanceof Error ? {
+          message: err.message,
+          name: err.name,
+          stack: err.stack,
+        } : err,
+        userId: user?.id,
+        timestamp: new Date().toISOString(),
+      });
+      // TODO: Show error toast/notification to user
     } finally {
       setLoading(false);
     }
