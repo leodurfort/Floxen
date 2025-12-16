@@ -10,6 +10,8 @@ import {
   verifyConnection,
   getFieldMappings,
   updateFieldMappings,
+  discoverWooFields,
+  getWooFields,
 } from '../controllers/shopController';
 import { requireAuth } from '../middleware/auth';
 
@@ -26,5 +28,7 @@ router.post('/:id/verify', requireAuth, verifyConnection);
 router.put('/:id/openai-config', requireAuth, configureOpenAI);
 router.get('/:id/field-mappings', requireAuth, getFieldMappings);
 router.put('/:id/field-mappings', requireAuth, updateFieldMappings);
+router.post('/:id/discover-fields', requireAuth, discoverWooFields);
+router.get('/:id/woo-fields', requireAuth, getWooFields);
 
 export default router;

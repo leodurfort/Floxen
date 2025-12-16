@@ -15,6 +15,7 @@ import {
 import { productSyncQueue } from '../jobs';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
+import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 
 const createShopSchema = z.object({
   storeUrl: z.string().url(),
@@ -292,8 +293,15 @@ export async function updateFieldMappings(req: Request, res: Response) {
         // Find the WooCommerce field by value (if not null/ENABLED/DISABLED)
         let wooField = null;
         if (wooFieldValue && wooFieldValue !== 'ENABLED' && wooFieldValue !== 'DISABLED') {
-          wooField = await prisma.wooCommerceField.findUnique({
-            where: { value: wooFieldValue },
+          // Try to find shop-specific field first, then standard field
+          wooField = await prisma.wooCommerceField.findFirst({
+            where: {
+              value: wooFieldValue,
+              OR: [
+                { shopId: id },    // Shop-specific discovered field
+                { shopId: null },  // Standard field
+              ],
+            },
           });
 
           if (!wooField) {
@@ -356,6 +364,86 @@ export async function updateFieldMappings(req: Request, res: Response) {
     return res.json({ success: true, results });
   } catch (err: any) {
     logger.error('shops:field-mappings:update error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Discover custom meta_data fields from shop's WooCommerce products
+ * POST /api/v1/shops/:id/discover-fields
+ */
+export async function discoverWooFields(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  const { id } = req.params;
+
+  try {
+    const shop = await getShopRecord(id);
+
+    if (!shop) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
+
+    // Verify ownership
+    if (shop.userId !== userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Trigger field discovery
+    logger.info('shops:discover-fields:start', { shopId: id, userId });
+
+    const result = await FieldDiscoveryService.discoverFields(id);
+
+    logger.info('shops:discover-fields:complete', {
+      shopId: id,
+      userId,
+      discovered: result.discovered.length,
+      saved: result.saved,
+      skipped: result.skipped,
+      errors: result.errors.length,
+    });
+
+    return res.json({
+      success: true,
+      discovered: result.discovered.length,
+      saved: result.saved,
+      skipped: result.skipped,
+      errors: result.errors,
+      fields: result.discovered,
+    });
+  } catch (err: any) {
+    logger.error('shops:discover-fields error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Get all available WooCommerce fields for a shop (standard + discovered)
+ * GET /api/v1/shops/:id/woo-fields
+ */
+export async function getWooFields(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  const { id } = req.params;
+
+  try {
+    const shop = await getShopRecord(id);
+
+    if (!shop) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
+
+    // Verify ownership
+    if (shop.userId !== userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Get all fields (standard + shop-specific discovered)
+    const fields = await FieldDiscoveryService.getShopFields(id);
+
+    logger.info('shops:woo-fields:get', { shopId: id, userId, count: fields.length });
+
+    return res.json({ fields });
+  } catch (err: any) {
+    logger.error('shops:woo-fields:get error', err);
     return res.status(500).json({ error: err.message });
   }
 }
