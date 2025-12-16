@@ -9,7 +9,27 @@ export async function feedGenerationProcessor(job: Job) {
   if (!shopId) return;
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) return;
-  const products = await prisma.product.findMany({ where: { shopId } });
+
+  // Get all product IDs that are used as parent IDs (exclude these parent variable products)
+  const parentProductIds = await prisma.product.findMany({
+    where: {
+      shopId,
+      wooParentId: { not: null },
+    },
+    select: { wooParentId: true },
+    distinct: ['wooParentId'],
+  });
+
+  const parentIds = parentProductIds.map(p => p.wooParentId).filter((id): id is number => id !== null);
+
+  // Get products excluding parent variable products
+  const products = await prisma.product.findMany({
+    where: {
+      shopId,
+      wooProductId: { notIn: parentIds },
+    },
+  });
+
   const payload = generateFeedPayload(shop, products);
   const body = JSON.stringify(payload, null, 2);
 

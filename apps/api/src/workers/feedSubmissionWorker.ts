@@ -25,12 +25,25 @@ export async function feedSubmissionProcessor(job: Job) {
   }
 
   try {
-    // Get valid products only (ready for OpenAI feed)
+    // Get all product IDs that are used as parent IDs (exclude these parent variable products)
+    const parentProductIds = await prisma.product.findMany({
+      where: {
+        shopId,
+        wooParentId: { not: null },
+      },
+      select: { wooParentId: true },
+      distinct: ['wooParentId'],
+    });
+
+    const parentIds = parentProductIds.map(p => p.wooParentId).filter((id): id is number => id !== null);
+
+    // Get valid products only (ready for OpenAI feed), excluding parent variable products
     const products = await prisma.product.findMany({
       where: {
         shopId,
         isValid: true,
         feedEnableSearch: true,
+        wooProductId: { notIn: parentIds },
       },
     });
 
