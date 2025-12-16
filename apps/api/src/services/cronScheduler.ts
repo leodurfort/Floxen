@@ -90,12 +90,12 @@ export class CronScheduler {
               delay: `${delay / 1000}s`,
             });
           } catch (err) {
-            logger.error(`Cron: Failed to enqueue jobs for shop ${shop.shopName}`, err);
+            logger.error(`Cron: Failed to enqueue jobs for shop ${shop.shopName}`, { error: err instanceof Error ? err : new Error(String(err)) });
           }
         }, delay);
       }
     } catch (err) {
-      logger.error('Cron: Failed to trigger all shops sync', err);
+      logger.error('Cron: Failed to trigger all shops sync', { error: err instanceof Error ? err : new Error(String(err)) });
     }
   }
 

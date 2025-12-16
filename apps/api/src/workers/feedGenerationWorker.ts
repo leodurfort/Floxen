@@ -37,7 +37,7 @@ export async function feedGenerationProcessor(job: Job) {
     logger.info(`Generated feed payload for shop ${shopId} (items: ${products.length})`, { url });
     return { url };
   } catch (err) {
-    logger.error(`feed-generation failed for shop ${shopId}`, err);
+    logger.error(`feed-generation failed for shop ${shopId}`, { error: err instanceof Error ? err : new Error(String(err)) });
     throw err;
   }
 }

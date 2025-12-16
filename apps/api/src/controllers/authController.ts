@@ -103,7 +103,7 @@ export async function refresh(req: Request, res: Response) {
     logger.info('refresh: success', { userId: user.id });
     return res.json({ tokens });
   } catch (err) {
-    logger.error('refresh: error', err);
+    logger.error('refresh: error', { error: err instanceof Error ? err : new Error(String(err)) });
     return res.status(401).json({ error: 'Invalid refresh token' });
   }
 }
@@ -123,7 +123,7 @@ export async function me(req: Request, res: Response) {
     logger.info('me: fetched', { userId: user.id });
     return res.json({ user });
   } catch (err) {
-    logger.error('me: error', err);
+    logger.error('me: error', { error: err instanceof Error ? err : new Error(String(err)) });
     res.status(500).json({ error: 'Internal error' });
   }
 }

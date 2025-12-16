@@ -25,6 +25,6 @@ export async function aiEnrichmentProcessor(job: Job) {
     await storeEmbeddingInQdrant(productId, `${result.title}\n${result.description}`);
     logger.info(`ai-enrichment complete for product ${productId}`);
   } catch (err) {
-    logger.error(`ai-enrichment failed for product ${productId}`, err);
+    logger.error(`ai-enrichment failed for product ${productId}`, { error: err instanceof Error ? err : new Error(String(err)) });
   }
 }
