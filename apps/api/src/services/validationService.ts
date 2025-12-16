@@ -128,9 +128,9 @@ export class ValidationService {
       return feedEnableCheckout;
     }
 
-    // GTIN/MPN dependency: mpn required if gtin is filled
+    // GTIN/MPN dependency: mpn required if gtin is not provided
     if (spec.attribute === 'mpn' && deps.includes('gtin')) {
-      return this.hasValue(effectiveValues['gtin']);
+      return !this.hasValue(effectiveValues['gtin']);
     }
 
     // Availability date required if availability = preorder
