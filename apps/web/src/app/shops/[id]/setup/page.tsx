@@ -54,7 +54,14 @@ export default function SetupPage() {
         mappings: data.mappings,
         sampleMappings: Object.entries(data.mappings || {}).slice(0, 10),
       });
-      setMappings(data.mappings);
+
+      // Initialize enable_search to ENABLED by default if not set
+      const loadedMappings = data.mappings || {};
+      if (!loadedMappings.enable_search) {
+        loadedMappings.enable_search = 'ENABLED';
+      }
+
+      setMappings(loadedMappings);
     } catch (err) {
       console.error('[Setup] Failed to load mappings', err);
     } finally {

@@ -2,6 +2,7 @@
 
 import { OpenAIFieldSpec } from '@productsynch/shared';
 import { WooCommerceFieldSelector } from './WooCommerceFieldSelector';
+import { ToggleSwitch } from './ToggleSwitch';
 import { extractFieldValue, formatFieldValue } from '@/lib/wooCommerceFields';
 
 interface Props {
@@ -19,8 +20,18 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     Conditional: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   };
 
+  // Check if this is a toggle field
+  const isToggleField = spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout';
+  const isCheckoutField = spec.attribute === 'enable_checkout';
+
+  // For toggle fields, mapping value is "ENABLED" or "DISABLED"
+  // Default enable_search to ENABLED
+  const isEnabled = isToggleField
+    ? (currentMapping === 'ENABLED' || (spec.attribute === 'enable_search' && !currentMapping))
+    : false;
+
   // Extract and format preview value
-  const previewValue = currentMapping && previewProductJson
+  const previewValue = currentMapping && previewProductJson && !isToggleField
     ? extractFieldValue(previewProductJson, currentMapping)
     : null;
   const formattedValue = formatFieldValue(previewValue);
@@ -29,7 +40,10 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
   let previewDisplay = formattedValue;
   let previewStyle = 'text-white/80';
 
-  if (!currentMapping) {
+  if (isToggleField) {
+    previewDisplay = isEnabled ? '✓ Enabled' : 'Disabled';
+    previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
+  } else if (!currentMapping) {
     previewDisplay = '⚠️ No field mapped';
     previewStyle = 'text-amber-400/60 italic';
   } else if (!previewProductJson) {
@@ -41,6 +55,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
   console.log(`[FieldMappingRow] ${spec.attribute}:`, {
     currentMapping: currentMapping || 'NOT MAPPED',
     hasPreviewData: !!previewProductJson,
+    isToggleField,
+    isEnabled,
     previewValue,
     formattedValue,
     previewDisplay,
@@ -62,13 +78,30 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
         </div>
       </div>
 
-      {/* Column 2: WooCommerce Field Selector */}
+      {/* Column 2: WooCommerce Field Selector or Toggle */}
       <div className="flex items-start pt-0">
-        <WooCommerceFieldSelector
-          value={currentMapping}
-          onChange={(wooField) => onMappingChange(spec.attribute, wooField)}
-          openaiAttribute={spec.attribute}
-        />
+        {isToggleField ? (
+          <div className="w-full">
+            <ToggleSwitch
+              enabled={isEnabled}
+              onChange={(enabled) => onMappingChange(spec.attribute, enabled ? 'ENABLED' : 'DISABLED')}
+              disabled={isCheckoutField}
+              label={isEnabled ? 'Enabled' : 'Disabled'}
+            />
+            {isCheckoutField && (
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-white/50">
+                <span title="This feature will be available soon">ℹ️</span>
+                <span>Feature coming soon</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <WooCommerceFieldSelector
+            value={currentMapping}
+            onChange={(wooField) => onMappingChange(spec.attribute, wooField)}
+            openaiAttribute={spec.attribute}
+          />
+        )}
       </div>
 
       {/* Column 3: Preview Data */}
