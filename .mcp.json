@@ -3,6 +3,10 @@
     "Railway": {
       "command": "npx",
       "args": ["-y", "@railway/mcp-server"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
     }
   }
 }
