@@ -130,7 +130,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     description: 'Manufacturer part number.',
     example: 'GPT5',
     requirement: 'Conditional',
-    dependencies: 'Required if gtin is filled',
+    dependencies: 'Required if gtin is not provided',
     validationRules: ['Max 70 characters'],
     wooCommerceMapping: {
       field: 'sku',

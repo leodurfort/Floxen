@@ -84,13 +84,13 @@ CURRENT PRODUCT DATA (includes user edits if any):
 ${product.manualCategory ? `User's preferred category: ${product.manualCategory}\n` : ''}
 Provide enhanced content in this JSON format:
 {
-  "enhanced_title": "Clear, descriptive title under 150 characters",
-  "enhanced_description": "Compelling description under 5000 characters",
+  "enhanced_title": "Clear, descriptive title under 150 characters (plain text, no HTML)",
+  "enhanced_description": "Compelling description under 5000 characters (plain text only, absolutely no HTML tags or markup)",
   "keywords": ["keyword1", "keyword2", "...up to 10"],
   "q_and_a": [
-    {"q": "Customer question 1?", "a": "Helpful answer 1"},
-    {"q": "Customer question 2?", "a": "Helpful answer 2"},
-    {"q": "Customer question 3?", "a": "Helpful answer 3"}
+    {"q": "Customer question 1?", "a": "Helpful answer 1 (plain text)"},
+    {"q": "Customer question 2?", "a": "Helpful answer 2 (plain text)"},
+    {"q": "Customer question 3?", "a": "Helpful answer 3 (plain text)"}
   ],
   "suggested_category": "Main Category > Subcategory"
 }`;
