@@ -53,7 +53,8 @@ export function generateFeedPayload(shop: Shop, products: Product[]) {
           inventory: effectiveValues.inventory,
           brand: effectiveValues.brand,
           gtin: effectiveValues.gtin,
-          mpn: effectiveValues.mpn,
+          // mpn is mutually exclusive with gtin: if gtin is provided, mpn should be null
+          mpn: effectiveValues.gtin ? null : effectiveValues.mpn,
           condition: effectiveValues.condition,
           age_group: effectiveValues.age_group,
           color: effectiveValues.color,
