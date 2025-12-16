@@ -320,7 +320,16 @@ export default function ProductDetailPage() {
     }
 
     // For non-enrichable fields or manual source: edited > autoFilled
-    return data.edited[fieldName] ?? data.autoFilled[fieldName] ?? null;
+    const value = data.edited[fieldName] ?? data.autoFilled[fieldName] ?? null;
+
+    // Special case: mpn is mutually exclusive with gtin
+    // If gtin has a value, mpn should be null in the feed
+    if (fieldName === 'mpn') {
+      const gtinValue = data.edited['gtin'] ?? data.autoFilled['gtin'];
+      if (gtinValue) return null;
+    }
+
+    return value;
   }
 
   function formatValueForDisplay(value: any): string {
