@@ -49,6 +49,11 @@ export default function SetupPage() {
       });
       if (!res.ok) throw new Error('Failed to load mappings');
       const data = await res.json();
+      console.log('[Setup] Loaded field mappings:', {
+        totalMappings: Object.keys(data.mappings || {}).length,
+        mappings: data.mappings,
+        sampleMappings: Object.entries(data.mappings || {}).slice(0, 10),
+      });
       setMappings(data.mappings);
     } catch (err) {
       console.error('[Setup] Failed to load mappings', err);
@@ -209,6 +214,19 @@ export default function SetupPage() {
                 Saving changes...
               </div>
             )}
+            {/* Mapping Statistics */}
+            <div className="mt-4 flex items-center gap-4 text-sm">
+              <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
+                <span className="text-white/60">Mapped Fields: </span>
+                <span className="text-white font-medium">{Object.keys(mappings).length}</span>
+                <span className="text-white/40"> / {OPENAI_FEED_SPEC.length}</span>
+              </div>
+              {previewProductJson && (
+                <div className="px-3 py-1.5 bg-[#5df0c0]/10 rounded-lg border border-[#5df0c0]/30">
+                  <span className="text-[#5df0c0]/80">✓ Preview data loaded</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Search Bar */}

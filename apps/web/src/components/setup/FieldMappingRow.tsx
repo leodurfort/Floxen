@@ -25,20 +25,26 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     : null;
   const formattedValue = formatFieldValue(previewValue);
 
-  // Debug logging for first row only to avoid spam
-  if (spec.attribute === 'id') {
-    console.log('[FieldMappingRow] Debug info:', {
-      attribute: spec.attribute,
-      currentMapping,
-      hasPreviewData: !!previewProductJson,
-      previewValue,
-      formattedValue,
-      previewDataSample: previewProductJson ? {
-        id: previewProductJson.id,
-        name: previewProductJson.name,
-      } : null,
-    });
+  // Determine preview display text
+  let previewDisplay = formattedValue;
+  let previewStyle = 'text-white/80';
+
+  if (!currentMapping) {
+    previewDisplay = '⚠️ No field mapped';
+    previewStyle = 'text-amber-400/60 italic';
+  } else if (!previewProductJson) {
+    previewDisplay = 'Select a product to preview...';
+    previewStyle = 'text-white/40 italic';
   }
+
+  // Debug logging for all fields to diagnose empty fields
+  console.log(`[FieldMappingRow] ${spec.attribute}:`, {
+    currentMapping: currentMapping || 'NOT MAPPED',
+    hasPreviewData: !!previewProductJson,
+    previewValue,
+    formattedValue,
+    previewDisplay,
+  });
 
   return (
     <div className="grid grid-cols-3 gap-6 py-4 border-b border-white/5 hover:bg-white/[0.02]">
@@ -68,8 +74,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
       {/* Column 3: Preview Data */}
       <div className="flex items-center">
         <div className="w-full px-4 py-2 bg-[#1a1d29] rounded-lg border border-white/10">
-          <pre className="text-xs text-white/80 whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
-            {formattedValue}
+          <pre className={`text-xs ${previewStyle} whitespace-pre-wrap break-all max-h-32 overflow-y-auto`}>
+            {previewDisplay}
           </pre>
         </div>
       </div>
