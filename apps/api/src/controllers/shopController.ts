@@ -14,6 +14,7 @@ import {
 } from '../services/shopService';
 import { productSyncQueue } from '../jobs';
 import { logger } from '../lib/logger';
+import { prisma } from '../lib/prisma';
 
 const createShopSchema = z.object({
   storeUrl: z.string().url(),
@@ -195,29 +196,58 @@ export function configureOpenAI(req: Request, res: Response) {
     });
 }
 
-export function getFieldMappings(req: Request, res: Response) {
+export async function getFieldMappings(req: Request, res: Response) {
   const userId = userIdFromReq(req);
   const { id } = req.params;
 
-  getShopRecord(id)
-    .then((shop) => {
-      if (!shop) return res.status(404).json({ error: 'Shop not found' });
+  try {
+    const shop = await getShopRecord(id);
 
-      // Verify ownership
-      if (shop.userId !== userId) {
-        return res.status(403).json({ error: 'Forbidden' });
-      }
+    if (!shop) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
 
-      // Return custom mappings or generate defaults
-      const mappings = shop.fieldMappings || getDefaultMappings();
+    // Verify ownership
+    if (shop.userId !== userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
-      logger.info('shops:field-mappings:get', { shopId: id, userId });
-      return res.json({ mappings });
-    })
-    .catch((err) => {
-      logger.error('shops:field-mappings:get error', err);
-      return res.status(500).json({ error: err.message });
+    // Query field mappings from database with joins
+    const fieldMappings = await prisma.fieldMapping.findMany({
+      where: { shopId: id },
+      include: {
+        openaiField: true,
+        wooField: true,
+      },
     });
+
+    // Convert to Record<string, string> format for API response
+    const mappings: Record<string, string> = {};
+
+    for (const mapping of fieldMappings) {
+      // If wooField is null, the field is not mapped
+      if (mapping.wooField) {
+        mappings[mapping.openaiField.attribute] = mapping.wooField.value;
+      } else {
+        // For toggle fields like enable_search, check if there's a mapping with null wooField
+        // This represents ENABLED/DISABLED state
+        mappings[mapping.openaiField.attribute] = null as any;
+      }
+    }
+
+    // If no mappings exist yet, return defaults
+    if (Object.keys(mappings).length === 0) {
+      const defaultMappings = getDefaultMappings();
+      logger.info('shops:field-mappings:get (defaults)', { shopId: id, userId });
+      return res.json({ mappings: defaultMappings });
+    }
+
+    logger.info('shops:field-mappings:get', { shopId: id, userId, count: fieldMappings.length });
+    return res.json({ mappings });
+  } catch (err: any) {
+    logger.error('shops:field-mappings:get error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 export async function updateFieldMappings(req: Request, res: Response) {
@@ -236,16 +266,94 @@ export async function updateFieldMappings(req: Request, res: Response) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Validate: req.body should be { mappings: Record<string, string> }
-    const { mappings } = req.body;
+    // Validate: req.body should be { mappings: Record<string, string | null> }
+    const { mappings } = req.body as { mappings: Record<string, string | null> };
 
-    // Update shop with new mappings
-    const updatedShop = await updateShopRecord(id, {
-      fieldMappings: mappings
-    });
+    if (!mappings || typeof mappings !== 'object') {
+      return res.status(400).json({ error: 'Invalid mappings format' });
+    }
 
-    logger.info('shops:field-mappings:update', { shopId: id, userId });
-    return res.json({ shop: updatedShop });
+    // Process each mapping
+    const results = { created: 0, updated: 0, deleted: 0, errors: 0 };
+
+    for (const [openaiAttribute, wooFieldValue] of Object.entries(mappings)) {
+      try {
+        // Find the OpenAI field by attribute
+        const openaiField = await prisma.openAIField.findUnique({
+          where: { attribute: openaiAttribute },
+        });
+
+        if (!openaiField) {
+          logger.warn(`OpenAI field "${openaiAttribute}" not found, skipping`);
+          results.errors++;
+          continue;
+        }
+
+        // Find the WooCommerce field by value (if not null/ENABLED/DISABLED)
+        let wooField = null;
+        if (wooFieldValue && wooFieldValue !== 'ENABLED' && wooFieldValue !== 'DISABLED') {
+          wooField = await prisma.wooCommerceField.findUnique({
+            where: { value: wooFieldValue },
+          });
+
+          if (!wooField) {
+            logger.warn(`WooCommerce field "${wooFieldValue}" not found, skipping`);
+            results.errors++;
+            continue;
+          }
+        }
+
+        // Check if mapping already exists
+        const existing = await prisma.fieldMapping.findUnique({
+          where: {
+            shopId_openaiFieldId: {
+              shopId: id,
+              openaiFieldId: openaiField.id,
+            },
+          },
+        });
+
+        if (wooFieldValue === null) {
+          // Delete mapping if it exists
+          if (existing) {
+            await prisma.fieldMapping.delete({
+              where: { id: existing.id },
+            });
+            results.deleted++;
+          }
+        } else {
+          // Upsert mapping
+          const result = await prisma.fieldMapping.upsert({
+            where: {
+              shopId_openaiFieldId: {
+                shopId: id,
+                openaiFieldId: openaiField.id,
+              },
+            },
+            create: {
+              shopId: id,
+              openaiFieldId: openaiField.id,
+              wooFieldId: wooField?.id || null,
+            },
+            update: {
+              wooFieldId: wooField?.id || null,
+            },
+          });
+
+          if (existing) {
+            results.updated++;
+          } else {
+            results.created++;
+          }
+        }
+      } catch (mappingErr: any) {
+        logger.error(`Error processing mapping for ${openaiAttribute}:`, mappingErr);
+        results.errors++;
+      }
+    }
+
+    logger.info('shops:field-mappings:update', { shopId: id, userId, results });
+    return res.json({ success: true, results });
   } catch (err: any) {
     logger.error('shops:field-mappings:update error', err);
     return res.status(500).json({ error: err.message });

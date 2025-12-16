@@ -89,11 +89,12 @@ model Shop {
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
 
-  user         User             @relation(fields: [userId], references: [id])
-  products     Product[]
-  syncBatches  SyncBatch[]
-  analytics    ShopAnalytics[]
-  feedSnapshot FeedSnapshot?
+  user          User             @relation(fields: [userId], references: [id])
+  products      Product[]
+  syncBatches   SyncBatch[]
+  analytics     ShopAnalytics[]
+  feedSnapshot  FeedSnapshot?
+  fieldMappingsV2 FieldMapping[]
 
   @@index([userId])
 }
@@ -261,4 +262,55 @@ model FeedSnapshot {
 
   @@index([shopId])
   @@map("feed_snapshots")
+}
+
+// Reference table for OpenAI Product Feed field specifications
+model OpenAIField {
+  id          String   @id @default(cuid())
+  attribute   String   @unique  // e.g., "title", "description", "gtin"
+  label       String             // Human-readable label
+  description String   @db.Text  // Field description
+  requirement String             // "Required", "Recommended", "Optional", "Conditional"
+  example     String             // Example value
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  mappings FieldMapping[]
+
+  @@map("openai_fields")
+}
+
+// Reference table for WooCommerce field specifications
+model WooCommerceField {
+  id          String   @id @default(cuid())
+  value       String   @unique  // Internal identifier: "name", "sku", "description", "categories"
+  label       String             // Human-readable label: "Product Name", "SKU"
+  description String?  @db.Text  // Optional field description
+  category    String?            // Field category: "basic", "pricing", "inventory", "taxonomy", "media", "meta"
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  mappings FieldMapping[]
+
+  @@map("woocommerce_fields")
+}
+
+// User's field mappings per shop with foreign key constraints
+model FieldMapping {
+  id              String   @id @default(cuid())
+  shopId          String   @map("shop_id")
+  openaiFieldId   String   @map("openai_field_id")
+  wooFieldId      String?  @map("woo_field_id")  // NULL = not mapped, FK = mapped to valid field
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  shop         Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  openaiField  OpenAIField      @relation(fields: [openaiFieldId], references: [id])
+  wooField     WooCommerceField? @relation(fields: [wooFieldId], references: [id])
+
+  @@unique([shopId, openaiFieldId])
+  @@index([shopId])
+  @@index([openaiFieldId])
+  @@index([wooFieldId])
+  @@map("field_mappings")
 }
