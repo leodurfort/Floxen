@@ -16,6 +16,7 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
 
   const filteredFields = searchQuery ? searchWooFields(searchQuery) : WOO_COMMERCE_FIELDS;
   const selectedField = value ? getWooField(value) : null;
+  const hasInvalidMapping = value && !selectedField; // Field value exists but not found in list
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,15 +36,35 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
     setSearchQuery('');
   }
 
+  // Determine button text and styling
+  let buttonText: string;
+  let buttonClass: string;
+  let borderClass: string;
+
+  if (selectedField) {
+    buttonText = selectedField.label;
+    buttonClass = 'text-white';
+    borderClass = 'border-white/10';
+  } else if (hasInvalidMapping) {
+    buttonText = `⚠️ Invalid: ${value}`;
+    buttonClass = 'text-amber-400';
+    borderClass = 'border-amber-400/50';
+  } else {
+    // No mapping set
+    buttonText = '⚠️ Not mapped';
+    buttonClass = 'text-amber-400/60';
+    borderClass = 'border-amber-400/30';
+  }
+
   return (
     <div className="relative w-full" ref={dropdownRef}>
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-[40px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border border-white/10 transition-colors flex items-center justify-between"
+        className={`w-full h-[40px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border transition-colors flex items-center justify-between ${borderClass}`}
       >
-        <span className="text-sm text-white truncate">
-          {selectedField ? selectedField.label : 'Select WooCommerce field...'}
+        <span className={`text-sm truncate ${buttonClass}`}>
+          {buttonText}
         </span>
         <svg className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
