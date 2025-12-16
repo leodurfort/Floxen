@@ -74,10 +74,11 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
       {/* Column 3: Preview Data */}
       <div className="flex items-start pt-0">
         <div
-          className="w-full min-h-[40px] max-h-[40px] px-4 py-2.5 bg-[#1a1d29] rounded-lg border border-white/10 flex items-center overflow-hidden group cursor-default"
+          className="w-full !h-[40px] px-4 bg-[#1a1d29] rounded-lg border border-white/10 flex items-center overflow-hidden cursor-default"
           title={previewDisplay}
+          style={{ height: '40px', minHeight: '40px', maxHeight: '40px' }}
         >
-          <span className={`text-xs ${previewStyle} truncate block w-full`}>
+          <span className={`text-xs ${previewStyle} truncate block w-full leading-tight`}>
             {previewDisplay}
           </span>
         </div>
