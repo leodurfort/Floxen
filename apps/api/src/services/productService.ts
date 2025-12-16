@@ -5,14 +5,36 @@ import { logger } from '../lib/logger';
 
 export async function listProducts(shopId: string, page = 1, limit = 20) {
   const skip = (page - 1) * limit;
+
+  // Get all product IDs that are used as parent IDs (these are parent variable products)
+  const parentProductIds = await prisma.product.findMany({
+    where: {
+      shopId,
+      wooParentId: { not: null },
+    },
+    select: { wooParentId: true },
+    distinct: ['wooParentId'],
+  });
+
+  const parentIds = parentProductIds.map(p => p.wooParentId).filter((id): id is number => id !== null);
+
+  // Exclude products that are parent variable products (have children)
   const [items, total] = await Promise.all([
     prisma.product.findMany({
-      where: { shopId },
+      where: {
+        shopId,
+        wooProductId: { notIn: parentIds },
+      },
       skip,
       take: limit,
       orderBy: { updatedAt: 'desc' },
     }),
-    prisma.product.count({ where: { shopId } }),
+    prisma.product.count({
+      where: {
+        shopId,
+        wooProductId: { notIn: parentIds },
+      },
+    }),
   ]);
 
   return {
