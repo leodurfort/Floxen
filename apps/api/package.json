@@ -1,6 +1,6 @@
 {
   "name": "@productsynch/api",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "ProductSynch API service (Express + TypeScript)",
   "author": "ProductSynch",
