@@ -1,6 +1,6 @@
 {
   "name": "@productsynch/web",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "ProductSynch dashboard (Next.js, App Router)",
   "scripts": {
