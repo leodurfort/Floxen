@@ -18,6 +18,7 @@
     "build:shared": "npm --workspace packages/shared run build",
     "build:api": "npm --workspace apps/api run build",
     "build:web": "npm --workspace apps/web run build",
+    "migrate:deploy": "cd apps/api && npx prisma migrate deploy",
     "lint": "npm --workspaces run lint",
     "format": "npm --workspaces run format",
     "test": "npm --workspaces run test"
