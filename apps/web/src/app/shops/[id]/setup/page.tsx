@@ -78,15 +78,45 @@ export default function SetupPage() {
   async function loadProductWooData(productId: string) {
     if (!accessToken) return;
     setLoadingPreview(true);
+
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${productId}/woo-data`;
+    console.log('[Setup] Loading product WooCommerce data:', {
+      url,
+      productId,
+      shopId: params.id,
+    });
+
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${productId}/woo-data`, {
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!res.ok) throw new Error('Failed to load product WooCommerce data');
+
+      console.log('[Setup] Response status:', res.status, res.statusText);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('[Setup] API error response:', errorText);
+        throw new Error(`Failed to load product WooCommerce data: ${res.status} ${errorText}`);
+      }
+
       const data = await res.json();
+      console.log('[Setup] Received WooCommerce data:', {
+        hasWooData: !!data.wooData,
+        wooDataKeys: data.wooData ? Object.keys(data.wooData).slice(0, 10) : [],
+        sampleData: data.wooData ? {
+          id: data.wooData.id,
+          name: data.wooData.name,
+          price: data.wooData.price,
+        } : null,
+      });
+
       setPreviewProductJson(data.wooData);
     } catch (err) {
-      console.error('[Setup] Failed to load product WooCommerce data', err);
+      console.error('[Setup] Failed to load product WooCommerce data:', {
+        error: err,
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       setPreviewProductJson(null);
     } finally {
       setLoadingPreview(false);
@@ -101,6 +131,15 @@ export default function SetupPage() {
       setPreviewProductJson(null);
     }
   }, [selectedProductId, accessToken]);
+
+  // Debug: Log when preview data changes
+  useEffect(() => {
+    console.log('[Setup] Preview data state changed:', {
+      hasData: !!previewProductJson,
+      dataKeys: previewProductJson ? Object.keys(previewProductJson).slice(0, 15) : [],
+      selectedProductId,
+    });
+  }, [previewProductJson, selectedProductId]);
 
   async function handleMappingChange(attribute: string, wooField: string) {
     // Optimistic update

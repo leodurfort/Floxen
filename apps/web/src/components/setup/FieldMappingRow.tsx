@@ -25,6 +25,21 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     : null;
   const formattedValue = formatFieldValue(previewValue);
 
+  // Debug logging for first row only to avoid spam
+  if (spec.attribute === 'id') {
+    console.log('[FieldMappingRow] Debug info:', {
+      attribute: spec.attribute,
+      currentMapping,
+      hasPreviewData: !!previewProductJson,
+      previewValue,
+      formattedValue,
+      previewDataSample: previewProductJson ? {
+        id: previewProductJson.id,
+        name: previewProductJson.name,
+      } : null,
+    });
+  }
+
   return (
     <div className="grid grid-cols-3 gap-6 py-4 border-b border-white/5 hover:bg-white/[0.02]">
       {/* Column 1: OpenAI Field Info */}
