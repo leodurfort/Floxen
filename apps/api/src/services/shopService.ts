@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import { encrypt } from '../lib/encryption';
 import { env } from '../config/env';
 import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
+import { createWooClient, fetchStoreSettings } from './wooClient';
 
 export async function listShopsByUser(userId: string) {
   return prisma.shop.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
@@ -10,20 +11,18 @@ export async function listShopsByUser(userId: string) {
 export async function createShop(params: {
   userId: string;
   storeUrl: string;
-  shopName?: string;
-  shopCurrency?: string;
   consumerKey?: string;
   consumerSecret?: string;
 }) {
-  const { userId, storeUrl, shopName, shopCurrency, consumerKey, consumerSecret } = params;
+  const { userId, storeUrl, consumerKey, consumerSecret } = params;
   return prisma.shop.create({
     data: {
       userId,
       wooStoreUrl: storeUrl,
       wooConsumerKey: consumerKey ? encrypt(consumerKey) : null,
       wooConsumerSecret: consumerSecret ? encrypt(consumerSecret) : null,
-      shopName: shopName || new URL(storeUrl).hostname,
-      shopCurrency: shopCurrency || 'USD',
+      shopName: null, // Will be populated after OAuth from WooCommerce API
+      shopCurrency: null, // Will be populated after OAuth from WooCommerce API
     },
   });
 }
@@ -119,6 +118,20 @@ export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string
 }
 
 export async function setWooCredentials(shopId: string, consumerKey: string, consumerSecret: string) {
+  const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+  if (!shop) throw new Error('Shop not found');
+
+  // Create WooCommerce client with new credentials
+  const wooClient = createWooClient({
+    storeUrl: shop.wooStoreUrl,
+    consumerKey: consumerKey,
+    consumerSecret: consumerSecret,
+  });
+
+  // Fetch store settings from WooCommerce API
+  const settings = await fetchStoreSettings(wooClient);
+
+  // Update shop with credentials and fetched settings
   return prisma.shop.update({
     where: { id: shopId },
     data: {
@@ -126,6 +139,8 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
       wooConsumerSecret: encrypt(consumerSecret),
       isConnected: true,
       syncStatus: 'PENDING',
+      shopName: settings?.shopName || shop.shopName,
+      shopCurrency: settings?.shopCurrency || shop.shopCurrency,
       updatedAt: new Date(),
     },
   });
