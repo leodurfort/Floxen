@@ -66,6 +66,21 @@ export async function fetchStoreCurrency(api: WooCommerceRestApi) {
   }
 }
 
+export async function fetchSingleProduct(api: WooCommerceRestApi, productId: number) {
+  logger.info('woo:fetch single product start', { productId: String(productId) });
+  try {
+    const response = await api.get(`products/${productId}`);
+    logger.info('woo:fetch single product complete', { productId: String(productId) });
+    return response.data;
+  } catch (err) {
+    logger.error('woo:fetch single product failed', {
+      productId: String(productId),
+      error: err instanceof Error ? err : new Error(String(err))
+    });
+    throw err;
+  }
+}
+
 export async function fetchProductVariations(api: WooCommerceRestApi, parentId: number) {
   logger.info('woo:fetch variations start', { parentId });
   const all: any[] = [];

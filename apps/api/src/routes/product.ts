@@ -3,6 +3,7 @@ import {
   bulkAction,
   getProduct,
   getProductEnrichmentData,
+  getProductWooData,
   getResolvedValues,
   listProducts,
   previewFeed,
@@ -18,6 +19,7 @@ const router = Router({ mergeParams: true });
 
 router.get('/', requireAuth, listProducts);
 router.get('/:pid', requireAuth, getProduct);
+router.get('/:pid/woo-data', requireAuth, getProductWooData);
 router.patch('/:pid', requireAuth, updateProduct);
 router.post('/:pid/enrich', requireAuth, triggerEnrichment);
 router.get('/:pid/preview-feed', requireAuth, previewFeed);

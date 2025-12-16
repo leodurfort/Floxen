@@ -96,6 +96,54 @@ export function getProduct(req: Request, res: Response) {
     });
 }
 
+export async function getProductWooData(req: Request, res: Response) {
+  const { id, pid } = req.params;
+
+  try {
+    // Import here to avoid circular dependencies
+    const { getShop } = await import('../services/shopService');
+    const { createWooClient, fetchSingleProduct } = await import('../services/wooClient');
+
+    // Get the product to find wooProductId
+    const product = await getProductRecord(id, pid);
+    if (!product) {
+      logger.warn('Product not found for woo data fetch', { shopId: id, productId: pid });
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Get the shop to create WooCommerce client
+    const shop = await getShop(id);
+    if (!shop || !shop.isConnected) {
+      logger.warn('Shop not connected for woo data fetch', { shopId: id });
+      return res.status(400).json({ error: 'Shop not connected to WooCommerce' });
+    }
+
+    // Fetch fresh data from WooCommerce API
+    const wooClient = createWooClient({
+      storeUrl: shop.wooStoreUrl,
+      consumerKey: shop.wooConsumerKey!,
+      consumerSecret: shop.wooConsumerSecret!,
+    });
+
+    const wooData = await fetchSingleProduct(wooClient, product.wooProductId);
+
+    logger.info('Product WooCommerce data fetched successfully', {
+      shopId: id,
+      productId: pid,
+      wooProductId: product.wooProductId,
+    });
+
+    return res.json({ wooData });
+  } catch (err: any) {
+    logger.error('Failed to fetch product WooCommerce data', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      shopId: id,
+      productId: pid,
+    });
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to fetch product data' });
+  }
+}
+
 export function updateProduct(req: Request, res: Response) {
   const { id, pid } = req.params;
   const parse = updateProductSchema.safeParse(req.body);
