@@ -61,7 +61,7 @@ export async function fetchStoreCurrency(api: WooCommerceRestApi) {
     logger.info('woo:fetch currency', { value });
     return typeof value === 'string' ? value : null;
   } catch (err) {
-    logger.warn('woo:fetch currency failed', err);
+    logger.warn('woo:fetch currency failed', { error: err instanceof Error ? err : new Error(String(err)) });
     return null;
   }
 }

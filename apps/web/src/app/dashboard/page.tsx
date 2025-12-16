@@ -62,6 +62,7 @@ export default function DashboardPage() {
   if (!accessToken || !user) return null;
 
   const connectedShops = shops.filter((s) => s.isConnected);
+  const totalProducts = 0; // TODO: Fetch total products count from API
 
   return (
     <div className="p-8">

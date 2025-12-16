@@ -151,7 +151,7 @@ export async function productSyncProcessor(job: Job) {
       data: { syncStatus: 'COMPLETED', lastSyncAt: new Date() },
     });
   } catch (err) {
-    logger.error(`product-sync failed for shop ${shopId}`, err);
+    logger.error(`product-sync failed for shop ${shopId}`, { error: err instanceof Error ? err : new Error(String(err)) });
     await prisma.shop.update({
       where: { id: shopId },
       data: { syncStatus: 'FAILED' },

@@ -14,7 +14,7 @@ export function createQueue(name: string) {
   }
   const queue = new Queue(name, { connection: redisConnection });
   const events = new QueueEvents(name, { connection: redisConnection });
-  events.on('error', (err) => logger.error(`QueueEvents error (${name})`, err));
+  events.on('error', (err) => logger.error(`QueueEvents error (${name})`, { error: err instanceof Error ? err : new Error(String(err)) }));
   return { queue, events };
 }
 
@@ -27,7 +27,7 @@ export function createWorker<T = any>(
     return null;
   }
   const worker = new Worker(name, processor, { connection: redisConnection });
-  worker.on('failed', (job, err) => logger.error(`Job failed (${name}:${job?.id})`, err));
+  worker.on('failed', (job, err) => logger.error(`Job failed (${name}:${job?.id})`, { error: err instanceof Error ? err : new Error(String(err)) }));
   return worker;
 }
 

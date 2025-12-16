@@ -53,7 +53,7 @@ export function listProducts(req: Request, res: Response) {
         page,
         limit,
         count: result.products.length,
-        total: result.total
+        total: result.pagination.total
       });
       res.json(result);
     })
@@ -81,7 +81,7 @@ export function getProduct(req: Request, res: Response) {
         shopId: id,
         productId: pid,
         status: product.status,
-        aiStatus: product.aiStatus
+        aiEnriched: product.aiEnriched
       });
       return res.json({ product });
     })

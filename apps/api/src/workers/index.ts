@@ -35,7 +35,7 @@ if (redisConnection) {
   });
 
   syncWorker.on('failed', (job, err) => {
-    logger.error(`Job failed: ${job?.name} (${job?.id})`, err);
+    logger.error(`Job failed: ${job?.name} (${job?.id})`, { error: err instanceof Error ? err : new Error(String(err)) });
   });
 
   logger.info('Workers initialized and listening for jobs');
