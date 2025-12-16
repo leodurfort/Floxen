@@ -40,7 +40,7 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border border-white/10 transition-colors flex items-center justify-between"
+        className="w-[500px] px-4 py-2 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border border-white/10 transition-colors flex items-center justify-between"
       >
         <span className="text-sm text-white truncate">
           {selectedField ? selectedField.label : 'Select WooCommerce field...'}
@@ -52,7 +52,7 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-96 overflow-hidden flex flex-col">
+        <div className="absolute z-50 top-full left-0 w-[500px] mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[320px] overflow-hidden flex flex-col">
           {/* Search Bar */}
           <div className="p-3 border-b border-white/10">
             <input
