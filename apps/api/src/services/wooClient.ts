@@ -65,3 +65,31 @@ export async function fetchStoreCurrency(api: WooCommerceRestApi) {
     return null;
   }
 }
+
+export async function fetchProductVariations(api: WooCommerceRestApi, parentId: number) {
+  logger.info('woo:fetch variations start', { parentId });
+  const all: any[] = [];
+  let page = 1;
+  const perPage = 100;
+
+  try {
+    while (true) {
+      const response = await api.get(`products/${parentId}/variations`, {
+        page,
+        per_page: perPage
+      });
+      all.push(...response.data);
+      const totalPages = parseInt(response.headers['x-wp-totalpages'] || '1', 10);
+      if (page >= totalPages) break;
+      page += 1;
+    }
+    logger.info('woo:fetch variations complete', { parentId, count: all.length });
+    return all;
+  } catch (err) {
+    logger.error('woo:fetch variations failed', {
+      parentId,
+      error: err instanceof Error ? err : new Error(String(err))
+    });
+    return [];
+  }
+}
