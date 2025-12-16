@@ -1,3 +1,18 @@
+/**
+ * ⚠️ DEVELOPMENT/TESTING ONLY - DO NOT USE IN PRODUCTION ⚠️
+ *
+ * This is an in-memory mock data store for local development and testing.
+ * It provides demo users, shops, and products without requiring a database.
+ *
+ * LIMITATIONS:
+ * - Data is stored in memory and resets on server restart
+ * - Not thread-safe or scalable
+ * - No persistence across deployments
+ * - Should be replaced with real Prisma database calls in production
+ *
+ * TODO: Remove all references to mockStore and use Prisma exclusively
+ */
+
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import {
