@@ -176,7 +176,7 @@ export async function getProductWooData(req: Request, res: Response) {
           shopId: id,
           productId: pid,
           wooParentId: product.wooParentId,
-          error: parentErr,
+          error: parentErr instanceof Error ? parentErr : new Error(String(parentErr)),
         });
         // Continue without parent description
       }
