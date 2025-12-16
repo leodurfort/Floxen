@@ -147,7 +147,40 @@ export async function getProductWooData(req: Request, res: Response) {
       consumerSecret: shop.wooConsumerSecret!,
     });
 
-    const wooData = await fetchSingleProduct(wooClient, product.wooProductId);
+    let wooData = await fetchSingleProduct(wooClient, product.wooProductId);
+
+    // For variation products, inherit description from parent if missing
+    if (product.wooParentId && (!wooData.description || wooData.description.trim() === '')) {
+      logger.info('Fetching parent product description for variation', {
+        shopId: id,
+        productId: pid,
+        wooProductId: product.wooProductId,
+        wooParentId: product.wooParentId,
+      });
+
+      try {
+        const parentData = await fetchSingleProduct(wooClient, product.wooParentId);
+        if (parentData.description) {
+          wooData = {
+            ...wooData,
+            description: parentData.description,
+          };
+          logger.info('Inherited description from parent product', {
+            shopId: id,
+            productId: pid,
+            wooParentId: product.wooParentId,
+          });
+        }
+      } catch (parentErr) {
+        logger.warn('Failed to fetch parent product description', {
+          shopId: id,
+          productId: pid,
+          wooParentId: product.wooParentId,
+          error: parentErr,
+        });
+        // Continue without parent description
+      }
+    }
 
     logger.info('Product WooCommerce data fetched successfully', {
       shopId: id,
