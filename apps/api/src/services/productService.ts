@@ -129,6 +129,44 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
       : parent.dimensions?.height || ''
   };
 
+  // Price: use variation price if provided, otherwise fallback to parent
+  const price = variation.price ? variation.price : parent.price || '';
+  const regularPrice = variation.regular_price ? variation.regular_price : parent.regular_price || '';
+  const salePrice = variation.sale_price ? variation.sale_price : parent.sale_price || '';
+
+  // Build attributes array with color and size from variation attributes
+  const mergedAttributes = [...(parent.attributes || [])];
+
+  // Add color attribute if found in variation
+  if (varAttrs.color || varAttrs.colour) {
+    mergedAttributes.push({
+      id: 0,
+      name: 'Color',
+      option: varAttrs.color || varAttrs.colour
+    });
+  }
+
+  // Add size attribute if found in variation
+  if (varAttrs.size) {
+    mergedAttributes.push({
+      id: 0,
+      name: 'Size',
+      option: varAttrs.size
+    });
+  }
+
+  // Material: inherit from parent if variation doesn't have it
+  const parentMaterial = parent.attributes?.find((attr: any) =>
+    attr.name.toLowerCase() === 'material'
+  );
+  const variationMaterial = variation.attributes?.find((attr: any) =>
+    attr.name.toLowerCase() === 'material'
+  );
+
+  if (parentMaterial && !variationMaterial) {
+    mergedAttributes.push(parentMaterial);
+  }
+
   // Create merged product object
   const merged = {
     id: variation.id,
@@ -137,27 +175,25 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
     description: parent.description || '', // Inherit from parent
     sku: variation.sku || '', // Variation's own SKU
     permalink: variation.permalink || parent.permalink, // Variation's own permalink
-    price: variation.price || '', // Variation's own price
-    regular_price: variation.regular_price || '',
-    sale_price: variation.sale_price || '',
-    date_on_sale_from: variation.date_on_sale_from || null,
-    date_on_sale_to: variation.date_on_sale_to || null,
+    price: price, // Variation price or parent fallback
+    regular_price: regularPrice,
+    sale_price: salePrice,
+    date_on_sale_from: variation.date_on_sale_from || parent.date_on_sale_from || null,
+    date_on_sale_to: variation.date_on_sale_to || parent.date_on_sale_to || null,
     stock_status: variation.stock_status || '', // Variation's own stock status
     stock_quantity: variation.stock_quantity !== null ? variation.stock_quantity : null,
-    manage_stock: variation.manage_stock || false,
+    manage_stock: variation.manage_stock || parent.manage_stock || false,
     weight: weight || '',
     dimensions: dimensions,
     shipping_class: parent.shipping_class || '',
     shipping_class_id: parent.shipping_class_id || 0,
     images: mergedImages,
-    attributes: variation.attributes || [],
+    attributes: mergedAttributes, // Merged attributes including color/size
     categories: parent.categories || [], // Inherit from parent
     tags: parent.tags || [], // Inherit from parent
-    meta_data: variation.meta_data || [],
+    brands: parent.brands || [], // Inherit brand from parent
+    meta_data: [...(parent.meta_data || []), ...(variation.meta_data || [])], // Merge meta_data
     date_modified: variation.date_modified || parent.date_modified,
-    // Store variation-specific attributes for color/size extraction
-    _variation_color: varAttrs.color || varAttrs.colour || '',
-    _variation_size: varAttrs.size || '',
   };
 
   return transformWooProduct(merged, shopCurrency);
