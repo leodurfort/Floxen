@@ -1,3 +1,6 @@
+[providers]
+prisma = false
+
 [phases.setup]
 nixPkgs = ["nodejs_20", "openssl"]
 
