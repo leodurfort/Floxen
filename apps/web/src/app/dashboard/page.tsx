@@ -62,7 +62,6 @@ export default function DashboardPage() {
   if (!accessToken || !user) return null;
 
   const connectedShops = shops.filter((s) => s.isConnected);
-  const totalProducts = 0; // We'll calculate this from all shops later if needed
 
   return (
     <div className="p-8">

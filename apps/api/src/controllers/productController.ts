@@ -148,7 +148,7 @@ export function triggerEnrichment(req: Request, res: Response) {
         productId: pid,
         userId: (req as any).user?.id,
       });
-      return res.json({ product, message: 'Enrichment queued (stub)' });
+      return res.json({ product, message: 'Enrichment queued' });
     })
     .catch((err) => {
       logger.error('Failed to queue product enrichment', {

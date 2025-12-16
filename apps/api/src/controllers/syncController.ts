@@ -4,7 +4,9 @@ import { SyncStatus } from '@prisma/client';
 import { syncQueue } from '../lib/redis';
 import { logger } from '../lib/logger';
 
-const history = [
+// TODO: REMOVE - Temporary mock data for development
+// Replace with actual sync history from database (SyncBatch model)
+const MOCK_SYNC_HISTORY = [
   {
     id: 'batch_1',
     status: 'COMPLETED',
@@ -44,7 +46,7 @@ export function getSyncStatus(req: Request, res: Response) {
         shopId: shop.id,
         status: shop.syncStatus,
         lastSyncAt: shop.lastSyncAt,
-        queuedBatches: history.length,
+        queuedBatches: MOCK_SYNC_HISTORY.length, // TODO: Replace with actual count
       });
     })
     .catch((err) => {
@@ -54,7 +56,8 @@ export function getSyncStatus(req: Request, res: Response) {
 }
 
 export function getSyncHistory(_req: Request, res: Response) {
-  return res.json({ history });
+  // TODO: Replace with actual database query for sync history
+  return res.json({ history: MOCK_SYNC_HISTORY });
 }
 
 export function pushFeed(req: Request, res: Response) {
