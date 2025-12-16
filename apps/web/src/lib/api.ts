@@ -254,3 +254,33 @@ export async function updateOpenAIField(
     body: JSON.stringify({ field, value }),
   });
 }
+
+/**
+ * Get field mappings for a shop
+ */
+export async function getFieldMappings(shopId: string, token: string) {
+  return request<{ mappings: Record<string, string> }>(
+    `/api/v1/shops/${shopId}/field-mappings`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+/**
+ * Update field mappings for a shop
+ */
+export async function updateFieldMappings(
+  shopId: string,
+  mappings: Record<string, string>,
+  token: string
+) {
+  return request<{ shop: Shop }>(
+    `/api/v1/shops/${shopId}/field-mappings`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ mappings }),
+    }
+  );
+}

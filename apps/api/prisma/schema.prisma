@@ -85,6 +85,7 @@ model Shop {
   sellerTos         String?    @map("seller_tos")
   returnPolicy      String?    @map("return_policy")
   returnWindow      Int?       @map("return_window")
+  fieldMappings     Json?      @map("field_mappings")
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
 

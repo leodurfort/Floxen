@@ -36,7 +36,23 @@ export class AutoFillService {
    * Fill a single field based on its mapping spec
    */
   private fillField(spec: OpenAIFieldSpec, wooProduct: any): any {
-    const mapping = spec.wooCommerceMapping;
+    // Check for custom mapping first
+    const customMappings = this.shop.fieldMappings as Record<string, string> | null;
+    let mapping = spec.wooCommerceMapping;
+
+    // Override with custom mapping if exists
+    if (customMappings && customMappings[spec.attribute]) {
+      const customPath = customMappings[spec.attribute];
+
+      // Handle shop-level fields (prefixed with "shop.")
+      if (customPath.startsWith('shop.')) {
+        const shopField = customPath.replace('shop.', '');
+        return this.shop[shopField as keyof Shop] || null;
+      }
+
+      // Handle product-level fields - create a temporary mapping object
+      mapping = { field: customPath };
+    }
 
     // No mapping = null (user must provide manually or skip)
     if (!mapping) return null;

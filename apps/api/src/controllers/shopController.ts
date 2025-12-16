@@ -10,6 +10,7 @@ import {
   listShopsByUser,
   setWooCredentials,
   updateShop as updateShopRecord,
+  getDefaultMappings,
 } from '../services/shopService';
 import { productSyncQueue } from '../jobs';
 import { logger } from '../lib/logger';
@@ -191,5 +192,61 @@ export function configureOpenAI(req: Request, res: Response) {
     .catch((err) => {
       logger.error('shops:configure openai error', err);
       res.status(500).json({ error: err.message });
+    });
+}
+
+export function getFieldMappings(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  const { id } = req.params;
+
+  getShopRecord(id)
+    .then((shop) => {
+      if (!shop) return res.status(404).json({ error: 'Shop not found' });
+
+      // Verify ownership
+      if (shop.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      // Return custom mappings or generate defaults
+      const mappings = shop.fieldMappings || getDefaultMappings();
+
+      logger.info('shops:field-mappings:get', { shopId: id, userId });
+      return res.json({ mappings });
+    })
+    .catch((err) => {
+      logger.error('shops:field-mappings:get error', err);
+      return res.status(500).json({ error: err.message });
+    });
+}
+
+export function updateFieldMappings(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  const { id } = req.params;
+
+  getShopRecord(id)
+    .then((shop) => {
+      if (!shop) return res.status(404).json({ error: 'Shop not found' });
+
+      // Verify ownership
+      if (shop.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      // Validate: req.body should be { mappings: Record<string, string> }
+      const { mappings } = req.body;
+
+      // Update shop with new mappings
+      return updateShopRecord(id, {
+        fieldMappings: mappings
+      });
+    })
+    .then((shop) => {
+      logger.info('shops:field-mappings:update', { shopId: id, userId });
+      return res.json({ shop });
+    })
+    .catch((err) => {
+      logger.error('shops:field-mappings:update error', err);
+      return res.status(500).json({ error: err.message });
     });
 }

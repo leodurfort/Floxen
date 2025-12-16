@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { encrypt } from '../lib/encryption';
 import { env } from '../config/env';
+import { OPENAI_FEED_SPEC } from '../config/openai-feed-spec';
 
 export async function listShopsByUser(userId: string) {
   return prisma.shop.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
@@ -128,4 +129,29 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
       updatedAt: new Date(),
     },
   });
+}
+
+/**
+ * Generate default field mappings from OpenAI feed spec
+ * Returns a mapping of openai_attribute -> woocommerce_field_path
+ */
+export function getDefaultMappings(): Record<string, string> {
+  const mappings: Record<string, string> = {};
+
+  for (const spec of OPENAI_FEED_SPEC) {
+    const mapping = spec.wooCommerceMapping;
+
+    if (!mapping) continue;
+
+    // Shop-level fields get special "shop." prefix
+    if (mapping.shopField) {
+      mappings[spec.attribute] = `shop.${mapping.shopField}`;
+    }
+    // Product-level fields use the field path directly
+    else if (mapping.field) {
+      mappings[spec.attribute] = mapping.field;
+    }
+  }
+
+  return mappings;
 }
