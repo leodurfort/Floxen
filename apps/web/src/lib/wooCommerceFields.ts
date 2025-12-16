@@ -109,3 +109,85 @@ export function searchWooFields(query: string): WooCommerceField[] {
 export function getWooField(value: string): WooCommerceField | undefined {
   return WOO_COMMERCE_FIELDS.find((f) => f.value === value);
 }
+
+/**
+ * Extract field value from WooCommerce product raw JSON
+ * Handles nested paths like "images[0].src", "meta_data._gtin", "dimensions.length"
+ */
+export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
+  if (!wooRawJson || !fieldPath) return null;
+
+  // Handle shop-level fields (these won't be in wooRawJson)
+  if (fieldPath.startsWith('shop.')) {
+    return null; // Shop fields are not in product data
+  }
+
+  try {
+    // Handle meta_data special case
+    if (fieldPath.startsWith('meta_data.')) {
+      const metaKey = fieldPath.replace('meta_data.', '');
+      const metaData = wooRawJson.meta_data || [];
+      const metaItem = metaData.find((m: any) => m.key === metaKey);
+      return metaItem?.value || null;
+    }
+
+    // Handle array indexing like "images[0].src"
+    const parts = fieldPath.split('.');
+    let current = wooRawJson;
+
+    for (const part of parts) {
+      if (!current) return null;
+
+      // Handle array index notation: "images[0]"
+      const arrayMatch = part.match(/^([^\[]+)\[(\d+)\]$/);
+      if (arrayMatch) {
+        const [, arrayName, index] = arrayMatch;
+        current = current[arrayName]?.[parseInt(index)];
+      } else {
+        current = current[part];
+      }
+    }
+
+    return current !== undefined ? current : null;
+  } catch (err) {
+    console.error('[extractFieldValue] Error extracting field', { fieldPath, err });
+    return null;
+  }
+}
+
+/**
+ * Format a field value for display
+ * Handles complex types (arrays, objects) and primitives
+ */
+export function formatFieldValue(value: any): string {
+  if (value === null || value === undefined) {
+    return '-';
+  }
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    // If array is empty
+    if (value.length === 0) return '[]';
+
+    // If array of simple values
+    if (typeof value[0] !== 'object') {
+      return value.join(', ');
+    }
+
+    // If array of objects, show JSON
+    return JSON.stringify(value, null, 2);
+  }
+
+  // Handle objects
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2);
+  }
+
+  // Handle booleans
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+
+  // Handle primitives
+  return String(value);
+}

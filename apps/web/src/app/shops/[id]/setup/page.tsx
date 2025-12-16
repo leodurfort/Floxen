@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { OPENAI_FEED_SPEC, CATEGORY_CONFIG } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product } from '@productsynch/shared';
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
+import { ProductSelector } from '@/components/setup/ProductSelector';
 
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
@@ -12,6 +13,8 @@ export default function SetupPage() {
   const { accessToken, hydrate, hydrated } = useAuth();
 
   const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
@@ -28,10 +31,11 @@ export default function SetupPage() {
     }
   }, [hydrated, accessToken, router]);
 
-  // Load mappings on mount
+  // Load mappings and products on mount
   useEffect(() => {
     if (!accessToken || !params.id) return;
     loadMappings();
+    loadProducts();
   }, [accessToken, params.id]);
 
   async function loadMappings() {
@@ -48,6 +52,24 @@ export default function SetupPage() {
       console.error('[Setup] Failed to load mappings', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadProducts() {
+    if (!accessToken) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) throw new Error('Failed to load products');
+      const data = await res.json();
+      setProducts(data.products || []);
+      // Auto-select first product if available
+      if (data.products && data.products.length > 0) {
+        setSelectedProductId(data.products[0].id);
+      }
+    } catch (err) {
+      console.error('[Setup] Failed to load products', err);
     }
   }
 
@@ -96,6 +118,10 @@ export default function SetupPage() {
     .filter((cat) => cat.fields.length > 0)
     .sort((a, b) => a.order - b.order);
 
+  // Get selected product's raw JSON
+  const selectedProduct = products.find((p) => p.id === selectedProductId);
+  const previewProductJson = selectedProduct?.wooRawJson || null;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -132,6 +158,24 @@ export default function SetupPage() {
             />
           </div>
 
+          {/* Column Headers */}
+          <div className="grid grid-cols-3 gap-6 mb-6 pb-4 border-b border-white/20">
+            <div className="text-sm font-semibold text-white/80">
+              OpenAI Attribute
+            </div>
+            <div className="text-sm font-semibold text-white/80">
+              WooCommerce Field
+            </div>
+            <div className="text-sm font-semibold text-white/80">
+              <div className="mb-2">Preview Data</div>
+              <ProductSelector
+                products={products}
+                value={selectedProductId}
+                onChange={setSelectedProductId}
+              />
+            </div>
+          </div>
+
           {/* Field Mappings - One Continuous List */}
           <div>
             {categories.map((category) => (
@@ -150,6 +194,7 @@ export default function SetupPage() {
                       spec={spec}
                       currentMapping={mappings[spec.attribute] || null}
                       onMappingChange={handleMappingChange}
+                      previewProductJson={previewProductJson}
                     />
                   ))}
                 </div>
