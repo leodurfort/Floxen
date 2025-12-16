@@ -9,9 +9,40 @@ import { Shop } from '@prisma/client';
 import { OPENAI_FEED_SPEC, OpenAIFieldSpec } from '../config/openai-feed-spec';
 import { TRANSFORMS, extractNestedValue, extractAttributeValue, extractMetaValue } from './woocommerce/transforms';
 import { logger } from '../lib/logger';
+import { prisma } from '../lib/prisma';
 
 export class AutoFillService {
-  constructor(private shop: Shop) {}
+  private customMappings: Record<string, string> = {};
+
+  constructor(private shop: Shop, customMappings?: Record<string, string>) {
+    // Accept custom mappings as parameter (for backward compatibility)
+    // or use the legacy fieldMappings JSON field
+    this.customMappings = customMappings || (shop.fieldMappings as Record<string, string>) || {};
+  }
+
+  /**
+   * Factory method to create AutoFillService with field mappings loaded from database
+   */
+  static async create(shop: Shop): Promise<AutoFillService> {
+    // Load field mappings from database
+    const fieldMappings = await prisma.fieldMapping.findMany({
+      where: { shopId: shop.id },
+      include: {
+        openaiField: true,
+        wooField: true,
+      },
+    });
+
+    // Convert to Record<string, string> format
+    const customMappings: Record<string, string> = {};
+    for (const mapping of fieldMappings) {
+      if (mapping.wooField) {
+        customMappings[mapping.openaiField.attribute] = mapping.wooField.value;
+      }
+    }
+
+    return new AutoFillService(shop, customMappings);
+  }
 
   /**
    * Auto-fill all OpenAI attributes from WooCommerce product data
@@ -37,7 +68,7 @@ export class AutoFillService {
    */
   private fillField(spec: OpenAIFieldSpec, wooProduct: any): any {
     // Check for custom mapping first
-    const customMappings = this.shop.fieldMappings as Record<string, string> | null;
+    const customMappings = this.customMappings;
     let mapping = spec.wooCommerceMapping;
 
     // Override with custom mapping if exists
