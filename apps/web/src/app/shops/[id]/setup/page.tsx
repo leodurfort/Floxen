@@ -15,6 +15,8 @@ export default function SetupPage() {
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [previewProductJson, setPreviewProductJson] = useState<any | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
@@ -73,6 +75,33 @@ export default function SetupPage() {
     }
   }
 
+  async function loadProductWooData(productId: string) {
+    if (!accessToken) return;
+    setLoadingPreview(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${productId}/woo-data`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) throw new Error('Failed to load product WooCommerce data');
+      const data = await res.json();
+      setPreviewProductJson(data.wooData);
+    } catch (err) {
+      console.error('[Setup] Failed to load product WooCommerce data', err);
+      setPreviewProductJson(null);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  // Load WooCommerce data when selected product changes
+  useEffect(() => {
+    if (selectedProductId && accessToken) {
+      loadProductWooData(selectedProductId);
+    } else {
+      setPreviewProductJson(null);
+    }
+  }, [selectedProductId, accessToken]);
+
   async function handleMappingChange(attribute: string, wooField: string) {
     // Optimistic update
     const newMappings = { ...mappings, [attribute]: wooField };
@@ -117,10 +146,6 @@ export default function SetupPage() {
     }))
     .filter((cat) => cat.fields.length > 0)
     .sort((a, b) => a.order - b.order);
-
-  // Get selected product's raw JSON
-  const selectedProduct = products.find((p) => p.id === selectedProductId);
-  const previewProductJson = selectedProduct?.wooRawJson || null;
 
   if (loading) {
     return (
@@ -167,7 +192,12 @@ export default function SetupPage() {
               WooCommerce Field
             </div>
             <div className="text-sm font-semibold text-white/80">
-              <div className="mb-2">Preview Data</div>
+              <div className="mb-2 flex items-center gap-2">
+                Preview Data
+                {loadingPreview && (
+                  <span className="text-xs text-[#5df0c0]">Loading...</span>
+                )}
+              </div>
               <ProductSelector
                 products={products}
                 value={selectedProductId}
