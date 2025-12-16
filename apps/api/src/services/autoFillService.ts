@@ -8,6 +8,7 @@
 import { Shop } from '@prisma/client';
 import { OPENAI_FEED_SPEC, OpenAIFieldSpec } from '../config/openai-feed-spec';
 import { TRANSFORMS, extractNestedValue, extractAttributeValue, extractMetaValue } from './woocommerce/transforms';
+import { logger } from '../lib/logger';
 
 export class AutoFillService {
   constructor(private shop: Shop) {}
@@ -66,7 +67,14 @@ export class AutoFillService {
           // Run transform even if value is null (for default value transforms)
           value = transformFn(value, wooProduct, this.shop);
         } catch (error) {
-          console.error(`Transform error for ${spec.attribute}:`, error);
+          logger.error('Transform function failed during auto-fill', {
+            error: error as Error,
+            attribute: spec.attribute,
+            transform: mapping.transform,
+            shopId: this.shop.id,
+            productId: wooProduct?.id,
+            inputValue: value,
+          });
           value = null;
         }
       }
