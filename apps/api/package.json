@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "ProductSynch API service (Express + TypeScript)",
+  "author": "ProductSynch",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "scripts": {
