@@ -111,12 +111,34 @@ export async function getProductWooData(req: Request, res: Response) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
+    // Validate wooProductId exists
+    if (!product.wooProductId) {
+      logger.warn('Product missing wooProductId', {
+        shopId: id,
+        productId: pid,
+        productData: {
+          id: product.id,
+          wooProductId: product.wooProductId,
+          status: product.status,
+        }
+      });
+      return res.status(400).json({ error: 'Product does not have a WooCommerce product ID' });
+    }
+
     // Get the shop to create WooCommerce client
     const shop = await getShop(id);
     if (!shop || !shop.isConnected) {
       logger.warn('Shop not connected for woo data fetch', { shopId: id });
       return res.status(400).json({ error: 'Shop not connected to WooCommerce' });
     }
+
+    // Log the WooCommerce request details
+    logger.info('Fetching WooCommerce data', {
+      shopId: id,
+      productId: pid,
+      wooProductId: product.wooProductId,
+      storeUrl: shop.wooStoreUrl,
+    });
 
     // Fetch fresh data from WooCommerce API
     const wooClient = createWooClient({
