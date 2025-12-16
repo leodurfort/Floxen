@@ -220,33 +220,34 @@ export function getFieldMappings(req: Request, res: Response) {
     });
 }
 
-export function updateFieldMappings(req: Request, res: Response) {
+export async function updateFieldMappings(req: Request, res: Response) {
   const userId = userIdFromReq(req);
   const { id } = req.params;
 
-  getShopRecord(id)
-    .then((shop) => {
-      if (!shop) return res.status(404).json({ error: 'Shop not found' });
+  try {
+    const shop = await getShopRecord(id);
 
-      // Verify ownership
-      if (shop.userId !== userId) {
-        return res.status(403).json({ error: 'Forbidden' });
-      }
+    if (!shop) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
 
-      // Validate: req.body should be { mappings: Record<string, string> }
-      const { mappings } = req.body;
+    // Verify ownership
+    if (shop.userId !== userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
-      // Update shop with new mappings
-      return updateShopRecord(id, {
-        fieldMappings: mappings
-      });
-    })
-    .then((shop) => {
-      logger.info('shops:field-mappings:update', { shopId: id, userId });
-      return res.json({ shop });
-    })
-    .catch((err) => {
-      logger.error('shops:field-mappings:update error', err);
-      return res.status(500).json({ error: err.message });
+    // Validate: req.body should be { mappings: Record<string, string> }
+    const { mappings } = req.body;
+
+    // Update shop with new mappings
+    const updatedShop = await updateShopRecord(id, {
+      fieldMappings: mappings
     });
+
+    logger.info('shops:field-mappings:update', { shopId: id, userId });
+    return res.json({ shop: updatedShop });
+  } catch (err: any) {
+    logger.error('shops:field-mappings:update error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }

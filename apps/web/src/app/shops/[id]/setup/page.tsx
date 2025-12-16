@@ -86,10 +86,15 @@ export default function SetupPage() {
     : OPENAI_FEED_SPEC;
 
   // Group by category
-  const categories = CATEGORY_CONFIG.map((cat) => ({
-    ...cat,
-    fields: filteredSpecs.filter((spec) => spec.category === cat.id),
-  })).filter((cat) => cat.fields.length > 0);
+  const categories = Object.entries(CATEGORY_CONFIG)
+    .map(([id, config]) => ({
+      id: id as any,
+      label: config.label,
+      order: config.order,
+      fields: filteredSpecs.filter((spec) => spec.category === id),
+    }))
+    .filter((cat) => cat.fields.length > 0)
+    .sort((a, b) => a.order - b.order);
 
   if (loading) {
     return (
