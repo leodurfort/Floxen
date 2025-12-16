@@ -58,8 +58,10 @@ export function Sidebar() {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { href: selectedShop ? `/shops/${selectedShop.id}/setup` : '/dashboard', label: 'Setup', icon: '⚙️' },
-    { href: selectedShop ? `/shops/${selectedShop.id}/products` : '/dashboard', label: 'Products', icon: '📦' },
+    ...(selectedShop ? [
+      { href: `/shops/${selectedShop.id}/setup`, label: 'Setup', icon: '⚙️' },
+      { href: `/shops/${selectedShop.id}/products`, label: 'Products', icon: '📦' },
+    ] : []),
     { href: '/shops', label: 'Shops', icon: '🏪' },
     { href: '/settings', label: 'Settings', icon: '🔧' },
   ];

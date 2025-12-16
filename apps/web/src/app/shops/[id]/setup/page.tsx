@@ -132,18 +132,18 @@ export default function SetupPage() {
             />
           </div>
 
-          {/* Field Mappings by Category */}
-          <div className="space-y-8">
+          {/* Field Mappings - One Continuous List */}
+          <div>
             {categories.map((category) => (
-              <div key={category.id} className="bg-[#1a1d29] rounded-lg border border-white/10 overflow-hidden">
+              <div key={category.id} className="mb-8">
                 {/* Category Header */}
-                <div className="px-6 py-4 bg-white/5 border-b border-white/10">
+                <div className="mb-4">
                   <h2 className="text-xl font-semibold text-white">{category.label}</h2>
                   <p className="text-sm text-white/40 mt-1">{category.fields.length} fields</p>
                 </div>
 
                 {/* Field Rows */}
-                <div className="px-6">
+                <div>
                   {category.fields.map((spec) => (
                     <FieldMappingRow
                       key={spec.attribute}
