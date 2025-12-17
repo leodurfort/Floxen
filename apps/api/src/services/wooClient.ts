@@ -112,7 +112,7 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       });
     } catch (err) {
       logger.warn('woo:fetch system status failed, using defaults', {
-        error: err instanceof Error ? err.message : String(err),
+        error: err instanceof Error ? err : new Error(String(err)),
       });
     }
 
