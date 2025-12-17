@@ -185,7 +185,18 @@ export async function getProductWooData(req: Request, res: Response) {
       wooRawJson: wooData,
     };
 
-    return res.json({ wooData: normalizedData });
+    // Include shop data for previewing shop-level fields
+    const shopData = {
+      sellerName: shop.sellerName,
+      sellerUrl: shop.sellerUrl,
+      sellerPrivacyPolicy: shop.sellerPrivacyPolicy,
+      sellerTos: shop.sellerTos,
+      returnPolicy: shop.returnPolicy,
+      returnWindow: shop.returnWindow,
+      shopCurrency: shop.shopCurrency,
+    };
+
+    return res.json({ wooData: normalizedData, shopData });
   } catch (err: any) {
     logger.error('Failed to fetch product WooCommerce data', {
       error: err instanceof Error ? err : new Error(String(err)),

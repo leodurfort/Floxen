@@ -36,10 +36,11 @@ export function getWooField(fields: WooCommerceField[], value: string): WooComme
 }
 
 /**
- * Extract field value from WooCommerce product raw JSON
+ * Extract field value from WooCommerce product raw JSON or shop data
  * Handles nested paths like "images[0].src", "meta_data._gtin", "dimensions.length"
+ * Also handles shop-level fields like "shop.sellerName"
  */
-export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
+export function extractFieldValue(wooRawJson: any, fieldPath: string, shopData?: any): any {
   // Debug logging for 'id' and attribute fields
   const shouldLog = fieldPath === 'id' || fieldPath.startsWith('attributes.');
 
@@ -58,10 +59,19 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
     return null;
   }
 
-  // Handle shop-level fields (these won't be in wooRawJson)
+  // Handle shop-level fields (extract from shopData)
   if (fieldPath.startsWith('shop.')) {
-    if (shouldLog) console.log('[extractFieldValue] Shop field, returning null');
-    return null; // Shop fields are not in product data
+    const shopFieldName = fieldPath.replace('shop.', '');
+    const value = shopData?.[shopFieldName] || null;
+    if (shouldLog) {
+      console.log('[extractFieldValue] Shop field extraction:', {
+        fieldPath,
+        shopFieldName,
+        hasShopData: !!shopData,
+        value,
+      });
+    }
+    return value;
   }
 
   try {

@@ -16,6 +16,7 @@ export default function SetupPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [previewProductJson, setPreviewProductJson] = useState<any | null>(null);
+  const [previewShopData, setPreviewShopData] = useState<any | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,7 +116,9 @@ export default function SetupPage() {
       const data = await res.json();
       console.log('[Setup] Received WooCommerce data:', {
         hasWooData: !!data.wooData,
+        hasShopData: !!data.shopData,
         wooDataKeys: data.wooData ? Object.keys(data.wooData).slice(0, 10) : [],
+        shopDataKeys: data.shopData ? Object.keys(data.shopData) : [],
         sampleData: data.wooData ? {
           id: data.wooData.id,
           name: data.wooData.name,
@@ -124,6 +127,7 @@ export default function SetupPage() {
       });
 
       setPreviewProductJson(data.wooData);
+      setPreviewShopData(data.shopData);
     } catch (err) {
       console.error('[Setup] Failed to load product WooCommerce data:', {
         error: err,
@@ -142,6 +146,7 @@ export default function SetupPage() {
       loadProductWooData(selectedProductId);
     } else {
       setPreviewProductJson(null);
+      setPreviewShopData(null);
     }
   }, [selectedProductId, accessToken]);
 
@@ -320,6 +325,7 @@ export default function SetupPage() {
                       currentMapping={mappings[spec.attribute] || null}
                       onMappingChange={handleMappingChange}
                       previewProductJson={previewProductJson}
+                      previewShopData={previewShopData}
                     />
                   ))}
                 </div>
