@@ -14,10 +14,20 @@ export function ProductSelector({ products, value, onChange }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Helper to extract name from wooRawJson or fallback to wooTitle
+  const getProductName = (product: Product): string => {
+    if (product.wooRawJson && typeof product.wooRawJson === 'object') {
+      const rawJson = product.wooRawJson as any;
+      return rawJson.name || product.wooTitle;
+    }
+    return product.wooTitle;
+  };
+
   const filteredProducts = searchQuery
-    ? products.filter((p) =>
-        p.wooTitle.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? products.filter((p) => {
+        const name = getProductName(p);
+        return name.toLowerCase().includes(searchQuery.toLowerCase());
+      })
     : products;
 
   const selectedProduct = products.find((p) => p.id === value);
@@ -48,7 +58,7 @@ export function ProductSelector({ products, value, onChange }: Props) {
         className="w-full px-4 py-2 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border border-white/10 transition-colors flex items-center justify-between"
       >
         <span className="text-sm text-white truncate">
-          {selectedProduct ? selectedProduct.wooTitle : 'Select product for preview...'}
+          {selectedProduct ? getProductName(selectedProduct) : 'Select product for preview...'}
         </span>
         <svg className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -83,7 +93,7 @@ export function ProductSelector({ products, value, onChange }: Props) {
                     value === product.id ? 'bg-[#2d3142]' : ''
                   }`}
                 >
-                  <div className="text-sm text-white font-medium truncate">{product.wooTitle}</div>
+                  <div className="text-sm text-white font-medium truncate">{getProductName(product)}</div>
                   <div className="text-xs text-white/40 mt-0.5">ID: {product.wooProductId}</div>
                 </button>
               ))
