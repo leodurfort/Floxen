@@ -80,9 +80,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
       {/* Column 1: OpenAI Field Info */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <span className="text-white font-medium">
-            {currentMapping && !isToggleField ? currentMapping.replace('shop.', '') : spec.attribute}
-          </span>
+          <span className="text-white font-medium">{spec.attribute}</span>
           <span className={`text-xs px-2 py-0.5 rounded border ${requirementColors[spec.requirement]}`}>
             {spec.requirement}
           </span>
