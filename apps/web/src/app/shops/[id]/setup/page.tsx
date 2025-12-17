@@ -12,7 +12,7 @@ export default function SetupPage() {
   const router = useRouter();
   const { accessToken, hydrate, hydrated } = useAuth();
 
-  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [mappings, setMappings] = useState<Record<string, string | null>>({});
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [previewProductJson, setPreviewProductJson] = useState<any | null>(null);
@@ -153,7 +153,7 @@ export default function SetupPage() {
     });
   }, [previewProductJson, selectedProductId]);
 
-  async function handleMappingChange(attribute: string, wooField: string) {
+  async function handleMappingChange(attribute: string, wooField: string | null) {
     // Optimistic update
     const newMappings = { ...mappings, [attribute]: wooField };
     setMappings(newMappings);
