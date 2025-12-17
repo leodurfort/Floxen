@@ -3,6 +3,7 @@ import { encrypt } from '../lib/encryption';
 import { env } from '../config/env';
 import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
 import { fetchStoreSettings } from './wooClient';
+import { logger } from '../lib/logger';
 
 export async function listShopsByUser(userId: string) {
   return prisma.shop.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
@@ -134,6 +135,13 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
   // Fetch store settings from WooCommerce API
   const settings = await fetchStoreSettings(wooClient);
 
+  logger.info('Fetched store settings from WooCommerce', {
+    shopId,
+    settings,
+    hasSellerName: !!settings?.sellerName,
+    hasSellerUrl: !!settings?.sellerUrl,
+  });
+
   // Update shop with credentials and fetched settings
   return prisma.shop.update({
     where: { id: shopId },
@@ -144,6 +152,14 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
       syncStatus: 'PENDING',
       shopName: settings?.shopName || shop.shopName,
       shopCurrency: settings?.shopCurrency || shop.shopCurrency,
+      // Populate seller fields from WooCommerce
+      sellerName: settings?.sellerName || shop.sellerName,
+      sellerUrl: settings?.sellerUrl || shop.sellerUrl,
+      sellerPrivacyPolicy: settings?.sellerPrivacyPolicy || shop.sellerPrivacyPolicy,
+      sellerTos: settings?.sellerTos || shop.sellerTos,
+      // Return policy needs to be set manually (not available in WooCommerce API)
+      returnPolicy: settings?.returnPolicy || shop.returnPolicy,
+      returnWindow: settings?.returnWindow || shop.returnWindow,
       updatedAt: new Date(),
     },
   });

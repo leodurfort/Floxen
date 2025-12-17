@@ -72,6 +72,13 @@ export interface StoreSettings {
   siteUrl?: string;
   homeUrl?: string;
   language?: string;
+  // Shop-level fields for OpenAI feed
+  sellerName?: string;
+  sellerUrl?: string;
+  sellerPrivacyPolicy?: string;
+  sellerTos?: string;
+  returnPolicy?: string;
+  returnWindow?: number;
 }
 
 /**
@@ -99,18 +106,54 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       logger.warn('woo:fetch system status failed, using defaults');
     }
 
+    // Try to fetch additional pages/settings for seller info
+    let privacyPolicyUrl: string | undefined;
+    let tosUrl: string | undefined;
+
+    try {
+      // Fetch WooCommerce pages to get privacy policy and terms
+      const pagesResponse = await api.get('system_status');
+      const pages = pagesResponse.data?.settings?.pages || {};
+
+      // WooCommerce provides page IDs for these, we'd need to fetch the actual pages
+      // For now, we'll construct URLs if we have the page IDs and site URL
+      if (systemInfo.site_url) {
+        if (pages.privacy_policy_page_id) {
+          privacyPolicyUrl = `${systemInfo.site_url}/?page_id=${pages.privacy_policy_page_id}`;
+        }
+        if (pages.terms_and_conditions_page_id) {
+          tosUrl = `${systemInfo.site_url}/?page_id=${pages.terms_and_conditions_page_id}`;
+        }
+      }
+    } catch {
+      logger.warn('woo:fetch pages for policies failed');
+    }
+
     const storeSettings: StoreSettings = {
       shopName: titleSetting?.value || systemInfo.site_name || 'Unknown Store',
       shopCurrency: currencySetting?.value || 'USD',
       siteUrl: systemInfo.site_url,
       homeUrl: systemInfo.home_url,
       language: systemInfo.language,
+      // Populate seller fields
+      sellerName: titleSetting?.value || systemInfo.site_name || undefined,
+      sellerUrl: systemInfo.home_url || systemInfo.site_url || undefined,
+      sellerPrivacyPolicy: privacyPolicyUrl,
+      sellerTos: tosUrl,
+      // Return policy - WooCommerce doesn't provide this by default
+      // Users will need to set this manually
+      returnPolicy: undefined,
+      returnWindow: undefined,
     };
 
     logger.info('woo:fetch store settings complete', {
       shopName: storeSettings.shopName,
       shopCurrency: storeSettings.shopCurrency,
       hasSiteUrl: !!storeSettings.siteUrl,
+      hasSellerName: !!storeSettings.sellerName,
+      hasSellerUrl: !!storeSettings.sellerUrl,
+      hasPrivacyPolicy: !!storeSettings.sellerPrivacyPolicy,
+      hasTos: !!storeSettings.sellerTos,
     });
     return storeSettings;
   } catch (err) {
