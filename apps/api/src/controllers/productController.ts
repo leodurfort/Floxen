@@ -196,6 +196,14 @@ export async function getProductWooData(req: Request, res: Response) {
       shopCurrency: shop.shopCurrency,
     };
 
+    logger.info('Sending shop data in response', {
+      shopId: id,
+      productId: pid,
+      shopData,
+      hasSellerName: !!shop.sellerName,
+      hasSellerUrl: !!shop.sellerUrl,
+    });
+
     return res.json({ wooData: normalizedData, shopData });
   } catch (err: any) {
     logger.error('Failed to fetch product WooCommerce data', {

@@ -119,6 +119,7 @@ export default function SetupPage() {
         hasShopData: !!data.shopData,
         wooDataKeys: data.wooData ? Object.keys(data.wooData).slice(0, 10) : [],
         shopDataKeys: data.shopData ? Object.keys(data.shopData) : [],
+        shopDataValues: data.shopData,
         sampleData: data.wooData ? {
           id: data.wooData.id,
           name: data.wooData.name,
@@ -126,6 +127,7 @@ export default function SetupPage() {
         } : null,
       });
 
+      console.log('[Setup] Setting preview shop data:', data.shopData);
       setPreviewProductJson(data.wooData);
       setPreviewShopData(data.shopData);
     } catch (err) {
