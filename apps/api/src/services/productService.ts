@@ -115,9 +115,21 @@ export function transformWooProduct(woo: any, shopCurrency: string) {
 
 /**
  * Merges parent variable product data with variation data
- * Variations override: permalink, SKU, global_unique_id, price, sale_price, stock_quantity, stock_status, color, size
- * Parent data inherited: title, description, categories, brand, material, etc.
- * Special handling for weight/dimensions and images
+ *
+ * PARENT FALLBACK STRATEGY:
+ * - All parent fields are used as base/default values
+ * - Variation fields override ONLY if they have a non-null/non-empty value
+ * - If a variation field is null/empty, the parent's value is used automatically
+ *
+ * SPECIAL CASES:
+ * - ID, SKU, stock: Always from variation (variations have independent values)
+ * - Images: Variation image as primary, parent images as additional
+ * - Attributes: Merged (parent attributes + variation-specific color/size)
+ * - Meta data: Merged (variation meta overrides parent for same key)
+ * - Categories, Tags, Brands: Always inherited from parent (variations don't have these)
+ *
+ * This ensures that variations never have missing data - any null field
+ * automatically falls back to the parent product's value.
  */
 export function mergeParentAndVariation(parent: any, variation: any, shopCurrency: string) {
   logger.info('woo:merge variation', {
@@ -189,34 +201,87 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
     mergedAttributes.push(parentMaterial);
   }
 
-  // Create merged product object
-  const merged = {
-    id: variation.id,
-    parent_id: parent.id,
-    name: parent.name, // Keep parent title as-is
-    description: parent.description || '', // Inherit from parent
-    sku: variation.sku || '', // Variation's own SKU
-    permalink: variation.permalink || parent.permalink, // Variation's own permalink
-    price: price, // Variation price or parent fallback
-    regular_price: regularPrice,
-    sale_price: salePrice,
-    date_on_sale_from: variation.date_on_sale_from || parent.date_on_sale_from || null,
-    date_on_sale_to: variation.date_on_sale_to || parent.date_on_sale_to || null,
-    stock_status: variation.stock_status || '', // Variation's own stock status
-    stock_quantity: variation.stock_quantity !== null ? variation.stock_quantity : null,
-    manage_stock: variation.manage_stock || parent.manage_stock || false,
-    weight: weight || '',
-    dimensions: dimensions,
-    shipping_class: parent.shipping_class || '',
-    shipping_class_id: parent.shipping_class_id || 0,
-    images: mergedImages,
-    attributes: mergedAttributes, // Merged attributes including color/size
-    categories: parent.categories || [], // Inherit from parent
-    tags: parent.tags || [], // Inherit from parent
-    brands: parent.brands || [], // Inherit brand from parent
-    meta_data: [...(parent.meta_data || []), ...(variation.meta_data || [])], // Merge meta_data
-    date_modified: variation.date_modified || parent.date_modified,
+  // COMPREHENSIVE PARENT FALLBACK STRATEGY:
+  // 1. Start with all parent fields as base
+  // 2. Override with variation fields that have values (not null/empty)
+  // 3. Special handling for arrays and objects that need merging (images, attributes, meta_data)
+
+  // Helper function to check if a value is "empty"
+  const isEmpty = (val: any): boolean => {
+    if (val === null || val === undefined) return true;
+    if (typeof val === 'string' && val.trim() === '') return true;
+    if (Array.isArray(val) && val.length === 0) return true;
+    return false;
   };
+
+  // Start with parent as base (shallow copy)
+  const merged: any = { ...parent };
+
+  // Override with variation fields (skip empty values - they should fallback to parent)
+  Object.keys(variation).forEach(key => {
+    const varValue = variation[key];
+
+    // Skip arrays and objects - we'll handle these specially
+    if (typeof varValue === 'object' && varValue !== null) {
+      return;
+    }
+
+    // Only override if variation has a non-empty value
+    if (!isEmpty(varValue)) {
+      merged[key] = varValue;
+    }
+  });
+
+  // SPECIAL HANDLING FOR SPECIFIC FIELDS:
+
+  // ID: Always use variation ID
+  merged.id = variation.id;
+  merged.parent_id = parent.id;
+
+  // SKU: Use variation SKU or empty (variations often have unique SKUs)
+  merged.sku = variation.sku || '';
+
+  // Permalink: Use variation permalink or parent
+  merged.permalink = variation.permalink || parent.permalink;
+
+  // Stock: Use variation's stock data (variations have independent stock)
+  merged.stock_status = variation.stock_status || '';
+  merged.stock_quantity = variation.stock_quantity !== null ? variation.stock_quantity : null;
+  merged.manage_stock = variation.manage_stock || parent.manage_stock || false;
+
+  // Pricing: Use variation price or parent fallback
+  merged.price = price;
+  merged.regular_price = regularPrice;
+  merged.sale_price = salePrice;
+
+  // Weight and Dimensions: Smart merging (already calculated)
+  merged.weight = weight || '';
+  merged.dimensions = dimensions;
+
+  // Images: Variation image as primary, parent images as additional
+  merged.images = mergedImages;
+
+  // Attributes: Merged attributes including variation-specific ones (color, size)
+  merged.attributes = mergedAttributes;
+
+  // Meta data: Merge both arrays (variation meta overrides parent if same key)
+  const parentMeta = parent.meta_data || [];
+  const variationMeta = variation.meta_data || [];
+  const variationMetaKeys = new Set(variationMeta.map((m: any) => m.key));
+
+  // Keep parent meta that's not overridden by variation, plus all variation meta
+  merged.meta_data = [
+    ...parentMeta.filter((m: any) => !variationMetaKeys.has(m.key)),
+    ...variationMeta
+  ];
+
+  // Categories, Tags, Brands: Always inherit from parent (variations don't have these)
+  merged.categories = parent.categories || [];
+  merged.tags = parent.tags || [];
+  merged.brands = parent.brands || [];
+
+  // Date modified: Use variation's or parent's
+  merged.date_modified = variation.date_modified || parent.date_modified;
 
   return transformWooProduct(merged, shopCurrency);
 }
