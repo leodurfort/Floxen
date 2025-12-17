@@ -82,7 +82,8 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
     // IMPORTANT: Parent products have "options" array, variations have "option" string
     if (fieldPath.startsWith('attributes.')) {
       const attrName = fieldPath.replace('attributes.', '');
-      const attributes = wooRawJson.attributes || [];
+      // API returns normalized wooAttributes field
+      const attributes = wooRawJson.wooAttributes || [];
 
       if (shouldLog) {
         console.log('[extractFieldValue] Attributes extraction:', {
