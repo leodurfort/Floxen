@@ -99,16 +99,28 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
 
     // Fetch system status for additional info
     let systemInfo: any = {};
+    let systemSettings: any = {};
     try {
       const systemResponse = await api.get('system_status');
-      systemInfo = systemResponse.data?.settings || {};
+
+      // Environment data contains URLs and site info
+      const environment = systemResponse.data?.environment || {};
+      // Settings contains WooCommerce configuration
+      systemSettings = systemResponse.data?.settings || {};
+
+      // Extract from environment (where site URLs are located)
+      systemInfo = {
+        site_title: environment.site_title || environment.home_url?.replace(/https?:\/\/(www\.)?/, '').replace(/\/$/, ''),
+        home_url: environment.home_url,
+        site_url: environment.site_url,
+      };
 
       logger.info('woo:system status fetched', {
         hasSiteTitle: !!systemInfo.site_title,
         siteTitle: systemInfo.site_title,
         homeUrl: systemInfo.home_url,
         siteUrl: systemInfo.site_url,
-        systemInfoKeys: Object.keys(systemInfo),
+        environmentKeys: Object.keys(environment),
       });
     } catch (err) {
       logger.warn('woo:fetch system status failed, using defaults', {
@@ -121,9 +133,8 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
     let tosUrl: string | undefined;
 
     try {
-      // Fetch WooCommerce pages to get privacy policy and terms
-      const pagesResponse = await api.get('system_status');
-      const pages = pagesResponse.data?.settings?.pages || {};
+      // Use systemSettings that we already fetched above
+      const pages = systemSettings?.pages || {};
 
       // WooCommerce provides page IDs for these, we'd need to fetch the actual pages
       // For now, we'll construct URLs if we have the page IDs and site URL
