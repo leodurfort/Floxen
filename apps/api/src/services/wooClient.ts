@@ -93,17 +93,27 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
     const generalResponse = await api.get('settings/general');
     const settings = Array.isArray(generalResponse.data) ? generalResponse.data : [];
 
-    // Extract settings
+    // Extract settings - WooCommerce doesn't have a direct "shop name" setting
+    // The site title comes from WordPress, not WooCommerce REST API
     const currencySetting = settings.find((s: any) => s.id === 'woocommerce_currency');
-    const titleSetting = settings.find((s: any) => s.id === 'woocommerce_store_address');
 
     // Fetch system status for additional info
     let systemInfo: any = {};
     try {
       const systemResponse = await api.get('system_status');
       systemInfo = systemResponse.data?.settings || {};
-    } catch {
-      logger.warn('woo:fetch system status failed, using defaults');
+
+      logger.info('woo:system status fetched', {
+        hasSiteTitle: !!systemInfo.site_title,
+        siteTitle: systemInfo.site_title,
+        homeUrl: systemInfo.home_url,
+        siteUrl: systemInfo.site_url,
+        systemInfoKeys: Object.keys(systemInfo),
+      });
+    } catch (err) {
+      logger.warn('woo:fetch system status failed, using defaults', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     // Try to fetch additional pages/settings for seller info
@@ -129,14 +139,17 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       logger.warn('woo:fetch pages for policies failed');
     }
 
+    // Get site name from system info (WordPress site title)
+    const siteName = systemInfo.site_title || systemInfo.home_url?.replace(/https?:\/\/(www\.)?/, '').split('/')[0] || 'Store';
+
     const storeSettings: StoreSettings = {
-      shopName: titleSetting?.value || systemInfo.site_name || 'Unknown Store',
+      shopName: siteName,
       shopCurrency: currencySetting?.value || 'USD',
       siteUrl: systemInfo.site_url,
       homeUrl: systemInfo.home_url,
       language: systemInfo.language,
       // Populate seller fields
-      sellerName: titleSetting?.value || systemInfo.site_name || undefined,
+      sellerName: siteName,
       sellerUrl: systemInfo.home_url || systemInfo.site_url || undefined,
       sellerPrivacyPolicy: privacyPolicyUrl,
       sellerTos: tosUrl,
