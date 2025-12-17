@@ -83,111 +83,38 @@ export interface StoreSettings {
 
 /**
  * Fetch comprehensive store settings from WooCommerce API
- * Retrieves: currency, site name, URLs, language
+ * Uses only index endpoint - no fallbacks
  */
 export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<StoreSettings | null> {
   try {
     logger.info('woo:fetch store settings start');
 
     // Fetch store information from index endpoint (GET /wp-json/wc/v3)
-    let storeInfo: any = {};
-    try {
-      const indexResponse = await api.get('');
-      storeInfo = indexResponse.data || {};
-      logger.info('woo:fetch store index info', {
-        name: storeInfo.name,
-        description: storeInfo.description,
-        url: storeInfo.url,
-      });
-    } catch (err) {
-      logger.warn('woo:fetch store index failed', {
-        error: err instanceof Error ? err : new Error(String(err)),
-      });
-    }
+    const indexResponse = await api.get('');
+    const storeInfo = indexResponse.data || {};
 
-    // Fetch general settings group
+    logger.info('woo:fetch store index info', {
+      name: storeInfo.name,
+      description: storeInfo.description,
+      url: storeInfo.url,
+    });
+
+    // Fetch currency from general settings
     const generalResponse = await api.get('settings/general');
     const settings = Array.isArray(generalResponse.data) ? generalResponse.data : [];
-
-    // Extract currency setting
     const currencySetting = settings.find((s: any) => s.id === 'woocommerce_currency');
 
-    // Fetch system status for additional info (URLs, pages)
-    let systemInfo: any = {};
-    let systemSettings: any = {};
-    try {
-      const systemResponse = await api.get('system_status');
-
-      // Environment data contains URLs and site info
-      const environment = systemResponse.data?.environment || {};
-      // Settings contains WooCommerce configuration
-      systemSettings = systemResponse.data?.settings || {};
-
-      // Extract from environment (where site URLs are located)
-      systemInfo = {
-        site_title: environment.site_title || storeInfo.name || environment.home_url?.replace(/https?:\/\/(www\.)?/, '').replace(/\/$/, ''),
-        home_url: environment.home_url || storeInfo.url,
-        site_url: environment.site_url || storeInfo.url,
-      };
-
-      logger.info('woo:system status fetched', {
-        hasSiteTitle: !!systemInfo.site_title,
-        siteTitle: systemInfo.site_title,
-        homeUrl: systemInfo.home_url,
-        siteUrl: systemInfo.site_url,
-        environmentKeys: Object.keys(environment),
-      });
-    } catch (err) {
-      logger.warn('woo:fetch system status failed, using store index data', {
-        error: err instanceof Error ? err : new Error(String(err)),
-      });
-      // Fallback to store index data if system_status fails
-      systemInfo = {
-        site_title: storeInfo.name,
-        home_url: storeInfo.url,
-        site_url: storeInfo.url,
-      };
-    }
-
-    // Try to fetch additional pages/settings for seller info
-    let privacyPolicyUrl: string | undefined;
-    let tosUrl: string | undefined;
-
-    try {
-      // Use systemSettings that we already fetched above
-      const pages = systemSettings?.pages || {};
-
-      // WooCommerce provides page IDs for these, we'd need to fetch the actual pages
-      // For now, we'll construct URLs if we have the page IDs and site URL
-      if (systemInfo.site_url) {
-        if (pages.privacy_policy_page_id) {
-          privacyPolicyUrl = `${systemInfo.site_url}/?page_id=${pages.privacy_policy_page_id}`;
-        }
-        if (pages.terms_and_conditions_page_id) {
-          tosUrl = `${systemInfo.site_url}/?page_id=${pages.terms_and_conditions_page_id}`;
-        }
-      }
-    } catch {
-      logger.warn('woo:fetch pages for policies failed');
-    }
-
-    // Get site name - prioritize index endpoint name over system status
-    const siteName = storeInfo.name || systemInfo.site_title || systemInfo.home_url?.replace(/https?:\/\/(www\.)?/, '').split('/')[0] || 'Store';
-    const siteUrl = storeInfo.url || systemInfo.home_url || systemInfo.site_url;
-
     const storeSettings: StoreSettings = {
-      shopName: siteName,
+      shopName: storeInfo.name,
       shopCurrency: currencySetting?.value || 'USD',
-      siteUrl: systemInfo.site_url || storeInfo.url,
-      homeUrl: systemInfo.home_url || storeInfo.url,
-      language: systemInfo.language,
-      // Populate seller fields - use index endpoint data first
-      sellerName: storeInfo.name || siteName,
-      sellerUrl: siteUrl,
-      sellerPrivacyPolicy: privacyPolicyUrl,
-      sellerTos: tosUrl,
-      // Return policy - WooCommerce doesn't provide this by default
-      // Users will need to set this manually
+      siteUrl: storeInfo.url,
+      homeUrl: storeInfo.url,
+      language: undefined,
+      // Populate seller fields from index endpoint only
+      sellerName: storeInfo.name,
+      sellerUrl: storeInfo.url,
+      sellerPrivacyPolicy: undefined,
+      sellerTos: undefined,
       returnPolicy: undefined,
       returnWindow: undefined,
     };
@@ -195,11 +122,8 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
     logger.info('woo:fetch store settings complete', {
       shopName: storeSettings.shopName,
       shopCurrency: storeSettings.shopCurrency,
-      hasSiteUrl: !!storeSettings.siteUrl,
       hasSellerName: !!storeSettings.sellerName,
       hasSellerUrl: !!storeSettings.sellerUrl,
-      hasPrivacyPolicy: !!storeSettings.sellerPrivacyPolicy,
-      hasTos: !!storeSettings.sellerTos,
     });
     return storeSettings;
   } catch (err) {
