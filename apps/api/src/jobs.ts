@@ -1,7 +1,9 @@
 import { createQueue } from './lib/redis';
 
-export const productSyncQueue = createQueue('product-sync');
-export const aiEnrichmentQueue = createQueue('ai-enrichment');
-export const feedGenerationQueue = createQueue('feed-generation');
-export const analyticsQueue = createQueue('analytics');
-export const webhooksQueue = createQueue('webhooks');
+// All jobs use the same 'sync' queue, differentiated by job name
+// This matches the worker setup in workers/index.ts
+export const productSyncQueue = createQueue('sync');
+export const aiEnrichmentQueue = createQueue('sync');
+export const feedGenerationQueue = createQueue('sync');
+export const analyticsQueue = createQueue('sync');
+export const webhooksQueue = createQueue('sync');
