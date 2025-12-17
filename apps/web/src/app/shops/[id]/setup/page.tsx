@@ -20,6 +20,7 @@ export default function SetupPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Hydrate auth
   useEffect(() => {
@@ -154,6 +155,12 @@ export default function SetupPage() {
   }, [previewProductJson, selectedProductId]);
 
   async function handleMappingChange(attribute: string, wooField: string | null) {
+    // Save old value for rollback
+    const oldValue = mappings[attribute];
+
+    // Clear any previous errors
+    setSaveError(null);
+
     // Optimistic update
     const newMappings = { ...mappings, [attribute]: wooField };
     setMappings(newMappings);
@@ -169,10 +176,23 @@ export default function SetupPage() {
         },
         body: JSON.stringify({ mappings: newMappings }),
       });
-      if (!res.ok) throw new Error('Failed to save mapping');
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to save mapping: ${errorText}`);
+      }
     } catch (err) {
       console.error('[Setup] Failed to save mapping', err);
-      // TODO: Show error toast, revert optimistic update
+
+      // Revert optimistic update
+      setMappings({ ...mappings, [attribute]: oldValue });
+
+      // Show error message
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save field mapping';
+      setSaveError(errorMessage);
+
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setSaveError(null), 5000);
     } finally {
       setSaving(false);
     }
@@ -219,6 +239,17 @@ export default function SetupPage() {
             {saving && (
               <div className="mt-2 text-sm text-[#5df0c0]">
                 Saving changes...
+              </div>
+            )}
+            {saveError && (
+              <div className="mt-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400 text-lg">⚠️</span>
+                  <div>
+                    <div className="text-sm font-medium text-red-400">Failed to save changes</div>
+                    <div className="text-xs text-red-400/80 mt-0.5">{saveError}</div>
+                  </div>
+                </div>
               </div>
             )}
             {/* Mapping Statistics */}
