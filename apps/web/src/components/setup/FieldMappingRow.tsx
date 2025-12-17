@@ -8,7 +8,7 @@ import { extractFieldValue, formatFieldValue } from '@/lib/wooCommerceFields';
 interface Props {
   spec: OpenAIFieldSpec;
   currentMapping: string | null;
-  onMappingChange: (attribute: string, wooField: string) => void;
+  onMappingChange: (attribute: string, wooField: string | null) => void;
   previewProductJson: any | null;  // WooCommerce raw JSON for selected product
 }
 

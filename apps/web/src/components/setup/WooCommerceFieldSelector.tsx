@@ -7,7 +7,7 @@ import { useParams } from 'next/navigation';
 
 interface Props {
   value: string | null;           // Current selected field value
-  onChange: (value: string) => void;
+  onChange: (value: string | null) => void;
   openaiAttribute: string;        // For debugging/logging
 }
 
@@ -76,6 +76,12 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
     setSearchQuery('');
   }
 
+  function handleClear() {
+    onChange(null);
+    setIsOpen(false);
+    setSearchQuery('');
+  }
+
   // Determine button text and styling
   let buttonText: string;
   let buttonClass: string;
@@ -139,6 +145,17 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
 
           {/* Field List */}
           <div className="overflow-y-auto">
+            {/* Clear mapping option (only show when not searching) */}
+            {!searchQuery && (
+              <button
+                onClick={handleClear}
+                className="w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10"
+              >
+                <div className="text-sm text-white/60 italic">Select WooCommerce field</div>
+                <div className="text-xs text-white/30 mt-0.5">Clear this mapping</div>
+              </button>
+            )}
+
             {filteredFields.length === 0 ? (
               <div className="p-4 text-center text-white/40 text-sm">
                 {searchQuery ? 'No fields found' : 'No fields available'}
