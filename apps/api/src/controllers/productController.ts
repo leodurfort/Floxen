@@ -196,7 +196,7 @@ export async function getProductWooData(req: Request, res: Response) {
 
       // Get shop for currency (reuse the shop we already fetched)
       // Use the proper merge function that handles attributes correctly
-      wooData = mergeParentAndVariation(parentData, wooData, shop.shopCurrency);
+      wooData = mergeParentAndVariation(parentData, wooData, shop.shopCurrency || 'USD');
 
       console.log('[getProductWooData] After mergeParentAndVariation:', {
         hasAttributes: !!(wooData.attributes && wooData.attributes.length > 0),
