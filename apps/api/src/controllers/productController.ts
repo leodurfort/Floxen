@@ -180,7 +180,6 @@ export async function getProductWooData(req: Request, res: Response) {
 
       // Import mergeParentAndVariation
       const { mergeParentAndVariation } = await import('../services/productService');
-      const { getShop: getShopForMerge } = await import('../services/shopService');
 
       // Fetch parent product
       const parentData = await fetchSingleProduct(wooClient, product.wooParentId);
@@ -195,11 +194,9 @@ export async function getProductWooData(req: Request, res: Response) {
         })) || [],
       });
 
-      // Get shop for currency
-      const shopForMerge = await getShopForMerge(id);
-
+      // Get shop for currency (reuse the shop we already fetched)
       // Use the proper merge function that handles attributes correctly
-      wooData = mergeParentAndVariation(parentData, wooData, shopForMerge.shopCurrency);
+      wooData = mergeParentAndVariation(parentData, wooData, shop.shopCurrency);
 
       console.log('[getProductWooData] After mergeParentAndVariation:', {
         hasAttributes: !!(wooData.attributes && wooData.attributes.length > 0),
