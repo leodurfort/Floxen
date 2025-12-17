@@ -207,6 +207,10 @@ export async function getFieldMappings(req: Request, res: Response) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    // Start with default mappings for all 70 OpenAI fields
+    const defaultMappings = getDefaultMappings();
+    const mappings: Record<string, string | null> = { ...defaultMappings };
+
     // Query field mappings from database with joins
     const fieldMappings = await prisma.fieldMapping.findMany({
       where: { shopId: id },
@@ -216,28 +220,24 @@ export async function getFieldMappings(req: Request, res: Response) {
       },
     });
 
-    // Convert to Record<string, string> format for API response
-    const mappings: Record<string, string> = {};
-
+    // Override defaults with database mappings (user customizations)
     for (const mapping of fieldMappings) {
-      // If wooField is null, the field is not mapped
       if (mapping.wooField) {
+        // User has mapped this field to a WooCommerce field
         mappings[mapping.openaiField.attribute] = mapping.wooField.value;
       } else {
-        // For toggle fields like enable_search, check if there's a mapping with null wooField
-        // This represents ENABLED/DISABLED state
-        mappings[mapping.openaiField.attribute] = null as any;
+        // User explicitly unmapped this field (set to null)
+        mappings[mapping.openaiField.attribute] = null;
       }
     }
 
-    // If no mappings exist yet, return defaults
-    if (Object.keys(mappings).length === 0) {
-      const defaultMappings = getDefaultMappings();
-      logger.info('shops:field-mappings:get (defaults)', { shopId: id, userId });
-      return res.json({ mappings: defaultMappings });
-    }
+    logger.info('shops:field-mappings:get', {
+      shopId: id,
+      userId,
+      dbMappings: fieldMappings.length,
+      totalFields: Object.keys(mappings).length,
+    });
 
-    logger.info('shops:field-mappings:get', { shopId: id, userId, count: fieldMappings.length });
     return res.json({ mappings });
   } catch (err: any) {
     logger.error('shops:field-mappings:get error', err);
