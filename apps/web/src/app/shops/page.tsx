@@ -13,7 +13,6 @@ export default function ShopsPage() {
   const [loading, setLoading] = useState(false);
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [storeUrl, setStoreUrl] = useState('');
-  const [shopName, setShopName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,7 +46,7 @@ export default function ShopsPage() {
     setError(null);
     try {
       const data = await createShop(
-        { storeUrl: storeUrl.trim(), shopName: shopName.trim() },
+        { storeUrl: storeUrl.trim() },
         accessToken
       );
       window.location.href = data.authUrl;
@@ -131,16 +130,6 @@ export default function ShopsPage() {
                   placeholder="https://your-store.com"
                   value={storeUrl}
                   onChange={(e) => setStoreUrl(e.target.value)}
-                  className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white placeholder-white/30 focus:border-white/30 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-white/60 mb-2">Shop Name (optional)</label>
-                <input
-                  type="text"
-                  placeholder="My Shop"
-                  value={shopName}
-                  onChange={(e) => setShopName(e.target.value)}
                   className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white placeholder-white/30 focus:border-white/30 focus:outline-none"
                 />
               </div>
