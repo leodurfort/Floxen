@@ -40,14 +40,16 @@ export function getWooField(fields: WooCommerceField[], value: string): WooComme
  * Handles nested paths like "images[0].src", "meta_data._gtin", "dimensions.length"
  */
 export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
-  // Debug logging for 'id' field only
-  const shouldLog = fieldPath === 'id';
+  // Debug logging for 'id' and attribute fields
+  const shouldLog = fieldPath === 'id' || fieldPath.startsWith('attributes.');
 
   if (shouldLog) {
     console.log('[extractFieldValue] Starting extraction:', {
       fieldPath,
       hasData: !!wooRawJson,
       dataKeys: wooRawJson ? Object.keys(wooRawJson).slice(0, 15) : [],
+      hasWooAttributes: !!wooRawJson?.wooAttributes,
+      wooAttributesCount: wooRawJson?.wooAttributes?.length || 0,
     });
   }
 

@@ -271,6 +271,27 @@ export async function getProductWooData(req: Request, res: Response) {
       wooRawJson: wooData, // Keep raw data for backwards compatibility
     };
 
+    // DETAILED LOGGING: Track attribute data through normalization
+    logger.info('[getProductWooData] Data normalization complete', {
+      shopId: id,
+      productId: pid,
+      wooProductId: product.wooProductId,
+      hasOriginalAttributes: !!(wooData.attributes && wooData.attributes.length > 0),
+      originalAttributesCount: wooData.attributes?.length || 0,
+      originalAttributes: wooData.attributes?.map((a: any) => ({
+        name: a.name,
+        hasOption: a.option !== undefined,
+        hasOptions: Array.isArray(a.options),
+        optionValue: a.option,
+        optionsValue: a.options,
+      })) || [],
+      hasNormalizedAttributes: !!(normalizedData.wooAttributes && normalizedData.wooAttributes.length > 0),
+      normalizedAttributesCount: normalizedData.wooAttributes?.length || 0,
+      materialAttribute: normalizedData.wooAttributes?.find((a: any) =>
+        a.name && a.name.toLowerCase() === 'material'
+      ) || null,
+    });
+
     return res.json({ wooData: normalizedData });
   } catch (err: any) {
     logger.error('Failed to fetch product WooCommerce data', {
