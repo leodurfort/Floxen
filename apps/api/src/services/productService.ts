@@ -172,21 +172,56 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
   // Parent attributes have "options" array, variations need "option" string
   const mergedAttributes: any[] = [];
 
+  // DETAILED LOGGING: Track parent attributes before conversion
+  logger.info('[mergeParentAndVariation] Processing parent attributes', {
+    parentId: parent?.id,
+    variationId: variation?.id,
+    parentAttributesCount: parent.attributes?.length || 0,
+    parentAttributes: parent.attributes?.map((a: any) => ({
+      name: a.name,
+      hasOption: a.option !== undefined,
+      hasOptions: Array.isArray(a.options),
+      optionsLength: a.options?.length,
+      optionsValue: a.options,
+    })) || [],
+  });
+
   // Start with parent attributes, but convert to variation format
   (parent.attributes || []).forEach((attr: any) => {
     const attrName = attr.name.toLowerCase();
 
     // Skip color and size - we'll add these from variation
     if (attrName === 'color' || attrName === 'colour' || attrName === 'size') {
+      logger.info('[mergeParentAndVariation] Skipping parent attribute (will use variation)', {
+        attrName,
+        parentId: parent?.id,
+        variationId: variation?.id,
+      });
       return;
     }
 
     // Convert parent's "options" array to variation's "option" string
     if (Array.isArray(attr.options) && attr.options.length > 0) {
-      mergedAttributes.push({
+      const converted = {
         id: attr.id || 0,
         name: attr.name,
         option: attr.options.length === 1 ? attr.options[0] : attr.options.join(', ')
+      };
+      mergedAttributes.push(converted);
+
+      logger.info('[mergeParentAndVariation] Converted parent attribute to variation format', {
+        attrName: attr.name,
+        originalFormat: { options: attr.options },
+        convertedFormat: { option: converted.option },
+        parentId: parent?.id,
+        variationId: variation?.id,
+      });
+    } else {
+      logger.warn('[mergeParentAndVariation] Skipped parent attribute (no options)', {
+        attrName: attr.name,
+        attr,
+        parentId: parent?.id,
+        variationId: variation?.id,
       });
     }
   });
@@ -198,6 +233,11 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
       name: 'Color',
       option: varAttrs.color || varAttrs.colour
     });
+    logger.info('[mergeParentAndVariation] Added Color from variation', {
+      value: varAttrs.color || varAttrs.colour,
+      parentId: parent?.id,
+      variationId: variation?.id,
+    });
   }
 
   // Add size attribute if found in variation
@@ -207,7 +247,24 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
       name: 'Size',
       option: varAttrs.size
     });
+    logger.info('[mergeParentAndVariation] Added Size from variation', {
+      value: varAttrs.size,
+      parentId: parent?.id,
+      variationId: variation?.id,
+    });
   }
+
+  // DETAILED LOGGING: Final merged attributes
+  logger.info('[mergeParentAndVariation] Final merged attributes', {
+    parentId: parent?.id,
+    variationId: variation?.id,
+    mergedAttributesCount: mergedAttributes.length,
+    mergedAttributes: mergedAttributes.map((a: any) => ({
+      name: a.name,
+      option: a.option,
+    })),
+    hasMaterial: !!mergedAttributes.find((a: any) => a.name.toLowerCase() === 'material'),
+  });
 
   // COMPREHENSIVE PARENT FALLBACK STRATEGY:
   // 1. Start with all parent fields as base
