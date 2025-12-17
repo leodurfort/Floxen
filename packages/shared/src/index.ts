@@ -34,6 +34,12 @@ export interface Shop {
   syncEnabled: boolean;
   openaiEnabled: boolean;
   wooStoreUrl?: string;
+  sellerName?: string | null;
+  sellerUrl?: string | null;
+  sellerPrivacyPolicy?: string | null;
+  sellerTos?: string | null;
+  returnPolicy?: string | null;
+  returnWindow?: number | null;
   createdAt: string;
   updatedAt: string;
 }
