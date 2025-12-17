@@ -348,5 +348,11 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
   // Date modified: Use variation's or parent's
   merged.date_modified = variation.date_modified || parent.date_modified;
 
+  // Construct a better product name: "Parent Name - Variation Attributes"
+  // Use parent name + variation name for better display
+  if (parent.name && variation.name) {
+    merged.name = `${parent.name} - ${variation.name}`;
+  }
+
   return transformWooProduct(merged, shopCurrency);
 }

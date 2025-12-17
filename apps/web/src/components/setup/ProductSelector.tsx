@@ -14,23 +14,8 @@ export function ProductSelector({ products, value, onChange }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Helper to extract name from wooRawJson or fallback to wooTitle
+  // Use wooTitle - it contains the full product name (parent + variation attributes)
   const getProductName = (product: Product): string => {
-    if (product.wooRawJson && typeof product.wooRawJson === 'object') {
-      const rawJson = product.wooRawJson as any;
-
-      // Debug log to see the structure
-      console.log('[ProductSelector] Product data:', {
-        id: product.id,
-        wooProductId: product.wooProductId,
-        wooTitle: product.wooTitle,
-        hasRawJson: !!product.wooRawJson,
-        rawJsonKeys: Object.keys(rawJson).slice(0, 10),
-        rawJsonName: rawJson.name,
-      });
-
-      return rawJson.name || product.wooTitle;
-    }
     return product.wooTitle;
   };
 
