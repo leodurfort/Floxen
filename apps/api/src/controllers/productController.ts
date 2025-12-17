@@ -196,12 +196,18 @@ export async function getProductWooData(req: Request, res: Response) {
 
       // Get shop for currency (reuse the shop we already fetched)
       // Use the proper merge function that handles attributes correctly
-      wooData = mergeParentAndVariation(parentData, wooData, shop.shopCurrency || 'USD');
+      const mergedTransformed = mergeParentAndVariation(parentData, wooData, shop.shopCurrency || 'USD');
+
+      // mergeParentAndVariation returns transformed data (wooAttributes),
+      // but we need raw WooCommerce format (attributes) for the endpoint
+      // Extract the raw merged data from wooRawJson
+      wooData = mergedTransformed.wooRawJson;
 
       console.log('[getProductWooData] After mergeParentAndVariation:', {
-        hasAttributes: !!(wooData.attributes && wooData.attributes.length > 0),
-        attributesCount: wooData.attributes?.length || 0,
-        attributes: wooData.attributes?.map((a: any) => ({
+        hasTransformedWooAttributes: !!(mergedTransformed.wooAttributes && mergedTransformed.wooAttributes.length > 0),
+        hasRawAttributes: !!(wooData.attributes && wooData.attributes.length > 0),
+        rawAttributesCount: wooData.attributes?.length || 0,
+        rawAttributes: wooData.attributes?.map((a: any) => ({
           name: a.name,
           hasOption: a.option !== undefined,
           optionValue: a.option,
