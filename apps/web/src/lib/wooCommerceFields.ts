@@ -78,6 +78,48 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
       return metaItem?.value || null;
     }
 
+    // Handle attributes special case: "attributes.Color"
+    if (fieldPath.startsWith('attributes.')) {
+      const attrName = fieldPath.replace('attributes.', '');
+      const attributes = wooRawJson.attributes || [];
+
+      if (shouldLog) {
+        console.log('[extractFieldValue] Attributes extraction:', {
+          attrName,
+          hasAttributes: !!attributes.length,
+          availableAttributes: attributes.map((a: any) => a.name),
+        });
+      }
+
+      // Find attribute by name (case-insensitive)
+      const attr = attributes.find((a: any) =>
+        a.name && a.name.toLowerCase() === attrName.toLowerCase()
+      );
+
+      if (attr && Array.isArray(attr.options) && attr.options.length > 0) {
+        // Return first option if single value, or join all options with comma
+        const result = attr.options.length === 1
+          ? attr.options[0]
+          : attr.options.join(', ');
+
+        if (shouldLog) {
+          console.log('[extractFieldValue] Attribute found:', {
+            attrName,
+            options: attr.options,
+            result,
+          });
+        }
+
+        return result;
+      }
+
+      if (shouldLog) {
+        console.log('[extractFieldValue] Attribute not found:', attrName);
+      }
+
+      return null;
+    }
+
     // Handle array indexing like "images[0].src"
     const parts = fieldPath.split('.');
     let current = wooRawJson;

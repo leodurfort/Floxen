@@ -90,61 +90,103 @@ export class FieldDiscoveryService {
         return result;
       }
 
-      logger.info('Analyzing products for meta_data fields', {
+      logger.info('Analyzing products for meta_data and attribute fields', {
         shopId,
         productCount: products.length
       });
 
       // Track discovered meta fields
       const metaFieldMap = new Map<string, { count: number; sample: any }>();
+      // Track discovered attribute fields
+      const attributeFieldMap = new Map<string, { count: number; sample: any }>();
 
-      // Scan all products for meta_data
+      // Scan all products for meta_data AND attributes
       for (const product of products) {
-        if (!product.meta_data || !Array.isArray(product.meta_data)) {
-          continue;
+        // === SCAN META_DATA ===
+        if (product.meta_data && Array.isArray(product.meta_data)) {
+          for (const meta of product.meta_data) {
+            if (!meta.key || typeof meta.key !== 'string') {
+              continue;
+            }
+
+            // Skip internal WordPress/WooCommerce meta (starts with _)
+            // but include common ones that users might want to map
+            const key = meta.key;
+
+            // Skip system meta keys that are too technical
+            if (this.shouldSkipMetaKey(key)) {
+              continue;
+            }
+
+            // Track this field
+            if (metaFieldMap.has(key)) {
+              const existing = metaFieldMap.get(key)!;
+              existing.count++;
+            } else {
+              metaFieldMap.set(key, {
+                count: 1,
+                sample: meta.value,
+              });
+            }
+          }
         }
 
-        for (const meta of product.meta_data) {
-          if (!meta.key || typeof meta.key !== 'string') {
-            continue;
-          }
+        // === SCAN ATTRIBUTES ===
+        if (product.attributes && Array.isArray(product.attributes)) {
+          for (const attr of product.attributes) {
+            if (!attr.name || typeof attr.name !== 'string') {
+              continue;
+            }
 
-          // Skip internal WordPress/WooCommerce meta (starts with _)
-          // but include common ones that users might want to map
-          const key = meta.key;
+            // Create field path like "attributes.Color"
+            const key = `attributes.${attr.name}`;
 
-          // Skip system meta keys that are too technical
-          if (this.shouldSkipMetaKey(key)) {
-            continue;
-          }
+            // Get the first option as sample value
+            const sampleValue = Array.isArray(attr.options) && attr.options.length > 0
+              ? attr.options.join(', ')  // Join multiple options
+              : null;
 
-          // Track this field
-          if (metaFieldMap.has(key)) {
-            const existing = metaFieldMap.get(key)!;
-            existing.count++;
-          } else {
-            metaFieldMap.set(key, {
-              count: 1,
-              sample: meta.value,
-            });
+            // Track this field
+            if (attributeFieldMap.has(key)) {
+              const existing = attributeFieldMap.get(key)!;
+              existing.count++;
+            } else {
+              attributeFieldMap.set(key, {
+                count: 1,
+                sample: sampleValue,
+              });
+            }
           }
         }
       }
 
-      // Convert to discovered fields array
-      result.discovered = Array.from(metaFieldMap.entries()).map(([key, data]) => ({
+      // Convert meta fields to discovered fields array
+      const metaFields = Array.from(metaFieldMap.entries()).map(([key, data]) => ({
         key,
         label: this.generateLabelFromKey(key),
         occurrences: data.count,
         sampleValue: data.sample,
       }));
 
+      // Convert attribute fields to discovered fields array
+      const attributeFields = Array.from(attributeFieldMap.entries()).map(([key, data]) => ({
+        key,
+        label: `${key.split('.')[1]} (Attribute)`,
+        occurrences: data.count,
+        sampleValue: data.sample,
+      }));
+
+      // Combine both types of discovered fields
+      result.discovered = [...metaFields, ...attributeFields];
+
       // Sort by occurrence count (most common first)
       result.discovered.sort((a, b) => b.occurrences - a.occurrences);
 
       logger.info('Field discovery complete', {
         shopId,
-        discovered: result.discovered.length,
+        totalDiscovered: result.discovered.length,
+        metaFields: metaFields.length,
+        attributeFields: attributeFields.length,
       });
 
       // Save discovered fields to database
@@ -171,7 +213,14 @@ export class FieldDiscoveryService {
   ): Promise<void> {
     for (const field of fields) {
       try {
-        const value = `meta_data.${field.key}`;
+        // Determine field value and category
+        // If key already starts with 'attributes.', use as-is
+        // Otherwise, it's a meta field, so prefix with 'meta_data.'
+        const value = field.key.startsWith('attributes.')
+          ? field.key
+          : `meta_data.${field.key}`;
+
+        const category = field.key.startsWith('attributes.') ? 'Attributes' : 'Meta';
 
         // Check if this field already exists for this shop
         const existing = await prisma.wooCommerceField.findUnique({
@@ -194,7 +243,7 @@ export class FieldDiscoveryService {
             value,
             label: field.label,
             description: `Found in ${field.occurrences} products. Example: ${JSON.stringify(field.sampleValue).substring(0, 100)}`,
-            category: 'Meta',
+            category,
             isStandard: false,
             shopId,
           },
