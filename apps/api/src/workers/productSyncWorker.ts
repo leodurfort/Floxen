@@ -1,7 +1,7 @@
 import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency, fetchProductVariations } from '../services/wooClient';
+import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation, checksum } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { ValidationService } from '../services/validationService';
@@ -129,13 +129,51 @@ export async function productSyncProcessor(job: Job) {
       consumerSecret: shop.wooConsumerSecret,
     });
 
-    // Pull currency if not set yet.
-    if (!shop.shopCurrency) {
-      const currency = await fetchStoreCurrency(client);
-      if (currency) {
-        await prisma.shop.update({ where: { id: shopId }, data: { shopCurrency: currency } });
-        logger.info('product-sync: currency updated from Woo', { shopId, currency });
-        shop.shopCurrency = currency;
+    // Refresh shop settings from WooCommerce on each sync
+    logger.info('product-sync: refreshing shop settings from WooCommerce', { shopId });
+    const settings = await fetchStoreSettings(client);
+
+    if (settings) {
+      const updateData: any = {
+        shopName: settings.shopName,
+        shopCurrency: settings.shopCurrency,
+      };
+
+      // Update seller fields if they're available from WooCommerce
+      if (settings.sellerName) updateData.sellerName = settings.sellerName;
+      if (settings.sellerUrl) updateData.sellerUrl = settings.sellerUrl;
+      if (settings.sellerPrivacyPolicy) updateData.sellerPrivacyPolicy = settings.sellerPrivacyPolicy;
+      if (settings.sellerTos) updateData.sellerTos = settings.sellerTos;
+
+      await prisma.shop.update({
+        where: { id: shopId },
+        data: updateData,
+      });
+
+      logger.info('product-sync: shop settings refreshed', {
+        shopId,
+        shopName: settings.shopName,
+        shopCurrency: settings.shopCurrency,
+        hasSellerName: !!settings.sellerName,
+        hasSellerUrl: !!settings.sellerUrl,
+        hasPrivacyPolicy: !!settings.sellerPrivacyPolicy,
+        hasTos: !!settings.sellerTos,
+      });
+
+      // Update local shop object for currency fallback
+      shop.shopCurrency = settings.shopCurrency;
+      shop.shopName = settings.shopName;
+    } else {
+      logger.warn('product-sync: failed to fetch shop settings, using existing values', { shopId });
+
+      // Fallback: Pull currency if not set yet
+      if (!shop.shopCurrency) {
+        const currency = await fetchStoreCurrency(client);
+        if (currency) {
+          await prisma.shop.update({ where: { id: shopId }, data: { shopCurrency: currency } });
+          logger.info('product-sync: currency updated from Woo (fallback)', { shopId, currency });
+          shop.shopCurrency = currency;
+        }
       }
     }
 
