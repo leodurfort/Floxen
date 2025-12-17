@@ -30,6 +30,7 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   product_category: 'categories[0].name',
   product_type: null,
   brand: 'brands[0].name',
+  link: 'permalink',
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ITEM INFORMATION
@@ -85,10 +86,10 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // ═══════════════════════════════════════════════════════════════════════════
   shipping: null,
   shipping_label: null,
-  shipping_weight: 'weight',
-  shipping_length: 'dimensions.length',
-  shipping_width: 'dimensions.width',
-  shipping_height: 'dimensions.height',
+  weight: 'weight',
+  length: 'dimensions.length',
+  width: 'dimensions.width',
+  height: 'dimensions.height',
   max_handling_time_days: null,
   min_handling_time_days: null,
   pickup_method: null,
