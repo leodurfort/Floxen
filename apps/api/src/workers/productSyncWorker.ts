@@ -139,11 +139,10 @@ export async function productSyncProcessor(job: Job) {
         shopCurrency: settings.shopCurrency,
       };
 
-      // Update seller fields if they're available from WooCommerce
+      // Update seller fields if they're available from WooCommerce (only sellerName and sellerUrl)
       if (settings.sellerName) updateData.sellerName = settings.sellerName;
       if (settings.sellerUrl) updateData.sellerUrl = settings.sellerUrl;
-      if (settings.sellerPrivacyPolicy) updateData.sellerPrivacyPolicy = settings.sellerPrivacyPolicy;
-      if (settings.sellerTos) updateData.sellerTos = settings.sellerTos;
+      // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 
       await prisma.shop.update({
         where: { id: shopId },
@@ -156,8 +155,6 @@ export async function productSyncProcessor(job: Job) {
         shopCurrency: settings.shopCurrency,
         hasSellerName: !!settings.sellerName,
         hasSellerUrl: !!settings.sellerUrl,
-        hasPrivacyPolicy: !!settings.sellerPrivacyPolicy,
-        hasTos: !!settings.sellerTos,
       });
 
       // Update local shop object for currency fallback

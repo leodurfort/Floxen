@@ -178,6 +178,23 @@ export async function toggleShopSync(shopId: string, syncEnabled: boolean, token
   });
 }
 
+export async function updateShop(
+  shopId: string,
+  data: {
+    sellerPrivacyPolicy?: string | null;
+    sellerTos?: string | null;
+    returnPolicy?: string | null;
+    returnWindow?: number | null;
+  },
+  token: string
+) {
+  return request<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+}
+
 // New API functions for 3-column enrichment flow
 
 export async function updateProductManualField(

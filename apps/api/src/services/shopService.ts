@@ -152,14 +152,10 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
       syncStatus: 'PENDING',
       shopName: settings?.shopName || shop.shopName,
       shopCurrency: settings?.shopCurrency || shop.shopCurrency,
-      // Populate seller fields from WooCommerce
+      // Populate seller fields from WooCommerce (only sellerName and sellerUrl)
       sellerName: settings?.sellerName || shop.sellerName,
       sellerUrl: settings?.sellerUrl || shop.sellerUrl,
-      sellerPrivacyPolicy: settings?.sellerPrivacyPolicy || shop.sellerPrivacyPolicy,
-      sellerTos: settings?.sellerTos || shop.sellerTos,
-      // Return policy needs to be set manually (not available in WooCommerce API)
-      returnPolicy: settings?.returnPolicy || shop.returnPolicy,
-      returnWindow: settings?.returnWindow || shop.returnWindow,
+      // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only (preserve existing values)
       updatedAt: new Date(),
     },
   });

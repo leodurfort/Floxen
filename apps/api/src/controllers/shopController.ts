@@ -25,10 +25,10 @@ const updateShopSchema = z.object({
   syncEnabled: z.boolean().optional(),
   sellerName: z.string().optional(),
   sellerUrl: z.string().url().optional(),
-  sellerPrivacyPolicy: z.string().url().optional(),
-  sellerTos: z.string().url().optional(),
-  returnPolicy: z.string().optional(),
-  returnWindow: z.number().int().positive().optional(),
+  sellerPrivacyPolicy: z.string().url().nullable().optional(),
+  sellerTos: z.string().url().nullable().optional(),
+  returnPolicy: z.string().nullable().optional(),
+  returnWindow: z.number().int().positive().nullable().optional(),
 });
 
 const openAiConfigSchema = z.object({
