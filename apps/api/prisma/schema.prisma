@@ -85,6 +85,8 @@ model Shop {
   sellerTos         String?    @map("seller_tos")
   returnPolicy      String?    @map("return_policy")
   returnWindow      Int?       @map("return_window")
+  defaultEnableSearch    Boolean    @default(true) @map("default_enable_search")
+  defaultEnableCheckout  Boolean    @default(false) @map("default_enable_checkout")
   fieldMappings     Json?      @map("field_mappings")
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
