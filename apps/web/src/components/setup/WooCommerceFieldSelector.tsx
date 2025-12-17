@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { WooCommerceField, WOO_COMMERCE_FIELDS, searchWooFields, getWooField } from '@/lib/wooCommerceFields';
+import { WooCommerceField, searchWooFields, getWooField } from '@/lib/wooCommerceFields';
+import { useAuth } from '@/store/auth';
+import { useParams } from 'next/navigation';
 
 interface Props {
   value: string | null;           // Current selected field value
@@ -10,13 +12,51 @@ interface Props {
 }
 
 export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: Props) {
+  const params = useParams<{ id: string }>();
+  const { accessToken } = useAuth();
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [fields, setFields] = useState<WooCommerceField[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const filteredFields = searchQuery ? searchWooFields(searchQuery) : WOO_COMMERCE_FIELDS;
-  const selectedField = value ? getWooField(value) : null;
-  const hasInvalidMapping = value && !selectedField; // Field value exists but not found in list
+  // Load fields from API
+  useEffect(() => {
+    if (!accessToken || !params.id) return;
+
+    async function loadFields() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/woo-fields`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error(`Failed to load fields: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        setFields(data.fields || []);
+      } catch (err) {
+        console.error('[WooCommerceFieldSelector] Failed to load fields', err);
+        setError(err instanceof Error ? err.message : 'Failed to load fields');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadFields();
+  }, [accessToken, params.id]);
+
+  const filteredFields = searchQuery ? searchWooFields(fields, searchQuery) : fields;
+  const selectedField = value ? getWooField(fields, value) : null;
+  const hasInvalidMapping = value && !selectedField && !loading; // Field value exists but not found in list
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -41,7 +81,15 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
   let buttonClass: string;
   let borderClass: string;
 
-  if (selectedField) {
+  if (loading) {
+    buttonText = 'Loading fields...';
+    buttonClass = 'text-white/40';
+    borderClass = 'border-white/10';
+  } else if (error) {
+    buttonText = `⚠️ Error loading fields`;
+    buttonClass = 'text-red-400';
+    borderClass = 'border-red-400/50';
+  } else if (selectedField) {
     buttonText = selectedField.label;
     buttonClass = 'text-white';
     borderClass = 'border-white/10';
@@ -60,8 +108,11 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
     <div className="relative w-full" ref={dropdownRef}>
       {/* Trigger Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full h-[40px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border transition-colors flex items-center justify-between ${borderClass}`}
+        onClick={() => !loading && !error && setIsOpen(!isOpen)}
+        disabled={loading || !!error}
+        className={`w-full h-[40px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border transition-colors flex items-center justify-between ${borderClass} ${
+          loading || error ? 'cursor-not-allowed opacity-60' : ''
+        }`}
       >
         <span className={`text-sm truncate ${buttonClass}`}>
           {buttonText}
@@ -72,7 +123,7 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
       </button>
 
       {/* Dropdown */}
-      {isOpen && (
+      {isOpen && !loading && !error && (
         <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[320px] overflow-hidden flex flex-col">
           {/* Search Bar */}
           <div className="p-3 border-b border-white/10">
@@ -89,7 +140,9 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
           {/* Field List */}
           <div className="overflow-y-auto">
             {filteredFields.length === 0 ? (
-              <div className="p-4 text-center text-white/40 text-sm">No fields found</div>
+              <div className="p-4 text-center text-white/40 text-sm">
+                {searchQuery ? 'No fields found' : 'No fields available'}
+              </div>
             ) : (
               filteredFields.map((field) => (
                 <button

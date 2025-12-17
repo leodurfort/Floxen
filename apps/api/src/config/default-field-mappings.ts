@@ -25,8 +25,8 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // BASIC PRODUCT DATA (6 fields)
   // ═══════════════════════════════════════════════════════════════════════════
   id: 'id',
-  gtin: 'global_unique_id',
-  mpn: null,
+  gtin: 'global_unique_id', // Standard WooCommerce field for GTIN/UPC/EAN/ISBN
+  mpn: null, // Manufacturer Part Number - typically in meta_data, discover via field discovery
   title: 'name',
   description: 'description',
   link: 'permalink',
@@ -34,16 +34,16 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // ═══════════════════════════════════════════════════════════════════════════
   // ITEM INFORMATION (10 fields)
   // ═══════════════════════════════════════════════════════════════════════════
-  condition: null, // Discovered dynamically (meta_data._condition)
+  condition: null, // Discovered dynamically via field discovery (e.g., meta_data._condition)
   product_category: 'categories[0].name',
-  brand: 'brands[0].name',
-  material: null,
-  dimensions: null,
+  brand: 'brands[0].name', // If brand plugin enabled, otherwise use field discovery
+  material: null, // Discovered dynamically via field discovery (e.g., meta_data._material)
+  dimensions: null, // Use specific dimension fields below instead
   length: 'dimensions.length',
   width: 'dimensions.width',
   height: 'dimensions.height',
   weight: 'weight',
-  age_group: null,
+  age_group: null, // Discovered dynamically via field discovery (e.g., meta_data._age_group)
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MEDIA (4 fields)
