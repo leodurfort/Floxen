@@ -89,15 +89,30 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
   try {
     logger.info('woo:fetch store settings start');
 
+    // Fetch store information from index endpoint (GET /wp-json/wc/v3)
+    let storeInfo: any = {};
+    try {
+      const indexResponse = await api.get('');
+      storeInfo = indexResponse.data || {};
+      logger.info('woo:fetch store index info', {
+        name: storeInfo.name,
+        description: storeInfo.description,
+        url: storeInfo.url,
+      });
+    } catch (err) {
+      logger.warn('woo:fetch store index failed', {
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
+    }
+
     // Fetch general settings group
     const generalResponse = await api.get('settings/general');
     const settings = Array.isArray(generalResponse.data) ? generalResponse.data : [];
 
-    // Extract settings - WooCommerce doesn't have a direct "shop name" setting
-    // The site title comes from WordPress, not WooCommerce REST API
+    // Extract currency setting
     const currencySetting = settings.find((s: any) => s.id === 'woocommerce_currency');
 
-    // Fetch system status for additional info
+    // Fetch system status for additional info (URLs, pages)
     let systemInfo: any = {};
     let systemSettings: any = {};
     try {
@@ -110,9 +125,9 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
 
       // Extract from environment (where site URLs are located)
       systemInfo = {
-        site_title: environment.site_title || environment.home_url?.replace(/https?:\/\/(www\.)?/, '').replace(/\/$/, ''),
-        home_url: environment.home_url,
-        site_url: environment.site_url,
+        site_title: environment.site_title || storeInfo.name || environment.home_url?.replace(/https?:\/\/(www\.)?/, '').replace(/\/$/, ''),
+        home_url: environment.home_url || storeInfo.url,
+        site_url: environment.site_url || storeInfo.url,
       };
 
       logger.info('woo:system status fetched', {
@@ -123,9 +138,15 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
         environmentKeys: Object.keys(environment),
       });
     } catch (err) {
-      logger.warn('woo:fetch system status failed, using defaults', {
+      logger.warn('woo:fetch system status failed, using store index data', {
         error: err instanceof Error ? err : new Error(String(err)),
       });
+      // Fallback to store index data if system_status fails
+      systemInfo = {
+        site_title: storeInfo.name,
+        home_url: storeInfo.url,
+        site_url: storeInfo.url,
+      };
     }
 
     // Try to fetch additional pages/settings for seller info
@@ -150,18 +171,19 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       logger.warn('woo:fetch pages for policies failed');
     }
 
-    // Get site name from system info (WordPress site title)
-    const siteName = systemInfo.site_title || systemInfo.home_url?.replace(/https?:\/\/(www\.)?/, '').split('/')[0] || 'Store';
+    // Get site name - prioritize index endpoint name over system status
+    const siteName = storeInfo.name || systemInfo.site_title || systemInfo.home_url?.replace(/https?:\/\/(www\.)?/, '').split('/')[0] || 'Store';
+    const siteUrl = storeInfo.url || systemInfo.home_url || systemInfo.site_url;
 
     const storeSettings: StoreSettings = {
       shopName: siteName,
       shopCurrency: currencySetting?.value || 'USD',
-      siteUrl: systemInfo.site_url,
-      homeUrl: systemInfo.home_url,
+      siteUrl: systemInfo.site_url || storeInfo.url,
+      homeUrl: systemInfo.home_url || storeInfo.url,
       language: systemInfo.language,
-      // Populate seller fields
-      sellerName: siteName,
-      sellerUrl: systemInfo.home_url || systemInfo.site_url || undefined,
+      // Populate seller fields - use index endpoint data first
+      sellerName: storeInfo.name || siteName,
+      sellerUrl: siteUrl,
       sellerPrivacyPolicy: privacyPolicyUrl,
       sellerTos: tosUrl,
       // Return policy - WooCommerce doesn't provide this by default
