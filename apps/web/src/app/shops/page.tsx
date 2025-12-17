@@ -225,54 +225,56 @@ export default function ShopsPage() {
                       )}
                       {shop.isConnected && (
                         <div className="mt-4 pt-4 border-t border-white/10">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <span className="text-white/60">sellerName:</span>
-                              <span className="text-white ml-2">{shop.sellerName || 'N/A'}</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="space-y-3">
+                              <div>
+                                <span className="text-white/60">sellerName:</span>
+                                <span className="text-white ml-2">{shop.sellerName || 'N/A'}</span>
+                              </div>
+                              <div>
+                                <span className="text-white/60">sellerUrl:</span>
+                                {shop.sellerUrl ? (
+                                  <a href={shop.sellerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
+                                    {shop.sellerUrl}
+                                  </a>
+                                ) : (
+                                  <span className="text-white/40 ml-2">N/A</span>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-white/60">sellerUrl:</span>
-                              {shop.sellerUrl ? (
-                                <a href={shop.sellerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
-                                  {shop.sellerUrl}
-                                </a>
-                              ) : (
-                                <span className="text-white/40 ml-2">N/A</span>
-                              )}
+                            <div className="space-y-3">
+                              <div>
+                                <span className="text-white/60">returnPolicy:</span>
+                                <span className="text-white ml-2">{shop.returnPolicy || 'N/A'}</span>
+                              </div>
+                              <div>
+                                <span className="text-white/60">returnWindow:</span>
+                                <span className="text-white ml-2">
+                                  {shop.returnWindow !== null && shop.returnWindow !== undefined ? `${shop.returnWindow} days` : 'N/A'}
+                                </span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-white/60">sellerPrivacyPolicy:</span>
-                              {shop.sellerPrivacyPolicy ? (
-                                <a href={shop.sellerPrivacyPolicy} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
-                                  {shop.sellerPrivacyPolicy}
-                                </a>
-                              ) : (
-                                <span className="text-white/40 ml-2">N/A</span>
-                              )}
-                            </div>
-                            <div>
-                              <span className="text-white/60">sellerTos:</span>
-                              {shop.sellerTos ? (
-                                <a href={shop.sellerTos} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
-                                  {shop.sellerTos}
-                                </a>
-                              ) : (
-                                <span className="text-white/40 ml-2">N/A</span>
-                              )}
-                            </div>
-                            <div>
-                              <span className="text-white/60">returnPolicy:</span>
-                              <span className="text-white ml-2">{shop.returnPolicy || 'N/A'}</span>
-                            </div>
-                            <div>
-                              <span className="text-white/60">returnWindow:</span>
-                              <span className="text-white ml-2">
-                                {shop.returnWindow !== null && shop.returnWindow !== undefined ? `${shop.returnWindow} days` : 'N/A'}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-white/60">shopCurrency:</span>
-                              <span className="text-white ml-2">{shop.shopCurrency || 'N/A'}</span>
+                            <div className="space-y-3">
+                              <div>
+                                <span className="text-white/60">sellerPrivacyPolicy:</span>
+                                {shop.sellerPrivacyPolicy ? (
+                                  <a href={shop.sellerPrivacyPolicy} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
+                                    {shop.sellerPrivacyPolicy}
+                                  </a>
+                                ) : (
+                                  <span className="text-white/40 ml-2">N/A</span>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-white/60">sellerTos:</span>
+                                {shop.sellerTos ? (
+                                  <a href={shop.sellerTos} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
+                                    {shop.sellerTos}
+                                  </a>
+                                ) : (
+                                  <span className="text-white/40 ml-2">N/A</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
