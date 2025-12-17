@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma';
 import { encrypt } from '../lib/encryption';
 import { env } from '../config/env';
 import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
-import { createWooClient, fetchStoreSettings } from './wooClient';
+import { fetchStoreSettings } from './wooClient';
 
 export async function listShopsByUser(userId: string) {
   return prisma.shop.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
@@ -121,11 +121,14 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) throw new Error('Shop not found');
 
-  // Create WooCommerce client with new credentials
-  const wooClient = createWooClient({
-    storeUrl: shop.wooStoreUrl,
+  // Create WooCommerce client with plain text credentials (not encrypted yet)
+  // Note: Don't use createWooClient() here as it expects encrypted credentials
+  const WooCommerceRestApi = require('@woocommerce/woocommerce-rest-api').default;
+  const wooClient = new WooCommerceRestApi({
+    url: shop.wooStoreUrl,
     consumerKey: consumerKey,
     consumerSecret: consumerSecret,
+    version: 'wc/v3',
   });
 
   // Fetch store settings from WooCommerce API
