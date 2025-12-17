@@ -318,7 +318,7 @@ export function triggerEnrichment(req: Request, res: Response) {
         logger.warn('Product not found for enrichment', { shopId: id, productId: pid });
         return res.status(404).json({ error: 'Product not found' });
       }
-      aiEnrichmentQueue?.queue.add('enrich', { productId: product.id }, { removeOnComplete: true });
+      aiEnrichmentQueue?.queue.add('ai-enrichment', { productId: product.id }, { removeOnComplete: true });
       logger.info('Product enrichment queued successfully', {
         shopId: id,
         productId: pid,
@@ -363,10 +363,10 @@ export function bulkAction(req: Request, res: Response) {
         syncStatus: action === 'sync' ? 'PENDING' : undefined,
       });
       if (action === 'enrich' && updated) {
-        aiEnrichmentQueue?.queue.add('enrich', { productId: pid }, { removeOnComplete: true });
+        aiEnrichmentQueue?.queue.add('ai-enrichment', { productId: pid }, { removeOnComplete: true });
       }
       if (action === 'sync' && updated) {
-        productSyncQueue?.queue.add('sync', { shopId: req.params.id, productId: pid }, { removeOnComplete: true });
+        productSyncQueue?.queue.add('product-sync', { shopId: req.params.id, productId: pid }, { removeOnComplete: true });
       }
       return { id: pid, updated: Boolean(updated) };
     }),

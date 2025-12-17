@@ -147,7 +147,7 @@ export function oauthCallback(req: Request, res: Response) {
 
   setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret))
     .then((shop) => {
-      productSyncQueue?.queue.add('sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
+      productSyncQueue?.queue.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
       logger.info('shops:oauth callback SUCCESS - stored creds', { shopId: shop.id });
       return res.json({ shop, message: 'Connection verified, sync queued' });
     })
