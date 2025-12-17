@@ -99,6 +99,14 @@ export function getProduct(req: Request, res: Response) {
 export async function getProductWooData(req: Request, res: Response) {
   const { id, pid } = req.params;
 
+  // DETAILED LOGGING: Endpoint called
+  console.log('============================================================');
+  console.log('[getProductWooData] ENDPOINT CALLED');
+  console.log('============================================================');
+  console.log('Shop ID:', id);
+  console.log('Product ID:', pid);
+  console.log('Timestamp:', new Date().toISOString());
+
   try {
     // Import here to avoid circular dependencies
     const { getShop } = await import('../services/shopService');
@@ -106,6 +114,12 @@ export async function getProductWooData(req: Request, res: Response) {
 
     // Get the product to find wooProductId
     const product = await getProductRecord(id, pid);
+    console.log('[getProductWooData] Product record retrieved:', {
+      hasProduct: !!product,
+      wooProductId: product?.wooProductId,
+      wooParentId: product?.wooParentId,
+      isVariation: !!product?.wooParentId,
+    });
     if (!product) {
       logger.warn('Product not found for woo data fetch', { shopId: id, productId: pid });
       return res.status(404).json({ error: 'Product not found' });
@@ -149,7 +163,58 @@ export async function getProductWooData(req: Request, res: Response) {
 
     let wooData = await fetchSingleProduct(wooClient, product.wooProductId);
 
-    // For variation products, inherit fields from parent if missing
+    console.log('[getProductWooData] Raw WooCommerce data fetched:', {
+      wooProductId: product.wooProductId,
+      hasAttributes: !!(wooData.attributes && wooData.attributes.length > 0),
+      attributesCount: wooData.attributes?.length || 0,
+      attributes: wooData.attributes?.map((a: any) => ({
+        name: a.name,
+        hasOption: a.option !== undefined,
+        hasOptions: Array.isArray(a.options),
+      })) || [],
+    });
+
+    // For variation products, use mergeParentAndVariation to properly merge all fields including attributes
+    if (product.wooParentId) {
+      console.log('[getProductWooData] This is a variation, fetching parent and merging...');
+
+      // Import mergeParentAndVariation
+      const { mergeParentAndVariation } = await import('../services/productService');
+      const { getShop: getShopForMerge } = await import('../services/shopService');
+
+      // Fetch parent product
+      const parentData = await fetchSingleProduct(wooClient, product.wooParentId);
+      console.log('[getProductWooData] Parent data fetched:', {
+        parentId: product.wooParentId,
+        hasParentAttributes: !!(parentData.attributes && parentData.attributes.length > 0),
+        parentAttributesCount: parentData.attributes?.length || 0,
+        parentAttributes: parentData.attributes?.map((a: any) => ({
+          name: a.name,
+          hasOptions: Array.isArray(a.options),
+          optionsLength: a.options?.length,
+        })) || [],
+      });
+
+      // Get shop for currency
+      const shopForMerge = await getShopForMerge(id);
+
+      // Use the proper merge function that handles attributes correctly
+      wooData = mergeParentAndVariation(parentData, wooData, shopForMerge.shopCurrency);
+
+      console.log('[getProductWooData] After mergeParentAndVariation:', {
+        hasAttributes: !!(wooData.attributes && wooData.attributes.length > 0),
+        attributesCount: wooData.attributes?.length || 0,
+        attributes: wooData.attributes?.map((a: any) => ({
+          name: a.name,
+          hasOption: a.option !== undefined,
+          optionValue: a.option,
+        })) || [],
+        hasMaterial: !!wooData.attributes?.find((a: any) => a.name.toLowerCase() === 'material'),
+      });
+    }
+
+    // OLD CODE - REPLACED WITH mergeParentAndVariation ABOVE
+    /*
     if (product.wooParentId) {
       // Helper to get meta_data value
       const getMetaValue = (data: any, key: string) => {
@@ -254,6 +319,13 @@ export async function getProductWooData(req: Request, res: Response) {
         }
       }
     }
+    */
+    // END OLD CODE
+
+    console.log('[getProductWooData] Final wooData before normalization:', {
+      hasAttributes: !!(wooData.attributes && wooData.attributes.length > 0),
+      attributesCount: wooData.attributes?.length || 0,
+    });
 
     logger.info('Product WooCommerce data fetched successfully', {
       shopId: id,
