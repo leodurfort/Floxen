@@ -5,6 +5,7 @@ import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCur
 import { transformWooProduct, mergeParentAndVariation, checksum } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { ValidationService } from '../services/validationService';
+import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { Shop } from '@prisma/client';
 
 /**
@@ -194,6 +195,25 @@ export async function productSyncProcessor(job: Job) {
       where: { id: shopId },
       data: { syncStatus: 'COMPLETED', lastSyncAt: new Date() },
     });
+
+    // Automatically discover meta_data fields after sync completes
+    logger.info('product-sync: triggering field discovery', { shopId });
+    try {
+      const discoveryResult = await FieldDiscoveryService.discoverFields(shopId);
+      logger.info('product-sync: field discovery completed', {
+        shopId,
+        discovered: discoveryResult.discovered.length,
+        saved: discoveryResult.saved,
+        skipped: discoveryResult.skipped,
+        errors: discoveryResult.errors.length,
+      });
+    } catch (discoveryErr) {
+      logger.error('product-sync: field discovery failed (non-fatal)', {
+        shopId,
+        error: discoveryErr instanceof Error ? discoveryErr : new Error(String(discoveryErr)),
+      });
+      // Don't fail the sync if field discovery fails
+    }
   } catch (err) {
     logger.error(`product-sync failed for shop ${shopId}`, { error: err instanceof Error ? err : new Error(String(err)) });
     await prisma.shop.update({

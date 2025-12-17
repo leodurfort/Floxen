@@ -25,8 +25,8 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // BASIC PRODUCT DATA (6 fields)
   // ═══════════════════════════════════════════════════════════════════════════
   id: 'id',
-  gtin: null, // Discovered dynamically per shop (meta_data._gtin)
-  mpn: 'sku',
+  gtin: 'global_unique_id',
+  mpn: null,
   title: 'name',
   description: 'description',
   link: 'permalink',

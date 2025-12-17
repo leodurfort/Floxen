@@ -56,15 +56,34 @@ export class FieldDiscoveryService {
         consumerSecret: shop.wooConsumerSecret,
       });
 
-      // Fetch sample of products (max 100 for performance)
+      // Fetch ALL products from the shop (paginated)
       logger.info('Fetching products for field discovery', { shopId, shopName: shop.shopName });
 
-      const response = await wooClient.get('products', {
-        per_page: 100,
-        status: 'publish',
-      });
+      const products: any[] = [];
+      let page = 1;
+      let hasMore = true;
 
-      const products = response.data as any[];
+      while (hasMore) {
+        const response = await wooClient.get('products', {
+          per_page: 100,
+          page,
+          status: 'publish',
+        });
+
+        const pageProducts = response.data as any[];
+        products.push(...pageProducts);
+
+        logger.info('Field discovery: fetched page', {
+          shopId,
+          page,
+          productsInPage: pageProducts.length,
+          totalSoFar: products.length,
+        });
+
+        // Check if there are more pages
+        hasMore = pageProducts.length === 100;
+        page++;
+      }
 
       if (!products || products.length === 0) {
         logger.warn('No products found for discovery', { shopId });
