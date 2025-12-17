@@ -56,7 +56,7 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // ═══════════════════════════════════════════════════════════════════════════
   // PRICE & PROMOTIONS (6 fields)
   // ═══════════════════════════════════════════════════════════════════════════
-  price: 'regular_price',
+  price: 'price',
   sale_price: 'sale_price',
   sale_price_effective_date: null,
   unit_pricing_measure: null,
