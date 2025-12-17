@@ -79,6 +79,7 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
     }
 
     // Handle attributes special case: "attributes.Color"
+    // IMPORTANT: Parent products have "options" array, variations have "option" string
     if (fieldPath.startsWith('attributes.')) {
       const attrName = fieldPath.replace('attributes.', '');
       const attributes = wooRawJson.attributes || [];
@@ -96,14 +97,32 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
         a.name && a.name.toLowerCase() === attrName.toLowerCase()
       );
 
-      if (attr && Array.isArray(attr.options) && attr.options.length > 0) {
-        // Return first option if single value, or join all options with comma
+      if (!attr) {
+        if (shouldLog) {
+          console.log('[extractFieldValue] Attribute not found:', attrName);
+        }
+        return null;
+      }
+
+      // For variations: check "option" (singular string)
+      if (attr.option !== undefined && attr.option !== null) {
+        if (shouldLog) {
+          console.log('[extractFieldValue] Variation attribute found:', {
+            attrName,
+            option: attr.option,
+          });
+        }
+        return attr.option;
+      }
+
+      // For parent products: check "options" (array)
+      if (Array.isArray(attr.options) && attr.options.length > 0) {
         const result = attr.options.length === 1
           ? attr.options[0]
           : attr.options.join(', ');
 
         if (shouldLog) {
-          console.log('[extractFieldValue] Attribute found:', {
+          console.log('[extractFieldValue] Parent attribute found:', {
             attrName,
             options: attr.options,
             result,
@@ -114,7 +133,7 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string): any {
       }
 
       if (shouldLog) {
-        console.log('[extractFieldValue] Attribute not found:', attrName);
+        console.log('[extractFieldValue] Attribute has no value:', { attr });
       }
 
       return null;

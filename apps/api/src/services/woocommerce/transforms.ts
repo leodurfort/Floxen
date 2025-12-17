@@ -306,6 +306,10 @@ export function extractNestedValue(obj: any, path: string): any {
 
 /**
  * Helper: Extract attribute value by name (case-insensitive)
+ *
+ * IMPORTANT: Handles both parent products and variations
+ * - Parent products: attributes have "options" array (e.g., ["Red", "Blue"])
+ * - Variations: attributes have "option" string (e.g., "Red")
  */
 export function extractAttributeValue(wooProduct: any, attributeName: string): any {
   if (!wooProduct.attributes || !Array.isArray(wooProduct.attributes)) {
@@ -317,7 +321,19 @@ export function extractAttributeValue(wooProduct: any, attributeName: string): a
     a.name.toLowerCase() === `pa_${attributeName.toLowerCase()}`
   );
 
-  return attr?.options?.[0] || null;
+  if (!attr) return null;
+
+  // For variations: check "option" (singular string)
+  if (attr.option !== undefined && attr.option !== null) {
+    return attr.option;
+  }
+
+  // For parent products: check "options" (array)
+  if (Array.isArray(attr.options) && attr.options.length > 0) {
+    return attr.options.length === 1 ? attr.options[0] : attr.options.join(', ');
+  }
+
+  return null;
 }
 
 /**
