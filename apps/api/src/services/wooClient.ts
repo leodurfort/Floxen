@@ -72,13 +72,10 @@ export interface StoreSettings {
   siteUrl?: string;
   homeUrl?: string;
   language?: string;
-  // Shop-level fields for OpenAI feed
+  // Shop-level fields for OpenAI feed (only sellerName and sellerUrl are fetched from API)
   sellerName?: string;
   sellerUrl?: string;
-  sellerPrivacyPolicy?: string;
-  sellerTos?: string;
-  returnPolicy?: string;
-  returnWindow?: number;
+  // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 }
 
 /**
@@ -113,10 +110,7 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       // Populate seller fields from index endpoint only
       sellerName: storeInfo.name,
       sellerUrl: storeInfo.url,
-      sellerPrivacyPolicy: undefined,
-      sellerTos: undefined,
-      returnPolicy: undefined,
-      returnWindow: undefined,
+      // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
     };
 
     logger.info('woo:fetch store settings complete', {

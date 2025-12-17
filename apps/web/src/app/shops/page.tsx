@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { listShops, deleteShop, createShop, triggerProductSync, toggleShopSync } from '@/lib/api';
+import { listShops, deleteShop, createShop, triggerProductSync, toggleShopSync, updateShop } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { Shop } from '@productsynch/shared';
 
@@ -14,6 +14,18 @@ export default function ShopsPage() {
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [storeUrl, setStoreUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [editingShopId, setEditingShopId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<{
+    sellerPrivacyPolicy: string;
+    sellerTos: string;
+    returnPolicy: string;
+    returnWindow: string;
+  }>({
+    sellerPrivacyPolicy: '',
+    sellerTos: '',
+    returnPolicy: '',
+    returnWindow: '',
+  });
 
   useEffect(() => {
     hydrate();
@@ -85,6 +97,65 @@ export default function ShopsPage() {
       setError(null);
     } catch (err: any) {
       setError(err.message);
+    }
+  }
+
+  function startEditing(shop: Shop) {
+    setEditingShopId(shop.id);
+    setEditValues({
+      sellerPrivacyPolicy: shop.sellerPrivacyPolicy || '',
+      sellerTos: shop.sellerTos || '',
+      returnPolicy: shop.returnPolicy || '',
+      returnWindow: shop.returnWindow?.toString() || '',
+    });
+  }
+
+  function cancelEditing() {
+    setEditingShopId(null);
+    setEditValues({
+      sellerPrivacyPolicy: '',
+      sellerTos: '',
+      returnPolicy: '',
+      returnWindow: '',
+    });
+  }
+
+  async function saveShopFields(shopId: string) {
+    if (!accessToken) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const updateData: {
+        sellerPrivacyPolicy?: string | null;
+        sellerTos?: string | null;
+        returnPolicy?: string | null;
+        returnWindow?: number | null;
+      } = {};
+
+      // Allow setting to empty string to clear the field
+      updateData.sellerPrivacyPolicy = editValues.sellerPrivacyPolicy.trim() || null;
+      updateData.sellerTos = editValues.sellerTos.trim() || null;
+      updateData.returnPolicy = editValues.returnPolicy.trim() || null;
+      
+      if (editValues.returnWindow.trim()) {
+        const returnWindow = parseInt(editValues.returnWindow.trim(), 10);
+        if (!isNaN(returnWindow) && returnWindow > 0) {
+          updateData.returnWindow = returnWindow;
+        } else {
+          updateData.returnWindow = null;
+        }
+      } else {
+        updateData.returnWindow = null;
+      }
+
+      await updateShop(shopId, updateData, accessToken);
+      await loadShops();
+      setEditingShopId(null);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -245,19 +316,48 @@ export default function ShopsPage() {
                             <div className="space-y-3">
                               <div>
                                 <span className="text-white/60">returnPolicy:</span>
-                                <span className="text-white ml-2">{shop.returnPolicy || 'N/A'}</span>
+                                {editingShopId === shop.id ? (
+                                  <input
+                                    type="text"
+                                    value={editValues.returnPolicy}
+                                    onChange={(e) => setEditValues({ ...editValues, returnPolicy: e.target.value })}
+                                    className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs"
+                                    placeholder="Enter return policy"
+                                  />
+                                ) : (
+                                  <span className="text-white ml-2">{shop.returnPolicy || 'N/A'}</span>
+                                )}
                               </div>
                               <div>
                                 <span className="text-white/60">returnWindow:</span>
-                                <span className="text-white ml-2">
-                                  {shop.returnWindow !== null && shop.returnWindow !== undefined ? `${shop.returnWindow} days` : 'N/A'}
-                                </span>
+                                {editingShopId === shop.id ? (
+                                  <input
+                                    type="number"
+                                    value={editValues.returnWindow}
+                                    onChange={(e) => setEditValues({ ...editValues, returnWindow: e.target.value })}
+                                    className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs"
+                                    placeholder="Days"
+                                    min="1"
+                                  />
+                                ) : (
+                                  <span className="text-white ml-2">
+                                    {shop.returnWindow !== null && shop.returnWindow !== undefined ? `${shop.returnWindow} days` : 'N/A'}
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <div className="space-y-3">
                               <div>
                                 <span className="text-white/60">sellerPrivacyPolicy:</span>
-                                {shop.sellerPrivacyPolicy ? (
+                                {editingShopId === shop.id ? (
+                                  <input
+                                    type="url"
+                                    value={editValues.sellerPrivacyPolicy}
+                                    onChange={(e) => setEditValues({ ...editValues, sellerPrivacyPolicy: e.target.value })}
+                                    className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs"
+                                    placeholder="https://..."
+                                  />
+                                ) : shop.sellerPrivacyPolicy ? (
                                   <a href={shop.sellerPrivacyPolicy} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
                                     {shop.sellerPrivacyPolicy}
                                   </a>
@@ -267,7 +367,15 @@ export default function ShopsPage() {
                               </div>
                               <div>
                                 <span className="text-white/60">sellerTos:</span>
-                                {shop.sellerTos ? (
+                                {editingShopId === shop.id ? (
+                                  <input
+                                    type="url"
+                                    value={editValues.sellerTos}
+                                    onChange={(e) => setEditValues({ ...editValues, sellerTos: e.target.value })}
+                                    className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs"
+                                    placeholder="https://..."
+                                  />
+                                ) : shop.sellerTos ? (
                                   <a href={shop.sellerTos} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
                                     {shop.sellerTos}
                                   </a>
@@ -277,6 +385,33 @@ export default function ShopsPage() {
                               </div>
                             </div>
                           </div>
+                          {editingShopId === shop.id ? (
+                            <div className="mt-4 flex gap-2">
+                              <button
+                                onClick={() => saveShopFields(shop.id)}
+                                disabled={loading}
+                                className="btn btn--sm btn--primary"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                disabled={loading}
+                                className="btn btn--sm"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="mt-4">
+                              <button
+                                onClick={() => startEditing(shop)}
+                                className="btn btn--sm"
+                              >
+                                Edit Fields
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
