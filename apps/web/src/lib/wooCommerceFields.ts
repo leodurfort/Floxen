@@ -63,14 +63,18 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string, shopData?:
   if (fieldPath.startsWith('shop.')) {
     const shopFieldName = fieldPath.replace('shop.', '');
     const value = shopData?.[shopFieldName] || null;
-    if (shouldLog) {
-      console.log('[extractFieldValue] Shop field extraction:', {
-        fieldPath,
-        shopFieldName,
-        hasShopData: !!shopData,
-        value,
-      });
-    }
+
+    // Always log shop field extractions for debugging
+    console.log('[extractFieldValue] Shop field extraction:', {
+      fieldPath,
+      shopFieldName,
+      hasShopData: !!shopData,
+      shopData: shopData,
+      shopDataKeys: shopData ? Object.keys(shopData) : [],
+      value,
+      extractedValue: shopData?.[shopFieldName],
+    });
+
     return value;
   }
 

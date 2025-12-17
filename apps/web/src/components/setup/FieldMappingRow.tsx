@@ -37,6 +37,18 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     : null;
   const formattedValue = formatFieldValue(previewValue);
 
+  // Debug logging for shop fields specifically
+  const isShopField = currentMapping?.startsWith('shop.');
+  if (isShopField) {
+    console.log(`[FieldMappingRow] Shop field "${spec.attribute}":`, {
+      currentMapping,
+      hasPreviewShopData: !!previewShopData,
+      previewShopData,
+      previewValue,
+      formattedValue,
+    });
+  }
+
   // Determine preview display text
   let previewDisplay = formattedValue;
   let previewStyle = 'text-white/80';
