@@ -261,7 +261,17 @@ export async function getProductWooData(req: Request, res: Response) {
       wooProductId: product.wooProductId,
     });
 
-    return res.json({ wooData });
+    // Normalize the data to match the database structure (wooAttributes, wooCategories, etc.)
+    // This ensures the frontend only needs to look in one place
+    const normalizedData = {
+      ...wooData,
+      wooAttributes: wooData.attributes || [],
+      wooCategories: wooData.categories || [],
+      wooImages: wooData.images || [],
+      wooRawJson: wooData, // Keep raw data for backwards compatibility
+    };
+
+    return res.json({ wooData: normalizedData });
   } catch (err: any) {
     logger.error('Failed to fetch product WooCommerce data', {
       error: err instanceof Error ? err : new Error(String(err)),
