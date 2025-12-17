@@ -168,8 +168,28 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
   const regularPrice = variation.regular_price ? variation.regular_price : parent.regular_price || '';
   const salePrice = variation.sale_price ? variation.sale_price : parent.sale_price || '';
 
-  // Build attributes array with color and size from variation attributes
-  const mergedAttributes = [...(parent.attributes || [])];
+  // Build attributes array: convert parent attributes to variation format
+  // Parent attributes have "options" array, variations need "option" string
+  const mergedAttributes: any[] = [];
+
+  // Start with parent attributes, but convert to variation format
+  (parent.attributes || []).forEach((attr: any) => {
+    const attrName = attr.name.toLowerCase();
+
+    // Skip color and size - we'll add these from variation
+    if (attrName === 'color' || attrName === 'colour' || attrName === 'size') {
+      return;
+    }
+
+    // Convert parent's "options" array to variation's "option" string
+    if (Array.isArray(attr.options) && attr.options.length > 0) {
+      mergedAttributes.push({
+        id: attr.id || 0,
+        name: attr.name,
+        option: attr.options.length === 1 ? attr.options[0] : attr.options.join(', ')
+      });
+    }
+  });
 
   // Add color attribute if found in variation
   if (varAttrs.color || varAttrs.colour) {
@@ -187,18 +207,6 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
       name: 'Size',
       option: varAttrs.size
     });
-  }
-
-  // Material: inherit from parent if variation doesn't have it
-  const parentMaterial = parent.attributes?.find((attr: any) =>
-    attr.name.toLowerCase() === 'material'
-  );
-  const variationMaterial = variation.attributes?.find((attr: any) =>
-    attr.name.toLowerCase() === 'material'
-  );
-
-  if (parentMaterial && !variationMaterial) {
-    mergedAttributes.push(parentMaterial);
   }
 
   // COMPREHENSIVE PARENT FALLBACK STRATEGY:
