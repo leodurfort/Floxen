@@ -231,6 +231,10 @@ export async function getFieldMappings(req: Request, res: Response) {
       }
     }
 
+    // Add shop-level toggle defaults (these are NOT field mappings, they're shop settings)
+    mappings['enable_search'] = shop.defaultEnableSearch ? 'ENABLED' : 'DISABLED';
+    mappings['enable_checkout'] = shop.defaultEnableCheckout ? 'ENABLED' : 'DISABLED';
+
     logger.info('shops:field-mappings:get', {
       shopId: id,
       userId,
@@ -266,6 +270,37 @@ export async function updateFieldMappings(req: Request, res: Response) {
 
     if (!mappings || typeof mappings !== 'object') {
       return res.status(400).json({ error: 'Invalid mappings format' });
+    }
+
+    // Extract toggle fields - these are shop-level settings, NOT field mappings
+    const enableSearch = mappings['enable_search'];
+    const enableCheckout = mappings['enable_checkout'];
+    delete mappings['enable_search'];
+    delete mappings['enable_checkout'];
+
+    // Update shop defaults for toggle fields
+    if (enableSearch !== undefined) {
+      await prisma.shop.update({
+        where: { id },
+        data: { defaultEnableSearch: enableSearch === 'ENABLED' },
+      });
+      logger.info('shops:field-mappings:update toggle', {
+        shopId: id,
+        field: 'enable_search',
+        value: enableSearch,
+      });
+    }
+
+    if (enableCheckout !== undefined) {
+      await prisma.shop.update({
+        where: { id },
+        data: { defaultEnableCheckout: enableCheckout === 'ENABLED' },
+      });
+      logger.info('shops:field-mappings:update toggle', {
+        shopId: id,
+        field: 'enable_checkout',
+        value: enableCheckout,
+      });
     }
 
     // Process each mapping

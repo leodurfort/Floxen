@@ -67,6 +67,11 @@ export class AutoFillService {
    * Fill a single field based on its mapping spec
    */
   private fillField(spec: OpenAIFieldSpec, wooProduct: any): any {
+    // Skip toggle fields - these are shop-level settings, not auto-filled from WooCommerce
+    if (spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout') {
+      return null;
+    }
+
     // Check for custom mapping first
     const customMappings = this.customMappings;
     let mapping = spec.wooCommerceMapping;

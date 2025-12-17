@@ -35,7 +35,7 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // ITEM INFORMATION (10 fields)
   // ═══════════════════════════════════════════════════════════════════════════
   condition: null, // Discovered dynamically via field discovery (e.g., meta_data._condition)
-  product_category: 'categories[0].name',
+  product_category: 'categories',
   brand: 'brands[0].name', // If brand plugin enabled, otherwise use field discovery
   material: null, // Discovered dynamically via field discovery (e.g., meta_data._material)
   dimensions: null, // Use specific dimension fields below instead
@@ -56,7 +56,7 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // ═══════════════════════════════════════════════════════════════════════════
   // PRICE & PROMOTIONS (6 fields)
   // ═══════════════════════════════════════════════════════════════════════════
-  price: 'price',
+  price: 'regular_price',
   sale_price: 'sale_price',
   sale_price_effective_date: null,
   unit_pricing_measure: null,
@@ -76,7 +76,7 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // ═══════════════════════════════════════════════════════════════════════════
   // VARIANTS (13 fields)
   // ═══════════════════════════════════════════════════════════════════════════
-  item_group_id: null,
+  item_group_id: 'parent_id',
   item_group_title: null,
   color: null,
   size: null,
@@ -136,7 +136,7 @@ export const DEFAULT_FIELD_MAPPINGS: Record<string, string | null> = {
   // ═══════════════════════════════════════════════════════════════════════════
   // RELATED PRODUCTS (2 fields)
   // ═══════════════════════════════════════════════════════════════════════════
-  related_product_id: 'related_ids',
+  related_product_id: 'cross_sell_ids',
   relationship_type: null,
 
   // ═══════════════════════════════════════════════════════════════════════════

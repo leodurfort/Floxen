@@ -72,6 +72,9 @@ async function processProduct(data: any, shop: Shop, shopId: string) {
       openaiAutoFilled: openaiAutoFilled as any,
       isValid: validation.isValid,
       validationErrors: validation.errors as any,
+      // Apply shop defaults for toggle fields on new products
+      feedEnableSearch: shop.defaultEnableSearch,
+      feedEnableCheckout: shop.defaultEnableCheckout,
       ...data,
     },
     update: {
@@ -81,6 +84,7 @@ async function processProduct(data: any, shop: Shop, shopId: string) {
       ...data,
       status: existing?.status || 'PENDING_REVIEW',
       syncStatus: 'PENDING',
+      // DON'T update toggle fields on sync - preserve user's product-level settings
     },
   });
 

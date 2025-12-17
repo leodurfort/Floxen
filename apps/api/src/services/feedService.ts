@@ -106,9 +106,9 @@ export function generateFeedPayload(shop: Shop, products: Product[]) {
           q_and_a: resolved.qAndA,
           related_product_ids: effectiveValues.related_product_ids,
 
-          // Control flags
-          enable_search: p.feedEnableSearch,
-          enable_checkout: p.feedEnableCheckout,
+          // Control flags - OpenAI spec requires lowercase strings, not booleans
+          enable_search: p.feedEnableSearch ? 'true' : 'false',
+          enable_checkout: p.feedEnableCheckout ? 'true' : 'false',
         };
       }),
   };
