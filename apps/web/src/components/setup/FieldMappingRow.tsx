@@ -10,9 +10,10 @@ interface Props {
   currentMapping: string | null;
   onMappingChange: (attribute: string, wooField: string | null) => void;
   previewProductJson: any | null;  // WooCommerce raw JSON for selected product
+  previewShopData?: any | null;    // Shop-level data (seller info, return policy, etc.)
 }
 
-export function FieldMappingRow({ spec, currentMapping, onMappingChange, previewProductJson }: Props) {
+export function FieldMappingRow({ spec, currentMapping, onMappingChange, previewProductJson, previewShopData }: Props) {
   const requirementColors = {
     Required: 'bg-red-500/20 text-red-300 border-red-500/30',
     Recommended: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
@@ -31,8 +32,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     : false;
 
   // Extract and format preview value
-  const previewValue = currentMapping && previewProductJson && !isToggleField
-    ? extractFieldValue(previewProductJson, currentMapping)
+  const previewValue = currentMapping && !isToggleField
+    ? extractFieldValue(previewProductJson, currentMapping, previewShopData)
     : null;
   const formattedValue = formatFieldValue(previewValue);
 
