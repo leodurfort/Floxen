@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { listShops, deleteShop, createShop, triggerProductSync, toggleShopSync, updateShop } from '@/lib/api';
 import { useAuth } from '@/store/auth';
@@ -14,18 +14,8 @@ export default function ShopsPage() {
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [storeUrl, setStoreUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [editingShopId, setEditingShopId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<{
-    sellerPrivacyPolicy: string;
-    sellerTos: string;
-    returnPolicy: string;
-    returnWindow: string;
-  }>({
-    sellerPrivacyPolicy: '',
-    sellerTos: '',
-    returnPolicy: '',
-    returnWindow: '',
-  });
+  const [savingShopId, setSavingShopId] = useState<string | null>(null);
+  const saveTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
     hydrate();
@@ -100,64 +90,119 @@ export default function ShopsPage() {
     }
   }
 
-  function startEditing(shop: Shop) {
-    setEditingShopId(shop.id);
-    setEditValues({
-      sellerPrivacyPolicy: shop.sellerPrivacyPolicy || '',
-      sellerTos: shop.sellerTos || '',
-      returnPolicy: shop.returnPolicy || '',
-      returnWindow: shop.returnWindow?.toString() || '',
-    });
-  }
-
-  function cancelEditing() {
-    setEditingShopId(null);
-    setEditValues({
-      sellerPrivacyPolicy: '',
-      sellerTos: '',
-      returnPolicy: '',
-      returnWindow: '',
-    });
-  }
-
-  async function saveShopFields(shopId: string) {
-    if (!accessToken) return;
-    setLoading(true);
-    setError(null);
+  // Validate URL
+  function isValidUrl(value: string): boolean {
+    if (!value.trim()) return true; // Empty is valid (will be cleared)
     try {
-      const updateData: {
-        sellerPrivacyPolicy?: string | null;
-        sellerTos?: string | null;
-        returnPolicy?: string | null;
-        returnWindow?: number | null;
-      } = {};
-
-      // Allow setting to empty string to clear the field
-      updateData.sellerPrivacyPolicy = editValues.sellerPrivacyPolicy.trim() || null;
-      updateData.sellerTos = editValues.sellerTos.trim() || null;
-      updateData.returnPolicy = editValues.returnPolicy.trim() || null;
-      
-      if (editValues.returnWindow.trim()) {
-        const returnWindow = parseInt(editValues.returnWindow.trim(), 10);
-        if (!isNaN(returnWindow) && returnWindow > 0) {
-          updateData.returnWindow = returnWindow;
-        } else {
-          updateData.returnWindow = null;
-        }
-      } else {
-        updateData.returnWindow = null;
-      }
-
-      await updateShop(shopId, updateData, accessToken);
-      await loadShops();
-      setEditingShopId(null);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      new URL(value.trim());
+      return true;
+    } catch {
+      return false;
     }
   }
+
+  // Validate integer
+  function isValidInteger(value: string): boolean {
+    if (!value.trim()) return true; // Empty is valid (will be cleared)
+    const num = parseInt(value.trim(), 10);
+    return !isNaN(num) && num > 0 && Number.isInteger(num);
+  }
+
+  // Auto-save function with debouncing
+  const handleFieldChange = useCallback(async (
+    shopId: string,
+    field: 'sellerPrivacyPolicy' | 'sellerTos' | 'returnPolicy' | 'returnWindow',
+    value: string
+  ) => {
+    if (!accessToken) return;
+
+    // Clear existing timeout for this shop
+    if (saveTimeouts.current[shopId]) {
+      clearTimeout(saveTimeouts.current[shopId]);
+    }
+
+    // Update local state immediately for better UX
+    setShops(prevShops => prevShops.map(shop => {
+      if (shop.id === shopId) {
+        if (field === 'returnWindow') {
+          const numValue = value.trim() ? parseInt(value.trim(), 10) : null;
+          return { ...shop, [field]: isNaN(numValue as number) ? null : numValue };
+        } else {
+          const stringValue = value.trim() || null;
+          return { ...shop, [field]: stringValue };
+        }
+      }
+      return shop;
+    }));
+
+    // Debounce the save
+    saveTimeouts.current[shopId] = setTimeout(async () => {
+      // Validate before saving
+      if (field === 'returnWindow') {
+        if (value.trim() && !isValidInteger(value)) {
+          return; // Don't save invalid integer
+        }
+      } else {
+        // URL fields - must be valid URL if not empty
+        if (value.trim() && !isValidUrl(value)) {
+          return; // Don't save invalid URL
+        }
+      }
+
+      setSavingShopId(shopId);
+      setError(null);
+      try {
+        const updateData: {
+          sellerPrivacyPolicy?: string | null;
+          sellerTos?: string | null;
+          returnPolicy?: string | null;
+          returnWindow?: number | null;
+        } = {};
+
+        if (field === 'returnWindow') {
+          if (value.trim()) {
+            const returnWindow = parseInt(value.trim(), 10);
+            if (!isNaN(returnWindow) && returnWindow > 0 && Number.isInteger(returnWindow)) {
+              updateData.returnWindow = returnWindow;
+            } else {
+              updateData.returnWindow = null;
+            }
+          } else {
+            updateData.returnWindow = null;
+          }
+        } else {
+          // URL fields - only save if valid URL or empty
+          if (value.trim()) {
+            if (isValidUrl(value)) {
+              updateData[field] = value.trim();
+            } else {
+              // Invalid URL, don't save
+              return;
+            }
+          } else {
+            updateData[field] = null;
+          }
+        }
+
+        await updateShop(shopId, updateData, accessToken);
+        await loadShops(); // Reload to get server state
+        setError(null);
+      } catch (err: any) {
+        setError(err.message);
+        // Reload on error to revert optimistic update
+        await loadShops();
+      } finally {
+        setSavingShopId(null);
+      }
+    }, 1000); // 1 second debounce
+  }, [accessToken]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(saveTimeouts.current).forEach(timeout => clearTimeout(timeout));
+    };
+  }, []);
 
   if (!hydrated || !accessToken) return null;
 
@@ -316,100 +361,76 @@ export default function ShopsPage() {
                             <div className="space-y-3">
                               <div>
                                 <span className="text-white/60">returnPolicy:</span>
-                                {editingShopId === shop.id ? (
-                                  <input
-                                    type="text"
-                                    value={editValues.returnPolicy}
-                                    onChange={(e) => setEditValues({ ...editValues, returnPolicy: e.target.value })}
-                                    className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs"
-                                    placeholder="Enter return policy"
-                                  />
-                                ) : (
-                                  <span className="text-white ml-2">{shop.returnPolicy || 'N/A'}</span>
-                                )}
+                                <input
+                                  type="url"
+                                  value={shop.returnPolicy || ''}
+                                  onChange={(e) => handleFieldChange(shop.id, 'returnPolicy', e.target.value)}
+                                  onBlur={(e) => {
+                                    // Validate on blur and show error
+                                    if (e.target.value.trim() && !isValidUrl(e.target.value)) {
+                                      setError('returnPolicy must be a valid URL');
+                                    }
+                                  }}
+                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  placeholder="https://..."
+                                />
                               </div>
                               <div>
                                 <span className="text-white/60">returnWindow:</span>
-                                {editingShopId === shop.id ? (
-                                  <input
-                                    type="number"
-                                    value={editValues.returnWindow}
-                                    onChange={(e) => setEditValues({ ...editValues, returnWindow: e.target.value })}
-                                    className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs"
-                                    placeholder="Days"
-                                    min="1"
-                                  />
-                                ) : (
-                                  <span className="text-white ml-2">
-                                    {shop.returnWindow !== null && shop.returnWindow !== undefined ? `${shop.returnWindow} days` : 'N/A'}
-                                  </span>
-                                )}
+                                <input
+                                  type="number"
+                                  value={shop.returnWindow?.toString() || ''}
+                                  onChange={(e) => handleFieldChange(shop.id, 'returnWindow', e.target.value)}
+                                  onBlur={(e) => {
+                                    // Validate on blur and show error
+                                    if (e.target.value.trim() && !isValidInteger(e.target.value)) {
+                                      setError('returnWindow must be a positive integer');
+                                    }
+                                  }}
+                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  placeholder="Days"
+                                  min="1"
+                                />
                               </div>
                             </div>
                             <div className="space-y-3">
                               <div>
                                 <span className="text-white/60">sellerPrivacyPolicy:</span>
-                                {editingShopId === shop.id ? (
-                                  <input
-                                    type="url"
-                                    value={editValues.sellerPrivacyPolicy}
-                                    onChange={(e) => setEditValues({ ...editValues, sellerPrivacyPolicy: e.target.value })}
-                                    className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs"
-                                    placeholder="https://..."
-                                  />
-                                ) : shop.sellerPrivacyPolicy ? (
-                                  <a href={shop.sellerPrivacyPolicy} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
-                                    {shop.sellerPrivacyPolicy}
-                                  </a>
-                                ) : (
-                                  <span className="text-white/40 ml-2">N/A</span>
-                                )}
+                                <input
+                                  type="url"
+                                  value={shop.sellerPrivacyPolicy || ''}
+                                  onChange={(e) => handleFieldChange(shop.id, 'sellerPrivacyPolicy', e.target.value)}
+                                  onBlur={(e) => {
+                                    // Validate on blur and show error
+                                    if (e.target.value.trim() && !isValidUrl(e.target.value)) {
+                                      setError('sellerPrivacyPolicy must be a valid URL');
+                                    }
+                                  }}
+                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  placeholder="https://..."
+                                />
                               </div>
                               <div>
                                 <span className="text-white/60">sellerTos:</span>
-                                {editingShopId === shop.id ? (
-                                  <input
-                                    type="url"
-                                    value={editValues.sellerTos}
-                                    onChange={(e) => setEditValues({ ...editValues, sellerTos: e.target.value })}
-                                    className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs"
-                                    placeholder="https://..."
-                                  />
-                                ) : shop.sellerTos ? (
-                                  <a href={shop.sellerTos} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
-                                    {shop.sellerTos}
-                                  </a>
-                                ) : (
-                                  <span className="text-white/40 ml-2">N/A</span>
-                                )}
+                                <input
+                                  type="url"
+                                  value={shop.sellerTos || ''}
+                                  onChange={(e) => handleFieldChange(shop.id, 'sellerTos', e.target.value)}
+                                  onBlur={(e) => {
+                                    // Validate on blur and show error
+                                    if (e.target.value.trim() && !isValidUrl(e.target.value)) {
+                                      setError('sellerTos must be a valid URL');
+                                    }
+                                  }}
+                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  placeholder="https://..."
+                                />
                               </div>
                             </div>
                           </div>
-                          {editingShopId === shop.id ? (
-                            <div className="mt-4 flex gap-2">
-                              <button
-                                onClick={() => saveShopFields(shop.id)}
-                                disabled={loading}
-                                className="btn btn--sm btn--primary"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={cancelEditing}
-                                disabled={loading}
-                                className="btn btn--sm"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="mt-4">
-                              <button
-                                onClick={() => startEditing(shop)}
-                                className="btn btn--sm"
-                              >
-                                Edit Fields
-                              </button>
+                          {savingShopId === shop.id && (
+                            <div className="mt-2 text-xs text-white/40 italic">
+                              Saving...
                             </div>
                           )}
                         </div>
