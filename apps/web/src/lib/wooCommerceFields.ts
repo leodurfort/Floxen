@@ -113,7 +113,22 @@ export function extractFieldValue(
       current = (current as Record<string, any>)[part];
     }
 
-    return current !== undefined ? current : null;
+    const result = current !== undefined ? current : null;
+
+    // Debug logging for problematic fields
+    if (fieldPath === 'id' || fieldPath === 'parent_id') {
+      console.log(`[extractFieldValue] ${fieldPath}:`, {
+        fieldPath,
+        result,
+        wooRawJsonKeys: Object.keys(wooRawJson).slice(0, 20),
+        hasId: 'id' in wooRawJson,
+        hasParentId: 'parent_id' in wooRawJson,
+        actualId: wooRawJson.id,
+        actualParentId: wooRawJson.parent_id,
+      });
+    }
+
+    return result;
   } catch (err) {
     console.error('[extractFieldValue] Error extracting field', { fieldPath, err });
     return null;
