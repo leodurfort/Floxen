@@ -9,7 +9,7 @@ export const LOCKED_FIELD_MAPPINGS: Record<string, string> = {
   description: 'description',
   link: 'permalink',
   product_category: 'categories',
-  brand: 'categories',
+  brand: 'brands[0].name',
   image_link: 'images[0].src',
   availability: 'stock_status',
   inventory_quantity: 'stock_quantity',

@@ -106,11 +106,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
             <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
               <div className="flex flex-col">
                 <span className="text-white text-sm font-medium">
-                  {isDimensions ? 'Auto-populated' : isLockedField ? 'Locked mapping' : 'Managed in Shops page'}
+                  {isDimensions ? 'Auto-populated' : isLockedField ? spec.attribute : 'Managed in Shops page'}
                 </span>
-                {isLockedField && (
-                  <span className="text-white/70 text-xs mt-1">Fixed to {lockedMappingValue}</span>
-                )}
               </div>
               <div className="relative group mt-[2px]">
                 <span className="text-white/60 cursor-help text-sm">ℹ️</span>
@@ -122,8 +119,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
                     </div>
                   ) : isLockedField ? (
                     <div>
-                      <div className="font-semibold text-white mb-1">Mapping locked</div>
-                      <div>Critical fields are fixed to prevent accidental changes.</div>
+                      <div className="font-semibold text-white mb-1">Managed automatically</div>
+                      <div>This mapping is predefined and cannot be edited.</div>
                     </div>
                   ) : (
                     <div>
