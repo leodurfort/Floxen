@@ -104,7 +104,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     validationRules: ['Max 100 characters', 'Must remain stable over time', 'Alphanumeric'],
     wooCommerceMapping: {
       field: 'id',
-      transform: 'generateStableId',
     },
     isAiEnrichable: false,
     category: 'basic_product_data',

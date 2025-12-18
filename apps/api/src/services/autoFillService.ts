@@ -6,7 +6,7 @@
  */
 
 import { Shop } from '@prisma/client';
-import { OPENAI_FEED_SPEC, OpenAIFieldSpec } from '../config/openai-feed-spec';
+import { OPENAI_FEED_SPEC, OpenAIFieldSpec } from '@productsynch/shared';
 import { TRANSFORMS, extractNestedValue, extractAttributeValue, extractMetaValue } from './woocommerce/transforms';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
