@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS } from '@productsynch/shared';
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
 import { ProductSelector } from '@/components/setup/ProductSelector';
 
@@ -214,6 +214,13 @@ export default function SetupPage() {
       )
     : OPENAI_FEED_SPEC;
 
+  // Calculate required fields mapping statistics
+  const requiredFieldsMapped = REQUIRED_FIELDS.filter(
+    (spec) => mappings[spec.attribute] != null && mappings[spec.attribute] !== ''
+  ).length;
+  const totalRequiredFields = REQUIRED_FIELDS.length;
+  const allRequiredFieldsMapped = requiredFieldsMapped === totalRequiredFields;
+
   // Group by category
   const categories = Object.entries(CATEGORY_CONFIG)
     .map(([id, config]) => ({
@@ -259,12 +266,25 @@ export default function SetupPage() {
                 </div>
               </div>
             )}
-            {/* Mapping Statistics */}
+            {/* Required Fields Counter */}
             <div className="mt-4 flex items-center gap-4 text-sm">
-              <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
-                <span className="text-white/60">Mapped Fields: </span>
-                <span className="text-white font-medium">{Object.keys(mappings).length}</span>
-                <span className="text-white/40"> / {OPENAI_FEED_SPEC.length}</span>
+              <div
+                className={`px-3 py-1.5 rounded-lg border ${
+                  allRequiredFieldsMapped
+                    ? 'bg-[#5df0c0]/10 border-[#5df0c0]/30'
+                    : 'bg-amber-500/10 border-amber-500/30'
+                }`}
+              >
+                <span className={allRequiredFieldsMapped ? 'text-[#5df0c0]/80' : 'text-amber-400'}>
+                  {allRequiredFieldsMapped ? '✓' : '⚠️'} Required Fields: {' '}
+                  <span className="font-medium">{requiredFieldsMapped}</span>
+                  <span className="opacity-60"> / {totalRequiredFields}</span>
+                </span>
+                {!allRequiredFieldsMapped && (
+                  <span className="ml-2 text-xs text-amber-400/80">
+                    ({totalRequiredFields - requiredFieldsMapped} missing)
+                  </span>
+                )}
               </div>
               {previewProductJson && (
                 <div className="px-3 py-1.5 bg-[#5df0c0]/10 rounded-lg border border-[#5df0c0]/30">
