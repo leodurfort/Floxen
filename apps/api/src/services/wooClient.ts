@@ -98,10 +98,12 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       url: storeInfo.url,
     });
 
-    // Fetch general settings (currency, dimensions, weight)
+    // Fetch general settings (currency, store title, store address)
     const generalResponse = await api.get('settings/general');
     const settings = Array.isArray(generalResponse.data) ? generalResponse.data : [];
     const currencySetting = settings.find((s: any) => s.id === 'woocommerce_currency');
+    const storeTitleSetting = settings.find((s: any) => s.id === 'woocommerce_store_address');
+    const storeUrlSetting = settings.find((s: any) => s.id === 'woocommerce_store_url');
 
     // Fetch products settings (dimension and weight units)
     const productsResponse = await api.get('settings/products');
@@ -109,17 +111,21 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
     const dimensionUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_dimension_unit');
     const weightUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_weight_unit');
 
+    // Use index endpoint data first, fallback to settings if empty
+    const shopName = storeInfo.name || storeTitleSetting?.value || null;
+    const shopUrl = storeInfo.url || storeUrlSetting?.value || null;
+
     const storeSettings: StoreSettings = {
-      shopName: storeInfo.name,
+      shopName: shopName,
       shopCurrency: currencySetting?.value || null,
       dimensionUnit: dimensionUnitSetting?.value || null,
       weightUnit: weightUnitSetting?.value || null,
-      siteUrl: storeInfo.url,
-      homeUrl: storeInfo.url,
+      siteUrl: shopUrl,
+      homeUrl: shopUrl,
       language: undefined,
-      // Populate seller fields from index endpoint only
-      sellerName: storeInfo.name,
-      sellerUrl: storeInfo.url,
+      // Populate seller fields - use shopName and shopUrl as defaults
+      sellerName: shopName,
+      sellerUrl: shopUrl,
       // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
     };
 
