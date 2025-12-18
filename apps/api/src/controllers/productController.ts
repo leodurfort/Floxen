@@ -187,6 +187,7 @@ export async function getProductWooData(req: Request, res: Response) {
 
     // Include shop data for previewing shop-level fields
     const shopData = {
+      id: shop.id, // Required for transforms like generateGroupId
       sellerName: shop.sellerName,
       sellerUrl: shop.sellerUrl,
       sellerPrivacyPolicy: shop.sellerPrivacyPolicy,
