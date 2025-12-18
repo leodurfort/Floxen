@@ -236,8 +236,8 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Required for all except movies, books, musical recordings',
     validationRules: ['Max 70 characters'],
     wooCommerceMapping: {
-      field: 'categories',
-      transform: 'extractBrand',
+      field: 'brands[0].name',
+      fallback: 'attributes.brand',
     },
     isAiEnrichable: false,
     category: 'item_information',
