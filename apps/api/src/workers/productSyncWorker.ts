@@ -131,11 +131,11 @@ export async function productSyncProcessor(job: Job) {
 
     // Refresh shop settings from WooCommerce on each sync
     logger.info('product-sync: refreshing shop settings from WooCommerce', { shopId });
-    const settings = await fetchStoreSettings(client);
+    const settings = await fetchStoreSettings(client, shop.wooStoreUrl);
 
     if (settings) {
-      // Use shop's wooStoreUrl as fallback if WooCommerce API doesn't return URL
-      const sellerUrl = settings.sellerUrl || shop.wooStoreUrl;
+      // Settings should now have sellerUrl populated (from API or fallback)
+      const sellerUrl = settings.sellerUrl;
 
       // Extract shop name from URL if WooCommerce API doesn't return name
       let shopName = settings.shopName;

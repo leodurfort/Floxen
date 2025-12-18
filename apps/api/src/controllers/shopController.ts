@@ -575,8 +575,8 @@ export async function testWooSettings(req: Request, res: Response) {
       consumerSecret: shop.wooConsumerSecret!,
     });
 
-    // Fetch settings directly from WooCommerce
-    const settings = await fetchStoreSettings(wooClient);
+    // Fetch settings directly from WooCommerce, pass shop URL as fallback
+    const settings = await fetchStoreSettings(wooClient, shop.wooStoreUrl);
 
     if (!settings) {
       return res.status(500).json({ error: 'Failed to fetch settings from WooCommerce' });
