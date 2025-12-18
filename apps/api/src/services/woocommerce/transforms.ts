@@ -36,13 +36,62 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
   },
 
   /**
-   * Build category path with > separator
+   * Build category path with > separator, respecting parent-child hierarchy
+   *
+   * WooCommerce categories have a `parent` field (ID of parent category).
+   * We need to build the full path from root to leaf: "Parent > Child > Grandchild"
+   *
+   * Algorithm:
+   * 1. Create a map of all categories by ID
+   * 2. For each category, recursively build path from root
+   * 3. Return the deepest (most specific) category path
    */
   buildCategoryPath: (categories) => {
     if (!categories || !Array.isArray(categories) || categories.length === 0) {
       return '';
     }
-    return categories.map((cat: any) => cat.name).join(' > ');
+
+    // Create a map of category ID -> category object for quick lookup
+    const categoryMap = new Map<number, any>();
+    categories.forEach((cat: any) => {
+      if (cat.id) categoryMap.set(cat.id, cat);
+    });
+
+    // Build full path for a category by traversing up to root
+    const buildPath = (category: any): string[] => {
+      const path: string[] = [];
+      let current = category;
+
+      // Traverse up the hierarchy (max 10 levels to prevent infinite loops)
+      let depth = 0;
+      while (current && depth < 10) {
+        path.unshift(current.name); // Add to beginning of array
+
+        // If has parent and parent exists in our map, continue up
+        if (current.parent && current.parent > 0 && categoryMap.has(current.parent)) {
+          current = categoryMap.get(current.parent);
+        } else {
+          break; // Reached root or parent not in product's categories
+        }
+        depth++;
+      }
+
+      return path;
+    };
+
+    // Build paths for all categories and find the deepest one
+    const paths = categories
+      .map((cat: any) => buildPath(cat))
+      .filter((path: string[]) => path.length > 0);
+
+    if (paths.length === 0) return '';
+
+    // Return the longest path (most specific category)
+    const deepestPath = paths.reduce((longest, current) =>
+      current.length > longest.length ? current : longest
+    );
+
+    return deepestPath.join(' > ');
   },
 
   /**
