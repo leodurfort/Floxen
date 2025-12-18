@@ -57,7 +57,6 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
 
   const filteredFields = searchQuery ? searchWooFields(fields, searchQuery) : fields;
   const selectedField = value ? getWooField(fields, value) : null;
-  const hasInvalidMapping = value && !selectedField && !loading; // Field value exists but not found in list
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -100,10 +99,18 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
     buttonText = selectedField.label;
     buttonClass = 'text-white';
     borderClass = 'border-white/10';
-  } else if (hasInvalidMapping) {
-    buttonText = `⚠️ Invalid: ${value}`;
-    buttonClass = 'text-amber-400';
-    borderClass = 'border-amber-400/50';
+  } else if (value) {
+    // Field was set but no longer exists - treat as unmapped
+    // This can happen if a field was deleted or the field list changed
+    if (requirement === 'Required') {
+      buttonText = '⚠️ Not mapped';
+      buttonClass = 'text-amber-400/60';
+      borderClass = 'border-amber-400/30';
+    } else {
+      buttonText = 'Select WooCommerce field';
+      buttonClass = 'text-white/60';
+      borderClass = 'border-white/10';
+    }
   } else {
     // No mapping set - show alert only for required fields
     if (requirement === 'Required') {
