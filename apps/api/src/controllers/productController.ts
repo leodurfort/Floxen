@@ -203,6 +203,8 @@ export async function getProductWooData(req: Request, res: Response) {
       returnPolicy: shop.returnPolicy,
       returnWindow: shop.returnWindow,
       shopCurrency: shop.shopCurrency,
+      dimensionUnit: shop.dimensionUnit,
+      weightUnit: shop.weightUnit,
     };
 
     logger.info('Sending shop data in response', {
