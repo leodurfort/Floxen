@@ -248,18 +248,24 @@
                         <div class="unit-value" style="font-size: 14px;">${sellerUrl}</div>
                     </div>
                 </div>
-                <details style="margin-top: 20px;">
-                    <summary style="cursor: pointer; font-weight: 500;">📦 Parsed Settings</summary>
-                    <pre>${JSON.stringify(data.parsedSettings, null, 2)}</pre>
+                <details style="margin-top: 20px;" open>
+                    <summary style="cursor: pointer; font-weight: 500; font-size: 18px;">📋 Index Endpoint (GET /wp-json/wc/v3)</summary>
+                    <p style="margin: 10px 0; color: #666; font-size: 14px;">Should contain: name, url, description, wc_version</p>
+                    <pre>${JSON.stringify(data.rawResponses?.index, null, 2)}</pre>
+                </details>
+                <details style="margin-top: 10px;" open>
+                    <summary style="cursor: pointer; font-weight: 500; font-size: 18px;">⚙️ General Settings (GET /wp-json/wc/v3/settings/general)</summary>
+                    <p style="margin: 10px 0; color: #666; font-size: 14px;">Look for: woocommerce_currency</p>
+                    <pre>${JSON.stringify(data.rawResponses?.generalSettings, null, 2)}</pre>
                 </details>
                 <details style="margin-top: 10px;">
-                    <summary style="cursor: pointer; font-weight: 500;">🔍 Raw WooCommerce API Responses</summary>
-                    <h4 style="margin-top: 10px;">Index Endpoint:</h4>
-                    <pre>${JSON.stringify(data.rawResponses?.index, null, 2)}</pre>
-                    <h4 style="margin-top: 10px;">General Settings:</h4>
-                    <pre>${JSON.stringify(data.rawResponses?.generalSettings?.slice(0, 10), null, 2)}</pre>
-                    <h4 style="margin-top: 10px;">Products Settings:</h4>
+                    <summary style="cursor: pointer; font-weight: 500; font-size: 18px;">📦 Products Settings (GET /wp-json/wc/v3/settings/products)</summary>
+                    <p style="margin: 10px 0; color: #666; font-size: 14px;">Look for: woocommerce_dimension_unit, woocommerce_weight_unit</p>
                     <pre>${JSON.stringify(data.rawResponses?.productsSettings, null, 2)}</pre>
+                </details>
+                <details style="margin-top: 10px;">
+                    <summary style="cursor: pointer; font-weight: 500;">✅ Parsed Settings (Our Extraction)</summary>
+                    <pre>${JSON.stringify(data.parsedSettings, null, 2)}</pre>
                 </details>
             `;
             resultDiv.style.display = 'block';
