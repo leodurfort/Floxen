@@ -57,8 +57,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     previewDisplay = isEnabled ? '✓ Enabled' : 'Disabled';
     previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
   } else if (!currentMapping) {
-    previewDisplay = '⚠️ No field mapped';
-    previewStyle = 'text-amber-400/60 italic';
+    previewDisplay = '';
+    previewStyle = 'text-white/40';
   } else if (!previewProductJson) {
     previewDisplay = 'Select a product to preview...';
     previewStyle = 'text-white/40 italic';
