@@ -151,6 +151,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     validationRules: ['Max 150 characters', 'Avoid ALL CAPS'],
     wooCommerceMapping: {
       field: 'name',
+      transform: 'cleanVariationTitle',
     },
     isAiEnrichable: true, // ✅ AI CAN ENRICH
     category: 'basic_product_data',
