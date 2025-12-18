@@ -12,6 +12,7 @@ import {
   updateShop as updateShopRecord,
   getDefaultMappings,
 } from '../services/shopService';
+import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET } from '@productsynch/shared';
 import { productSyncQueue } from '../jobs';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
@@ -19,6 +20,7 @@ import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 
 const TOGGLE_FIELDS = new Set(['enable_search', 'enable_checkout']);
 const ALLOWED_MAPPING_ATTRIBUTES = new Set(Object.keys(getDefaultMappings()));
+const LOCKED_ATTRIBUTES = Array.from(LOCKED_FIELD_SET);
 
 const createShopSchema = z.object({
   storeUrl: z.string().url(),
@@ -244,6 +246,11 @@ export async function getFieldMappings(req: Request, res: Response) {
     mappings['enable_search'] = shop.defaultEnableSearch ? 'ENABLED' : 'DISABLED';
     mappings['enable_checkout'] = shop.defaultEnableCheckout ? 'ENABLED' : 'DISABLED';
 
+    // Force locked mappings to their required values
+    for (const [attribute, lockedValue] of Object.entries(LOCKED_FIELD_MAPPINGS)) {
+      mappings[attribute] = lockedValue;
+    }
+
     logger.info('shops:field-mappings:get', {
       shopId: id,
       userId,
@@ -302,6 +309,11 @@ export async function updateFieldMappings(req: Request, res: Response) {
       sanitizedMappings[attribute] = trimmed.length ? trimmed : null;
     }
 
+    // Strip out locked fields - they cannot be customized
+    LOCKED_ATTRIBUTES.forEach((attribute) => {
+      delete sanitizedMappings[attribute];
+    });
+
     // Extract toggle fields - these are shop-level settings, NOT field mappings
     const enableSearch = sanitizedMappings['enable_search'];
     const enableCheckout = sanitizedMappings['enable_checkout'];
@@ -339,6 +351,18 @@ export async function updateFieldMappings(req: Request, res: Response) {
       logger.info('shops:field-mappings:update toggle', {
         shopId: id,
         ...toggleUpdates,
+      });
+    }
+
+    // Ensure locked mappings are removed from the database
+    if (LOCKED_ATTRIBUTES.length) {
+      await prisma.fieldMapping.deleteMany({
+        where: {
+          shopId: id,
+          openaiField: {
+            attribute: { in: LOCKED_ATTRIBUTES },
+          },
+        },
       });
     }
 

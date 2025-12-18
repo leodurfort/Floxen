@@ -92,3 +92,4 @@ export interface ApiResponse<T> {
 
 // Export OpenAI Feed Specification
 export * from './openai-feed-spec';
+export * from './locked-field-mappings';

@@ -118,7 +118,8 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['8-14 digits', 'No dashes or spaces'],
     wooCommerceMapping: {
-      field: 'meta_data',
+      field: 'global_unique_id',
+      fallback: 'meta_data',
       transform: 'extractGtin',
     },
     isAiEnrichable: false,
@@ -235,8 +236,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Required for all except movies, books, musical recordings',
     validationRules: ['Max 70 characters'],
     wooCommerceMapping: {
-      field: 'brands',
-      fallback: 'attributes.brand',
+      field: 'categories',
       transform: 'extractBrand',
     },
     isAiEnrichable: false,

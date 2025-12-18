@@ -1,6 +1,6 @@
 'use client';
 
-import { OpenAIFieldSpec } from '@productsynch/shared';
+import { LOCKED_FIELD_MAPPINGS, OpenAIFieldSpec } from '@productsynch/shared';
 import { WooCommerceFieldSelector } from './WooCommerceFieldSelector';
 import { ToggleSwitch } from './ToggleSwitch';
 import { extractTransformedPreviewValue, formatFieldValue } from '@/lib/wooCommerceFields';
@@ -33,7 +33,9 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     'return_policy',
     'return_window',
   ].includes(spec.attribute);
-  const isNonEditableField = isDimensions || isShopManagedField;
+  const lockedMappingValue = LOCKED_FIELD_MAPPINGS[spec.attribute];
+  const isLockedField = Boolean(lockedMappingValue);
+  const isNonEditableField = isDimensions || isShopManagedField || isLockedField;
 
   // For toggle fields, mapping value is "ENABLED" or "DISABLED"
   // Default enable_search to ENABLED
@@ -42,8 +44,9 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     : false;
 
   // Extract and format preview value
-  const previewValue = currentMapping && !isToggleField
-    ? extractTransformedPreviewValue(spec, currentMapping, previewProductJson, previewShopData || undefined)
+  const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping) || null;
+  const previewValue = effectiveMapping && !isToggleField
+    ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
     : null;
   const formattedValue = formatFieldValue(previewValue);
 
@@ -54,7 +57,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
   if (isToggleField) {
     previewDisplay = isEnabled ? 'true' : 'false';
     previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
-  } else if (!currentMapping) {
+  } else if (!effectiveMapping) {
     previewDisplay = '';
     previewStyle = 'text-white/40';
   } else if (!previewProductJson) {
@@ -101,9 +104,14 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
         {isNonEditableField ? (
           <div className="w-full">
             <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
-              <span className="text-white text-sm font-medium">
-                {isDimensions ? 'Auto-populated' : 'Managed in Shops page'}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-white text-sm font-medium">
+                  {isDimensions ? 'Auto-populated' : isLockedField ? 'Locked mapping' : 'Managed in Shops page'}
+                </span>
+                {isLockedField && (
+                  <span className="text-white/70 text-xs mt-1">Fixed to {lockedMappingValue}</span>
+                )}
+              </div>
               <div className="relative group mt-[2px]">
                 <span className="text-white/60 cursor-help text-sm">ℹ️</span>
                 <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-72 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
@@ -111,6 +119,11 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
                     <div>
                       <div className="font-semibold text-white mb-1">Auto-filled dimensions</div>
                       <div>Populates automatically when length, width, and height are available.</div>
+                    </div>
+                  ) : isLockedField ? (
+                    <div>
+                      <div className="font-semibold text-white mb-1">Mapping locked</div>
+                      <div>Critical fields are fixed to prevent accidental changes.</div>
                     </div>
                   ) : (
                     <div>
@@ -140,7 +153,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
           </div>
         ) : (
           <WooCommerceFieldSelector
-            value={currentMapping}
+            value={effectiveMapping}
             onChange={(wooField) => onMappingChange(spec.attribute, wooField)}
             openaiAttribute={spec.attribute}
             requirement={spec.requirement}
