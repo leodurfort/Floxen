@@ -29,3 +29,7 @@ export * from './functions/media';
 export * from './functions/product-data';
 export * from './functions/availability';
 export * from './functions/defaults';
+
+// Export validation layer
+export * from './validation';
+export * from './validators';

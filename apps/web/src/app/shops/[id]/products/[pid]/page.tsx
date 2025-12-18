@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   getProductEnrichmentData,
@@ -10,7 +10,7 @@ import {
   updateProductSelectedSource,
 } from '@/lib/api';
 import { useAuth } from '@/store/auth';
-import { OPENAI_FEED_SPEC } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC, validateFeedEntry } from '@productsynch/shared';
 
 // The 4 AI-enrichable fields (only these can toggle between AI and WooCommerce sources)
 type EnrichableField = 'title' | 'description' | 'product_category' | 'q_and_a';
@@ -365,6 +365,27 @@ export default function ProductDetailPage() {
   if (!hydrated) return <main className="shell"><div className="subtle">Loading...</div></main>;
   if (!accessToken || !data) return null;
 
+  // Validate the complete feed entry
+  const validationResult = useMemo(() => {
+    if (!data) return null;
+
+    // Build complete feed entry (same structure as feed service)
+    const feedEntry: Record<string, any> = {};
+
+    OPENAI_FEED_SPEC.forEach(spec => {
+      feedEntry[spec.attribute] = getEffectiveValue(spec.attribute);
+    });
+
+    // Add flags
+    feedEntry.enable_search = data.product.feedEnableSearch ? 'true' : 'false';
+    feedEntry.enable_checkout = data.product.feedEnableCheckout ? 'true' : 'false';
+
+    // Validate entry
+    return validateFeedEntry(feedEntry, {
+      validateOptional: false, // Only validate required fields for now
+    });
+  }, [data]);
+
   // Group fields by category
   const categories = [...new Set(OPENAI_FEED_SPEC.map(f => f.category))];
   const fieldsByCategory = categories.map(cat => ({
@@ -403,6 +424,60 @@ export default function ProductDetailPage() {
           All 63 OpenAI feed attributes are listed below, organized by category. Edit WooCommerce-mapped values, generate AI suggestions for enrichable fields, and select which source to use.
         </div>
       </div>
+
+      {/* Validation Summary */}
+      {validationResult && (
+        <div className="panel space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Feed Validation</h2>
+            <div className={`px-3 py-1 rounded text-sm font-medium ${
+              validationResult.valid
+                ? 'bg-green-500/20 text-green-300'
+                : 'bg-red-500/20 text-red-300'
+            }`}>
+              {validationResult.valid ? '✓ Valid' : `✗ ${validationResult.errors.length} Error${validationResult.errors.length !== 1 ? 's' : ''}`}
+            </div>
+          </div>
+
+          {validationResult.errors.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-red-300">Errors (must be fixed):</p>
+              <div className="space-y-2">
+                {validationResult.errors.map((error, i) => (
+                  <div key={i} className="bg-red-500/10 border border-red-500/30 rounded p-3 text-sm">
+                    <div className="font-medium text-red-300">{error.field}</div>
+                    <div className="text-white/70 mt-1">{error.error}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {validationResult.warnings.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-yellow-300">Warnings (recommended to fix):</p>
+              <div className="space-y-2">
+                {validationResult.warnings.map((warning, i) => (
+                  <div key={i} className="bg-yellow-500/10 border border-yellow-500/30 rounded p-3 text-sm">
+                    <div className="font-medium text-yellow-300">{warning.field}</div>
+                    <div className="text-white/70 mt-1">{warning.error}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {validationResult.valid && validationResult.warnings.length === 0 && (
+            <p className="text-sm text-green-300">
+              ✓ All required fields are valid and properly formatted. This product will be included in your feed.
+            </p>
+          )}
+
+          <div className="text-xs text-white/40">
+            This validation checks that all required OpenAI feed fields are present and properly formatted according to the specification.
+          </div>
+        </div>
+      )}
 
       {/* Field Categories */}
       {fieldsByCategory.map(({ category, fields }) => (
