@@ -4,6 +4,7 @@ import { ProductStatus, SyncStatus } from '@prisma/client';
 import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord } from '../services/productService';
 import { productSyncQueue } from '../jobs';
 import { logger } from '../lib/logger';
+import { prisma } from '../lib/prisma';
 
 const updateProductSchema = z.object({
   status: z.nativeEnum(ProductStatus).optional(),
@@ -137,5 +138,69 @@ export function bulkAction(req: Request, res: Response) {
       logger.error('products:bulk error', err);
       res.status(500).json({ error: err.message });
     });
+}
+
+/**
+ * Get product WooCommerce raw data for field mapping preview
+ */
+export async function getProductWooData(req: Request, res: Response) {
+  const { id: shopId, pid: productId } = req.params;
+
+  try {
+    // Fetch product with WooCommerce raw JSON
+    const product = await prisma.product.findFirst({
+      where: { shopId, id: productId },
+      select: { wooRawJson: true },
+    });
+
+    if (!product) {
+      logger.warn('Product WooCommerce data fetched successfully', { shopId, productId, wooProductId: (product as any)?.wooProductId });
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Fetch shop data for units and currency
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        id: true,
+        shopCurrency: true,
+        dimensionUnit: true,
+        weightUnit: true,
+        sellerName: true,
+        sellerUrl: true,
+        sellerPrivacyPolicy: true,
+        sellerTos: true,
+        returnPolicy: true,
+        returnWindow: true,
+      },
+    });
+
+    logger.info('Product WooCommerce data fetched successfully', {
+      shopId,
+      productId,
+      wooProductId: (product.wooRawJson as any)?.id,
+    });
+
+    logger.info('Sending shop data in response', {
+      shopId,
+      productId,
+      shopData: shop,
+      hasSellerName: !!shop?.sellerName,
+      hasSellerUrl: !!shop?.sellerUrl,
+    });
+
+    res.json({
+      wooData: product.wooRawJson,
+      shopData: shop,
+    });
+  } catch (err) {
+    logger.error('Failed to get product WooCommerce data', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      shopId,
+      productId,
+      userId: (req as any).user?.id,
+    });
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to fetch product data' });
+  }
 }
 
