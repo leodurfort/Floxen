@@ -45,6 +45,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
 
   // Extract and format preview value
   const defaultMapping = spec.wooCommerceMapping?.field || null;
+  // Only use defaultMapping for dimensions field, not for regular fields
+  // This prevents showing "Invalid" for spec defaults that don't exist in this specific store
   const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping || (isDimensions ? defaultMapping : null)) || null;
   const previewValue = effectiveMapping && !isToggleField
     ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
@@ -151,7 +153,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
           </div>
         ) : (
           <WooCommerceFieldSelector
-            value={effectiveMapping}
+            value={currentMapping}
             onChange={(wooField) => onMappingChange(spec.attribute, wooField)}
             openaiAttribute={spec.attribute}
             requirement={spec.requirement}
