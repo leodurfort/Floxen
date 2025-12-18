@@ -93,12 +93,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
                 <div className="font-semibold text-yellow-300 mb-1">Conditional Field</div>
                 {spec.dependencies ? (
                   <div>
-                    <span className="text-white/60">Required when:</span>
-                    <ul className="mt-1 space-y-0.5 text-white/70">
-                      {spec.dependencies.map((dep, idx) => (
-                        <li key={idx}>• {dep}</li>
-                      ))}
-                    </ul>
+                    <span className="text-white/60">Required when: </span>
+                    <span className="text-white/70">{spec.dependencies}</span>
                   </div>
                 ) : (
                   <span className="text-white/60">This field is conditionally required based on other fields.</span>
