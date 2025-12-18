@@ -146,7 +146,8 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
     const { length, width, height } = dimensions;
     if (!length || !width || !height) return null;
 
-    const unit = shop?.dimensionUnit || dimensions.unit || 'in';
+    const unit = shop?.dimensionUnit || dimensions.unit;
+    if (!unit) return null;
     return `${length}x${width}x${height} ${unit}`;
   },
 
@@ -175,7 +176,8 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
 
     // If all three are filled, return with unit
     if (filledCount === 3) {
-      const unit = shop?.dimensionUnit || dimensions.unit || 'in';
+      const unit = shop?.dimensionUnit || dimensions.unit;
+      if (!unit) return null;
       return `${value} ${unit}`;
     }
 
@@ -189,7 +191,8 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
    */
   addWeightUnit: (weight, _, shop) => {
     if (!weight) return null;
-    const unit = shop?.weightUnit || 'lb';
+    const unit = shop?.weightUnit;
+    if (!unit) return null;
     return `${weight} ${unit}`;
   },
 
