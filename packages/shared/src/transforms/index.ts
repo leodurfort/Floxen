@@ -14,6 +14,7 @@ export { TRANSFORMS } from './registry';
 
 // Export helper functions
 export {
+  extractFieldValue,
   extractNestedValue,
   extractAttributeValue,
   extractMetaValue,
