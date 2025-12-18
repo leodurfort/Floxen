@@ -3,17 +3,6 @@ export type SubscriptionTier = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE
 export type ProductStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'SYNCED' | 'EXCLUDED' | 'ERROR';
 export type SyncStatus = 'PENDING' | 'SYNCING' | 'COMPLETED' | 'FAILED' | 'PAUSED';
 
-// Source selection for enrichable fields
-export type FieldSource = 'manual' | 'ai';
-
-export interface SelectedSources {
-  title?: FieldSource;
-  description?: FieldSource;
-  category?: FieldSource;
-  keywords?: FieldSource;
-  q_and_a?: FieldSource;
-}
-
 export interface User {
   id: string;
   email: string;
@@ -57,26 +46,6 @@ export interface Product {
   wooCategories?: any;
   wooDateModified?: string | null;
   wooRawJson?: any;  // Full WooCommerce product JSON for field mapping preview
-
-  // AI enrichment fields
-  aiEnriched?: boolean;
-  aiTitle?: string | null;
-  aiDescription?: string | null;
-  aiKeywords?: string[];
-  aiQAndA?: Array<{ q: string; a: string }> | null;
-  aiSuggestedCategory?: string | null;
-  aiEnrichedAt?: string | null;
-
-  // Manual edit fields
-  manualTitle?: string | null;
-  manualDescription?: string | null;
-  manualCategory?: string | null;
-  manualKeywords?: string[];
-  manualQAndA?: Array<{ q: string; a: string }> | null;
-  manualEditedAt?: string | null;
-
-  // Source selection
-  selectedSources?: SelectedSources | null;
 
   // Status fields
   status: ProductStatus;

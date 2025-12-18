@@ -126,7 +126,6 @@ model Product {
   // OpenAI Feed Data (V2 Model with JSON Storage)
   // All 63 OpenAI attributes stored as JSON for flexibility
   openaiAutoFilled    Json          @default("{}") @map("openai_auto_filled")  // Auto-filled from WooCommerce
-  openaiEdited        Json          @default("{}") @map("openai_edited")       // User's manual edits
 
   // Legacy Feed Fields (kept for backward compatibility)
   feedId              String?       @map("feed_id")
@@ -140,28 +139,6 @@ model Product {
   feedEnableSearch    Boolean       @default(true) @map("feed_enable_search")
   feedEnableCheckout  Boolean       @default(false) @map("feed_enable_checkout")
   feedDataJson        Json?         @map("feed_data_json")
-
-  // AI Enrichment (Only 4 enrichable fields: title, description, category, q_and_a)
-  aiEnriched          Boolean       @default(false) @map("ai_enriched")
-  aiTitle             String?       @map("ai_title")
-  aiDescription       String?       @map("ai_description") @db.Text
-  aiKeywords          String[]      @map("ai_keywords")
-  aiQAndA             Json?         @map("ai_q_and_a")
-  aiSuggestedCategory String?       @map("ai_suggested_category")
-  aiEnrichedAt        DateTime?     @map("ai_enriched_at")
-
-  // Manual Overrides (kept for backward compatibility)
-  manualOverride      Boolean       @default(false) @map("manual_override")
-  manualTitle         String?       @map("manual_title")
-  manualDescription   String?       @map("manual_description")
-  manualCategory      String?       @map("manual_category")
-  manualKeywords      String[]      @map("manual_keywords")
-  manualQAndA         Json?         @map("manual_q_and_a")
-  manualEditedAt      DateTime?     @map("manual_edited_at")
-
-  // Source Selection (Only for 4 enrichable fields)
-  // Format: { "title": "ai"|"woo", "description": "ai"|"woo", "product_category": "ai"|"woo", "q_and_a": "ai"|"woo" }
-  selectedSources     Json          @default("{}") @map("selected_sources")
 
   // Status & Validation
   status              ProductStatus @default(DRAFT)

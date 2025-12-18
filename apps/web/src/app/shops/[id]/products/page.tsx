@@ -54,7 +54,6 @@ export default function ShopProductsPage() {
                 <tr>
                   <th>Product</th>
                   <th>Price</th>
-                  <th>AI</th>
                   <th>Status</th>
                   <th>WooCommerce Last Modified</th>
                 </tr>
@@ -63,13 +62,10 @@ export default function ShopProductsPage() {
                 {products.map((p) => (
                   <tr key={p.id}>
                     <td>
-                      <a className="font-semibold underline" href={`/shops/${params.id}/products/${p.id}`}>
-                        {p.wooTitle}
-                      </a>
+                      <div className="font-semibold">{p.wooTitle}</div>
                       <div className="subtle text-sm">SKU {p.wooSku || '—'}</div>
                     </td>
                     <td>{p.wooPrice ? `$${p.wooPrice}` : '—'}</td>
-                    <td>{p.aiEnriched ? <span className="badge badge--success">Enriched</span> : <span className="badge badge--warn">Pending</span>}</td>
                     <td className="subtle text-sm">{p.syncStatus}</td>
                     <td className="subtle text-sm">
                       {p.wooDateModified ? new Date(p.wooDateModified).toLocaleString('en-US', {
