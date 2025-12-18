@@ -139,18 +139,20 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
 
   /**
    * Format dimensions as "LxWxH unit"
+   * Uses shop's dimensionUnit from WooCommerce settings
    */
   formatDimensions: (dimensions, _, shop) => {
     if (!dimensions) return null;
     const { length, width, height } = dimensions;
     if (!length || !width || !height) return null;
 
-    const unit = dimensions.unit || 'in';
+    const unit = shop?.dimensionUnit || dimensions.unit || 'in';
     return `${length}x${width}x${height} ${unit}`;
   },
 
   /**
    * Add unit to dimension value
+   * Uses shop's dimensionUnit from WooCommerce settings
    * Validates that all three dimensions (length, width, height) are present
    * Returns null if only some dimensions are filled (enforces all-or-nothing)
    */
@@ -173,7 +175,7 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
 
     // If all three are filled, return with unit
     if (filledCount === 3) {
-      const unit = dimensions.unit || 'in';
+      const unit = shop?.dimensionUnit || dimensions.unit || 'in';
       return `${value} ${unit}`;
     }
 
@@ -183,11 +185,11 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
 
   /**
    * Add weight unit
+   * Uses shop's weightUnit from WooCommerce settings
    */
   addWeightUnit: (weight, _, shop) => {
     if (!weight) return null;
-    // Default to lb (could be configured per shop in future)
-    const unit = 'lb';
+    const unit = shop?.weightUnit || 'lb';
     return `${weight} ${unit}`;
   },
 

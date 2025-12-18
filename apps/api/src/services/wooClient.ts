@@ -72,6 +72,8 @@ export interface StoreSettings {
   siteUrl?: string;
   homeUrl?: string;
   language?: string;
+  dimensionUnit?: string;
+  weightUnit?: string;
   // Shop-level fields for OpenAI feed (only sellerName and sellerUrl are fetched from API)
   sellerName?: string;
   sellerUrl?: string;
@@ -96,14 +98,22 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       url: storeInfo.url,
     });
 
-    // Fetch currency from general settings
+    // Fetch general settings (currency, dimensions, weight)
     const generalResponse = await api.get('settings/general');
     const settings = Array.isArray(generalResponse.data) ? generalResponse.data : [];
     const currencySetting = settings.find((s: any) => s.id === 'woocommerce_currency');
 
+    // Fetch products settings (dimension and weight units)
+    const productsResponse = await api.get('settings/products');
+    const productSettings = Array.isArray(productsResponse.data) ? productsResponse.data : [];
+    const dimensionUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_dimension_unit');
+    const weightUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_weight_unit');
+
     const storeSettings: StoreSettings = {
       shopName: storeInfo.name,
       shopCurrency: currencySetting?.value || 'USD',
+      dimensionUnit: dimensionUnitSetting?.value || 'in',
+      weightUnit: weightUnitSetting?.value || 'lb',
       siteUrl: storeInfo.url,
       homeUrl: storeInfo.url,
       language: undefined,
@@ -116,6 +126,8 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
     logger.info('woo:fetch store settings complete', {
       shopName: storeSettings.shopName,
       shopCurrency: storeSettings.shopCurrency,
+      dimensionUnit: storeSettings.dimensionUnit,
+      weightUnit: storeSettings.weightUnit,
       hasSellerName: !!storeSettings.sellerName,
       hasSellerUrl: !!storeSettings.sellerUrl,
     });
