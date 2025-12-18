@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function TestUnitsPage() {
   const [shopId, setShopId] = useState('');
@@ -9,6 +9,16 @@ export default function TestUnitsPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-load token from localStorage on mount
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('productsynch.access');
+      if (storedToken) {
+        setToken(storedToken);
+      }
+    }
+  });
 
   const testUnits = async () => {
     if (!shopId) {
