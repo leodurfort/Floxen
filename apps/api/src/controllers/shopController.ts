@@ -396,19 +396,13 @@ export async function updateFieldMappings(req: Request, res: Response) {
       ? await prisma.wooCommerceField.findMany({
           where: {
             value: { in: wooFieldValues },
-            OR: [{ shopId: id }, { shopId: null }],
           },
         })
       : [];
 
     const wooFieldByValue = new Map<string, (typeof wooFields)[number]>();
     for (const field of wooFields) {
-      const existing = wooFieldByValue.get(field.value);
-
-      // Prefer shop-specific fields over global defaults
-      if (!existing || (field.shopId === id && existing.shopId !== id)) {
-        wooFieldByValue.set(field.value, field);
-      }
+      wooFieldByValue.set(field.value, field);
     }
 
     const existingMappings = await prisma.fieldMapping.findMany({
