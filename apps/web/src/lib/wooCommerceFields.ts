@@ -121,6 +121,149 @@ export function extractFieldValue(
 }
 
 /**
+ * Lightweight transform registry for client-side preview.
+ * Mirrors server transforms where possible; fallbacks to raw values when required data is missing.
+ */
+const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?: Record<string, any> | null) => any> = {
+  generateStableId: (_, wooProduct, shopData) => {
+    if (!shopData?.id || !wooProduct?.id) return null;
+    const sku = wooProduct.sku || '';
+    return `${shopData.id}-${wooProduct.id}${sku ? `-${sku}` : ''}`;
+  },
+  stripHtml: (value) => {
+    if (!value) return '';
+    return String(value).replace(/<[^>]*>/g, '').trim();
+  },
+  buildCategoryPath: (categories) => {
+    if (!Array.isArray(categories) || categories.length === 0) return '';
+    return categories.map((cat: any) => cat?.name).filter(Boolean).join(' > ');
+  },
+  extractGtin: (metaData) => {
+    if (!Array.isArray(metaData)) return null;
+    const gtinKeys = ['_gtin', 'gtin', '_upc', 'upc', '_ean', 'ean', '_isbn', 'isbn'];
+    const match = metaData.find((m: any) => m && gtinKeys.includes(m.key));
+    return match?.value || null;
+  },
+  formatPriceWithCurrency: (price, _wooProduct, shopData) => {
+    if (price === undefined || price === null) return null;
+    const num = typeof price === 'string' ? parseFloat(price) : Number(price);
+    if (Number.isNaN(num)) return null;
+    const currency = shopData?.shopCurrency || '';
+    return currency ? `${num.toFixed(2)} ${currency}` : num.toFixed(2);
+  },
+  mapStockStatus: (stockStatus) => {
+    const map: Record<string, string> = { instock: 'in_stock', outofstock: 'out_of_stock', onbackorder: 'preorder' };
+    return map[stockStatus] || 'in_stock';
+  },
+  formatDimensions: (dimensions) => {
+    if (!dimensions) return null;
+    const { length, width, height } = dimensions;
+    if (!length || !width || !height) return null;
+    const unit = dimensions.unit || 'in';
+    return `${length}x${width}x${height} ${unit}`;
+  },
+  addUnit: (value, wooProduct) => {
+    if (!value) return null;
+    const dimensions = wooProduct?.dimensions || {};
+    const { length, width, height, unit = 'in' } = dimensions;
+    const filled = [length, width, height].filter((d) => d && d !== '0' && d !== 0).length;
+    if (filled > 0 && filled < 3) return null;
+    if (filled === 3) return `${value} ${unit}`;
+    return null;
+  },
+  addWeightUnit: (weight) => {
+    if (!weight) return null;
+    return `${weight} lb`;
+  },
+  extractAdditionalImages: (images) => {
+    if (!Array.isArray(images) || images.length <= 1) return [];
+    return images.slice(1).map((img: any) => img?.src).filter(Boolean);
+  },
+  extractBrand: (brands, wooProduct) => {
+    if (Array.isArray(brands) && brands.length > 0) {
+      return brands[0]?.name || null;
+    }
+    const brandAttr = wooProduct?.attributes?.find((a: any) => a?.name?.toLowerCase() === 'brand');
+    return brandAttr?.options?.[0] || null;
+  },
+  defaultToNew: (value) => value || 'new',
+  defaultToZero: (value) => (value ?? 0),
+  formatSaleDateRange: (_value, wooProduct) => {
+    const from = wooProduct?.date_on_sale_from;
+    const to = wooProduct?.date_on_sale_to;
+    if (!from || !to) return null;
+    const fromDate = new Date(from).toISOString().split('T')[0];
+    const toDate = new Date(to).toISOString().split('T')[0];
+    return `${fromDate} / ${toDate}`;
+  },
+  generateGroupId: (_value, wooProduct, shopData) => {
+    if (!shopData?.id || !wooProduct) return null;
+    const parentId = wooProduct.parent_id;
+    return parentId && parentId > 0 ? `${shopData.id}-${parentId}` : `${shopData.id}-${wooProduct.id}`;
+  },
+  generateOfferId: (value, wooProduct) => {
+    const baseSku = value || `prod-${wooProduct?.id}`;
+    const color = wooProduct?.attributes?.find((a: any) => a?.name?.toLowerCase() === 'color')?.options?.[0];
+    const size = wooProduct?.attributes?.find((a: any) => a?.name?.toLowerCase() === 'size')?.options?.[0];
+    let offerId = baseSku;
+    if (color) offerId += `-${color}`;
+    if (size) offerId += `-${size}`;
+    return offerId;
+  },
+  extractCustomVariant: (attributes) => {
+    if (!Array.isArray(attributes) || attributes.length === 0) return null;
+    return attributes[0]?.name || null;
+  },
+  extractCustomVariantOption: (attributes) => {
+    if (!Array.isArray(attributes) || attributes.length === 0) return null;
+    return attributes[0]?.options?.[0] || null;
+  },
+  buildShippingString: () => null,
+};
+
+/**
+ * Extract and transform a value for preview using the OpenAI spec mapping.
+ */
+export function extractTransformedPreviewValue(
+  spec: { attribute: string; wooCommerceMapping: { field?: string; fallback?: string; transform?: string; shopField?: string } | null },
+  mappingPath: string | null,
+  wooRawJson: Record<string, any> | null | undefined,
+  shopData?: Record<string, any> | null,
+): any {
+  if (!mappingPath) return null;
+
+  const specMapping = spec.wooCommerceMapping;
+  const matchesDefault = !!specMapping && specMapping.field === mappingPath;
+  const effectiveMapping = matchesDefault && specMapping
+    ? specMapping
+    : { field: mappingPath };
+
+  // Shop-level field shortcut
+  const primaryValue = effectiveMapping.shopField
+    ? shopData?.[effectiveMapping.shopField] ?? null
+    : extractFieldValue(wooRawJson, effectiveMapping.field || '', shopData);
+
+  let value = primaryValue;
+
+  // Apply fallback only for default mappings
+  if ((value === null || value === undefined) && matchesDefault && effectiveMapping.fallback) {
+    value = extractFieldValue(wooRawJson, effectiveMapping.fallback, shopData);
+  }
+
+  const transformName = effectiveMapping.transform;
+  if (transformName && PREVIEW_TRANSFORMS[transformName]) {
+    try {
+      value = PREVIEW_TRANSFORMS[transformName](value, wooRawJson, shopData);
+    } catch (err) {
+      console.error('[extractTransformedPreviewValue] transform failed', { transformName, err });
+      value = null;
+    }
+  }
+
+  return value;
+}
+
+/**
  * Format a field value for display
  * Handles complex types (arrays, objects) and primitives
  */

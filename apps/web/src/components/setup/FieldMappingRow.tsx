@@ -3,7 +3,7 @@
 import { OpenAIFieldSpec } from '@productsynch/shared';
 import { WooCommerceFieldSelector } from './WooCommerceFieldSelector';
 import { ToggleSwitch } from './ToggleSwitch';
-import { extractFieldValue, formatFieldValue } from '@/lib/wooCommerceFields';
+import { extractTransformedPreviewValue, formatFieldValue } from '@/lib/wooCommerceFields';
 
 interface Props {
   spec: OpenAIFieldSpec;
@@ -43,7 +43,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
 
   // Extract and format preview value
   const previewValue = currentMapping && !isToggleField
-    ? extractFieldValue(previewProductJson, currentMapping, previewShopData)
+    ? extractTransformedPreviewValue(spec, currentMapping, previewProductJson, previewShopData || undefined)
     : null;
   const formattedValue = formatFieldValue(previewValue);
 
