@@ -212,9 +212,22 @@ const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?
     return `${fromDate} / ${toDate}`;
   },
   generateGroupId: (_value, wooProduct, shopData) => {
-    if (!shopData?.id || !wooProduct) return null;
+    console.log('[generateGroupId] Called with:', {
+      hasShopData: !!shopData,
+      shopDataId: shopData?.id,
+      hasWooProduct: !!wooProduct,
+      wooProductId: wooProduct?.id,
+      parentId: wooProduct?.parent_id,
+    });
+
+    if (!shopData?.id || !wooProduct) {
+      console.log('[generateGroupId] Returning null - missing shopData.id or wooProduct');
+      return null;
+    }
     const parentId = wooProduct.parent_id;
-    return parentId && parentId > 0 ? `${shopData.id}-${parentId}` : `${shopData.id}-${wooProduct.id}`;
+    const result = parentId && parentId > 0 ? `${shopData.id}-${parentId}` : `${shopData.id}-${wooProduct.id}`;
+    console.log('[generateGroupId] Result:', result);
+    return result;
   },
   generateOfferId: (value, wooProduct) => {
     const baseSku = value || `prod-${wooProduct?.id}`;
