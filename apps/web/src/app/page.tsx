@@ -13,7 +13,6 @@ const sampleProducts: Product[] = [
     status: 'SYNCED',
     syncStatus: 'COMPLETED',
     lastSyncedAt: new Date().toISOString(),
-    aiEnriched: true,
     feedEnableSearch: true,
     feedEnableCheckout: true,
     updatedAt: new Date().toISOString(),
@@ -29,7 +28,6 @@ const sampleProducts: Product[] = [
     status: 'PENDING_REVIEW',
     syncStatus: 'PENDING',
     lastSyncedAt: null,
-    aiEnriched: false,
     feedEnableSearch: true,
     feedEnableCheckout: false,
     updatedAt: new Date().toISOString(),
@@ -45,7 +43,6 @@ const sampleProducts: Product[] = [
     status: 'APPROVED',
     syncStatus: 'COMPLETED',
     lastSyncedAt: new Date().toISOString(),
-    aiEnriched: true,
     feedEnableSearch: true,
     feedEnableCheckout: false,
     updatedAt: new Date().toISOString(),
@@ -60,8 +57,8 @@ export default function HomePage() {
           <p className="uppercase tracking-[0.2em] text-xs text-white/70">ProductSynch</p>
           <h1 className="section-title font-display">One-click sync from WooCommerce to ChatGPT</h1>
           <p className="subtle max-w-2xl">
-            Connect your store, enrich listings with AI, and push a compliant OpenAI product feed on a schedule.
-            Control manual overrides, review diffs, and keep every SKU in lockstep.
+            Connect your store and push a compliant OpenAI product feed on a schedule.
+            Keep every SKU in lockstep with your WooCommerce catalog.
           </p>
           <div className="flex flex-wrap gap-3">
             <button className="btn btn--primary">Connect WooCommerce Store</button>
@@ -70,7 +67,7 @@ export default function HomePage() {
           <div className="flex flex-wrap gap-2">
             <span className="pill">OAuth + Webhooks</span>
             <span className="pill">Feed Preview</span>
-            <span className="pill">AI Enrichment</span>
+            <span className="pill">Auto-sync</span>
           </div>
         </div>
         <div className="preview space-y-3">
@@ -89,7 +86,7 @@ export default function HomePage() {
             ))}
           </div>
           <p className="text-sm subtle">
-            Every 15 minutes ProductSynch polls WooCommerce, applies AI enrichment, and regenerates the OpenAI feed.
+            Every 15 minutes ProductSynch polls WooCommerce and regenerates the OpenAI feed.
           </p>
         </div>
       </section>
@@ -102,14 +99,12 @@ export default function HomePage() {
           </div>
           <div className="flex gap-2">
             <button className="btn btn--primary">Trigger sync</button>
-            <button className="btn">Enrich 50 pending</button>
           </div>
         </div>
         <div className="stat-grid">
           {[
             { label: 'Total products', value: '482', detail: '+12 this week' },
             { label: 'Synced to ChatGPT', value: '468', detail: '97% coverage' },
-            { label: 'AI enriched', value: '451', detail: 'GPT-4' },
             { label: 'ChatGPT impressions', value: '15,120', detail: '+12.5%' },
             { label: 'Sync status', value: 'Idle', detail: 'Next at :15' },
           ].map((item) => (
@@ -139,7 +134,6 @@ export default function HomePage() {
               <tr>
                 <th>Product</th>
                 <th>Price</th>
-                <th>AI</th>
                 <th>Status</th>
                 <th>Last synced</th>
               </tr>
@@ -152,7 +146,6 @@ export default function HomePage() {
                     <div className="subtle text-sm">SKU {p.wooSku}</div>
                   </td>
                   <td>${p.wooPrice}</td>
-                  <td>{p.aiEnriched ? <span className="badge badge--success">Enriched</span> : <span className="badge badge--warn">Pending</span>}</td>
                   <td>{p.syncStatus === 'COMPLETED' ? 'Synced' : 'Pending'}</td>
                   <td className="subtle text-sm">{p.lastSyncedAt ? new Date(p.lastSyncedAt).toLocaleString() : '—'}</td>
                 </tr>
@@ -176,8 +169,8 @@ export default function HomePage() {
           <button className="btn btn--primary">Preview JSON feed</button>
         </div>
         <p className="subtle max-w-3xl">
-          Every sync generates a feed JSON that matches OpenAI’s Product Feed schema, including pricing, inventory,
-          SEO-friendly metadata, and AI-enriched Q&A. Use the preview to validate before pushing.
+          Every sync generates a feed JSON that matches OpenAI's Product Feed schema, including pricing, inventory,
+          and product metadata. Use the preview to validate before pushing.
         </p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="stat-card">
