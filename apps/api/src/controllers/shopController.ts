@@ -17,6 +17,9 @@ import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 
+const TOGGLE_FIELDS = new Set(['enable_search', 'enable_checkout']);
+const ALLOWED_MAPPING_ATTRIBUTES = new Set(Object.keys(getDefaultMappings()));
+
 const createShopSchema = z.object({
   storeUrl: z.string().url(),
 });
@@ -271,123 +274,175 @@ export async function updateFieldMappings(req: Request, res: Response) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Validate: req.body should be { mappings: Record<string, string | null> }
-    const { mappings } = req.body as { mappings: Record<string, string | null> };
+    const parsedBody = z
+      .object({
+        mappings: z.record(z.union([z.string().max(255), z.null()])),
+      })
+      .safeParse(req.body);
 
-    if (!mappings || typeof mappings !== 'object') {
-      return res.status(400).json({ error: 'Invalid mappings format' });
+    if (!parsedBody.success) {
+      logger.warn('shops:field-mappings:update invalid payload', parsedBody.error.flatten());
+      return res.status(400).json({ error: parsedBody.error.flatten() });
+    }
+
+    // Normalize incoming mappings: trim strings, drop unknown attributes, convert empty to null
+    const sanitizedMappings: Record<string, string | null> = {};
+    for (const [attribute, rawValue] of Object.entries(parsedBody.data.mappings || {})) {
+      if (!ALLOWED_MAPPING_ATTRIBUTES.has(attribute)) {
+        logger.warn('shops:field-mappings:update unknown attribute', { attribute, shopId: id });
+        continue;
+      }
+
+      if (rawValue === null) {
+        sanitizedMappings[attribute] = null;
+        continue;
+      }
+
+      const trimmed = rawValue.trim();
+      sanitizedMappings[attribute] = trimmed.length ? trimmed : null;
     }
 
     // Extract toggle fields - these are shop-level settings, NOT field mappings
-    const enableSearch = mappings['enable_search'];
-    const enableCheckout = mappings['enable_checkout'];
-    delete mappings['enable_search'];
-    delete mappings['enable_checkout'];
+    const enableSearch = sanitizedMappings['enable_search'];
+    const enableCheckout = sanitizedMappings['enable_checkout'];
+    delete sanitizedMappings['enable_search'];
+    delete sanitizedMappings['enable_checkout'];
+
+    // Validate toggle values early
+    const invalidToggle =
+      (enableSearch !== undefined &&
+        enableSearch !== 'ENABLED' &&
+        enableSearch !== 'DISABLED') ||
+      (enableCheckout !== undefined &&
+        enableCheckout !== 'ENABLED' &&
+        enableCheckout !== 'DISABLED');
+
+    if (invalidToggle) {
+      return res.status(400).json({ error: 'Invalid toggle value' });
+    }
 
     // Update shop defaults for toggle fields
+    const toggleUpdates: Record<string, boolean> = {};
     if (enableSearch !== undefined) {
-      await prisma.shop.update({
-        where: { id },
-        data: { defaultEnableSearch: enableSearch === 'ENABLED' },
-      });
-      logger.info('shops:field-mappings:update toggle', {
-        shopId: id,
-        field: 'enable_search',
-        value: enableSearch,
-      });
+      toggleUpdates.defaultEnableSearch = enableSearch === 'ENABLED';
     }
 
     if (enableCheckout !== undefined) {
+      toggleUpdates.defaultEnableCheckout = enableCheckout === 'ENABLED';
+    }
+
+    if (Object.keys(toggleUpdates).length) {
       await prisma.shop.update({
         where: { id },
-        data: { defaultEnableCheckout: enableCheckout === 'ENABLED' },
+        data: toggleUpdates,
       });
       logger.info('shops:field-mappings:update toggle', {
         shopId: id,
-        field: 'enable_checkout',
-        value: enableCheckout,
+        ...toggleUpdates,
       });
     }
 
     // Process each mapping
     const results = { created: 0, updated: 0, deleted: 0, errors: 0 };
+    const mappingEntries = Object.entries(sanitizedMappings).filter(
+      ([attribute]) => !TOGGLE_FIELDS.has(attribute)
+    );
 
-    for (const [openaiAttribute, wooFieldValue] of Object.entries(mappings)) {
+    if (!mappingEntries.length) {
+      logger.info('shops:field-mappings:update', { shopId: id, userId, results, message: 'No field mappings to process' });
+      return res.json({ success: true, results });
+    }
+
+    // Preload OpenAI fields and WooCommerce fields to reduce per-iteration queries
+    const attributes = mappingEntries.map(([attribute]) => attribute);
+    const openaiFields = await prisma.openAIField.findMany({
+      where: { attribute: { in: attributes } },
+    });
+    const openaiFieldByAttribute = new Map(openaiFields.map((field) => [field.attribute, field]));
+
+    const wooFieldValues = Array.from(
+      new Set(
+        mappingEntries
+          .map(([, value]) => value)
+          .filter((value): value is string => Boolean(value))
+      )
+    );
+
+    const wooFields = wooFieldValues.length
+      ? await prisma.wooCommerceField.findMany({
+          where: {
+            value: { in: wooFieldValues },
+            OR: [{ shopId: id }, { shopId: null }],
+          },
+        })
+      : [];
+
+    const wooFieldByValue = new Map<string, (typeof wooFields)[number]>();
+    for (const field of wooFields) {
+      const existing = wooFieldByValue.get(field.value);
+
+      // Prefer shop-specific fields over global defaults
+      if (!existing || (field.shopId === id && existing.shopId !== id)) {
+        wooFieldByValue.set(field.value, field);
+      }
+    }
+
+    const existingMappings = await prisma.fieldMapping.findMany({
+      where: { shopId: id },
+    });
+    const existingByOpenaiId = new Map(existingMappings.map((mapping) => [mapping.openaiFieldId, mapping]));
+
+    for (const [openaiAttribute, wooFieldValue] of mappingEntries) {
       try {
-        // Find the OpenAI field by attribute
-        const openaiField = await prisma.openAIField.findUnique({
-          where: { attribute: openaiAttribute },
-        });
-
+        const openaiField = openaiFieldByAttribute.get(openaiAttribute);
         if (!openaiField) {
-          logger.warn(`OpenAI field "${openaiAttribute}" not found, skipping`);
+          logger.warn(`OpenAI field "${openaiAttribute}" not found, skipping`, { shopId: id });
           results.errors++;
           continue;
         }
 
-        // Find the WooCommerce field by value (if not null/ENABLED/DISABLED)
-        let wooField = null;
-        if (wooFieldValue && wooFieldValue !== 'ENABLED' && wooFieldValue !== 'DISABLED') {
-          // Try to find shop-specific field first, then standard field
-          wooField = await prisma.wooCommerceField.findFirst({
-            where: {
-              value: wooFieldValue,
-              OR: [
-                { shopId: id },    // Shop-specific discovered field
-                { shopId: null },  // Standard field
-              ],
-            },
-          });
+        const existing = existingByOpenaiId.get(openaiField.id);
 
-          if (!wooField) {
-            logger.warn(`WooCommerce field "${wooFieldValue}" not found, skipping`);
-            results.errors++;
-            continue;
-          }
-        }
-
-        // Check if mapping already exists
-        const existing = await prisma.fieldMapping.findUnique({
-          where: {
-            shopId_openaiFieldId: {
-              shopId: id,
-              openaiFieldId: openaiField.id,
-            },
-          },
-        });
-
+        // Delete mapping if explicitly cleared
         if (wooFieldValue === null) {
-          // Delete mapping if it exists
           if (existing) {
             await prisma.fieldMapping.delete({
               where: { id: existing.id },
             });
             results.deleted++;
           }
-        } else {
-          // Upsert mapping
-          const result = await prisma.fieldMapping.upsert({
-            where: {
-              shopId_openaiFieldId: {
-                shopId: id,
-                openaiFieldId: openaiField.id,
-              },
-            },
-            create: {
+          continue;
+        }
+
+        const wooField = wooFieldByValue.get(wooFieldValue);
+        if (!wooField) {
+          logger.warn(`WooCommerce field "${wooFieldValue}" not found, skipping`, { shopId: id });
+          results.errors++;
+          continue;
+        }
+
+        // Upsert mapping
+        await prisma.fieldMapping.upsert({
+          where: {
+            shopId_openaiFieldId: {
               shopId: id,
               openaiFieldId: openaiField.id,
-              wooFieldId: wooField?.id || null,
             },
-            update: {
-              wooFieldId: wooField?.id || null,
-            },
-          });
+          },
+          create: {
+            shopId: id,
+            openaiFieldId: openaiField.id,
+            wooFieldId: wooField.id,
+          },
+          update: {
+            wooFieldId: wooField.id,
+          },
+        });
 
-          if (existing) {
-            results.updated++;
-          } else {
-            results.created++;
-          }
+        if (existing) {
+          results.updated++;
+        } else {
+          results.created++;
         }
       } catch (mappingErr: any) {
         logger.error(`Error processing mapping for ${openaiAttribute}:`, mappingErr);
