@@ -31,7 +31,6 @@ const WOO_COMMERCE_FIELDS = [
   { value: 'global_unique_id', label: 'Global Unique ID', category: 'Basic', description: 'GTIN, UPC, EAN, or ISBN' },
 
   // Pricing
-  { value: 'price', label: 'Price', category: 'Pricing', description: 'Current price (string)' },
   { value: 'regular_price', label: 'Regular Price', category: 'Pricing', description: 'Regular price (string)' },
   { value: 'sale_price', label: 'Sale Price', category: 'Pricing', description: 'Sale price (string)' },
   { value: 'on_sale', label: 'On Sale', category: 'Pricing', description: 'On sale status (true/false)' },
