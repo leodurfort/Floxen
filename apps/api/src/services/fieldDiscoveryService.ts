@@ -222,13 +222,10 @@ export class FieldDiscoveryService {
 
         const category = field.key.startsWith('attributes.') ? 'Attributes' : 'Meta';
 
-        // Check if this field already exists for this shop
+        // Check if this field already exists globally
         const existing = await prisma.wooCommerceField.findUnique({
           where: {
-            value_shopId: {
-              value,
-              shopId,
-            },
+            value,
           },
         });
 
@@ -237,15 +234,13 @@ export class FieldDiscoveryService {
           continue;
         }
 
-        // Create new discovered field
+        // Create new discovered field (global, not shop-specific)
         await prisma.wooCommerceField.create({
           data: {
             value,
             label: field.label,
             description: `Found in ${field.occurrences} products. Example: ${JSON.stringify(field.sampleValue).substring(0, 100)}`,
             category,
-            isStandard: false,
-            shopId,
           },
         });
 
@@ -322,18 +317,11 @@ export class FieldDiscoveryService {
   }
 
   /**
-   * Get all fields for a shop (standard + discovered)
+   * Get all fields for a shop (all global fields)
    */
   static async getShopFields(shopId: string): Promise<any[]> {
     const fields = await prisma.wooCommerceField.findMany({
-      where: {
-        OR: [
-          { shopId: null },      // Standard fields
-          { shopId: shopId },    // Shop-specific discovered fields
-        ],
-      },
       orderBy: [
-        { isStandard: 'desc' },  // Standard fields first
         { category: 'asc' },
         { label: 'asc' },
       ],

@@ -99,7 +99,6 @@ model Shop {
   analytics         ShopAnalytics[]
   feedSnapshot      FeedSnapshot?
   fieldMappingsV2   FieldMapping[]
-  discoveredFields  WooCommerceField[]
 
   @@index([userId])
 }
@@ -288,21 +287,15 @@ model OpenAIField {
 // Reference table for WooCommerce field specifications
 model WooCommerceField {
   id          String   @id @default(cuid())
-  value       String   // Internal identifier: "name", "sku", "description", "meta_data._gtin"
+  value       String   @unique  // Internal identifier: "name", "sku", "description", "meta_data._gtin"
   label       String   // Human-readable label: "Product Name", "SKU"
   description String?  @db.Text  // Optional field description
   category    String?  // Field category: "basic", "pricing", "inventory", "taxonomy", "media", "meta"
-  isStandard  Boolean  @default(true) @map("is_standard")  // true = from WooCommerce docs, false = discovered/custom
-  shopId      String?  @map("shop_id")  // NULL = global field, set = shop-specific discovered field
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  shop     Shop? @relation(fields: [shopId], references: [id], onDelete: Cascade)
   mappings FieldMapping[]
 
-  @@unique([value, shopId])  // Allow same value for different shops (e.g., meta_data._custom)
-  @@index([shopId])
-  @@index([isStandard])
   @@map("woocommerce_fields")
 }
 

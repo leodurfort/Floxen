@@ -159,8 +159,6 @@ async function main() {
         label: field.label,
         description: field.description || null,
         category: field.category,
-        isStandard: true,
-        shopId: null, // Global fields
       },
     });
   }
@@ -175,8 +173,6 @@ async function main() {
         label: field.label,
         description: field.description || null,
         category: field.category,
-        isStandard: true,
-        shopId: null, // Global fields
       },
     });
   }
