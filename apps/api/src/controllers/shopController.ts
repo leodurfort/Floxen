@@ -28,7 +28,7 @@ const createShopSchema = z.object({
 
 const updateShopSchema = z.object({
   syncEnabled: z.boolean().optional(),
-  sellerName: z.string().optional(),
+  sellerName: z.string().nullable().optional(),
   sellerUrl: z.string().url().optional(),
   sellerPrivacyPolicy: z.string().url().nullable().optional(),
   sellerTos: z.string().url().nullable().optional(),

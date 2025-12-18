@@ -111,7 +111,7 @@ export default function ShopsPage() {
   // Auto-save function with debouncing
   const handleFieldChange = useCallback(async (
     shopId: string,
-    field: 'sellerPrivacyPolicy' | 'sellerTos' | 'returnPolicy' | 'returnWindow',
+    field: 'sellerName' | 'sellerPrivacyPolicy' | 'sellerTos' | 'returnPolicy' | 'returnWindow',
     value: string
   ) => {
     if (!accessToken) return;
@@ -142,6 +142,8 @@ export default function ShopsPage() {
         if (value.trim() && !isValidInteger(value)) {
           return; // Don't save invalid integer
         }
+      } else if (field === 'sellerName') {
+        // sellerName is a text field, no URL validation
       } else {
         // URL fields - must be valid URL if not empty
         if (value.trim() && !isValidUrl(value)) {
@@ -153,6 +155,7 @@ export default function ShopsPage() {
       setError(null);
       try {
         const updateData: {
+          sellerName?: string | null;
           sellerPrivacyPolicy?: string | null;
           sellerTos?: string | null;
           returnPolicy?: string | null;
@@ -170,6 +173,9 @@ export default function ShopsPage() {
           } else {
             updateData.returnWindow = null;
           }
+        } else if (field === 'sellerName') {
+          // sellerName is a text field
+          updateData.sellerName = value.trim() || null;
         } else {
           // URL fields - only save if valid URL or empty
           if (value.trim()) {
@@ -345,7 +351,13 @@ export default function ShopsPage() {
                             <div className="space-y-3">
                               <div>
                                 <span className="text-white/60">sellerName:</span>
-                                <span className="text-white ml-2">{shop.sellerName || 'N/A'}</span>
+                                <input
+                                  type="text"
+                                  value={shop.sellerName || ''}
+                                  onChange={(e) => handleFieldChange(shop.id, 'sellerName', e.target.value)}
+                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  placeholder="Your store name"
+                                />
                               </div>
                               <div>
                                 <span className="text-white/60">sellerUrl:</span>
