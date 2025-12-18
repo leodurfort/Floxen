@@ -13,6 +13,8 @@ export default function SetupPage() {
   const { accessToken, hydrate, hydrated } = useAuth();
 
   const [mappings, setMappings] = useState<Record<string, string | null>>({});
+  const [userMappings, setUserMappings] = useState<Record<string, string | null>>({});
+  const [specDefaults, setSpecDefaults] = useState<Record<string, string | null>>({});
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [previewProductJson, setPreviewProductJson] = useState<any | null>(null);
@@ -62,6 +64,8 @@ export default function SetupPage() {
       }
 
       setMappings(loadedMappings);
+      setUserMappings(data.userMappings || {});
+      setSpecDefaults(data.specDefaults || {});
     } catch (err) {
       console.error('[Setup] Failed to load mappings', err);
     } finally {
@@ -129,15 +133,18 @@ export default function SetupPage() {
       return;
     }
 
-    // Save old value for rollback
+    // Save old values for rollback
     const oldValue = mappings[attribute];
+    const oldUserValue = userMappings[attribute];
 
     // Clear any previous errors
     setSaveError(null);
 
     // Optimistic update
     const newMappings = { ...mappings, [attribute]: wooField };
+    const newUserMappings = { ...userMappings, [attribute]: wooField };
     setMappings(newMappings);
+    setUserMappings(newUserMappings);
 
     // Auto-save to API
     setSaving(true);
@@ -160,6 +167,7 @@ export default function SetupPage() {
 
       // Revert optimistic update
       setMappings({ ...mappings, [attribute]: oldValue });
+      setUserMappings({ ...userMappings, [attribute]: oldUserValue });
 
       // Show error message
       const errorMessage = err instanceof Error ? err.message : 'Failed to save field mapping';
@@ -312,6 +320,7 @@ export default function SetupPage() {
                       key={spec.attribute}
                       spec={spec}
                       currentMapping={mappings[spec.attribute] || null}
+                      isUserSelected={spec.attribute in userMappings}
                       onMappingChange={handleMappingChange}
                       previewProductJson={previewProductJson}
                       previewShopData={previewShopData}

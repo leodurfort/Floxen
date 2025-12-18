@@ -8,12 +8,13 @@ import { extractTransformedPreviewValue, formatFieldValue } from '@/lib/wooComme
 interface Props {
   spec: OpenAIFieldSpec;
   currentMapping: string | null;
+  isUserSelected: boolean;  // True if user explicitly selected a mapping (not just spec default)
   onMappingChange: (attribute: string, wooField: string | null) => void;
   previewProductJson: any | null;  // WooCommerce raw JSON for selected product
   previewShopData?: any | null;    // Shop-level data (seller info, return policy, etc.)
 }
 
-export function FieldMappingRow({ spec, currentMapping, onMappingChange, previewProductJson, previewShopData }: Props) {
+export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappingChange, previewProductJson, previewShopData }: Props) {
   const requirementColors = {
     Required: 'bg-red-500/20 text-red-300 border-red-500/30',
     Recommended: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
@@ -44,11 +45,15 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     : false;
 
   // Extract and format preview value
+  // Only show preview if:
+  // 1. User has explicitly selected a mapping (isUserSelected), OR
+  // 2. This is a locked field (always mapped), OR
+  // 3. This is a non-editable field like dimensions or shop-managed fields
+  const shouldShowPreview = isUserSelected || isLockedField || isNonEditableField;
+
   const defaultMapping = spec.wooCommerceMapping?.field || null;
-  // Only use defaultMapping for dimensions field, not for regular fields
-  // This prevents showing "Invalid" for spec defaults that don't exist in this specific store
   const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping || (isDimensions ? defaultMapping : null)) || null;
-  const previewValue = effectiveMapping && !isToggleField
+  const previewValue = shouldShowPreview && effectiveMapping && !isToggleField
     ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
     : null;
   const formattedValue = formatFieldValue(previewValue);
