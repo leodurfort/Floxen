@@ -587,12 +587,22 @@ export async function testWooSettings(req: Request, res: Response) {
     const generalResponse = await wooClient.get('settings/general');
     const productsResponse = await wooClient.get('settings/products');
 
+    // Fetch WordPress settings to show store name and URL
+    let wpSettings = null;
+    try {
+      const wpSettingsResponse = await wooClient.get('../wp/v2/settings');
+      wpSettings = wpSettingsResponse.data;
+    } catch (wpError: any) {
+      wpSettings = { error: wpError.message };
+    }
+
     return res.json({
       parsedSettings: settings,
       rawResponses: {
         index: indexResponse.data,
         generalSettings: generalResponse.data,
         productsSettings: productsResponse.data,
+        wpSettings: wpSettings,
       },
     });
   } catch (error: any) {

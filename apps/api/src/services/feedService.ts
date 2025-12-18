@@ -9,7 +9,7 @@ export function generateFeedPayload(shop: Shop, products: Product[]) {
   return {
     seller: {
       id: shop.openaiMerchantId || shop.id,
-      name: shop.sellerName || shop.shopName,
+      name: shop.sellerName,
       url: shop.sellerUrl || shop.wooStoreUrl,
       privacy_policy: shop.sellerPrivacyPolicy,
       terms_of_service: shop.sellerTos,

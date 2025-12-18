@@ -57,7 +57,7 @@ export class FieldDiscoveryService {
       });
 
       // Fetch ALL products from the shop (paginated)
-      logger.info('Fetching products for field discovery', { shopId, shopName: shop.shopName });
+      logger.info('Fetching products for field discovery', { shopId, sellerName: shop.sellerName });
 
       const products: any[] = [];
       let page = 1;

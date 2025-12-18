@@ -134,29 +134,12 @@ export async function productSyncProcessor(job: Job) {
     const settings = await fetchStoreSettings(client, shop.wooStoreUrl);
 
     if (settings) {
-      // Settings should now have sellerUrl populated (from API or fallback)
-      const sellerUrl = settings.sellerUrl;
-
-      // Extract shop name from URL if WooCommerce API doesn't return name
-      let shopName = settings.shopName;
-      if (!shopName && sellerUrl) {
-        try {
-          const url = new URL(sellerUrl);
-          const domain = url.hostname.replace(/^www\./, '');
-          shopName = domain.split('.')[0];
-          shopName = shopName.charAt(0).toUpperCase() + shopName.slice(1);
-        } catch (e) {
-          // Invalid URL, keep as null
-        }
-      }
-
       const updateData: any = {
-        shopName: shopName,
         shopCurrency: settings.shopCurrency,
         dimensionUnit: settings.dimensionUnit,
         weightUnit: settings.weightUnit,
-        sellerName: shopName,  // Use shopName as sellerName
-        sellerUrl: sellerUrl,
+        sellerName: settings.sellerName,
+        sellerUrl: settings.sellerUrl,
       };
       // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 
@@ -167,7 +150,6 @@ export async function productSyncProcessor(job: Job) {
 
       logger.info('product-sync: shop settings refreshed', {
         shopId,
-        shopName: settings.shopName,
         shopCurrency: settings.shopCurrency,
         dimensionUnit: settings.dimensionUnit,
         weightUnit: settings.weightUnit,
@@ -177,7 +159,6 @@ export async function productSyncProcessor(job: Job) {
 
       // Update local shop object cache
       shop.shopCurrency = settings.shopCurrency || null;
-      shop.shopName = settings.shopName || null;
       shop.dimensionUnit = settings.dimensionUnit || null;
       shop.weightUnit = settings.weightUnit || null;
       shop.sellerName = settings.sellerName || null;

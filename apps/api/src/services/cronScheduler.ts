@@ -46,7 +46,7 @@ export class CronScheduler {
         },
         select: {
           id: true,
-          shopName: true,
+          sellerName: true,
         },
       });
 
@@ -85,12 +85,12 @@ export class CronScheduler {
               delay: 60000, // 1 minute after product sync
             });
 
-            logger.info(`Cron: Enqueued jobs for shop ${shop.shopName}`, {
+            logger.info(`Cron: Enqueued jobs for shop ${shop.sellerName || shop.id}`, {
               shopId: shop.id,
               delay: `${delay / 1000}s`,
             });
           } catch (err) {
-            logger.error(`Cron: Failed to enqueue jobs for shop ${shop.shopName}`, { error: err instanceof Error ? err : new Error(String(err)) });
+            logger.error(`Cron: Failed to enqueue jobs for shop ${shop.sellerName || shop.id}`, { error: err instanceof Error ? err : new Error(String(err)) });
           }
         }, delay);
       }

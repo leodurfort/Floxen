@@ -214,7 +214,6 @@
             const settings = data.parsedSettings || {};
             const dimensionUnit = settings.dimensionUnit || 'Not returned by API';
             const weightUnit = settings.weightUnit || 'Not returned by API';
-            const shopName = settings.shopName || 'Not returned by API';
             const shopCurrency = settings.shopCurrency || 'Not returned by API';
             const sellerName = settings.sellerName || 'Not returned by API';
             const sellerUrl = settings.sellerUrl || 'Not returned by API';
@@ -224,8 +223,12 @@
                 <h3>✅ Successfully Fetched from WooCommerce API</h3>
                 <div class="unit-info">
                     <div class="unit-item">
-                        <div class="unit-label">Shop Name</div>
-                        <div class="unit-value" style="font-size: 16px;">${shopName}</div>
+                        <div class="unit-label">Seller Name</div>
+                        <div class="unit-value" style="font-size: 16px;">${sellerName}</div>
+                    </div>
+                    <div class="unit-item">
+                        <div class="unit-label">Seller URL</div>
+                        <div class="unit-value" style="font-size: 14px;">${sellerUrl}</div>
                     </div>
                     <div class="unit-item">
                         <div class="unit-label">Currency</div>
@@ -239,18 +242,15 @@
                         <div class="unit-label">Weight Unit</div>
                         <div class="unit-value">${weightUnit}</div>
                     </div>
-                    <div class="unit-item">
-                        <div class="unit-label">Seller Name</div>
-                        <div class="unit-value" style="font-size: 16px;">${sellerName}</div>
-                    </div>
-                    <div class="unit-item">
-                        <div class="unit-label">Seller URL</div>
-                        <div class="unit-value" style="font-size: 14px;">${sellerUrl}</div>
-                    </div>
                 </div>
                 <details style="margin-top: 20px;" open>
-                    <summary style="cursor: pointer; font-weight: 500; font-size: 18px;">📋 Index Endpoint (GET /wp-json/wc/v3)</summary>
-                    <p style="margin: 10px 0; color: #666; font-size: 14px;">Should contain: name, url, description, wc_version</p>
+                    <summary style="cursor: pointer; font-weight: 500; font-size: 18px;">🌐 WordPress Settings (GET /wp-json/wp/v2/settings) ⭐ NEW</summary>
+                    <p style="margin: 10px 0; color: #666; font-size: 14px;">Contains: title (store name), url (store URL)</p>
+                    <pre>${JSON.stringify(data.rawResponses?.wpSettings, null, 2)}</pre>
+                </details>
+                <details style="margin-top: 10px;">
+                    <summary style="cursor: pointer; font-weight: 500; font-size: 18px;">📋 WooCommerce Index Endpoint (GET /wp-json/wc/v3)</summary>
+                    <p style="margin: 10px 0; color: #666; font-size: 14px;">❌ Does NOT contain store name or URL - only returns "namespace" and "routes"</p>
                     <pre>${JSON.stringify(data.rawResponses?.index, null, 2)}</pre>
                 </details>
                 <details style="margin-top: 10px;" open>

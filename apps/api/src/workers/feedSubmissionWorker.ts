@@ -74,7 +74,7 @@ export async function feedSubmissionProcessor(job: Job) {
 
     logger.info('feed-submission: Feed saved to database', {
       shopId,
-      shopName: shop.shopName,
+      sellerName: shop.sellerName,
       productCount: products.length,
       feedSize: JSON.stringify(feedPayload).length,
     });

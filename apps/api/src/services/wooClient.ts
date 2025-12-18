@@ -67,16 +67,13 @@ export async function fetchStoreCurrency(api: WooCommerceRestApi) {
 }
 
 export interface StoreSettings {
-  shopName: string;
-  shopCurrency: string;
-  siteUrl?: string;
-  homeUrl?: string;
+  shopCurrency: string | null;
   language?: string;
   dimensionUnit?: string;
   weightUnit?: string;
-  // Shop-level fields for OpenAI feed (only sellerName and sellerUrl are fetched from API)
-  sellerName?: string;
-  sellerUrl?: string;
+  // Shop-level fields for OpenAI feed
+  sellerName: string | null;
+  sellerUrl: string | null;
   // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 }
 
@@ -89,17 +86,6 @@ export async function fetchStoreSettings(api: WooCommerceRestApi, fallbackStoreU
   try {
     logger.info('woo:fetch store settings start');
 
-    // Fetch store information from index endpoint (GET /wp-json/wc/v3)
-    const indexResponse = await api.get('');
-    const storeInfo = indexResponse.data || {};
-
-    logger.info('woo:fetch store index info', {
-      name: storeInfo.name,
-      description: storeInfo.description,
-      url: storeInfo.url,
-      fullResponse: JSON.stringify(storeInfo),
-    });
-
     // Fetch general settings (currency)
     const generalResponse = await api.get('settings/general');
     const settings = Array.isArray(generalResponse.data) ? generalResponse.data : [];
@@ -111,54 +97,59 @@ export async function fetchStoreSettings(api: WooCommerceRestApi, fallbackStoreU
     const dimensionUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_dimension_unit');
     const weightUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_weight_unit');
 
-    // WooCommerce index endpoint often returns empty name/url
-    // Use fallback store URL if provided and API returns null
-    let shopUrl = storeInfo.url || fallbackStoreUrl || null;
-    let shopName = storeInfo.name || null;
+    // Fetch seller name and URL from WordPress REST API settings endpoint
+    // The WooCommerce index endpoint (GET /wp-json/wc/v3/) only returns "namespace" and "routes"
+    // It does NOT return store name or URL despite what the WooCommerce docs claim
+    let sellerUrl: string | null = null;
+    let sellerName: string | null = null;
 
-    // If name is empty, try to extract a readable name from the URL
-    if (!shopName && shopUrl) {
-      try {
-        const url = new URL(shopUrl);
-        // Extract domain without www and TLD (e.g., "mystore.com" -> "mystore")
-        const domain = url.hostname.replace(/^www\./, '');
-        shopName = domain.split('.')[0];
-        // Capitalize first letter
-        shopName = shopName.charAt(0).toUpperCase() + shopName.slice(1);
-      } catch (e) {
-        // Invalid URL, keep as null
+    try {
+      // WordPress REST API /wp/v2/settings contains "title" and "url" fields
+      // Use relative path to navigate from /wc/v3 to /wp/v2/settings
+      const wpSettingsResponse = await api.get('../wp/v2/settings');
+      const wpSettings = wpSettingsResponse.data || {};
+
+      sellerName = wpSettings.title || null;
+      sellerUrl = wpSettings.url || null;
+
+      logger.info('woo:fetch WordPress settings success', {
+        title: wpSettings.title,
+        url: wpSettings.url,
+      });
+    } catch (wpError: any) {
+      logger.error('woo:failed to fetch WordPress settings', {
+        error: wpError.message,
+        usingFallback: !!fallbackStoreUrl,
+      });
+
+      // If WordPress API fails, use fallback URL if provided
+      if (fallbackStoreUrl) {
+        sellerUrl = fallbackStoreUrl;
       }
     }
 
-    logger.info('woo:extracted shop name and url', {
-      apiReturnedName: storeInfo.name,
-      apiReturnedUrl: storeInfo.url,
-      fallbackUsed: !!fallbackStoreUrl && !storeInfo.url,
-      extractedShopName: shopName,
-      finalShopUrl: shopUrl,
+    logger.info('woo:extracted seller name and url', {
+      sellerName,
+      sellerUrl,
+      fallbackUsed: !!fallbackStoreUrl && !sellerUrl,
     });
 
     const storeSettings: StoreSettings = {
-      shopName: shopName,
       shopCurrency: currencySetting?.value || null,
-      dimensionUnit: dimensionUnitSetting?.value || null,
-      weightUnit: weightUnitSetting?.value || null,
-      siteUrl: shopUrl,
-      homeUrl: shopUrl,
+      dimensionUnit: dimensionUnitSetting?.value || undefined,
+      weightUnit: weightUnitSetting?.value || undefined,
       language: undefined,
-      // Populate seller fields - use shopName and shopUrl as defaults
-      sellerName: shopName,
-      sellerUrl: shopUrl,
+      sellerName: sellerName,
+      sellerUrl: sellerUrl,
       // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
     };
 
     logger.info('woo:fetch store settings complete', {
-      shopName: storeSettings.shopName,
       shopCurrency: storeSettings.shopCurrency,
       dimensionUnit: storeSettings.dimensionUnit,
       weightUnit: storeSettings.weightUnit,
-      hasSellerName: !!storeSettings.sellerName,
-      hasSellerUrl: !!storeSettings.sellerUrl,
+      sellerName: storeSettings.sellerName,
+      sellerUrl: storeSettings.sellerUrl,
     });
     return storeSettings;
   } catch (err) {
