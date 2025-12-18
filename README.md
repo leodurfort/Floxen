@@ -41,3 +41,4 @@ The dashboard landing page mirrors the spec’s priorities: store connection CTA
 - Wire real persistence (Prisma/PostgreSQL, Redis) and replace the mock store.
 - Implement OAuth with WooCommerce, webhook signature verification, and job queues (BullMQ) for sync/enrichment.
 - Expand the web app with the full navigation/layout, product detail flows, and analytics visualizations from the spec.
+# Trigger deployment
