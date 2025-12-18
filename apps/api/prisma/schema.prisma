@@ -69,7 +69,6 @@ model Shop {
   wooStoreUrl       String     @map("woo_store_url")
   wooConsumerKey    String?    @map("woo_consumer_key")
   wooConsumerSecret String?    @map("woo_consumer_secret")
-  shopName          String?    @map("shop_name")
   shopCurrency      String?    @map("shop_currency")
   dimensionUnit     String?    @map("dimension_unit")
   weightUnit        String?    @map("weight_unit")

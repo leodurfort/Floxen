@@ -22,8 +22,9 @@ export async function createShop(params: {
       wooStoreUrl: storeUrl,
       wooConsumerKey: consumerKey ? encrypt(consumerKey) : null,
       wooConsumerSecret: consumerSecret ? encrypt(consumerSecret) : null,
-      shopName: null, // Will be populated after OAuth from WooCommerce API
       shopCurrency: null, // Will be populated after OAuth from WooCommerce API
+      sellerName: null, // Will be populated after OAuth from WooCommerce API
+      sellerUrl: null, // Will be populated after OAuth from WooCommerce API
     },
   });
 }
@@ -150,11 +151,10 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
       wooConsumerSecret: encrypt(consumerSecret),
       isConnected: true,
       syncStatus: 'PENDING',
-      shopName: settings?.shopName || shop.shopName,
       shopCurrency: settings?.shopCurrency || shop.shopCurrency,
-      dimensionUnit: settings?.dimensionUnit || shop.dimensionUnit,
-      weightUnit: settings?.weightUnit || shop.weightUnit,
-      // Populate seller fields from WooCommerce (only sellerName and sellerUrl)
+      dimensionUnit: settings?.dimensionUnit,
+      weightUnit: settings?.weightUnit,
+      // Populate seller fields from WooCommerce
       sellerName: settings?.sellerName || shop.sellerName,
       sellerUrl: settings?.sellerUrl || shop.sellerUrl,
       // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only (preserve existing values)
