@@ -218,9 +218,8 @@ export async function getFieldMappings(req: Request, res: Response) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Start with default mappings for all 70 OpenAI fields
-    const defaultMappings = getDefaultMappings();
-    const mappings: Record<string, string | null> = { ...defaultMappings };
+    // Get default mappings from spec
+    const specDefaults = getDefaultMappings();
 
     // Query field mappings from database with joins
     const fieldMappings = await prisma.fieldMapping.findMany({
@@ -231,34 +230,49 @@ export async function getFieldMappings(req: Request, res: Response) {
       },
     });
 
-    // Override defaults with database mappings (user customizations)
+    // Build user mappings (only explicit selections from database)
+    const userMappings: Record<string, string | null> = {};
     for (const mapping of fieldMappings) {
       if (mapping.wooField) {
         // User has mapped this field to a WooCommerce field
-        mappings[mapping.openaiField.attribute] = mapping.wooField.value;
+        userMappings[mapping.openaiField.attribute] = mapping.wooField.value;
       } else {
         // User explicitly unmapped this field (set to null)
-        mappings[mapping.openaiField.attribute] = null;
+        userMappings[mapping.openaiField.attribute] = null;
       }
+    }
+
+    // Build merged mappings (user selections override spec defaults)
+    const mappings: Record<string, string | null> = { ...specDefaults };
+    for (const [attribute, value] of Object.entries(userMappings)) {
+      mappings[attribute] = value;
     }
 
     // Add shop-level toggle defaults (these are NOT field mappings, they're shop settings)
     mappings['enable_search'] = shop.defaultEnableSearch ? 'ENABLED' : 'DISABLED';
     mappings['enable_checkout'] = shop.defaultEnableCheckout ? 'ENABLED' : 'DISABLED';
+    userMappings['enable_search'] = shop.defaultEnableSearch ? 'ENABLED' : 'DISABLED';
+    userMappings['enable_checkout'] = shop.defaultEnableCheckout ? 'ENABLED' : 'DISABLED';
 
     // Force locked mappings to their required values
     for (const [attribute, lockedValue] of Object.entries(LOCKED_FIELD_MAPPINGS)) {
       mappings[attribute] = lockedValue;
+      userMappings[attribute] = lockedValue;
     }
 
     logger.info('shops:field-mappings:get', {
       shopId: id,
       userId,
       dbMappings: fieldMappings.length,
+      userMappings: Object.keys(userMappings).length,
       totalFields: Object.keys(mappings).length,
     });
 
-    return res.json({ mappings });
+    return res.json({
+      mappings,           // Merged: user selections + spec defaults (backward compatible)
+      userMappings,       // Only explicit user selections from database
+      specDefaults,       // Default mappings from OpenAI spec
+    });
   } catch (err: any) {
     logger.error('shops:field-mappings:get error', err);
     return res.status(500).json({ error: err.message });
