@@ -12,3 +12,6 @@ build
 *.tsbuildinfo
 .DS_Store
 npm-debug.log*
+
+# Development utility scripts
+trigger-sync.js

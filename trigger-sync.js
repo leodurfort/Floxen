@@ -19,13 +19,25 @@ const syncQueue = new Queue('sync', {
 
 async function triggerSync() {
   try {
-    const shop = await prisma.shop.findUnique({
-      where: { id: 'cmjaehhf50001m6s7prcf7skj' }
-    });
+    // Get shop ID from command line argument or use first shop
+    const shopIdArg = process.argv[2];
 
-    if (!shop) {
-      console.error('Shop not found');
-      process.exit(1);
+    let shop;
+    if (shopIdArg) {
+      shop = await prisma.shop.findUnique({
+        where: { id: shopIdArg }
+      });
+      if (!shop) {
+        console.error(`Shop with ID "${shopIdArg}" not found`);
+        process.exit(1);
+      }
+    } else {
+      shop = await prisma.shop.findFirst();
+      if (!shop) {
+        console.error('No shops found in database');
+        process.exit(1);
+      }
+      console.log(`No shop ID provided, using first shop: ${shop.id} (${shop.shopName})`);
     }
 
     await prisma.shop.update({
