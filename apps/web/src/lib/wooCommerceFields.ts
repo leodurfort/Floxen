@@ -219,6 +219,25 @@ const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?
     return attributes[0]?.options?.[0] || null;
   },
   buildShippingString: () => null,
+  cleanVariationTitle: (title, wooProduct) => {
+    if (!title || typeof title !== 'string') return title;
+
+    // For variation products: check if parent_id exists
+    const isVariation = wooProduct?.parent_id && wooProduct.parent_id > 0;
+    if (!isVariation) return title;
+
+    // Split by " - " to find repetition pattern
+    const parts = title.split(' - ');
+    if (parts.length < 3) return title; // No duplication possible
+
+    // Check if first part equals second part (duplication pattern)
+    if (parts[0].trim() === parts[1].trim()) {
+      // Remove the duplicate first part, rejoin the rest
+      return parts.slice(1).join(' - ');
+    }
+
+    return title;
+  },
 };
 
 /**
