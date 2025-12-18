@@ -52,14 +52,6 @@ async function processProduct(data: any, shop: Shop, shopId: string) {
   const validationService = new ValidationService();
   const validation = validationService.validateProduct(
     openaiAutoFilled,
-    existing?.openaiEdited as Record<string, any> || {},
-    {
-      aiTitle: existing?.aiTitle || undefined,
-      aiDescription: existing?.aiDescription || undefined,
-      aiCategory: existing?.aiSuggestedCategory || undefined,
-      aiQAndA: existing?.aiQAndA || undefined,
-    },
-    existing?.selectedSources as Record<string, 'ai' | 'woo'> || {},
     existing?.feedEnableCheckout || false
   );
 

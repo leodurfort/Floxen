@@ -9,7 +9,7 @@ export function getOverview(req: Request, res: Response) {
     .findMany({ where: { shopId } })
     .then((products) => {
       const synced = products.filter((p) => p.syncStatus === 'COMPLETED').length;
-      const enriched = products.filter((p) => p.aiEnriched).length;
+      const enriched = 0; // AI enrichment removed
 
       // TODO: Implement real analytics tracking
       // These values should come from an analytics database or external service

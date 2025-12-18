@@ -1,7 +1,6 @@
 import { Worker } from 'bullmq';
 import { redisConnection } from '../lib/redis';
 import { productSyncProcessor } from './productSyncWorker';
-import { aiEnrichmentProcessor } from './aiEnrichmentWorker';
 import { feedGenerationProcessor } from './feedGenerationWorker';
 import { feedSubmissionProcessor } from './feedSubmissionWorker';
 import { logger } from '../lib/logger';
@@ -14,8 +13,6 @@ if (redisConnection) {
       switch (job.name) {
         case 'product-sync':
           return await productSyncProcessor(job);
-        case 'ai-enrichment':
-          return await aiEnrichmentProcessor(job);
         case 'feed-generation':
           return await feedGenerationProcessor(job);
         case 'feed-submission':

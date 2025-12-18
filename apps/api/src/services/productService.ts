@@ -63,27 +63,6 @@ export async function updateProduct(
   });
 }
 
-export async function markEnrichmentQueued(shopId: string, productId: string) {
-  return prisma.product.update({
-    where: { id: productId },
-    data: {
-      aiEnriched: false,
-      status: ProductStatus.PENDING_REVIEW,
-      syncStatus: SyncStatus.PENDING,
-    },
-  });
-}
-
-export function buildFeedPreview(product: { wooProductId: number; wooTitle: string; wooDescription?: string | null; wooPrice?: any; syncStatus: SyncStatus }, shopId: string) {
-  return {
-    id: `${shopId}-${product.wooProductId}`,
-    title: product.wooTitle,
-    description: product.wooDescription,
-    availability: product.syncStatus === SyncStatus.COMPLETED ? 'in_stock' : 'preorder',
-    price: product.wooPrice ? `${product.wooPrice} USD` : null,
-  };
-}
-
 export function checksum(data: unknown) {
   return crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
 }

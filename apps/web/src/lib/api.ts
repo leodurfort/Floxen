@@ -142,13 +142,6 @@ export async function requestProduct(shopId: string, productId: string, token: s
   });
 }
 
-export async function triggerProductEnrich(shopId: string, productId: string, token: string) {
-  return request<{ product: Product; message: string }>(`/api/v1/shops/${shopId}/products/${productId}/enrich`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
 export async function triggerProductSync(shopId: string, token: string, forceFull: boolean = false) {
   return request<{ shopId: string; status: string }>(`/api/v1/shops/${shopId}/sync`, {
     method: 'POST',
@@ -192,83 +185,6 @@ export async function updateShop(
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
-}
-
-// New API functions for 3-column enrichment flow
-
-export async function updateProductManualField(
-  shopId: string,
-  productId: string,
-  field: string,
-  value: string | string[] | Array<{ q: string; a: string }>,
-  token: string
-) {
-  return request<{ product: Product }>(`/api/v1/shops/${shopId}/products/${productId}/manual-field`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ field, value }),
-  });
-}
-
-export async function updateProductSelectedSource(
-  shopId: string,
-  productId: string,
-  field: string,
-  source: 'manual' | 'ai',
-  token: string
-) {
-  return request<{ product: Product }>(`/api/v1/shops/${shopId}/products/${productId}/selected-source`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ field, source }),
-  });
-}
-
-export async function getResolvedValues(shopId: string, productId: string, token: string) {
-  return request<{ resolved: any }>(`/api/v1/shops/${shopId}/products/${productId}/resolved-values`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function getProductEnrichmentData(shopId: string, productId: string, token: string) {
-  return request<{
-    product: {
-      id: string;
-      wooProductId: number;
-      status: string;
-      isValid: boolean;
-      feedEnableSearch: boolean;
-      feedEnableCheckout: boolean;
-    };
-    autoFilled: Record<string, any>;
-    edited: Record<string, any>;
-    aiData: {
-      title?: string;
-      description?: string;
-      category?: string;
-      keywords?: string[];
-      q_and_a?: Array<{ q: string; a: string }>;
-    };
-    selectedSources: Record<string, 'manual' | 'ai'>;
-    resolved: any;
-    validationErrors: Record<string, string[]>;
-  }>(`/api/v1/shops/${shopId}/products/${productId}/enrichment-data`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function updateOpenAIField(
-  shopId: string,
-  productId: string,
-  field: string,
-  value: any,
-  token: string
-) {
-  return request<{ product: Product }>(`/api/v1/shops/${shopId}/products/${productId}/openai-field`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ field, value }),
   });
 }
 

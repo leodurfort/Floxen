@@ -21,26 +21,18 @@ export class ValidationService {
 
   /**
    * Validate all OpenAI fields for a product
-   * Computes effective values and validates each field
+   * Uses only auto-filled values from WooCommerce
    */
   validateProduct(
     openaiAutoFilled: Record<string, any>,
-    openaiEdited: Record<string, any>,
-    aiValues: { aiTitle?: string; aiDescription?: string; aiCategory?: string; aiQAndA?: any },
-    selectedSources: Record<string, 'ai' | 'woo'>,
     feedEnableCheckout: boolean = false
   ): ValidationResult {
 
     const errors: Record<string, string[]> = {};
     const warnings: Record<string, string[]> = {};
 
-    // Compute effective values (what will actually be in the feed)
-    const effectiveValues = this.computeEffectiveValues(
-      openaiAutoFilled,
-      openaiEdited,
-      aiValues,
-      selectedSources
-    );
+    // Use auto-filled values directly
+    const effectiveValues = openaiAutoFilled;
 
     // Validate each field
     for (const spec of OPENAI_FEED_SPEC) {
@@ -285,47 +277,6 @@ export class ValidationService {
     }
 
     return null;
-  }
-
-  /**
-   * Compute effective values (resolved from auto-fill, edited, and AI)
-   */
-  private computeEffectiveValues(
-    openaiAutoFilled: Record<string, any>,
-    openaiEdited: Record<string, any>,
-    aiValues: { aiTitle?: string; aiDescription?: string; aiCategory?: string; aiQAndA?: any },
-    selectedSources: Record<string, 'ai' | 'woo'>
-  ): EffectiveValues {
-
-    const effective: EffectiveValues = {};
-
-    // Map AI values to OpenAI attribute names
-    const aiValuesMap: Record<string, any> = {
-      'title': aiValues.aiTitle,
-      'description': aiValues.aiDescription,
-      'product_category': aiValues.aiCategory,
-      'q_and_a': aiValues.aiQAndA,
-    };
-
-    for (const spec of OPENAI_FEED_SPEC) {
-      const attr = spec.attribute;
-
-      // For AI-enrichable fields, check selectedSource
-      if (spec.isAiEnrichable) {
-        const source = selectedSources[attr] || 'woo';
-        if (source === 'ai' && this.hasValue(aiValuesMap[attr])) {
-          effective[attr] = aiValuesMap[attr];
-        } else {
-          // Use edited value if exists, otherwise auto-filled
-          effective[attr] = openaiEdited[attr] ?? openaiAutoFilled[attr];
-        }
-      } else {
-        // For non-enrichable fields, edited takes priority
-        effective[attr] = openaiEdited[attr] ?? openaiAutoFilled[attr];
-      }
-    }
-
-    return effective;
   }
 
   /**
