@@ -113,6 +113,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
             value={currentMapping}
             onChange={(wooField) => onMappingChange(spec.attribute, wooField)}
             openaiAttribute={spec.attribute}
+            requirement={spec.requirement}
           />
         )}
       </div>

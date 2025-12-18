@@ -9,9 +9,10 @@ interface Props {
   value: string | null;           // Current selected field value
   onChange: (value: string | null) => void;
   openaiAttribute: string;        // For debugging/logging
+  requirement?: 'Required' | 'Recommended' | 'Optional' | 'Conditional';  // Field requirement level
 }
 
-export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: Props) {
+export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, requirement }: Props) {
   const params = useParams<{ id: string }>();
   const { accessToken } = useAuth();
 
@@ -104,10 +105,17 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
     buttonClass = 'text-amber-400';
     borderClass = 'border-amber-400/50';
   } else {
-    // No mapping set
-    buttonText = '⚠️ Not mapped';
-    buttonClass = 'text-amber-400/60';
-    borderClass = 'border-amber-400/30';
+    // No mapping set - show alert only for required fields
+    if (requirement === 'Required') {
+      buttonText = '⚠️ Not mapped';
+      buttonClass = 'text-amber-400/60';
+      borderClass = 'border-amber-400/30';
+    } else {
+      // Non-required fields show neutral placeholder
+      buttonText = 'Select WooCommerce field';
+      buttonClass = 'text-white/60';
+      borderClass = 'border-white/10';
+    }
   }
 
   return (
@@ -145,8 +153,8 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute }: P
 
           {/* Field List */}
           <div className="overflow-y-auto">
-            {/* Clear mapping option (only show when not searching) */}
-            {!searchQuery && (
+            {/* Clear mapping option (only show when not searching and a field is currently selected) */}
+            {!searchQuery && value && (
               <button
                 onClick={handleClear}
                 className="w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10"
