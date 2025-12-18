@@ -6,7 +6,6 @@ import { useAuth } from '@/store/auth';
 import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
 import { ProductSelector } from '@/components/setup/ProductSelector';
-import { downloadMappingCSV } from '@/components/setup/exportMappingCSV';
 
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
@@ -368,28 +367,6 @@ export default function SetupPage() {
               No fields match your search.
             </div>
           )}
-
-          {/* Export CSV Button - TEMPORARY FEATURE */}
-          <div className="mt-12 pt-8 border-t border-white/10">
-            <button
-              onClick={() => {
-                const productName = previewProductJson?.name || products.find(p => p.id === selectedProductId)?.wooTitle || 'product';
-                downloadMappingCSV({
-                  mappings,
-                  previewProductJson,
-                  previewShopData,
-                  productName,
-                });
-              }}
-              className="px-6 py-3 bg-[#5df0c0]/10 hover:bg-[#5df0c0]/20 border border-[#5df0c0]/30 rounded-lg text-[#5df0c0] font-medium transition-colors flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Export CSV
-            </button>
-            <p className="mt-2 text-xs text-white/40 italic">Temporary feature - Export mapping data to CSV</p>
-          </div>
         </div>
       </div>
     </div>
