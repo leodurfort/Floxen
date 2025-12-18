@@ -71,9 +71,8 @@ export interface StoreSettings {
   language?: string;
   dimensionUnit?: string;
   weightUnit?: string;
-  // Shop-level fields for OpenAI feed
-  sellerName: string | null;
-  sellerUrl: string | null;
+  // sellerName is user-input only
+  // sellerUrl can be populated from wooStoreUrl
   // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 }
 
@@ -97,50 +96,13 @@ export async function fetchStoreSettings(api: WooCommerceRestApi, fallbackStoreU
     const dimensionUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_dimension_unit');
     const weightUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_weight_unit');
 
-    // Fetch seller name and URL from WordPress REST API settings endpoint
-    // The WooCommerce index endpoint (GET /wp-json/wc/v3/) only returns "namespace" and "routes"
-    // It does NOT return store name or URL despite what the WooCommerce docs claim
-    let sellerUrl: string | null = null;
-    let sellerName: string | null = null;
-
-    try {
-      // WordPress REST API /wp/v2/settings contains "title" and "url" fields
-      // Use relative path to navigate from /wc/v3 to /wp/v2/settings
-      const wpSettingsResponse = await api.get('../wp/v2/settings');
-      const wpSettings = wpSettingsResponse.data || {};
-
-      sellerName = wpSettings.title || null;
-      sellerUrl = wpSettings.url || null;
-
-      logger.info('woo:fetch WordPress settings success', {
-        title: wpSettings.title,
-        url: wpSettings.url,
-      });
-    } catch (wpError: any) {
-      logger.error('woo:failed to fetch WordPress settings', {
-        error: wpError.message,
-        usingFallback: !!fallbackStoreUrl,
-      });
-
-      // If WordPress API fails, use fallback URL if provided
-      if (fallbackStoreUrl) {
-        sellerUrl = fallbackStoreUrl;
-      }
-    }
-
-    logger.info('woo:extracted seller name and url', {
-      sellerName,
-      sellerUrl,
-      fallbackUsed: !!fallbackStoreUrl && !sellerUrl,
-    });
-
     const storeSettings: StoreSettings = {
       shopCurrency: currencySetting?.value || null,
       dimensionUnit: dimensionUnitSetting?.value || undefined,
       weightUnit: weightUnitSetting?.value || undefined,
       language: undefined,
-      sellerName: sellerName,
-      sellerUrl: sellerUrl,
+      // sellerName is user-input only
+      // sellerUrl can be populated from wooStoreUrl
       // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
     };
 
@@ -148,8 +110,6 @@ export async function fetchStoreSettings(api: WooCommerceRestApi, fallbackStoreU
       shopCurrency: storeSettings.shopCurrency,
       dimensionUnit: storeSettings.dimensionUnit,
       weightUnit: storeSettings.weightUnit,
-      sellerName: storeSettings.sellerName,
-      sellerUrl: storeSettings.sellerUrl,
     });
     return storeSettings;
   } catch (err) {
