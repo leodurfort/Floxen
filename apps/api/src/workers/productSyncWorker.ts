@@ -137,11 +137,11 @@ export async function productSyncProcessor(job: Job) {
       const updateData: any = {
         shopName: settings.shopName,
         shopCurrency: settings.shopCurrency,
+        dimensionUnit: settings.dimensionUnit,
+        weightUnit: settings.weightUnit,
+        sellerName: settings.sellerName,
+        sellerUrl: settings.sellerUrl,
       };
-
-      // Update seller fields if they're available from WooCommerce (only sellerName and sellerUrl)
-      if (settings.sellerName) updateData.sellerName = settings.sellerName;
-      if (settings.sellerUrl) updateData.sellerUrl = settings.sellerUrl;
       // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 
       await prisma.shop.update({
@@ -153,13 +153,19 @@ export async function productSyncProcessor(job: Job) {
         shopId,
         shopName: settings.shopName,
         shopCurrency: settings.shopCurrency,
-        hasSellerName: !!settings.sellerName,
-        hasSellerUrl: !!settings.sellerUrl,
+        dimensionUnit: settings.dimensionUnit,
+        weightUnit: settings.weightUnit,
+        sellerName: settings.sellerName,
+        sellerUrl: settings.sellerUrl,
       });
 
-      // Update local shop object for currency fallback
-      shop.shopCurrency = settings.shopCurrency;
-      shop.shopName = settings.shopName;
+      // Update local shop object cache
+      shop.shopCurrency = settings.shopCurrency || null;
+      shop.shopName = settings.shopName || null;
+      shop.dimensionUnit = settings.dimensionUnit || null;
+      shop.weightUnit = settings.weightUnit || null;
+      shop.sellerName = settings.sellerName || null;
+      shop.sellerUrl = settings.sellerUrl || null;
     } else {
       logger.warn('product-sync: failed to fetch shop settings, using existing values', { shopId });
 
