@@ -170,3 +170,75 @@ export async function fetchProductVariations(api: WooCommerceRestApi, parentId: 
     return [];
   }
 }
+
+/**
+ * Fetch all product categories with parent relationships
+ * Returns a map of category ID -> full category data including parent field
+ */
+export async function fetchAllCategories(api: WooCommerceRestApi): Promise<Map<number, any>> {
+  logger.info('woo:fetch all categories start');
+  const all: any[] = [];
+  let page = 1;
+  const perPage = 100;
+
+  try {
+    while (true) {
+      const response = await api.get('products/categories', {
+        page,
+        per_page: perPage,
+        hide_empty: false,
+      });
+      all.push(...response.data);
+      const totalPages = parseInt(response.headers['x-wp-totalpages'] || '1', 10);
+      if (page >= totalPages) break;
+      page += 1;
+    }
+    logger.info('woo:fetch all categories complete', { count: all.length });
+
+    // Create a map for quick lookups
+    const categoryMap = new Map();
+    all.forEach(cat => {
+      if (cat.id) {
+        categoryMap.set(cat.id, cat);
+      }
+    });
+
+    return categoryMap;
+  } catch (err) {
+    logger.error('woo:fetch all categories failed', {
+      error: err instanceof Error ? err : new Error(String(err))
+    });
+    return new Map();
+  }
+}
+
+/**
+ * Enrich product categories with parent field from category map
+ * The WooCommerce products API only returns {id, name, slug} for categories,
+ * but we need the parent field to build category hierarchies
+ */
+export function enrichProductCategories(product: any, categoryMap: Map<number, any>): any {
+  if (!product.categories || !Array.isArray(product.categories)) {
+    return product;
+  }
+
+  const enrichedCategories = product.categories.map((cat: any) => {
+    const fullCategory = categoryMap.get(cat.id);
+    if (fullCategory) {
+      // Return the full category data with parent field
+      return {
+        id: fullCategory.id,
+        name: fullCategory.name,
+        slug: fullCategory.slug,
+        parent: fullCategory.parent || 0,
+      };
+    }
+    // Fallback to original category if not found in map
+    return cat;
+  });
+
+  return {
+    ...product,
+    categories: enrichedCategories,
+  };
+}
