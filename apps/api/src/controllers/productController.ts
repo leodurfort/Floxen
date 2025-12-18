@@ -102,7 +102,7 @@ export async function getProductWooData(req: Request, res: Response) {
   try {
     // Import here to avoid circular dependencies
     const { getShop } = await import('../services/shopService');
-    const { createWooClient, fetchSingleProduct } = await import('../services/wooClient');
+    const { createWooClient, fetchSingleProduct, fetchAllCategories, enrichProductCategories } = await import('../services/wooClient');
 
     // Get the product to find wooProductId
     const product = await getProductRecord(id, pid);
@@ -147,14 +147,23 @@ export async function getProductWooData(req: Request, res: Response) {
       consumerSecret: shop.wooConsumerSecret!,
     });
 
+    // Fetch all categories to enrich product categories with parent field
+    const categoryMap = await fetchAllCategories(wooClient);
+    logger.info('Fetched category map for enrichment', { categoryCount: categoryMap.size });
+
     let wooData = await fetchSingleProduct(wooClient, product.wooProductId);
+
+    // Enrich product categories with parent field
+    wooData = enrichProductCategories(wooData, categoryMap);
 
     // For variation products, use mergeParentAndVariation to properly merge all fields including attributes
     if (product.wooParentId) {
       const { mergeParentAndVariation } = await import('../services/productService');
 
-      // Fetch parent product and merge
-      const parentData = await fetchSingleProduct(wooClient, product.wooParentId);
+      // Fetch parent product and enrich its categories too
+      let parentData = await fetchSingleProduct(wooClient, product.wooParentId);
+      parentData = enrichProductCategories(parentData, categoryMap);
+
       const mergedTransformed = mergeParentAndVariation(parentData, wooData, shop.shopCurrency || 'USD');
 
       // mergeParentAndVariation returns transformed data (wooAttributes),
