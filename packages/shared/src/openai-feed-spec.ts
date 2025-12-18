@@ -245,10 +245,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     requirement: 'Required',
     dependencies: null,
     validationRules: ['Max 100 characters'],
-    wooCommerceMapping: {
-      field: 'attributes.material',
-      fallback: 'meta_data._material',
-    },
+    wooCommerceMapping: null,
     isAiEnrichable: false,
     category: 'item_information',
   },
