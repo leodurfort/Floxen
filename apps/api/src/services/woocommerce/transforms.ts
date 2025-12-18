@@ -121,8 +121,13 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
    * Extract GTIN from meta_data
    * Looks for various barcode fields: gtin, upc, ean, isbn
    */
-  extractGtin: (metaData) => {
-    if (!metaData || !Array.isArray(metaData)) return null;
+  extractGtin: (value) => {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+
+    const metaData = Array.isArray(value) ? value : null;
+    if (!metaData) return null;
 
     const gtinKeys = ['_gtin', 'gtin', '_upc', 'upc', '_ean', 'ean', '_isbn', 'isbn'];
     const gtinField = metaData.find((m: any) => gtinKeys.includes(m.key));

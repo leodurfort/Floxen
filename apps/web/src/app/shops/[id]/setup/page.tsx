@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
 import { ProductSelector } from '@/components/setup/ProductSelector';
 import { downloadMappingCSV } from '@/components/setup/exportMappingCSV';
@@ -59,7 +59,10 @@ export default function SetupPage() {
       });
 
       // Initialize enable_search to ENABLED by default if not set
-      const loadedMappings = data.mappings || {};
+      const loadedMappings = { ...(data.mappings || {}) };
+      Object.entries(LOCKED_FIELD_MAPPINGS).forEach(([attribute, lockedValue]) => {
+        loadedMappings[attribute] = lockedValue;
+      });
       if (!loadedMappings.enable_search) {
         loadedMappings.enable_search = 'ENABLED';
       }
@@ -163,6 +166,10 @@ export default function SetupPage() {
   }, [previewProductJson, selectedProductId]);
 
   async function handleMappingChange(attribute: string, wooField: string | null) {
+    if (LOCKED_FIELD_MAPPINGS[attribute]) {
+      return;
+    }
+
     // Save old value for rollback
     const oldValue = mappings[attribute];
 

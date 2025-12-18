@@ -6,7 +6,7 @@
  */
 
 import { Shop } from '@prisma/client';
-import { OPENAI_FEED_SPEC, OpenAIFieldSpec } from '@productsynch/shared';
+import { LOCKED_FIELD_SET, OPENAI_FEED_SPEC, OpenAIFieldSpec } from '@productsynch/shared';
 import { TRANSFORMS, extractNestedValue, extractAttributeValue, extractMetaValue } from './woocommerce/transforms';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
@@ -17,7 +17,10 @@ export class AutoFillService {
   constructor(private shop: Shop, customMappings?: Record<string, string>) {
     // Accept custom mappings as parameter (for backward compatibility)
     // or use the legacy fieldMappings JSON field
-    this.customMappings = customMappings || (shop.fieldMappings as Record<string, string>) || {};
+    const mergedMappings = customMappings || (shop.fieldMappings as Record<string, string>) || {};
+    this.customMappings = Object.fromEntries(
+      Object.entries(mergedMappings).filter(([attribute]) => !LOCKED_FIELD_SET.has(attribute))
+    );
   }
 
   /**
@@ -36,8 +39,13 @@ export class AutoFillService {
     // Convert to Record<string, string> format
     const customMappings: Record<string, string> = {};
     for (const mapping of fieldMappings) {
+      const attribute = mapping.openaiField.attribute;
+      if (LOCKED_FIELD_SET.has(attribute)) {
+        continue;
+      }
+
       if (mapping.wooField) {
-        customMappings[mapping.openaiField.attribute] = mapping.wooField.value;
+        customMappings[attribute] = mapping.wooField.value;
       }
     }
 
@@ -72,12 +80,13 @@ export class AutoFillService {
       return null;
     }
 
+    const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);
     // Check for custom mapping first
     const customMappings = this.customMappings;
     let mapping = spec.wooCommerceMapping;
 
     // Override with custom mapping if exists
-    if (customMappings && customMappings[spec.attribute]) {
+    if (!isLockedField && customMappings && customMappings[spec.attribute]) {
       const customPath = customMappings[spec.attribute];
 
       // Handle shop-level fields (prefixed with "shop.")
