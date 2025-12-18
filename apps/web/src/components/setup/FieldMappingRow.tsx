@@ -52,7 +52,7 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
   let previewStyle = 'text-white/80';
 
   if (isToggleField) {
-    previewDisplay = isEnabled ? '✓ Enabled' : 'Disabled';
+    previewDisplay = isEnabled ? 'true' : 'false';
     previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
   } else if (!currentMapping) {
     previewDisplay = '';

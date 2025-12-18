@@ -43,8 +43,8 @@ export function generateMappingCSV({
         );
         previewValue = formatFieldValue(extractedValue);
       } else {
-        // For toggle fields, show ENABLED/DISABLED
-        previewValue = mappings[spec.attribute] === 'ENABLED' ? 'Enabled' : 'Disabled';
+        // For toggle fields, use true/false as per OpenAI spec
+        previewValue = mappings[spec.attribute] === 'ENABLED' ? 'true' : 'false';
       }
     }
 
