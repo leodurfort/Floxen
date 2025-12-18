@@ -24,6 +24,16 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
   // Check if this is a toggle field
   const isToggleField = spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout';
   const isCheckoutField = spec.attribute === 'enable_checkout';
+  const isDimensions = spec.attribute === 'dimensions';
+  const isShopManagedField = [
+    'seller_name',
+    'seller_url',
+    'seller_privacy_policy',
+    'seller_tos',
+    'return_policy',
+    'return_window',
+  ].includes(spec.attribute);
+  const isNonEditableField = isDimensions || isShopManagedField;
 
   // For toggle fields, mapping value is "ENABLED" or "DISABLED"
   // Default enable_search to ENABLED
@@ -88,7 +98,32 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
 
       {/* Column 2: WooCommerce Field Selector or Toggle */}
       <div className="flex items-start pt-0">
-        {isToggleField ? (
+        {isNonEditableField ? (
+          <div className="w-full">
+            <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
+              <span className="text-white text-sm font-medium">
+                {isDimensions ? 'Auto-populated' : 'Managed in Shops page'}
+              </span>
+              <div className="relative group mt-[2px]">
+                <span className="text-white/60 cursor-help text-sm">ℹ️</span>
+                <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-72 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
+                  {isDimensions ? (
+                    <div>
+                      <div className="font-semibold text-white mb-1">Auto-filled dimensions</div>
+                      <div>Populates automatically when length, width, and height are available.</div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="font-semibold text-white mb-1">Update in Shops page</div>
+                      <div className="mb-2">Edit this value from the Shops page to change the feed output.</div>
+                      <a href="/shops" className="text-[#5df0c0] underline">Go to Shops</a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : isToggleField ? (
           <div className="w-full">
             <ToggleSwitch
               enabled={isEnabled}
