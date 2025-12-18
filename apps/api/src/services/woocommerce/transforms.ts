@@ -119,10 +119,12 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
    * Format price with currency
    */
   formatPriceWithCurrency: (price, _, shop) => {
-    if (!price) return null;
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    if (isNaN(numPrice)) return null;
-    return `${numPrice.toFixed(2)} ${shop.shopCurrency}`;
+    if (price === undefined || price === null) return null;
+    const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price);
+    if (Number.isNaN(numPrice)) return null;
+    const currency = shop?.shopCurrency;
+    if (!currency) return numPrice.toFixed(2);
+    return `${numPrice.toFixed(2)} ${currency}`;
   },
 
   /**
