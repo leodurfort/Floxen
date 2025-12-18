@@ -51,11 +51,6 @@ export default function SetupPage() {
       });
       if (!res.ok) throw new Error('Failed to load mappings');
       const data = await res.json();
-      console.log('[Setup] Loaded field mappings:', {
-        totalMappings: Object.keys(data.mappings || {}).length,
-        mappings: data.mappings,
-        sampleMappings: Object.entries(data.mappings || {}).slice(0, 10),
-      });
 
       // Initialize enable_search to ENABLED by default if not set
       const loadedMappings = { ...(data.mappings || {}) };
@@ -97,48 +92,22 @@ export default function SetupPage() {
     setLoadingPreview(true);
 
     const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${productId}/woo-data`;
-    console.log('[Setup] Loading product WooCommerce data:', {
-      url,
-      productId,
-      shopId: params.id,
-    });
 
     try {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      console.log('[Setup] Response status:', res.status, res.statusText);
-
       if (!res.ok) {
         const errorText = await res.text();
-        console.error('[Setup] API error response:', errorText);
         throw new Error(`Failed to load product WooCommerce data: ${res.status} ${errorText}`);
       }
 
       const data = await res.json();
-      console.log('[Setup] Received WooCommerce data:', {
-        hasWooData: !!data.wooData,
-        hasShopData: !!data.shopData,
-        wooDataKeys: data.wooData ? Object.keys(data.wooData).slice(0, 10) : [],
-        shopDataKeys: data.shopData ? Object.keys(data.shopData) : [],
-        shopDataValues: data.shopData,
-        sampleData: data.wooData ? {
-          id: data.wooData.id,
-          name: data.wooData.name,
-          price: data.wooData.price,
-        } : null,
-      });
-
-      console.log('[Setup] Setting preview shop data:', data.shopData);
       setPreviewProductJson(data.wooData);
       setPreviewShopData(data.shopData);
     } catch (err) {
-      console.error('[Setup] Failed to load product WooCommerce data:', {
-        error: err,
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
+      console.error('[Setup] Failed to load product WooCommerce data:', err);
       setPreviewProductJson(null);
     } finally {
       setLoadingPreview(false);
@@ -154,15 +123,6 @@ export default function SetupPage() {
       setPreviewShopData(null);
     }
   }, [selectedProductId, accessToken]);
-
-  // Debug: Log when preview data changes
-  useEffect(() => {
-    console.log('[Setup] Preview data state changed:', {
-      hasData: !!previewProductJson,
-      dataKeys: previewProductJson ? Object.keys(previewProductJson).slice(0, 15) : [],
-      selectedProductId,
-    });
-  }, [previewProductJson, selectedProductId]);
 
   async function handleMappingChange(attribute: string, wooField: string | null) {
     if (LOCKED_FIELD_MAPPINGS[attribute]) {
