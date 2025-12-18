@@ -419,7 +419,8 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must include ISO 4217 currency code'],
     wooCommerceMapping: {
-      field: 'price',
+      field: 'regular_price',
+      fallback: 'price',
       transform: 'formatPriceWithCurrency',
     },
     isAiEnrichable: false,
