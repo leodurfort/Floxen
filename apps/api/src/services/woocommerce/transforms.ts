@@ -3,6 +3,7 @@
  *
  * Contains all transformation logic to convert WooCommerce data to OpenAI feed format.
  * Each function takes WooCommerce data and returns the OpenAI-formatted value.
+ * Updated: 2025-12-18
  */
 
 import { Shop } from '@prisma/client';
