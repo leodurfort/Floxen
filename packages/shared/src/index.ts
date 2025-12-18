@@ -28,6 +28,8 @@ export interface Shop {
   userId: string;
   shopName: string;
   shopCurrency: string;
+  dimensionUnit?: string | null;
+  weightUnit?: string | null;
   isConnected: boolean;
   lastSyncAt?: string | null;
   syncStatus: SyncStatus;
@@ -93,3 +95,6 @@ export interface ApiResponse<T> {
 // Export OpenAI Feed Specification
 export * from './openai-feed-spec';
 export * from './locked-field-mappings';
+
+// Export Transform Functions
+export * from './transforms';

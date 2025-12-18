@@ -8,6 +8,8 @@
  * - Shop-level fields (seller info, return policy, etc.)
  */
 
+import { TRANSFORMS } from '@productsynch/shared';
+
 export interface WooCommerceField {
   value: string;           // Field path (e.g., "name", "meta_data._gtin", "shop.sellerName")
   label: string;           // Display name
@@ -121,175 +123,10 @@ export function extractFieldValue(
 }
 
 /**
- * Lightweight transform registry for client-side preview.
- * Mirrors server transforms where possible; fallbacks to raw values when required data is missing.
+ * Transform registry for client-side preview.
+ * Now imported from shared package - single source of truth for all transforms.
  */
-const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?: Record<string, any> | null) => any> = {
-  generateStableId: (_, wooProduct, shopData) => {
-    if (!shopData?.id || !wooProduct?.id) return null;
-    const sku = wooProduct.sku || '';
-    return `${shopData.id}-${wooProduct.id}${sku ? `-${sku}` : ''}`;
-  },
-  stripHtml: (value) => {
-    if (!value) return '';
-    return String(value).replace(/<[^>]*>/g, '').trim();
-  },
-  buildCategoryPath: (categories) => {
-    if (!Array.isArray(categories) || categories.length === 0) return '';
-
-    // Create a map of category ID -> category object for quick lookup
-    const categoryMap = new Map<number, any>();
-    categories.forEach((cat: any) => {
-      if (cat.id) categoryMap.set(cat.id, cat);
-    });
-
-    // Build full path for a category by traversing up to root
-    const buildPath = (category: any): string[] => {
-      const path: string[] = [];
-      let current = category;
-
-      // Traverse up the hierarchy (max 10 levels to prevent infinite loops)
-      let depth = 0;
-      while (current && depth < 10) {
-        path.unshift(current.name); // Add to beginning of array
-
-        // If has parent and parent exists in our map, continue up
-        if (current.parent && current.parent > 0 && categoryMap.has(current.parent)) {
-          current = categoryMap.get(current.parent);
-        } else {
-          break; // Reached root or parent not in product's categories
-        }
-        depth++;
-      }
-
-      return path;
-    };
-
-    // Build paths for all categories and find the deepest one
-    const paths = categories
-      .map((cat: any) => buildPath(cat))
-      .filter((path: string[]) => path.length > 0);
-
-    if (paths.length === 0) return '';
-
-    // Return the longest path (most specific category)
-    const deepestPath = paths.reduce((longest, current) =>
-      current.length > longest.length ? current : longest
-    );
-
-    return deepestPath.join(' > ');
-  },
-  extractGtin: (metaData) => {
-    if (typeof metaData === 'string' && metaData.trim()) {
-      return metaData.trim();
-    }
-    if (!Array.isArray(metaData)) return null;
-    const gtinKeys = ['_gtin', 'gtin', '_upc', 'upc', '_ean', 'ean', '_isbn', 'isbn'];
-    const match = metaData.find((m: any) => m && gtinKeys.includes(m.key));
-    return match?.value || null;
-  },
-  formatPriceWithCurrency: (price, _wooProduct, shopData) => {
-    if (price === undefined || price === null) return null;
-    const num = typeof price === 'string' ? parseFloat(price) : Number(price);
-    if (Number.isNaN(num)) return null;
-    const currency = shopData?.shopCurrency || '';
-    return currency ? `${num.toFixed(2)} ${currency}` : num.toFixed(2);
-  },
-  mapStockStatus: (stockStatus) => {
-    const map: Record<string, string> = { instock: 'in_stock', outofstock: 'out_of_stock', onbackorder: 'preorder' };
-    return map[stockStatus] || 'in_stock';
-  },
-  formatDimensions: (dimensions, _wooProduct, shopData) => {
-    if (!dimensions) return null;
-    const { length, width, height } = dimensions;
-    if (!length || !width || !height) return null;
-    const unit = shopData?.dimensionUnit || dimensions.unit;
-    if (!unit) return null;
-    return `${length}x${width}x${height} ${unit}`;
-  },
-  addUnit: (value, wooProduct, shopData) => {
-    if (!value) return null;
-    const dimensions = wooProduct?.dimensions || {};
-    const { length, width, height } = dimensions;
-    const filled = [length, width, height].filter((d) => d && d !== '0' && d !== 0).length;
-    if (filled > 0 && filled < 3) return null;
-    if (filled === 3) {
-      const unit = shopData?.dimensionUnit || dimensions.unit;
-      if (!unit) return null;
-      return `${value} ${unit}`;
-    }
-    return null;
-  },
-  addWeightUnit: (weight, _wooProduct, shopData) => {
-    if (!weight) return null;
-    const unit = shopData?.weightUnit;
-    if (!unit) return null;
-    return `${weight} ${unit}`;
-  },
-  extractAdditionalImages: (images) => {
-    if (!Array.isArray(images) || images.length <= 1) return [];
-    return images.slice(1).map((img: any) => img?.src).filter(Boolean);
-  },
-  extractBrand: (brands, wooProduct) => {
-    if (Array.isArray(brands) && brands.length > 0) {
-      return brands[0]?.name || null;
-    }
-    const brandAttr = wooProduct?.attributes?.find((a: any) => a?.name?.toLowerCase() === 'brand');
-    return brandAttr?.options?.[0] || null;
-  },
-  defaultToNew: (value) => value || 'new',
-  defaultToZero: (value) => (value ?? 0),
-  formatSaleDateRange: (_value, wooProduct) => {
-    const from = wooProduct?.date_on_sale_from;
-    const to = wooProduct?.date_on_sale_to;
-    if (!from || !to) return null;
-    const fromDate = new Date(from).toISOString().split('T')[0];
-    const toDate = new Date(to).toISOString().split('T')[0];
-    return `${fromDate} / ${toDate}`;
-  },
-  generateGroupId: (_value, wooProduct, shopData) => {
-    if (!shopData?.id || !wooProduct) return null;
-    const parentId = wooProduct.parent_id;
-    return parentId && parentId > 0 ? `${shopData.id}-${parentId}` : `${shopData.id}-${wooProduct.id}`;
-  },
-  generateOfferId: (value, wooProduct) => {
-    const baseSku = value || `prod-${wooProduct?.id}`;
-    const color = wooProduct?.attributes?.find((a: any) => a?.name?.toLowerCase() === 'color')?.options?.[0];
-    const size = wooProduct?.attributes?.find((a: any) => a?.name?.toLowerCase() === 'size')?.options?.[0];
-    let offerId = baseSku;
-    if (color) offerId += `-${color}`;
-    if (size) offerId += `-${size}`;
-    return offerId;
-  },
-  extractCustomVariant: (attributes) => {
-    if (!Array.isArray(attributes) || attributes.length === 0) return null;
-    return attributes[0]?.name || null;
-  },
-  extractCustomVariantOption: (attributes) => {
-    if (!Array.isArray(attributes) || attributes.length === 0) return null;
-    return attributes[0]?.options?.[0] || null;
-  },
-  buildShippingString: () => null,
-  cleanVariationTitle: (title, wooProduct) => {
-    if (!title || typeof title !== 'string') return title;
-
-    // For variation products: check if parent_id exists
-    const isVariation = wooProduct?.parent_id && wooProduct.parent_id > 0;
-    if (!isVariation) return title;
-
-    // Split by " - " to find repetition pattern
-    const parts = title.split(' - ');
-    if (parts.length < 3) return title; // No duplication possible
-
-    // Check if first part equals second part (duplication pattern)
-    if (parts[0].trim() === parts[1].trim()) {
-      // Remove the duplicate first part, rejoin the rest
-      return parts.slice(1).join(' - ');
-    }
-
-    return title;
-  },
-};
+const PREVIEW_TRANSFORMS = TRANSFORMS;
 
 /**
  * Extract and transform a value for preview using the OpenAI spec mapping.
@@ -323,7 +160,7 @@ export function extractTransformedPreviewValue(
   const transformName = effectiveMapping.transform;
   if (transformName && PREVIEW_TRANSFORMS[transformName]) {
     try {
-      value = PREVIEW_TRANSFORMS[transformName](value, wooRawJson, shopData);
+      value = PREVIEW_TRANSFORMS[transformName](value, wooRawJson, shopData || {});
     } catch (err) {
       console.error('[extractTransformedPreviewValue] transform failed', { transformName, err });
       value = null;
