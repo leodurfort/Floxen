@@ -11,9 +11,7 @@ import {
   OPENAI_FEED_SPEC,
   OpenAIFieldSpec,
   TRANSFORMS,
-  extractNestedValue,
-  extractAttributeValue,
-  extractMetaValue,
+  extractFieldValue,
 } from '@productsynch/shared';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
@@ -160,25 +158,7 @@ export class AutoFillService {
    * - Special cases: "meta_data", "attributes"
    */
   private extractValue(wooProduct: any, path: string): any {
-    // Special case: meta_data (search by key)
-    if (path.startsWith('meta_data.')) {
-      const metaKey = path.replace('meta_data.', '');
-      return extractMetaValue(wooProduct, metaKey);
-    }
-
-    // Special case: attributes (search by name)
-    if (path.startsWith('attributes.')) {
-      const attrName = path.replace('attributes.', '');
-      return extractAttributeValue(wooProduct, attrName);
-    }
-
-    // Special case: array access like images[0].src
-    if (path.includes('[')) {
-      return extractNestedValue(wooProduct, path);
-    }
-
-    // Standard nested field access
-    return extractNestedValue(wooProduct, path);
+    return extractFieldValue(wooProduct, path, this.shop);
   }
 }
 

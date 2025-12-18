@@ -6,9 +6,110 @@
  */
 
 /**
+ * Extract field value from WooCommerce product raw JSON or shop data
+ *
+ * This is the main extraction function that handles all path types:
+ * - Shop-level fields: "shop.sellerName"
+ * - Meta data fields: "meta_data._gtin"
+ * - Attribute fields: "attributes.Color"
+ * - Nested paths: "dimensions.length"
+ * - Array indexing: "images[0].src"
+ *
+ * @param wooRawJson - WooCommerce product object
+ * @param fieldPath - Field path to extract (e.g., "name", "meta_data._gtin", "attributes.Color")
+ * @param shopData - Optional shop-level data for shop.* fields
+ * @returns The extracted value or null if not found
+ *
+ * @example
+ * extractFieldValue(product, "name") // "Product Name"
+ * extractFieldValue(product, "meta_data._gtin") // "1234567890123"
+ * extractFieldValue(product, "attributes.Color") // "Red"
+ * extractFieldValue(product, "images[0].src") // "https://example.com/image.jpg"
+ * extractFieldValue(product, "shop.sellerName", shopData) // "My Store"
+ */
+export function extractFieldValue(
+  wooRawJson: Record<string, any> | null | undefined,
+  fieldPath: string,
+  shopData?: Record<string, any> | null
+): any {
+  if (!fieldPath || typeof fieldPath !== 'string') return null;
+
+  // Shop-level fields are read from shopData, not WooCommerce product JSON
+  if (fieldPath.startsWith('shop.')) {
+    const shopFieldName = fieldPath.replace('shop.', '');
+    return shopData?.[shopFieldName] ?? null;
+  }
+
+  if (!wooRawJson) return null;
+
+  try {
+    // Handle meta_data special case
+    if (fieldPath.startsWith('meta_data.')) {
+      const metaKey = fieldPath.replace('meta_data.', '');
+      const metaData = Array.isArray(wooRawJson.meta_data) ? wooRawJson.meta_data : [];
+      const metaItem = metaData.find((m: any) => m && m.key === metaKey);
+      return metaItem?.value || null;
+    }
+
+    // Handle attributes special case: "attributes.Color"
+    // IMPORTANT: Parent products have "options" array, variations have "option" string
+    if (fieldPath.startsWith('attributes.')) {
+      const attrName = fieldPath.replace('attributes.', '');
+      // API returns normalized wooAttributes field
+      const attributes = Array.isArray(wooRawJson.wooAttributes) ? wooRawJson.wooAttributes :
+                        Array.isArray(wooRawJson.attributes) ? wooRawJson.attributes : [];
+
+      // Find attribute by name (case-insensitive)
+      const attr = attributes.find((a: any) =>
+        a.name && a.name.toLowerCase() === attrName.toLowerCase()
+      );
+
+      if (!attr) return null;
+
+      // For variations: check "option" (singular string)
+      if (attr.option !== undefined && attr.option !== null) {
+        return attr.option;
+      }
+
+      // For parent products: check "options" (array)
+      if (Array.isArray(attr.options) && attr.options.length > 0) {
+        return attr.options.length === 1 ? attr.options[0] : attr.options.join(', ');
+      }
+
+      return null;
+    }
+
+    // Handle array indexing like "images[0].src"
+    const parts = fieldPath.split('.');
+    let current = wooRawJson;
+
+    for (const part of parts) {
+      if (current === null || current === undefined) return null;
+
+      const arrayMatch = part.match(/^([^\[]+)\[(\d+)\]$/);
+      if (arrayMatch) {
+        const [, arrayName, index] = arrayMatch;
+        if (!Array.isArray((current as any)[arrayName])) return null;
+        current = (current as any)[arrayName]?.[parseInt(index, 10)];
+        continue;
+      }
+
+      if (typeof current !== 'object') return null;
+      current = (current as Record<string, any>)[part];
+    }
+
+    return current !== undefined ? current : null;
+  } catch (err) {
+    console.error('[extractFieldValue] Error extracting field', { fieldPath, err });
+    return null;
+  }
+}
+
+/**
  * Extract nested value from object using dot notation
  *
  * Handles complex paths including arrays and nested objects.
+ * This is now a thin wrapper around extractFieldValue for backward compatibility.
  *
  * @param obj - The object to extract from (typically WooCommerce product)
  * @param path - Dot-notation path (e.g., "meta_data", "dimensions.length", "images[0].src")
@@ -19,23 +120,7 @@
  * extractNestedValue(product, "images[0].src") // "https://example.com/image.jpg"
  */
 export function extractNestedValue(obj: any, path: string): any {
-  const keys = path.split('.');
-  let current = obj;
-
-  for (const key of keys) {
-    if (current === null || current === undefined) return null;
-
-    // Handle array indexing (e.g., images[0])
-    const arrayMatch = key.match(/^(\w+)\[(\d+)\]$/);
-    if (arrayMatch) {
-      const [, arrayKey, index] = arrayMatch;
-      current = current[arrayKey]?.[parseInt(index)];
-    } else {
-      current = current[key];
-    }
-  }
-
-  return current;
+  return extractFieldValue(obj, path);
 }
 
 /**
@@ -44,6 +129,8 @@ export function extractNestedValue(obj: any, path: string): any {
  * IMPORTANT: Handles both parent products and variations
  * - Parent products: attributes have "options" array (e.g., ["Red", "Blue"])
  * - Variations: attributes have "option" string (e.g., "Red")
+ *
+ * This is now a thin wrapper around extractFieldValue for backward compatibility.
  *
  * @param wooProduct - WooCommerce product object
  * @param attributeName - Attribute name to find (e.g., "color", "size")
@@ -54,28 +141,7 @@ export function extractNestedValue(obj: any, path: string): any {
  * extractAttributeValue(product, "size") // "Large"
  */
 export function extractAttributeValue(wooProduct: any, attributeName: string): any {
-  if (!wooProduct.attributes || !Array.isArray(wooProduct.attributes)) {
-    return null;
-  }
-
-  const attr = wooProduct.attributes.find((a: any) =>
-    a.name.toLowerCase() === attributeName.toLowerCase() ||
-    a.name.toLowerCase() === `pa_${attributeName.toLowerCase()}`
-  );
-
-  if (!attr) return null;
-
-  // For variations: check "option" (singular string)
-  if (attr.option !== undefined && attr.option !== null) {
-    return attr.option;
-  }
-
-  // For parent products: check "options" (array)
-  if (Array.isArray(attr.options) && attr.options.length > 0) {
-    return attr.options.length === 1 ? attr.options[0] : attr.options.join(', ');
-  }
-
-  return null;
+  return extractFieldValue(wooProduct, `attributes.${attributeName}`);
 }
 
 /**
@@ -83,6 +149,8 @@ export function extractAttributeValue(wooProduct: any, attributeName: string): a
  *
  * WooCommerce stores custom fields in a meta_data array.
  * This helper finds the value for a specific meta key.
+ *
+ * This is now a thin wrapper around extractFieldValue for backward compatibility.
  *
  * @param wooProduct - WooCommerce product object
  * @param metaKey - Meta key to find (e.g., "_gtin", "_custom_field")
@@ -93,10 +161,5 @@ export function extractAttributeValue(wooProduct: any, attributeName: string): a
  * extractMetaValue(product, "_custom_field") // "custom value"
  */
 export function extractMetaValue(wooProduct: any, metaKey: string): any {
-  if (!wooProduct.meta_data || !Array.isArray(wooProduct.meta_data)) {
-    return null;
-  }
-
-  const meta = wooProduct.meta_data.find((m: any) => m.key === metaKey);
-  return meta?.value || null;
+  return extractFieldValue(wooProduct, `meta_data.${metaKey}`);
 }
