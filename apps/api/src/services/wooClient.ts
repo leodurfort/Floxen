@@ -98,12 +98,10 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       url: storeInfo.url,
     });
 
-    // Fetch general settings (currency, store title, store address)
+    // Fetch general settings (currency)
     const generalResponse = await api.get('settings/general');
     const settings = Array.isArray(generalResponse.data) ? generalResponse.data : [];
     const currencySetting = settings.find((s: any) => s.id === 'woocommerce_currency');
-    const storeTitleSetting = settings.find((s: any) => s.id === 'woocommerce_store_address');
-    const storeUrlSetting = settings.find((s: any) => s.id === 'woocommerce_store_url');
 
     // Fetch products settings (dimension and weight units)
     const productsResponse = await api.get('settings/products');
@@ -111,9 +109,24 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
     const dimensionUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_dimension_unit');
     const weightUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_weight_unit');
 
-    // Use index endpoint data first, fallback to settings if empty
-    const shopName = storeInfo.name || storeTitleSetting?.value || null;
-    const shopUrl = storeInfo.url || storeUrlSetting?.value || null;
+    // WooCommerce index endpoint often returns empty name/url
+    // Extract domain name from URL as fallback for shop name
+    let shopName = storeInfo.name || null;
+    let shopUrl = storeInfo.url || null;
+
+    // If name is empty, try to extract a readable name from the URL
+    if (!shopName && shopUrl) {
+      try {
+        const url = new URL(shopUrl);
+        // Extract domain without www and TLD (e.g., "mystore.com" -> "mystore")
+        const domain = url.hostname.replace(/^www\./, '');
+        shopName = domain.split('.')[0];
+        // Capitalize first letter
+        shopName = shopName.charAt(0).toUpperCase() + shopName.slice(1);
+      } catch (e) {
+        // Invalid URL, keep as null
+      }
+    }
 
     const storeSettings: StoreSettings = {
       shopName: shopName,

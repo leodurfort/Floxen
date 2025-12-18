@@ -134,13 +134,29 @@ export async function productSyncProcessor(job: Job) {
     const settings = await fetchStoreSettings(client);
 
     if (settings) {
+      // Use shop's wooStoreUrl as fallback if WooCommerce API doesn't return URL
+      const sellerUrl = settings.sellerUrl || shop.wooStoreUrl;
+
+      // Extract shop name from URL if WooCommerce API doesn't return name
+      let shopName = settings.shopName;
+      if (!shopName && sellerUrl) {
+        try {
+          const url = new URL(sellerUrl);
+          const domain = url.hostname.replace(/^www\./, '');
+          shopName = domain.split('.')[0];
+          shopName = shopName.charAt(0).toUpperCase() + shopName.slice(1);
+        } catch (e) {
+          // Invalid URL, keep as null
+        }
+      }
+
       const updateData: any = {
-        shopName: settings.shopName,
+        shopName: shopName,
         shopCurrency: settings.shopCurrency,
         dimensionUnit: settings.dimensionUnit,
         weightUnit: settings.weightUnit,
-        sellerName: settings.sellerName,
-        sellerUrl: settings.sellerUrl,
+        sellerName: shopName,  // Use shopName as sellerName
+        sellerUrl: sellerUrl,
       };
       // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 
