@@ -5,7 +5,7 @@
  * Checks: required fields, character limits, enum values, URL formats, etc.
  */
 
-import { OPENAI_FEED_SPEC, OpenAIFieldSpec, REQUIRED_FIELDS } from '../config/openai-feed-spec';
+import { OPENAI_FEED_SPEC, OpenAIFieldSpec, REQUIRED_FIELDS } from '@productsynch/shared';
 
 export interface ValidationResult {
   isValid: boolean;
