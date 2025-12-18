@@ -199,25 +199,32 @@ const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?
     const map: Record<string, string> = { instock: 'in_stock', outofstock: 'out_of_stock', onbackorder: 'preorder' };
     return map[stockStatus] || 'in_stock';
   },
-  formatDimensions: (dimensions) => {
+  formatDimensions: (dimensions, _wooProduct, shopData) => {
     if (!dimensions) return null;
     const { length, width, height } = dimensions;
     if (!length || !width || !height) return null;
-    const unit = dimensions.unit || 'in';
+    const unit = shopData?.dimensionUnit || dimensions.unit;
+    if (!unit) return null;
     return `${length}x${width}x${height} ${unit}`;
   },
-  addUnit: (value, wooProduct) => {
+  addUnit: (value, wooProduct, shopData) => {
     if (!value) return null;
     const dimensions = wooProduct?.dimensions || {};
-    const { length, width, height, unit = 'in' } = dimensions;
+    const { length, width, height } = dimensions;
     const filled = [length, width, height].filter((d) => d && d !== '0' && d !== 0).length;
     if (filled > 0 && filled < 3) return null;
-    if (filled === 3) return `${value} ${unit}`;
+    if (filled === 3) {
+      const unit = shopData?.dimensionUnit || dimensions.unit;
+      if (!unit) return null;
+      return `${value} ${unit}`;
+    }
     return null;
   },
-  addWeightUnit: (weight) => {
+  addWeightUnit: (weight, _wooProduct, shopData) => {
     if (!weight) return null;
-    return `${weight} lb`;
+    const unit = shopData?.weightUnit;
+    if (!unit) return null;
+    return `${weight} ${unit}`;
   },
   extractAdditionalImages: (images) => {
     if (!Array.isArray(images) || images.length <= 1) return [];
