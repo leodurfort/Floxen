@@ -138,10 +138,10 @@ export async function productSyncProcessor(job: Job) {
         shopCurrency: settings.shopCurrency,
         dimensionUnit: settings.dimensionUnit,
         weightUnit: settings.weightUnit,
-        sellerName: settings.sellerName,
-        sellerUrl: settings.sellerUrl,
+        // Populate sellerUrl from wooStoreUrl if not set
+        sellerUrl: shop.sellerUrl || shop.wooStoreUrl,
       };
-      // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
+      // sellerName, sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 
       await prisma.shop.update({
         where: { id: shopId },
@@ -153,16 +153,15 @@ export async function productSyncProcessor(job: Job) {
         shopCurrency: settings.shopCurrency,
         dimensionUnit: settings.dimensionUnit,
         weightUnit: settings.weightUnit,
-        sellerName: settings.sellerName,
-        sellerUrl: settings.sellerUrl,
       });
 
       // Update local shop object cache
       shop.shopCurrency = settings.shopCurrency || null;
       shop.dimensionUnit = settings.dimensionUnit || null;
       shop.weightUnit = settings.weightUnit || null;
-      shop.sellerName = settings.sellerName || null;
-      shop.sellerUrl = settings.sellerUrl || null;
+      if (!shop.sellerUrl) {
+        shop.sellerUrl = shop.wooStoreUrl;
+      }
     } else {
       logger.warn('product-sync: failed to fetch shop settings, using existing values', { shopId });
 

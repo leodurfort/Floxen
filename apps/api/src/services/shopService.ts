@@ -139,8 +139,6 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
   logger.info('Fetched store settings from WooCommerce', {
     shopId,
     settings,
-    hasSellerName: !!settings?.sellerName,
-    hasSellerUrl: !!settings?.sellerUrl,
   });
 
   // Update shop with credentials and fetched settings
@@ -154,10 +152,9 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
       shopCurrency: settings?.shopCurrency || shop.shopCurrency,
       dimensionUnit: settings?.dimensionUnit,
       weightUnit: settings?.weightUnit,
-      // Populate seller fields from WooCommerce
-      sellerName: settings?.sellerName || shop.sellerName,
-      sellerUrl: settings?.sellerUrl || shop.sellerUrl,
-      // sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only (preserve existing values)
+      // Populate sellerUrl from wooStoreUrl if not already set
+      sellerUrl: shop.sellerUrl || shop.wooStoreUrl,
+      // sellerName, sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only (preserve existing values)
       updatedAt: new Date(),
     },
   });
