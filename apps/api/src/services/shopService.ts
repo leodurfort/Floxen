@@ -164,17 +164,8 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
 /**
  * Get default field mappings suggestions
  * Returns a mapping of openai_attribute -> woocommerce_field_value
- * Filters out null values (unmapped fields)
+ * The object is cloned to avoid accidental mutations of the defaults
  */
-export function getDefaultMappings(): Record<string, string> {
-  const mappings: Record<string, string> = {};
-
-  // Filter out null values - only return fields with suggested mappings
-  for (const [openaiAttr, wooField] of Object.entries(DEFAULT_FIELD_MAPPINGS)) {
-    if (wooField !== null) {
-      mappings[openaiAttr] = wooField;
-    }
-  }
-
-  return mappings;
+export function getDefaultMappings(): Record<string, string | null> {
+  return { ...DEFAULT_FIELD_MAPPINGS };
 }

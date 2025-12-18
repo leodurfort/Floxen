@@ -37,18 +37,6 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     : null;
   const formattedValue = formatFieldValue(previewValue);
 
-  // Debug logging for shop fields specifically
-  const isShopField = currentMapping?.startsWith('shop.');
-  if (isShopField) {
-    console.log(`[FieldMappingRow] Shop field "${spec.attribute}":`, {
-      currentMapping,
-      hasPreviewShopData: !!previewShopData,
-      previewShopData,
-      previewValue,
-      formattedValue,
-    });
-  }
-
   // Determine preview display text
   let previewDisplay = formattedValue;
   let previewStyle = 'text-white/80';
@@ -63,17 +51,6 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     previewDisplay = 'Select a product to preview...';
     previewStyle = 'text-white/40 italic';
   }
-
-  // Debug logging for all fields to diagnose empty fields
-  console.log(`[FieldMappingRow] ${spec.attribute}:`, {
-    currentMapping: currentMapping || 'NOT MAPPED',
-    hasPreviewData: !!previewProductJson,
-    isToggleField,
-    isEnabled,
-    previewValue,
-    formattedValue,
-    previewDisplay,
-  });
 
   return (
     <div className="grid grid-cols-[1fr_280px_1fr] gap-6 py-4 border-b border-white/5 hover:bg-white/[0.02] items-start">

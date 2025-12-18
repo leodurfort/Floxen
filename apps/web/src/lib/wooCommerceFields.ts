@@ -19,13 +19,16 @@ export interface WooCommerceField {
  * Search and filter WooCommerce fields
  */
 export function searchWooFields(fields: WooCommerceField[], query: string): WooCommerceField[] {
-  const lowerQuery = query.toLowerCase();
-  return fields.filter(
-    (field) =>
-      field.label.toLowerCase().includes(lowerQuery) ||
-      field.value.toLowerCase().includes(lowerQuery) ||
-      field.description?.toLowerCase().includes(lowerQuery)
-  );
+  const lowerQuery = query?.trim().toLowerCase();
+  if (!lowerQuery) return fields;
+
+  return fields.filter((field) => {
+    const haystacks = [field.label, field.value, field.description].filter(
+      (val): val is string => typeof val === 'string'
+    );
+
+    return haystacks.some((value) => value.toLowerCase().includes(lowerQuery));
+  });
 }
 
 /**
@@ -40,57 +43,27 @@ export function getWooField(fields: WooCommerceField[], value: string): WooComme
  * Handles nested paths like "images[0].src", "meta_data._gtin", "dimensions.length"
  * Also handles shop-level fields like "shop.sellerName"
  */
-export function extractFieldValue(wooRawJson: any, fieldPath: string, shopData?: any): any {
-  // Debug logging for 'id' and attribute fields
-  const shouldLog = fieldPath === 'id' || fieldPath.startsWith('attributes.');
+export function extractFieldValue(
+  wooRawJson: Record<string, any> | null | undefined,
+  fieldPath: string,
+  shopData?: Record<string, any> | null
+): any {
+  if (!fieldPath || typeof fieldPath !== 'string') return null;
 
-  if (shouldLog) {
-    console.log('[extractFieldValue] Starting extraction:', {
-      fieldPath,
-      hasData: !!wooRawJson,
-      dataKeys: wooRawJson ? Object.keys(wooRawJson).slice(0, 15) : [],
-      hasWooAttributes: !!wooRawJson?.wooAttributes,
-      wooAttributesCount: wooRawJson?.wooAttributes?.length || 0,
-    });
-  }
-
-  if (!wooRawJson || !fieldPath) {
-    if (shouldLog) console.log('[extractFieldValue] No data or path');
-    return null;
-  }
-
-  // Handle shop-level fields (extract from shopData)
+  // Shop-level fields are read from shopData, not WooCommerce product JSON
   if (fieldPath.startsWith('shop.')) {
     const shopFieldName = fieldPath.replace('shop.', '');
-    const value = shopData?.[shopFieldName] || null;
-
-    // Always log shop field extractions for debugging
-    console.log('[extractFieldValue] Shop field extraction:', {
-      fieldPath,
-      shopFieldName,
-      hasShopData: !!shopData,
-      shopData: shopData,
-      shopDataKeys: shopData ? Object.keys(shopData) : [],
-      value,
-      extractedValue: shopData?.[shopFieldName],
-    });
-
-    return value;
+    return shopData?.[shopFieldName] ?? null;
   }
+
+  if (!wooRawJson) return null;
 
   try {
     // Handle meta_data special case
     if (fieldPath.startsWith('meta_data.')) {
       const metaKey = fieldPath.replace('meta_data.', '');
-      const metaData = wooRawJson.meta_data || [];
-      const metaItem = metaData.find((m: any) => m.key === metaKey);
-      if (shouldLog) {
-        console.log('[extractFieldValue] Meta data extraction:', {
-          metaKey,
-          hasMetaData: !!metaData.length,
-          found: !!metaItem,
-        });
-      }
+      const metaData = Array.isArray(wooRawJson.meta_data) ? wooRawJson.meta_data : [];
+      const metaItem = metaData.find((m: any) => m && m.key === metaKey);
       return metaItem?.value || null;
     }
 
@@ -99,58 +72,23 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string, shopData?:
     if (fieldPath.startsWith('attributes.')) {
       const attrName = fieldPath.replace('attributes.', '');
       // API returns normalized wooAttributes field
-      const attributes = wooRawJson.wooAttributes || [];
-
-      if (shouldLog) {
-        console.log('[extractFieldValue] Attributes extraction:', {
-          attrName,
-          hasAttributes: !!attributes.length,
-          availableAttributes: attributes.map((a: any) => a.name),
-        });
-      }
+      const attributes = Array.isArray(wooRawJson.wooAttributes) ? wooRawJson.wooAttributes : [];
 
       // Find attribute by name (case-insensitive)
       const attr = attributes.find((a: any) =>
         a.name && a.name.toLowerCase() === attrName.toLowerCase()
       );
 
-      if (!attr) {
-        if (shouldLog) {
-          console.log('[extractFieldValue] Attribute not found:', attrName);
-        }
-        return null;
-      }
+      if (!attr) return null;
 
       // For variations: check "option" (singular string)
       if (attr.option !== undefined && attr.option !== null) {
-        if (shouldLog) {
-          console.log('[extractFieldValue] Variation attribute found:', {
-            attrName,
-            option: attr.option,
-          });
-        }
         return attr.option;
       }
 
       // For parent products: check "options" (array)
       if (Array.isArray(attr.options) && attr.options.length > 0) {
-        const result = attr.options.length === 1
-          ? attr.options[0]
-          : attr.options.join(', ');
-
-        if (shouldLog) {
-          console.log('[extractFieldValue] Parent attribute found:', {
-            attrName,
-            options: attr.options,
-            result,
-          });
-        }
-
-        return result;
-      }
-
-      if (shouldLog) {
-        console.log('[extractFieldValue] Attribute has no value:', { attr });
+        return attr.options.length === 1 ? attr.options[0] : attr.options.join(', ');
       }
 
       return null;
@@ -160,34 +98,19 @@ export function extractFieldValue(wooRawJson: any, fieldPath: string, shopData?:
     const parts = fieldPath.split('.');
     let current = wooRawJson;
 
-    if (shouldLog) {
-      console.log('[extractFieldValue] Path traversal:', { parts, initialValue: current });
-    }
-
     for (const part of parts) {
-      if (!current) {
-        if (shouldLog) console.log('[extractFieldValue] Current is null at part:', part);
-        return null;
-      }
+      if (current === null || current === undefined) return null;
 
-      // Handle array index notation: "images[0]"
       const arrayMatch = part.match(/^([^\[]+)\[(\d+)\]$/);
       if (arrayMatch) {
         const [, arrayName, index] = arrayMatch;
-        current = current[arrayName]?.[parseInt(index)];
-        if (shouldLog) {
-          console.log('[extractFieldValue] Array access:', { arrayName, index, found: !!current });
-        }
-      } else {
-        current = current[part];
-        if (shouldLog) {
-          console.log('[extractFieldValue] Property access:', { part, found: current !== undefined, value: current });
-        }
+        if (!Array.isArray((current as any)[arrayName])) return null;
+        current = (current as any)[arrayName]?.[parseInt(index, 10)];
+        continue;
       }
-    }
 
-    if (shouldLog) {
-      console.log('[extractFieldValue] Final result:', { value: current });
+      if (typeof current !== 'object') return null;
+      current = (current as Record<string, any>)[part];
     }
 
     return current !== undefined ? current : null;
