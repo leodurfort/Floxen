@@ -306,6 +306,16 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
   // SKU: Use variation SKU or empty (variations often have unique SKUs)
   merged.sku = variation.sku || '';
 
+  // Name: Construct clean name from parent + variation attributes (avoid WooCommerce duplications)
+  // Format: "{Parent Name} - {Color}, {Size}" or just "{Parent Name}" if no attributes
+  const variationParts: string[] = [];
+  if (varAttrs.color) variationParts.push(varAttrs.color);
+  if (varAttrs.size) variationParts.push(varAttrs.size);
+
+  merged.name = variationParts.length > 0
+    ? `${parent.name} - ${variationParts.join(', ')}`
+    : parent.name;
+
   // Permalink: Use variation permalink or parent
   merged.permalink = variation.permalink || parent.permalink;
 

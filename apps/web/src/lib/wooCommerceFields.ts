@@ -113,22 +113,7 @@ export function extractFieldValue(
       current = (current as Record<string, any>)[part];
     }
 
-    const result = current !== undefined ? current : null;
-
-    // Debug logging for problematic fields
-    if (fieldPath === 'id' || fieldPath === 'parent_id') {
-      console.log(`[extractFieldValue] ${fieldPath}:`, {
-        fieldPath,
-        result,
-        wooRawJsonKeys: Object.keys(wooRawJson).slice(0, 20),
-        hasId: 'id' in wooRawJson,
-        hasParentId: 'parent_id' in wooRawJson,
-        actualId: wooRawJson.id,
-        actualParentId: wooRawJson.parent_id,
-      });
-    }
-
-    return result;
+    return current !== undefined ? current : null;
   } catch (err) {
     console.error('[extractFieldValue] Error extracting field', { fieldPath, err });
     return null;
@@ -212,22 +197,9 @@ const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?
     return `${fromDate} / ${toDate}`;
   },
   generateGroupId: (_value, wooProduct, shopData) => {
-    console.log('[generateGroupId] Called with:', {
-      hasShopData: !!shopData,
-      shopDataId: shopData?.id,
-      hasWooProduct: !!wooProduct,
-      wooProductId: wooProduct?.id,
-      parentId: wooProduct?.parent_id,
-    });
-
-    if (!shopData?.id || !wooProduct) {
-      console.log('[generateGroupId] Returning null - missing shopData.id or wooProduct');
-      return null;
-    }
+    if (!shopData?.id || !wooProduct) return null;
     const parentId = wooProduct.parent_id;
-    const result = parentId && parentId > 0 ? `${shopData.id}-${parentId}` : `${shopData.id}-${wooProduct.id}`;
-    console.log('[generateGroupId] Result:', result);
-    return result;
+    return parentId && parentId > 0 ? `${shopData.id}-${parentId}` : `${shopData.id}-${wooProduct.id}`;
   },
   generateOfferId: (value, wooProduct) => {
     const baseSku = value || `prod-${wooProduct?.id}`;
