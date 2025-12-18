@@ -152,6 +152,8 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
       syncStatus: 'PENDING',
       shopName: settings?.shopName || shop.shopName,
       shopCurrency: settings?.shopCurrency || shop.shopCurrency,
+      dimensionUnit: settings?.dimensionUnit || shop.dimensionUnit,
+      weightUnit: settings?.weightUnit || shop.weightUnit,
       // Populate seller fields from WooCommerce (only sellerName and sellerUrl)
       sellerName: settings?.sellerName || shop.sellerName,
       sellerUrl: settings?.sellerUrl || shop.sellerUrl,

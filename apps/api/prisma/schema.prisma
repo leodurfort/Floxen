@@ -71,6 +71,8 @@ model Shop {
   wooConsumerSecret String?    @map("woo_consumer_secret")
   shopName          String?    @map("shop_name")
   shopCurrency      String?    @map("shop_currency")
+  dimensionUnit     String?    @map("dimension_unit")
+  weightUnit        String?    @map("weight_unit")
   isConnected       Boolean    @default(false) @map("is_connected")
   lastSyncAt        DateTime?  @map("last_sync_at")
   syncStatus        SyncStatus @default(PENDING) @map("sync_status")
