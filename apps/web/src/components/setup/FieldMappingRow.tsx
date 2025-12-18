@@ -44,7 +44,8 @@ export function FieldMappingRow({ spec, currentMapping, onMappingChange, preview
     : false;
 
   // Extract and format preview value
-  const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping) || null;
+  const defaultMapping = spec.wooCommerceMapping?.field || null;
+  const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping || (isDimensions ? defaultMapping : null)) || null;
   const previewValue = effectiveMapping && !isToggleField
     ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
     : null;
