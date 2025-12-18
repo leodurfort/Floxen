@@ -82,9 +82,10 @@ export interface StoreSettings {
 
 /**
  * Fetch comprehensive store settings from WooCommerce API
- * Uses only index endpoint - no fallbacks
+ * @param api - WooCommerce REST API client
+ * @param fallbackStoreUrl - Optional store URL to use if WooCommerce API doesn't return one
  */
-export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<StoreSettings | null> {
+export async function fetchStoreSettings(api: WooCommerceRestApi, fallbackStoreUrl?: string): Promise<StoreSettings | null> {
   try {
     logger.info('woo:fetch store settings start');
 
@@ -96,6 +97,7 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
       name: storeInfo.name,
       description: storeInfo.description,
       url: storeInfo.url,
+      fullResponse: JSON.stringify(storeInfo),
     });
 
     // Fetch general settings (currency)
@@ -110,9 +112,9 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
     const weightUnitSetting = productSettings.find((s: any) => s.id === 'woocommerce_weight_unit');
 
     // WooCommerce index endpoint often returns empty name/url
-    // Extract domain name from URL as fallback for shop name
+    // Use fallback store URL if provided and API returns null
+    let shopUrl = storeInfo.url || fallbackStoreUrl || null;
     let shopName = storeInfo.name || null;
-    let shopUrl = storeInfo.url || null;
 
     // If name is empty, try to extract a readable name from the URL
     if (!shopName && shopUrl) {
@@ -127,6 +129,14 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
         // Invalid URL, keep as null
       }
     }
+
+    logger.info('woo:extracted shop name and url', {
+      apiReturnedName: storeInfo.name,
+      apiReturnedUrl: storeInfo.url,
+      fallbackUsed: !!fallbackStoreUrl && !storeInfo.url,
+      extractedShopName: shopName,
+      finalShopUrl: shopUrl,
+    });
 
     const storeSettings: StoreSettings = {
       shopName: shopName,
