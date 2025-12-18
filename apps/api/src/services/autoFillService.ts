@@ -6,8 +6,15 @@
  */
 
 import { Shop } from '@prisma/client';
-import { LOCKED_FIELD_SET, OPENAI_FEED_SPEC, OpenAIFieldSpec } from '@productsynch/shared';
-import { TRANSFORMS, extractNestedValue, extractAttributeValue, extractMetaValue } from './woocommerce/transforms';
+import {
+  LOCKED_FIELD_SET,
+  OPENAI_FEED_SPEC,
+  OpenAIFieldSpec,
+  TRANSFORMS,
+  extractNestedValue,
+  extractAttributeValue,
+  extractMetaValue,
+} from '@productsynch/shared';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 
