@@ -111,9 +111,9 @@ export async function fetchStoreSettings(api: WooCommerceRestApi): Promise<Store
 
     const storeSettings: StoreSettings = {
       shopName: storeInfo.name,
-      shopCurrency: currencySetting?.value || 'USD',
-      dimensionUnit: dimensionUnitSetting?.value || 'in',
-      weightUnit: weightUnitSetting?.value || 'lb',
+      shopCurrency: currencySetting?.value || null,
+      dimensionUnit: dimensionUnitSetting?.value || null,
+      weightUnit: weightUnitSetting?.value || null,
       siteUrl: storeInfo.url,
       homeUrl: storeInfo.url,
       language: undefined,
