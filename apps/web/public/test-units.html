@@ -129,8 +129,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>🧪 Store Units Test</h1>
-        <p class="subtitle">Test retrieval of WooCommerce dimension and weight units</p>
+        <h1>🧪 WooCommerce API Test</h1>
+        <p class="subtitle">Fetch settings directly from WooCommerce API (not from database)</p>
 
         <div class="input-group">
             <label for="shopId">Shop ID</label>
@@ -148,7 +148,7 @@
         </div>
 
         <button id="testButton" onclick="testUnits()">
-            Test Store Units
+            Fetch from WooCommerce API
         </button>
 
         <div id="result" class="result"></div>
@@ -187,7 +187,7 @@
                     headers['Authorization'] = `Bearer ${token}`;
                 }
 
-                const response = await fetch(`${apiUrl}/api/v1/shops/${shopId}`, {
+                const response = await fetch(`${apiUrl}/api/v1/shops/${shopId}/test-woo-settings`, {
                     method: 'GET',
                     headers: headers
                 });
@@ -205,19 +205,32 @@
                 showError(error.message);
             } finally {
                 button.disabled = false;
-                button.innerHTML = 'Test Store Units';
+                button.innerHTML = 'Fetch from WooCommerce API';
             }
         }
 
         function showSuccess(data) {
             const resultDiv = document.getElementById('result');
-            const dimensionUnit = data.dimensionUnit || 'Not set';
-            const weightUnit = data.weightUnit || 'Not set';
+            const settings = data.parsedSettings || {};
+            const dimensionUnit = settings.dimensionUnit || 'Not returned by API';
+            const weightUnit = settings.weightUnit || 'Not returned by API';
+            const shopName = settings.shopName || 'Not returned by API';
+            const shopCurrency = settings.shopCurrency || 'Not returned by API';
+            const sellerName = settings.sellerName || 'Not returned by API';
+            const sellerUrl = settings.sellerUrl || 'Not returned by API';
 
             resultDiv.className = 'result success';
             resultDiv.innerHTML = `
-                <h3>✅ Successfully Retrieved Store Units</h3>
+                <h3>✅ Successfully Fetched from WooCommerce API</h3>
                 <div class="unit-info">
+                    <div class="unit-item">
+                        <div class="unit-label">Shop Name</div>
+                        <div class="unit-value" style="font-size: 16px;">${shopName}</div>
+                    </div>
+                    <div class="unit-item">
+                        <div class="unit-label">Currency</div>
+                        <div class="unit-value">${shopCurrency}</div>
+                    </div>
                     <div class="unit-item">
                         <div class="unit-label">Dimension Unit</div>
                         <div class="unit-value">${dimensionUnit}</div>
@@ -226,10 +239,27 @@
                         <div class="unit-label">Weight Unit</div>
                         <div class="unit-value">${weightUnit}</div>
                     </div>
+                    <div class="unit-item">
+                        <div class="unit-label">Seller Name</div>
+                        <div class="unit-value" style="font-size: 16px;">${sellerName}</div>
+                    </div>
+                    <div class="unit-item">
+                        <div class="unit-label">Seller URL</div>
+                        <div class="unit-value" style="font-size: 14px;">${sellerUrl}</div>
+                    </div>
                 </div>
                 <details style="margin-top: 20px;">
-                    <summary style="cursor: pointer; font-weight: 500;">View Full Shop Response</summary>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <summary style="cursor: pointer; font-weight: 500;">📦 Parsed Settings</summary>
+                    <pre>${JSON.stringify(data.parsedSettings, null, 2)}</pre>
+                </details>
+                <details style="margin-top: 10px;">
+                    <summary style="cursor: pointer; font-weight: 500;">🔍 Raw WooCommerce API Responses</summary>
+                    <h4 style="margin-top: 10px;">Index Endpoint:</h4>
+                    <pre>${JSON.stringify(data.rawResponses?.index, null, 2)}</pre>
+                    <h4 style="margin-top: 10px;">General Settings:</h4>
+                    <pre>${JSON.stringify(data.rawResponses?.generalSettings?.slice(0, 10), null, 2)}</pre>
+                    <h4 style="margin-top: 10px;">Products Settings:</h4>
+                    <pre>${JSON.stringify(data.rawResponses?.productsSettings, null, 2)}</pre>
                 </details>
             `;
             resultDiv.style.display = 'block';

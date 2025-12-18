@@ -548,3 +548,55 @@ export async function getWooFields(req: Request, res: Response) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+/**
+ * Test endpoint: Fetch settings directly from WooCommerce API
+ * GET /api/v1/shops/:id/test-woo-settings
+ */
+export async function testWooSettings(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const userId = userIdFromReq(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const shop = await prisma.shop.findFirst({
+      where: { id, userId },
+    });
+
+    if (!shop || !shop.isConnected) {
+      return res.status(404).json({ error: 'Shop not found or not connected' });
+    }
+
+    const { createWooClient, fetchStoreSettings } = await import('../services/wooClient');
+
+    const wooClient = createWooClient({
+      storeUrl: shop.wooStoreUrl,
+      consumerKey: shop.wooConsumerKey!,
+      consumerSecret: shop.wooConsumerSecret!,
+    });
+
+    // Fetch settings directly from WooCommerce
+    const settings = await fetchStoreSettings(wooClient);
+
+    if (!settings) {
+      return res.status(500).json({ error: 'Failed to fetch settings from WooCommerce' });
+    }
+
+    // Also fetch raw API responses for debugging
+    const indexResponse = await wooClient.get('');
+    const generalResponse = await wooClient.get('settings/general');
+    const productsResponse = await wooClient.get('settings/products');
+
+    return res.json({
+      parsedSettings: settings,
+      rawResponses: {
+        index: indexResponse.data,
+        generalSettings: generalResponse.data,
+        productsSettings: productsResponse.data,
+      },
+    });
+  } catch (error: any) {
+    logger.error('testWooSettings error', { error: error.message });
+    return res.status(500).json({ error: error.message });
+  }
+}
