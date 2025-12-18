@@ -402,23 +402,16 @@ export async function updateFieldMappings(req: Request, res: Response) {
         }
 
         const existing = existingByOpenaiId.get(openaiField.id);
+        let wooFieldId: string | null = null;
 
-        // Delete mapping if explicitly cleared
-        if (wooFieldValue === null) {
-          if (existing) {
-            await prisma.fieldMapping.delete({
-              where: { id: existing.id },
-            });
-            results.deleted++;
+        if (wooFieldValue !== null) {
+          const wooField = wooFieldByValue.get(wooFieldValue);
+          if (!wooField) {
+            logger.warn(`WooCommerce field "${wooFieldValue}" not found, skipping`, { shopId: id });
+            results.errors++;
+            continue;
           }
-          continue;
-        }
-
-        const wooField = wooFieldByValue.get(wooFieldValue);
-        if (!wooField) {
-          logger.warn(`WooCommerce field "${wooFieldValue}" not found, skipping`, { shopId: id });
-          results.errors++;
-          continue;
+          wooFieldId = wooField.id;
         }
 
         // Upsert mapping
@@ -432,10 +425,10 @@ export async function updateFieldMappings(req: Request, res: Response) {
           create: {
             shopId: id,
             openaiFieldId: openaiField.id,
-            wooFieldId: wooField.id,
+            wooFieldId,
           },
           update: {
-            wooFieldId: wooField.id,
+            wooFieldId,
           },
         });
 
