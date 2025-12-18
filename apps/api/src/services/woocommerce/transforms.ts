@@ -49,11 +49,8 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
    */
   buildCategoryPath: (categories) => {
     if (!categories || !Array.isArray(categories) || categories.length === 0) {
-      console.log('[buildCategoryPath] No categories provided');
       return '';
     }
-
-    console.log('[buildCategoryPath] Input categories:', JSON.stringify(categories, null, 2));
 
     // Create a map of category ID -> category object for quick lookup
     const categoryMap = new Map<number, any>();
@@ -61,37 +58,25 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
       if (cat.id) categoryMap.set(cat.id, cat);
     });
 
-    console.log('[buildCategoryPath] Category map:', Array.from(categoryMap.entries()).map(([id, cat]) => ({
-      id,
-      name: cat.name,
-      parent: cat.parent
-    })));
-
     // Build full path for a category by traversing up to root
     const buildPath = (category: any): string[] => {
       const path: string[] = [];
       let current = category;
 
-      console.log(`[buildCategoryPath] Building path for: ${category.name} (id: ${category.id}, parent: ${category.parent})`);
-
       // Traverse up the hierarchy (max 10 levels to prevent infinite loops)
       let depth = 0;
       while (current && depth < 10) {
-        console.log(`  [depth ${depth}] Current: ${current.name} (id: ${current.id}, parent: ${current.parent})`);
         path.unshift(current.name); // Add to beginning of array
 
         // If has parent and parent exists in our map, continue up
         if (current.parent && current.parent > 0 && categoryMap.has(current.parent)) {
-          console.log(`    -> Found parent ${current.parent} in map, continuing`);
           current = categoryMap.get(current.parent);
         } else {
-          console.log(`    -> No parent or not in map (parent: ${current.parent}, inMap: ${categoryMap.has(current.parent)})`);
           break; // Reached root or parent not in product's categories
         }
         depth++;
       }
 
-      console.log(`  Final path: [${path.join(' > ')}]`);
       return path;
     };
 
@@ -100,10 +85,7 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
       .map((cat: any) => buildPath(cat))
       .filter((path: string[]) => path.length > 0);
 
-    console.log('[buildCategoryPath] All paths:', paths);
-
     if (paths.length === 0) {
-      console.log('[buildCategoryPath] No valid paths, returning empty');
       return '';
     }
 
@@ -112,9 +94,7 @@ export const TRANSFORMS: Record<string, TransformFunction> = {
       current.length > longest.length ? current : longest
     );
 
-    const result = deepestPath.join(' > ');
-    console.log('[buildCategoryPath] Final result:', result);
-    return result;
+    return deepestPath.join(' > ');
   },
 
   /**

@@ -135,12 +135,7 @@ const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?
     return String(value).replace(/<[^>]*>/g, '').trim();
   },
   buildCategoryPath: (categories) => {
-    if (!Array.isArray(categories) || categories.length === 0) {
-      console.log('[CLIENT buildCategoryPath] No categories provided');
-      return '';
-    }
-
-    console.log('[CLIENT buildCategoryPath] Input categories:', JSON.stringify(categories, null, 2));
+    if (!Array.isArray(categories) || categories.length === 0) return '';
 
     // Create a map of category ID -> category object for quick lookup
     const categoryMap = new Map<number, any>();
@@ -148,37 +143,25 @@ const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?
       if (cat.id) categoryMap.set(cat.id, cat);
     });
 
-    console.log('[CLIENT buildCategoryPath] Category map:', Array.from(categoryMap.entries()).map(([id, cat]) => ({
-      id,
-      name: cat.name,
-      parent: cat.parent
-    })));
-
     // Build full path for a category by traversing up to root
     const buildPath = (category: any): string[] => {
       const path: string[] = [];
       let current = category;
 
-      console.log(`[CLIENT buildCategoryPath] Building path for: ${category.name} (id: ${category.id}, parent: ${category.parent})`);
-
       // Traverse up the hierarchy (max 10 levels to prevent infinite loops)
       let depth = 0;
       while (current && depth < 10) {
-        console.log(`  [depth ${depth}] Current: ${current.name} (id: ${current.id}, parent: ${current.parent})`);
         path.unshift(current.name); // Add to beginning of array
 
         // If has parent and parent exists in our map, continue up
         if (current.parent && current.parent > 0 && categoryMap.has(current.parent)) {
-          console.log(`    -> Found parent ${current.parent} in map, continuing`);
           current = categoryMap.get(current.parent);
         } else {
-          console.log(`    -> No parent or not in map (parent: ${current.parent}, inMap: ${categoryMap.has(current.parent)})`);
           break; // Reached root or parent not in product's categories
         }
         depth++;
       }
 
-      console.log(`  Final path: [${path.join(' > ')}]`);
       return path;
     };
 
@@ -187,21 +170,14 @@ const PREVIEW_TRANSFORMS: Record<string, (value: any, wooProduct: any, shopData?
       .map((cat: any) => buildPath(cat))
       .filter((path: string[]) => path.length > 0);
 
-    console.log('[CLIENT buildCategoryPath] All paths:', paths);
-
-    if (paths.length === 0) {
-      console.log('[CLIENT buildCategoryPath] No valid paths, returning empty');
-      return '';
-    }
+    if (paths.length === 0) return '';
 
     // Return the longest path (most specific category)
     const deepestPath = paths.reduce((longest, current) =>
       current.length > longest.length ? current : longest
     );
 
-    const result = deepestPath.join(' > ');
-    console.log('[CLIENT buildCategoryPath] Final result:', result);
-    return result;
+    return deepestPath.join(' > ');
   },
   extractGtin: (metaData) => {
     if (typeof metaData === 'string' && metaData.trim()) {

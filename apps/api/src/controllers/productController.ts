@@ -149,7 +149,6 @@ export async function getProductWooData(req: Request, res: Response) {
 
     // Fetch all categories to enrich product categories with parent field
     const categoryMap = await fetchAllCategories(wooClient);
-    logger.info('Fetched category map for enrichment', { categoryCount: categoryMap.size });
 
     let wooData = await fetchSingleProduct(wooClient, product.wooProductId);
 
