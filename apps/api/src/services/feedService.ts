@@ -17,7 +17,7 @@ export interface FeedValidationStats {
 }
 
 /**
- * Generate complete OpenAI feed payload with all 63 attributes
+ * Generate complete OpenAI feed payload with all 70 attributes
  * Uses auto-filled values from WooCommerce data
  *
  * @param shop - Shop configuration
@@ -52,7 +52,7 @@ export function generateFeedPayload(
         // Get all auto-filled values from WooCommerce
         const autoFilled = (p.openaiAutoFilled as Record<string, any>) || {};
 
-        // Build complete feed item with all 63 attributes
+        // Build complete feed item with all 70 attributes
         return {
           // Core identifiers
           id: autoFilled.id || `${shop.id}-${p.wooProductId}`,

@@ -1,7 +1,7 @@
 /**
  * OpenAI Product Feed Complete Specification
  *
- * This file defines all 63 OpenAI feed attributes with complete metadata.
+ * This file defines all 70 OpenAI feed attributes with complete metadata.
  * Based on ProductSynch Technical Specification V2.1
  *
  * Each field includes:

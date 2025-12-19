@@ -1,7 +1,7 @@
 /**
  * ValidationService
  *
- * Validates all 63 OpenAI feed fields against specification rules.
+ * Validates all 70 OpenAI feed fields against specification rules.
  * Checks: required fields, character limits, enum values, URL formats, etc.
  */
 
