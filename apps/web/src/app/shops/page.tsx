@@ -2,15 +2,14 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { listShops, deleteShop, createShop, triggerProductSync, toggleShopSync, updateShop } from '@/lib/api';
+import { deleteShop, createShop, triggerProductSync, toggleShopSync, updateShop } from '@/lib/api';
 import { useAuth } from '@/store/auth';
-import { Shop } from '@productsynch/shared';
+import { useShops } from '@/store/shops';
 
 export default function ShopsPage() {
   const router = useRouter();
   const { accessToken, hydrate, hydrated } = useAuth();
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { shops, loading, loadShops, removeShop, updateShop: updateShopInStore } = useShops();
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [storeUrl, setStoreUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -26,25 +25,14 @@ export default function ShopsPage() {
   }, [hydrated, accessToken, router]);
 
   useEffect(() => {
-    if (accessToken) loadShops();
-  }, [accessToken]);
+    if (accessToken) loadShops(accessToken);
+  }, [accessToken, loadShops]);
 
-  async function loadShops() {
-    if (!accessToken) return;
-    setLoading(true);
-    try {
-      const data = await listShops(accessToken);
-      setShops(data.shops);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [connecting, setConnecting] = useState(false);
 
   async function handleConnectShop() {
     if (!accessToken || !storeUrl.trim()) return;
-    setLoading(true);
+    setConnecting(true);
     setError(null);
     try {
       const data = await createShop(
@@ -54,7 +42,7 @@ export default function ShopsPage() {
       window.location.href = data.authUrl;
     } catch (err: any) {
       setError(err.message);
-      setLoading(false);
+      setConnecting(false);
     }
   }
 
@@ -62,7 +50,7 @@ export default function ShopsPage() {
     if (!accessToken || !confirm('Are you sure you want to delete this shop?')) return;
     try {
       await deleteShop(shopId, accessToken);
-      await loadShops();
+      removeShop(shopId); // Immediately update store (sidebar updates)
     } catch (err: any) {
       setError(err.message);
     }
@@ -83,7 +71,7 @@ export default function ShopsPage() {
     if (!accessToken) return;
     try {
       await toggleShopSync(shopId, !currentValue, accessToken);
-      await loadShops(); // Reload to show updated state
+      updateShopInStore(shopId, { syncEnabled: !currentValue }); // Immediate UI update
       setError(null);
     } catch (err: any) {
       setError(err.message);
@@ -121,19 +109,14 @@ export default function ShopsPage() {
       clearTimeout(saveTimeouts.current[shopId]);
     }
 
-    // Update local state immediately for better UX
-    setShops(prevShops => prevShops.map(shop => {
-      if (shop.id === shopId) {
-        if (field === 'returnWindow') {
-          const numValue = value.trim() ? parseInt(value.trim(), 10) : null;
-          return { ...shop, [field]: isNaN(numValue as number) ? null : numValue };
-        } else {
-          const stringValue = value.trim() || null;
-          return { ...shop, [field]: stringValue };
-        }
-      }
-      return shop;
-    }));
+    // Update store immediately for better UX
+    if (field === 'returnWindow') {
+      const numValue = value.trim() ? parseInt(value.trim(), 10) : null;
+      updateShopInStore(shopId, { [field]: isNaN(numValue as number) ? null : numValue });
+    } else {
+      const stringValue = value.trim() || null;
+      updateShopInStore(shopId, { [field]: stringValue });
+    }
 
     // Debounce the save
     saveTimeouts.current[shopId] = setTimeout(async () => {
@@ -191,17 +174,17 @@ export default function ShopsPage() {
         }
 
         await updateShop(shopId, updateData, accessToken);
-        await loadShops(); // Reload to get server state
+        // No need to reload - store is already updated optimistically
         setError(null);
       } catch (err: any) {
         setError(err.message);
         // Reload on error to revert optimistic update
-        await loadShops();
+        await loadShops(accessToken);
       } finally {
         setSavingShopId(null);
       }
     }, 1000); // 1 second debounce
-  }, [accessToken]);
+  }, [accessToken, loadShops, updateShopInStore]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -257,10 +240,10 @@ export default function ShopsPage() {
               </div>
               <button
                 onClick={handleConnectShop}
-                disabled={loading || !storeUrl.trim()}
+                disabled={connecting || !storeUrl.trim()}
                 className="btn btn--primary"
               >
-                {loading ? 'Connecting...' : 'Connect'}
+                {connecting ? 'Connecting...' : 'Connect'}
               </button>
             </div>
           </div>

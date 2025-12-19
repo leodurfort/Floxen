@@ -4,46 +4,22 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { listShops } from '@/lib/api';
+import { useShops } from '@/store/shops';
 import { Shop } from '@productsynch/shared';
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, accessToken, clear } = useAuth();
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
+  const { shops, selectedShop, setSelectedShop, loadShops } = useShops();
   const [showShopDropdown, setShowShopDropdown] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
 
   useEffect(() => {
     if (accessToken) {
-      loadShops();
+      loadShops(accessToken);
     }
-  }, [accessToken]);
-
-  async function loadShops() {
-    if (!accessToken) return;
-    try {
-      const data = await listShops(accessToken);
-      setShops(data.shops);
-      if (data.shops.length > 0 && !selectedShop) {
-        setSelectedShop(data.shops[0]);
-      }
-    } catch (err) {
-      // Log error with context for debugging
-      console.error('[Sidebar] Failed to load shops', {
-        error: err instanceof Error ? {
-          message: err.message,
-          name: err.name,
-          stack: err.stack,
-        } : err,
-        userId: user?.id,
-        timestamp: new Date().toISOString(),
-      });
-      // TODO: Show error toast/notification to user
-    }
-  }
+  }, [accessToken, loadShops]);
 
   function handleShopChange(shop: Shop) {
     setSelectedShop(shop);
@@ -58,7 +34,7 @@ export function Sidebar() {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-    ...(selectedShop ? [
+    ...(selectedShop?.isConnected ? [
       { href: `/shops/${selectedShop.id}/setup`, label: 'Setup', icon: '⚙️' },
       { href: `/shops/${selectedShop.id}/products`, label: 'Products', icon: '📦' },
     ] : []),
