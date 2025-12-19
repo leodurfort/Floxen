@@ -34,9 +34,8 @@ export function createWorker<T = any>(
 // Create shared queue instance for sync jobs
 const syncQueueInstance = createQueue('sync');
 
-export const syncQueue = syncQueueInstance?.queue || {
-  add: async () => {
-    logger.warn('Redis not configured; queue operation skipped');
-    return null as any;
-  },
-};
+export const syncQueue = syncQueueInstance?.queue || null;
+
+export function isQueueAvailable(): boolean {
+  return syncQueue !== null;
+}
