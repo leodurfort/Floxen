@@ -354,6 +354,7 @@ export default function SetupPage() {
             <div className="text-sm font-semibold text-white/80">
               <div className="mb-2 flex items-center gap-2">
                 Preview Data
+                <span className="text-xs font-normal text-white/50">(Excludes custom product matching)</span>
                 {loadingPreview && (
                   <span className="text-xs text-[#5df0c0]">Loading...</span>
                 )}
