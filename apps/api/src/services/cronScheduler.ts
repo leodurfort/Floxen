@@ -11,7 +11,7 @@
 import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { syncQueue } from '../lib/redis';
+import { syncQueue, isQueueAvailable } from '../lib/redis';
 
 export class CronScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
@@ -38,6 +38,12 @@ export class CronScheduler {
    * Enqueues jobs for each shop with staggered delays to avoid thundering herd
    */
   async triggerAllShopsSync() {
+    // Check Redis availability before attempting to queue jobs
+    if (!isQueueAvailable()) {
+      logger.error('Cron: Cannot trigger sync - Redis queue not available');
+      return;
+    }
+
     try {
       const shops = await prisma.shop.findMany({
         where: {
@@ -61,7 +67,7 @@ export class CronScheduler {
         setTimeout(async () => {
           try {
             // 1. Product sync (fetch from WooCommerce)
-            await syncQueue.add('product-sync', {
+            await syncQueue!.add('product-sync', {
               shopId: shop.id,
               triggeredBy: 'cron',
             }, {
@@ -70,7 +76,7 @@ export class CronScheduler {
             });
 
             // 2. Feed generation (after product sync completes)
-            await syncQueue.add('feed-generation', {
+            await syncQueue!.add('feed-generation', {
               shopId: shop.id,
             }, {
               priority: 3,
@@ -78,7 +84,7 @@ export class CronScheduler {
             });
 
             // 3. Feed submission (save to database)
-            await syncQueue.add('feed-submission', {
+            await syncQueue!.add('feed-submission', {
               shopId: shop.id,
             }, {
               priority: 3,

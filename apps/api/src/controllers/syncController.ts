@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { SyncStatus } from '@prisma/client';
-import { syncQueue } from '../lib/redis';
+import { syncQueue, isQueueAvailable } from '../lib/redis';
 import { logger } from '../lib/logger';
 
 // TODO: REMOVE - Temporary mock data for development
@@ -20,13 +20,22 @@ const MOCK_SYNC_HISTORY = [
 ];
 
 export function triggerSync(req: Request, res: Response) {
+  // Check Redis availability FIRST before modifying shop status
+  if (!isQueueAvailable()) {
+    logger.error('sync:trigger failed - Redis unavailable', { shopId: req.params.id });
+    return res.status(503).json({
+      error: 'Sync service unavailable',
+      details: 'Redis queue not configured. Please set REDIS_URL environment variable.',
+    });
+  }
+
   prisma.shop
     .update({
       where: { id: req.params.id },
       data: { syncStatus: SyncStatus.SYNCING, lastSyncAt: new Date() },
     })
     .then((shop) => {
-      syncQueue.add('product-sync', { shopId: shop.id, type: req.body?.type || 'FULL' }, { removeOnComplete: true, priority: 2 });
+      syncQueue!.add('product-sync', { shopId: shop.id, type: req.body?.type || 'FULL' }, { removeOnComplete: true, priority: 2 });
       logger.info('sync:trigger', { shopId: shop.id, type: req.body?.type || 'FULL' });
       return res.json({ shopId: shop.id, status: 'QUEUED', syncType: req.body?.type || 'FULL' });
     })
@@ -61,11 +70,20 @@ export function getSyncHistory(_req: Request, res: Response) {
 }
 
 export function pushFeed(req: Request, res: Response) {
+  // Check Redis availability FIRST
+  if (!isQueueAvailable()) {
+    logger.error('feed:push failed - Redis unavailable', { shopId: req.params.id });
+    return res.status(503).json({
+      error: 'Feed generation service unavailable',
+      details: 'Redis queue not configured. Please set REDIS_URL environment variable.',
+    });
+  }
+
   prisma.shop
     .findUnique({ where: { id: req.params.id } })
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
-      syncQueue.add('feed-generation', { shopId: shop.id }, { removeOnComplete: true });
+      syncQueue!.add('feed-generation', { shopId: shop.id }, { removeOnComplete: true });
       logger.info('feed:push', { shopId: shop.id });
       return res.json({ shopId: shop.id, pushed: true });
     })
