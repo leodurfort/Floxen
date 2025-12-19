@@ -68,8 +68,20 @@ export const generateGroupId: TransformFunction = (parentId, wooProduct, shop) =
  */
 export const generateOfferId: TransformFunction = (sku, wooProduct, shop) => {
   const baseSku = sku || `prod-${wooProduct.id}`;
-  const color = wooProduct.attributes?.find((a: any) => a.name.toLowerCase() === 'color')?.options?.[0];
-  const size = wooProduct.attributes?.find((a: any) => a.name.toLowerCase() === 'size')?.options?.[0];
+
+  // Helper to get attribute value - handles both parent format (options array) and variation format (option string)
+  const getAttrValue = (attrName: string): string | undefined => {
+    const attr = wooProduct.attributes?.find((a: any) => a.name.toLowerCase() === attrName);
+    if (!attr) return undefined;
+    // Variation format: single option string
+    if (attr.option !== undefined && attr.option !== null) return attr.option;
+    // Parent format: options array
+    if (Array.isArray(attr.options) && attr.options.length > 0) return attr.options[0];
+    return undefined;
+  };
+
+  const color = getAttrValue('color');
+  const size = getAttrValue('size');
 
   let offerId = `${baseSku}`;
   if (color) offerId += `-${color}`;

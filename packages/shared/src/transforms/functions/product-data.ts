@@ -58,7 +58,9 @@ export const extractBrand: TransformFunction = (brands, wooProduct) => {
   const brandAttr = wooProduct.attributes?.find((a: any) =>
     a.name.toLowerCase() === 'brand'
   );
-  return brandAttr?.options?.[0] || null;
+  if (!brandAttr) return null;
+  // Handle both variation format (option string) and parent format (options array)
+  return brandAttr.option ?? brandAttr.options?.[0] ?? null;
 };
 
 /**
@@ -92,7 +94,9 @@ export const extractCustomVariant: TransformFunction = (attributes) => {
  */
 export const extractCustomVariantOption: TransformFunction = (attributes) => {
   if (!Array.isArray(attributes) || attributes.length === 0) return null;
-  return attributes[0]?.options?.[0] || null;
+  const attr = attributes[0];
+  // Handle both variation format (option string) and parent format (options array)
+  return attr?.option ?? attr?.options?.[0] ?? null;
 };
 
 /**
