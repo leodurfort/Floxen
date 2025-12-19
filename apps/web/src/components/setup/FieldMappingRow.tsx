@@ -115,7 +115,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
             <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
               <div className="flex flex-col">
                 <span className="text-white text-sm font-medium">
-                  {isDimensions ? 'Auto-populated' : isLockedField ? spec.attribute : 'Managed in Shops page'}
+                  {isDimensions ? 'Auto-populated' : isLockedField ? effectiveMapping : 'Managed in Shops page'}
                 </span>
               </div>
               <div className="relative group mt-[2px]">
