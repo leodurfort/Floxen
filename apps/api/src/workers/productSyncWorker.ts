@@ -30,7 +30,14 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
     existing?.updatedAt &&
     shop.fieldMappingsUpdatedAt > existing.updatedAt;
 
-  if (existing && existing.checksum === data.checksum && !mappingsChangedSinceLastUpdate) {
+  // Check if shop settings (currency, units, seller info) changed since product was last updated
+  const settingsChangedSinceLastUpdate = shop.shopSettingsUpdatedAt &&
+    existing?.updatedAt &&
+    shop.shopSettingsUpdatedAt > existing.updatedAt;
+
+  const needsReprocessing = mappingsChangedSinceLastUpdate || settingsChangedSinceLastUpdate;
+
+  if (existing && existing.checksum === data.checksum && !needsReprocessing) {
     logger.info(`product-sync: skipping unchanged product`, {
       shopId,
       wooProductId: data.wooProductId,
@@ -41,7 +48,10 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
   }
 
   if (existing) {
-    const reason = mappingsChangedSinceLastUpdate ? 'mappings changed' : 'checksum changed';
+    let reason = 'checksum changed';
+    if (mappingsChangedSinceLastUpdate) reason = 'mappings changed';
+    else if (settingsChangedSinceLastUpdate) reason = 'shop settings changed';
+
     logger.info(`product-sync: updating product (${reason})`, {
       shopId,
       wooProductId: data.wooProductId,
@@ -50,6 +60,7 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
       oldChecksum: existing.checksum,
       newChecksum: data.checksum,
       mappingsChangedSinceLastUpdate,
+      settingsChangedSinceLastUpdate,
     });
   } else {
     logger.info(`product-sync: creating new product`, {
@@ -142,6 +153,12 @@ export async function productSyncProcessor(job: Job) {
     const settings = await fetchStoreSettings(client, shop.wooStoreUrl);
 
     if (settings) {
+      // Check if any auto-fill-affecting settings have changed
+      const settingsChanged =
+        shop.shopCurrency !== settings.shopCurrency ||
+        shop.dimensionUnit !== settings.dimensionUnit ||
+        shop.weightUnit !== settings.weightUnit;
+
       const updateData: any = {
         shopCurrency: settings.shopCurrency,
         dimensionUnit: settings.dimensionUnit,
@@ -149,6 +166,20 @@ export async function productSyncProcessor(job: Job) {
         // Populate sellerUrl from wooStoreUrl if not set
         sellerUrl: shop.sellerUrl || shop.wooStoreUrl,
       };
+
+      // If settings changed, update shopSettingsUpdatedAt to trigger product reprocessing
+      if (settingsChanged) {
+        updateData.shopSettingsUpdatedAt = new Date();
+        logger.info('product-sync: shop settings changed, will reprocess products', {
+          shopId,
+          oldCurrency: shop.shopCurrency,
+          newCurrency: settings.shopCurrency,
+          oldDimensionUnit: shop.dimensionUnit,
+          newDimensionUnit: settings.dimensionUnit,
+          oldWeightUnit: shop.weightUnit,
+          newWeightUnit: settings.weightUnit,
+        });
+      }
       // sellerName, sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
 
       await prisma.shop.update({
@@ -161,9 +192,13 @@ export async function productSyncProcessor(job: Job) {
         shopCurrency: settings.shopCurrency,
         dimensionUnit: settings.dimensionUnit,
         weightUnit: settings.weightUnit,
+        settingsChanged,
       });
 
       // Update local shop object cache
+      if (settingsChanged) {
+        shop.shopSettingsUpdatedAt = updateData.shopSettingsUpdatedAt;
+      }
       shop.shopCurrency = settings.shopCurrency || null;
       shop.dimensionUnit = settings.dimensionUnit || null;
       shop.weightUnit = settings.weightUnit || null;
@@ -177,9 +212,13 @@ export async function productSyncProcessor(job: Job) {
       if (!shop.shopCurrency) {
         const currency = await fetchStoreCurrency(client);
         if (currency) {
-          await prisma.shop.update({ where: { id: shopId }, data: { shopCurrency: currency } });
+          await prisma.shop.update({
+            where: { id: shopId },
+            data: { shopCurrency: currency, shopSettingsUpdatedAt: new Date() },
+          });
           logger.info('product-sync: currency updated from Woo (fallback)', { shopId, currency });
           shop.shopCurrency = currency;
+          shop.shopSettingsUpdatedAt = new Date();
         }
       }
     }

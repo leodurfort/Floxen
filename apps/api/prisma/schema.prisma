@@ -90,6 +90,7 @@ model Shop {
   defaultEnableCheckout  Boolean    @default(false) @map("default_enable_checkout")
   fieldMappings     Json?      @map("field_mappings")
   fieldMappingsUpdatedAt DateTime? @map("field_mappings_updated_at")
+  shopSettingsUpdatedAt DateTime? @map("shop_settings_updated_at")
   productsReprocessedAt DateTime? @map("products_reprocessed_at")
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")

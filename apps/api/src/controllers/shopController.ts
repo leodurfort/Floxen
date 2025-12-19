@@ -116,12 +116,17 @@ export async function updateShop(req: Request, res: Response) {
   }
 
   try {
-    const shop = await updateShopRecord(req.params.id, parse.data);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-
     // Check if any auto-fill affecting fields were updated
     const updatedFields = Object.keys(parse.data);
     const affectsAutofill = updatedFields.some((field) => AUTOFILL_AFFECTING_FIELDS.has(field));
+
+    // Include shopSettingsUpdatedAt if auto-fill affecting fields changed
+    const updateData = affectsAutofill
+      ? { ...parse.data, shopSettingsUpdatedAt: new Date() }
+      : parse.data;
+
+    const shop = await updateShopRecord(req.params.id, updateData);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
     if (affectsAutofill && syncQueue) {
       await syncQueue.queue.add('product-reprocess', {

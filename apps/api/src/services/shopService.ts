@@ -140,6 +140,12 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
     settings,
   });
 
+  // Check if settings changed (important for reconnection scenarios where products already exist)
+  const settingsChanged =
+    (settings?.shopCurrency && shop.shopCurrency !== settings.shopCurrency) ||
+    (settings?.dimensionUnit && shop.dimensionUnit !== settings.dimensionUnit) ||
+    (settings?.weightUnit && shop.weightUnit !== settings.weightUnit);
+
   // Update shop with credentials and fetched settings
   return prisma.shop.update({
     where: { id: shopId },
@@ -154,6 +160,8 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
       // Populate sellerUrl from wooStoreUrl if not already set
       sellerUrl: shop.sellerUrl || shop.wooStoreUrl,
       // sellerName, sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only (preserve existing values)
+      // If settings changed during disconnection, trigger product reprocessing
+      ...(settingsChanged && { shopSettingsUpdatedAt: new Date() }),
       updatedAt: new Date(),
     },
   });
