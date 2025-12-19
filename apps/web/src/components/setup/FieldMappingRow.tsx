@@ -106,7 +106,11 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
         </div>
         <p className="text-sm text-white/60">{spec.description}</p>
         <div className="text-xs text-white/40">
-          Example: <span className="text-white/60">{spec.example}</span>
+          {spec.supportedValues ? (
+            <>Values: <span className="text-white/60">{spec.supportedValues}</span></>
+          ) : (
+            <>Example: <span className="text-white/60">{spec.example}</span></>
+          )}
         </div>
       </div>
 
