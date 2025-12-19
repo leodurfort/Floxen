@@ -123,8 +123,11 @@ export class AutoFillService {
         return this.shop[shopField as keyof Shop] || null;
       }
 
-      // Handle product-level fields - create a temporary mapping object
-      mapping = { field: customPath };
+      // Handle product-level fields - merge with spec defaults to preserve transform/fallback
+      mapping = {
+        ...spec.wooCommerceMapping,  // Keep transform, fallback from spec
+        field: customPath,           // Override just the field path
+      };
     }
 
     // No mapping = null (user must provide manually or skip)
