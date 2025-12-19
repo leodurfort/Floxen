@@ -313,8 +313,8 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
   merged.id = variation.id;
   merged.parent_id = parent.id;
 
-  // SKU: Use variation SKU or empty (variations often have unique SKUs)
-  merged.sku = variation.sku || '';
+  // SKU: Use variation SKU, fallback to parent SKU
+  merged.sku = variation.sku || parent.sku || '';
 
   // Permalink: Use variation permalink or parent
   merged.permalink = variation.permalink || parent.permalink;
