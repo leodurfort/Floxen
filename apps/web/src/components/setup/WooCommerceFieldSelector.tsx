@@ -17,7 +17,9 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const filteredFields = searchQuery ? searchWooFields(fields, searchQuery) : fields;
+  const filteredFields = (searchQuery ? searchWooFields(fields, searchQuery) : fields)
+    .slice()
+    .sort((a, b) => a.label.localeCompare(b.label));
   const selectedField = value ? getWooField(fields, value) : null;
 
   // Close dropdown when clicking outside
