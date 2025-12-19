@@ -51,6 +51,102 @@ export interface ValidationOptions {
   strictMode?: boolean;
   /** Validate optional fields */
   validateOptional?: boolean;
+  /** Feed-level enable_checkout setting (affects conditional requirements) */
+  feedEnableCheckout?: boolean;
+}
+
+/**
+ * Check if a value exists (not null, undefined, empty string, or empty array)
+ */
+function hasValue(value: any): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string' && value.trim() === '') return false;
+  if (Array.isArray(value) && value.length === 0) return false;
+  return true;
+}
+
+/**
+ * Check if a conditional requirement is met
+ */
+function checkConditionalRequirement(
+  spec: OpenAIFieldSpec,
+  entry: Record<string, any>,
+  feedEnableCheckout: boolean
+): boolean {
+  const deps = spec.dependencies || '';
+
+  // Checkout-related requirements (seller_privacy_policy, seller_tos)
+  if (deps.includes('enable_checkout')) {
+    return feedEnableCheckout;
+  }
+
+  // GTIN/MPN dependency: mpn required if gtin is not provided
+  if (spec.attribute === 'mpn' && deps.includes('gtin')) {
+    return !hasValue(entry['gtin']);
+  }
+
+  // Availability date required if availability = preorder
+  if (spec.attribute === 'availability_date' && deps.includes('availability')) {
+    return entry['availability'] === 'preorder';
+  }
+
+  // Item group ID required if variants exist (check for parent_id presence)
+  if (spec.attribute === 'item_group_id' && deps.includes('variants')) {
+    return hasValue(entry['item_group_id']) || hasValue(entry['parent_id']);
+  }
+
+  // Condition required if product condition differs from new
+  if (spec.attribute === 'condition' && deps.includes('new')) {
+    return hasValue(entry['condition']) && entry['condition'] !== 'new';
+  }
+
+  return false;
+}
+
+/**
+ * Validate cross-field dependencies
+ */
+function validateCrossFieldDependencies(
+  entry: Record<string, any>
+): FieldValidationError[] {
+  const errors: FieldValidationError[] = [];
+
+  // availability_date must be null when availability is not "preorder"
+  if (hasValue(entry['availability_date']) && entry['availability'] !== 'preorder') {
+    errors.push({
+      field: 'availability_date',
+      error: 'availability_date must be null when availability is not "preorder"',
+      severity: 'error',
+    });
+  }
+
+  // sale_price must be <= price
+  if (hasValue(entry['sale_price']) && hasValue(entry['price'])) {
+    const salePriceMatch = String(entry['sale_price']).match(/^(\d+(?:\.\d+)?)/);
+    const priceMatch = String(entry['price']).match(/^(\d+(?:\.\d+)?)/);
+    if (salePriceMatch && priceMatch) {
+      const salePrice = parseFloat(salePriceMatch[1]);
+      const price = parseFloat(priceMatch[1]);
+      if (salePrice > price) {
+        errors.push({
+          field: 'sale_price',
+          error: `sale_price (${salePrice}) must be less than or equal to price (${price})`,
+          severity: 'error',
+        });
+      }
+    }
+  }
+
+  // enable_checkout requires enable_search to be true
+  if (entry['enable_checkout'] === 'true' && entry['enable_search'] !== 'true') {
+    errors.push({
+      field: 'enable_checkout',
+      error: 'enable_checkout requires enable_search to be "true"',
+      severity: 'error',
+    });
+  }
+
+  return errors;
 }
 
 /**
@@ -60,7 +156,7 @@ function validateFieldValue(
   spec: OpenAIFieldSpec,
   value: any
 ): ValidationResult {
-  const { attribute, dataType, requirement, validationRules } = spec;
+  const { attribute, requirement } = spec;
 
   // Check required fields
   if (requirement === 'Required' && (value === null || value === undefined || value === '')) {
@@ -235,7 +331,12 @@ export function validateFeedEntry(
 ): FeedValidationResult {
   const errors: FieldValidationError[] = [];
   const warnings: FieldValidationError[] = [];
-  const { skipFields = [], strictMode = false, validateOptional = true } = options;
+  const {
+    skipFields = [],
+    strictMode = false,
+    validateOptional = true,
+    feedEnableCheckout = false,
+  } = options;
 
   for (const spec of OPENAI_FEED_SPEC) {
     const { attribute, requirement } = spec;
@@ -251,6 +352,33 @@ export function validateFeedEntry(
     }
 
     const value = entry[attribute];
+
+    // Handle conditional requirements
+    if (requirement === 'Conditional') {
+      const conditionMet = checkConditionalRequirement(spec, entry, feedEnableCheckout);
+      if (conditionMet && !hasValue(value)) {
+        errors.push({
+          field: attribute,
+          error: `${attribute} is required: ${spec.dependencies}`,
+          severity: 'error',
+        });
+      }
+      // Skip further validation if value is empty and condition not met
+      if (!hasValue(value)) {
+        continue;
+      }
+    }
+
+    // Handle recommended fields - add warning if missing
+    if (requirement === 'Recommended' && !hasValue(value)) {
+      warnings.push({
+        field: attribute,
+        error: `${attribute} is recommended but missing`,
+        severity: 'warning',
+      });
+      continue;
+    }
+
     const validation = validateFieldValue(spec, value);
 
     if (!validation.valid) {
@@ -274,6 +402,10 @@ export function validateFeedEntry(
       });
     }
   }
+
+  // Add cross-field validation errors
+  const crossFieldErrors = validateCrossFieldDependencies(entry);
+  errors.push(...crossFieldErrors);
 
   // In strict mode, treat warnings as errors
   if (strictMode && warnings.length > 0) {
@@ -369,4 +501,73 @@ export function getValidationSummary(results: Map<number, FeedValidationResult>)
     totalWarnings,
     commonErrors,
   };
+}
+
+/**
+ * API-compatible validation result format
+ * Matches the format previously used by ValidationService
+ */
+export interface ApiValidationResult {
+  isValid: boolean;
+  errors: Record<string, string[]>;
+  warnings: Record<string, string[]>;
+}
+
+/**
+ * Convert FeedValidationResult to API-compatible format
+ *
+ * This converts the array-based error format to a Record grouped by field,
+ * matching the format expected by the API and database storage.
+ *
+ * @param result - FeedValidationResult from validateFeedEntry
+ * @returns API-compatible validation result
+ *
+ * @example
+ * ```typescript
+ * const feedResult = validateFeedEntry(entry, { feedEnableCheckout: true });
+ * const apiResult = toApiValidationResult(feedResult);
+ * // apiResult.errors = { title: ['Title is required'], price: ['Invalid price format'] }
+ * ```
+ */
+export function toApiValidationResult(result: FeedValidationResult): ApiValidationResult {
+  const errors: Record<string, string[]> = {};
+  const warnings: Record<string, string[]> = {};
+
+  for (const error of result.errors) {
+    if (!errors[error.field]) {
+      errors[error.field] = [];
+    }
+    errors[error.field].push(error.error);
+  }
+
+  for (const warning of result.warnings) {
+    if (!warnings[warning.field]) {
+      warnings[warning.field] = [];
+    }
+    warnings[warning.field].push(warning.error);
+  }
+
+  return {
+    isValid: result.valid,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Validate a product and return API-compatible result
+ *
+ * This is a convenience function that combines validateFeedEntry with
+ * toApiValidationResult for direct use in API code.
+ *
+ * @param openaiAutoFilled - Auto-filled OpenAI field values
+ * @param feedEnableCheckout - Whether checkout is enabled for this feed
+ * @returns API-compatible validation result
+ */
+export function validateProduct(
+  openaiAutoFilled: Record<string, any>,
+  feedEnableCheckout: boolean = false
+): ApiValidationResult {
+  const result = validateFeedEntry(openaiAutoFilled, { feedEnableCheckout });
+  return toApiValidationResult(result);
 }

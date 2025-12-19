@@ -4,7 +4,7 @@ import { logger } from '../lib/logger';
 import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation, checksum } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
-import { ValidationService } from '../services/validationService';
+import { validateProduct } from '@productsynch/shared';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { Shop } from '@prisma/client';
 
@@ -54,9 +54,8 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
     enableCheckout,
   });
 
-  // Validate the product with auto-filled values
-  const validationService = new ValidationService();
-  const validation = validationService.validateProduct(
+  // Validate the product with auto-filled values (using shared validation)
+  const validation = validateProduct(
     openaiAutoFilled,
     enableCheckout
   );
