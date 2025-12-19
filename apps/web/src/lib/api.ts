@@ -148,11 +148,10 @@ export async function requestProduct(shopId: string, productId: string, token: s
   });
 }
 
-export async function triggerProductSync(shopId: string, token: string, forceFull: boolean = false) {
+export async function triggerProductSync(shopId: string, token: string) {
   return request<{ shopId: string; status: string }>(`/api/v1/shops/${shopId}/sync`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ type: forceFull ? 'FULL' : undefined }),
   });
 }
 

@@ -17,12 +17,12 @@ export function triggerSync(req: Request, res: Response) {
   prisma.shop
     .update({
       where: { id: req.params.id },
-      data: { syncStatus: SyncStatus.SYNCING, lastSyncAt: new Date() },
+      data: { syncStatus: SyncStatus.SYNCING },
     })
     .then((shop) => {
-      syncQueue!.add('product-sync', { shopId: shop.id, type: req.body?.type || 'FULL' }, { removeOnComplete: true, priority: 2 });
-      logger.info('sync:trigger', { shopId: shop.id, type: req.body?.type || 'FULL' });
-      return res.json({ shopId: shop.id, status: 'QUEUED', syncType: req.body?.type || 'FULL' });
+      syncQueue!.add('product-sync', { shopId: shop.id }, { removeOnComplete: true, priority: 2 });
+      logger.info('sync:trigger', { shopId: shop.id });
+      return res.json({ shopId: shop.id, status: 'QUEUED' });
     })
     .catch((err) => {
       logger.error('sync:trigger error', err);

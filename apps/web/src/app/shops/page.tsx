@@ -68,12 +68,12 @@ export default function ShopsPage() {
     }
   }
 
-  async function handleSync(shopId: string, forceFull: boolean = false) {
+  async function handleSync(shopId: string) {
     if (!accessToken) return;
     try {
-      await triggerProductSync(shopId, accessToken, forceFull);
+      await triggerProductSync(shopId, accessToken);
       setError(null);
-      alert(forceFull ? 'Force full sync triggered successfully' : 'Sync triggered successfully');
+      alert('Sync triggered successfully');
     } catch (err: any) {
       setError(err.message);
     }
@@ -457,20 +457,12 @@ export default function ShopsPage() {
                         View Products
                       </button>
                       <button
-                        onClick={() => handleSync(shop.id, false)}
+                        onClick={() => handleSync(shop.id)}
                         disabled={!shop.isConnected}
                         className="btn btn--sm btn--primary"
-                        title="Incremental sync (only changed products)"
+                        title="Sync all products from WooCommerce"
                       >
                         Sync
-                      </button>
-                      <button
-                        onClick={() => handleSync(shop.id, true)}
-                        disabled={!shop.isConnected}
-                        className="btn btn--sm"
-                        title="Force full sync (all products, ignores date_modified)"
-                      >
-                        Force Full Sync
                       </button>
                       <button
                         onClick={() => handleDeleteShop(shop.id)}
