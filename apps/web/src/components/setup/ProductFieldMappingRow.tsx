@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   LOCKED_FIELD_MAPPINGS,
@@ -10,7 +10,7 @@ import {
   ProductFieldOverride,
   validateStaticValue,
 } from '@productsynch/shared';
-import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } from '@/lib/wooCommerceFields';
+import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField, searchWooFields } from '@/lib/wooCommerceFields';
 
 // Special dropdown values
 const STATIC_VALUE_OPTION = '__STATIC_VALUE__';
@@ -98,6 +98,11 @@ export function ProductFieldMappingRow({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isStaticMode, setIsStaticMode] = useState(productOverride?.type === 'static');
 
+  // Custom dropdown state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   // Sync state when productOverride changes from parent
   useEffect(() => {
     const newMapping = getCurrentMapping();
@@ -110,6 +115,24 @@ export function ProductFieldMappingRow({
       setIsStaticMode(false);
     }
   }, [productOverride, shopMapping]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+        setSearchQuery('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter fields based on search
+  const filteredFields = useMemo(() => {
+    const fields = searchQuery ? searchWooFields(wooFields, searchQuery) : wooFields;
+    return fields.slice().sort((a, b) => a.label.localeCompare(b.label));
+  }, [wooFields, searchQuery]);
 
   // Validate the draft static value
   const validateDraft = (value: string): boolean => {
@@ -136,6 +159,8 @@ export function ProductFieldMappingRow({
   // Handle dropdown selection change
   const handleDropdownChange = (value: string) => {
     setSelectedValue(value);
+    setIsDropdownOpen(false);
+    setSearchQuery('');
 
     if (value === STATIC_VALUE_OPTION) {
       // Switch to static value mode
@@ -230,7 +255,7 @@ export function ProductFieldMappingRow({
   // Find label for current selection
   const getSelectionLabel = (value: string | null): string => {
     if (!value) return 'Select field or value';
-    if (value === STATIC_VALUE_OPTION) return 'Set Static Value';
+    if (value === STATIC_VALUE_OPTION) return '+ Set Static Value';
     const field = wooFields.find(f => f.value === value);
     return field?.label || value;
   };
@@ -325,36 +350,92 @@ export function ProductFieldMappingRow({
           </div>
         ) : (
           <>
-            {/* Flat dropdown with all options */}
-            <select
-              value={selectedValue || ''}
-              onChange={(e) => handleDropdownChange(e.target.value)}
-              className="w-full px-3 py-2 bg-[#1a1d29] rounded-lg border border-white/10 text-white text-sm focus:border-[#5df0c0]/50 focus:outline-none"
-              disabled={wooFieldsLoading}
-            >
-              {/* Always show "Select field or value" at the top */}
-              <option value="">Select field or value</option>
+            {/* Custom styled dropdown */}
+            <div className="relative w-full" ref={dropdownRef}>
+              {/* Trigger Button */}
+              <button
+                onClick={() => !wooFieldsLoading && setIsDropdownOpen(!isDropdownOpen)}
+                disabled={wooFieldsLoading}
+                className={`w-full h-[40px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border transition-colors flex items-center justify-between border-white/10 ${
+                  wooFieldsLoading ? 'cursor-not-allowed opacity-60' : ''
+                }`}
+              >
+                <span className={`text-sm truncate ${
+                  isStaticMode ? 'text-[#5df0c0]' :
+                  selectedValue ? 'text-white' : 'text-white/60'
+                }`}>
+                  {wooFieldsLoading ? 'Loading fields...' : getSelectionLabel(isStaticMode ? STATIC_VALUE_OPTION : selectedValue)}
+                </span>
+                <svg className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
 
-              {/* Static value option */}
-              {(allowsStaticOverride || !isLockedField) && (
-                <>
-                  <option value="" disabled>───────────────</option>
-                  <option value={STATIC_VALUE_OPTION}>+ Set Static Value</option>
-                </>
-              )}
+              {/* Dropdown Panel */}
+              {isDropdownOpen && !wooFieldsLoading && (
+                <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[320px] overflow-hidden flex flex-col">
+                  {/* Search Bar */}
+                  <div className="p-3 border-b border-white/10">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search fields..."
+                      className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+                      autoFocus
+                    />
+                  </div>
 
-              {/* All WooCommerce fields */}
-              {!isLockedField && wooFields.length > 0 && (
-                <>
-                  <option value="" disabled>───────────────</option>
-                  {wooFields.map((field) => (
-                    <option key={field.value} value={field.value}>
-                      {field.label}
-                    </option>
-                  ))}
-                </>
+                  {/* Options List */}
+                  <div className="overflow-y-auto">
+                    {/* Clear/Reset option - only show when not searching and has a value */}
+                    {!searchQuery && selectedValue && (
+                      <button
+                        onClick={() => handleDropdownChange('')}
+                        className="w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10"
+                      >
+                        <div className="text-sm text-white/60 italic">Select field or value</div>
+                        <div className="text-xs text-white/30 mt-0.5">Reset to shop default</div>
+                      </button>
+                    )}
+
+                    {/* Static value option */}
+                    {!searchQuery && (allowsStaticOverride || !isLockedField) && (
+                      <button
+                        onClick={() => handleDropdownChange(STATIC_VALUE_OPTION)}
+                        className={`w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10 ${
+                          isStaticMode ? 'bg-[#2d3142]' : ''
+                        }`}
+                      >
+                        <div className="text-sm text-[#5df0c0] font-medium">+ Set Static Value</div>
+                        <div className="text-xs text-white/40 mt-0.5">Enter a custom value for this product</div>
+                      </button>
+                    )}
+
+                    {/* WooCommerce fields */}
+                    {!isLockedField && filteredFields.length > 0 ? (
+                      filteredFields.map((field) => (
+                        <button
+                          key={field.value}
+                          onClick={() => handleDropdownChange(field.value)}
+                          className={`w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/5 last:border-0 ${
+                            selectedValue === field.value && !isStaticMode ? 'bg-[#2d3142]' : ''
+                          }`}
+                        >
+                          <div className="text-sm text-white font-medium">{field.label}</div>
+                          <div className="text-xs text-white/40 mt-0.5">{field.value}</div>
+                          {field.description && (
+                            <div className="text-xs text-white/30 mt-1">{field.description}</div>
+                          )}
+                        </button>
+                      ))
+                    ) : !isLockedField && searchQuery ? (
+                      <div className="p-4 text-center text-white/40 text-sm">No fields found</div>
+                    ) : null}
+                  </div>
+                </div>
               )}
-            </select>
+            </div>
 
             {/* Static value input with validation button */}
             {isStaticMode && (
