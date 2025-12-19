@@ -17,6 +17,7 @@ import { syncQueue } from '../jobs';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
+import { clearOverridesForField } from '../services/productReprocessService';
 
 const TOGGLE_FIELDS = new Set(['enable_search', 'enable_checkout']);
 const ALLOWED_MAPPING_ATTRIBUTES = new Set(Object.keys(DEFAULT_FIELD_MAPPINGS));
@@ -298,6 +299,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
     const parsedBody = z
       .object({
         mappings: z.record(z.union([z.string().max(255), z.null()])),
+        propagationMode: z.enum(['apply_all', 'preserve_overrides']).optional().default('preserve_overrides'),
       })
       .safeParse(req.body);
 
@@ -305,6 +307,8 @@ export async function updateFieldMappings(req: Request, res: Response) {
       logger.warn('shops:field-mappings:update invalid payload', parsedBody.error.flatten());
       return res.status(400).json({ error: parsedBody.error.flatten() });
     }
+
+    const { propagationMode } = parsedBody.data;
 
     // Normalize incoming mappings: trim strings, drop unknown attributes, convert empty to null
     const sanitizedMappings: Record<string, string | null> = {};
@@ -487,8 +491,27 @@ export async function updateFieldMappings(req: Request, res: Response) {
       logger.info('shops:field-mappings:updated-at', { shopId: id });
     }
 
-    logger.info('shops:field-mappings:update', { shopId: id, userId, results });
-    return res.json({ success: true, results });
+    // Handle propagation mode: clear product overrides if 'apply_all'
+    let overridesCleared = 0;
+    if (propagationMode === 'apply_all' && (results.created > 0 || results.updated > 0)) {
+      // Clear product-level overrides for all changed fields
+      const changedAttributes = mappingEntries.map(([attribute]) => attribute);
+
+      for (const attribute of changedAttributes) {
+        const cleared = await clearOverridesForField(id, attribute);
+        overridesCleared += cleared;
+      }
+
+      logger.info('shops:field-mappings:cleared-overrides', {
+        shopId: id,
+        propagationMode,
+        changedFields: changedAttributes.length,
+        overridesCleared,
+      });
+    }
+
+    logger.info('shops:field-mappings:update', { shopId: id, userId, results, propagationMode, overridesCleared });
+    return res.json({ success: true, results, overridesCleared });
   } catch (err: any) {
     logger.error('shops:field-mappings:update error', err);
     return res.status(500).json({ error: err.message });

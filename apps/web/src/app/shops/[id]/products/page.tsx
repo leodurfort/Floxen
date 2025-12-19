@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { listProducts, getShop, triggerProductSync } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { Product, Shop } from '@productsynch/shared';
@@ -105,6 +106,7 @@ export default function ShopProductsPage() {
                   <th>Price</th>
                   <th>Status</th>
                   <th>WooCommerce Last Modified</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,6 +127,14 @@ export default function ShopProductsPage() {
                         minute: '2-digit',
                         hour12: true
                       }) : '—'}
+                    </td>
+                    <td>
+                      <Link
+                        href={`/shops/${params.id}/products/${p.id}/mapping`}
+                        className="text-[#5df0c0] hover:text-[#5df0c0]/80 text-sm font-medium"
+                      >
+                        Customize Mappings
+                      </Link>
                     </td>
                   </tr>
                 ))}

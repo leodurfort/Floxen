@@ -28,6 +28,11 @@ export default function SetupPage() {
   const [wooFields, setWooFields] = useState<WooCommerceField[]>([]);
   const [wooFieldsLoading, setWooFieldsLoading] = useState(true);
 
+  // Propagation modal state
+  const [showPropagationModal, setShowPropagationModal] = useState(false);
+  const [skipPropagationModal, setSkipPropagationModal] = useState(false);
+  const [pendingChange, setPendingChange] = useState<{ attribute: string; newValue: string | null } | null>(null);
+
   // Hydrate auth
   useEffect(() => {
     hydrate();
@@ -149,11 +154,12 @@ export default function SetupPage() {
     }
   }, [selectedProductId, accessToken]);
 
-  async function handleMappingChange(attribute: string, wooField: string | null) {
-    if (LOCKED_FIELD_MAPPINGS[attribute]) {
-      return;
-    }
-
+  // Save mapping with propagation mode
+  async function saveMappingChange(
+    attribute: string,
+    wooField: string | null,
+    propagationMode: 'apply_all' | 'preserve_overrides'
+  ) {
     // Save old values for rollback
     const oldValue = mappings[attribute];
     const oldUserValue = userMappings[attribute];
@@ -176,7 +182,7 @@ export default function SetupPage() {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ mappings: newMappings }),
+        body: JSON.stringify({ mappings: newMappings, propagationMode }),
       });
 
       if (!res.ok) {
@@ -199,6 +205,42 @@ export default function SetupPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  // Handle mapping change - show propagation modal or save directly
+  async function handleMappingChange(attribute: string, wooField: string | null) {
+    if (LOCKED_FIELD_MAPPINGS[attribute]) {
+      return;
+    }
+
+    // If user chose to skip the modal, save with preserve_overrides
+    if (skipPropagationModal) {
+      await saveMappingChange(attribute, wooField, 'preserve_overrides');
+      return;
+    }
+
+    // Show the propagation modal
+    setPendingChange({ attribute, newValue: wooField });
+    setShowPropagationModal(true);
+  }
+
+  // Handle propagation modal choice
+  async function handlePropagationChoice(mode: 'apply_all' | 'preserve_overrides', dontAskAgain: boolean) {
+    if (dontAskAgain) {
+      setSkipPropagationModal(true);
+    }
+    setShowPropagationModal(false);
+
+    if (pendingChange) {
+      await saveMappingChange(pendingChange.attribute, pendingChange.newValue, mode);
+      setPendingChange(null);
+    }
+  }
+
+  // Cancel propagation modal
+  function handlePropagationCancel() {
+    setShowPropagationModal(false);
+    setPendingChange(null);
   }
 
   // Filter fields based on search
@@ -359,6 +401,83 @@ export default function SetupPage() {
               No fields match your search.
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Propagation Modal */}
+      {showPropagationModal && (
+        <PropagationModal
+          attribute={pendingChange?.attribute || ''}
+          onChoice={handlePropagationChoice}
+          onCancel={handlePropagationCancel}
+        />
+      )}
+    </div>
+  );
+}
+
+// Propagation Modal Component
+function PropagationModal({
+  attribute,
+  onChoice,
+  onCancel,
+}: {
+  attribute: string;
+  onChoice: (mode: 'apply_all' | 'preserve_overrides', dontAskAgain: boolean) => void;
+  onCancel: () => void;
+}) {
+  const [dontAskAgain, setDontAskAgain] = useState(false);
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      <div className="bg-[#1a1d29] rounded-xl border border-white/10 p-6 max-w-md w-full mx-4 shadow-2xl">
+        <h3 className="text-xl font-semibold text-white mb-2">
+          Apply Mapping Change
+        </h3>
+        <p className="text-white/60 text-sm mb-6">
+          You're changing the mapping for <span className="text-[#5df0c0] font-medium">{attribute}</span>.
+          Some products may have custom overrides for this field.
+        </p>
+
+        <div className="space-y-3 mb-6">
+          <button
+            onClick={() => onChoice('apply_all', dontAskAgain)}
+            className="w-full px-4 py-3 bg-[#5df0c0]/10 hover:bg-[#5df0c0]/20 border border-[#5df0c0]/30 rounded-lg text-left transition-colors"
+          >
+            <div className="text-[#5df0c0] font-medium">Apply to All Products</div>
+            <div className="text-white/50 text-sm mt-1">
+              Reset any custom overrides and use this new mapping for all products.
+            </div>
+          </button>
+
+          <button
+            onClick={() => onChoice('preserve_overrides', dontAskAgain)}
+            className="w-full px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-left transition-colors"
+          >
+            <div className="text-white font-medium">Preserve Custom Overrides</div>
+            <div className="text-white/50 text-sm mt-1">
+              Keep existing product-level overrides. Only update products using shop defaults.
+            </div>
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={dontAskAgain}
+              onChange={(e) => setDontAskAgain(e.target.checked)}
+              className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#5df0c0] focus:ring-[#5df0c0]/50"
+            />
+            <span className="text-white/60 text-sm">Don't ask again this session</span>
+          </label>
+
+          <button
+            onClick={onCancel}
+            className="text-white/50 hover:text-white text-sm"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </div>
