@@ -44,15 +44,16 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     ? (currentMapping === 'ENABLED' || (spec.attribute === 'enable_search' && !currentMapping))
     : false;
 
-  // Extract and format preview value
-  // Only show preview if:
-  // 1. User has explicitly selected a mapping (isUserSelected), OR
-  // 2. This is a locked field (always mapped), OR
-  // 3. This is a non-editable field like dimensions or shop-managed fields
-  const shouldShowPreview = isUserSelected || isLockedField || isNonEditableField;
-
   const defaultMapping = spec.wooCommerceMapping?.field || null;
   const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping || (isDimensions ? defaultMapping : null)) || null;
+
+  // Extract and format preview value
+  // Show preview if:
+  // 1. User has explicitly selected a mapping (isUserSelected), OR
+  // 2. This is a locked field (always mapped), OR
+  // 3. This is a non-editable field like dimensions or shop-managed fields, OR
+  // 4. There's an effective mapping (including spec defaults)
+  const shouldShowPreview = isUserSelected || isLockedField || isNonEditableField || Boolean(effectiveMapping);
   const previewValue = shouldShowPreview && effectiveMapping && !isToggleField
     ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
     : null;
