@@ -12,6 +12,8 @@ import {
   OpenAIFieldSpec,
   TRANSFORMS,
   extractFieldValue,
+  ProductFieldOverrides,
+  STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS,
 } from '@productsynch/shared';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
@@ -61,20 +63,28 @@ export class AutoFillService {
    * Auto-fill all OpenAI attributes from WooCommerce product data
    * Returns a record of attribute -> value for all 70 fields
    *
+   * Priority order for field resolution:
+   * 1. Product-level static value (if set) -> Use directly, no transform
+   * 2. Product-level custom mapping (if set) -> Extract from WooCommerce using this mapping
+   * 3. Shop-level mapping (from Field Mapping Setup) -> Use shop default
+   * 4. Spec default mapping (from OPENAI_FEED_SPEC.wooCommerceMapping) -> Fallback
+   *
    * @param wooProduct - WooCommerce product data
    * @param productFlags - Product-level settings (enable_search, enable_checkout)
+   * @param productOverrides - Product-level field mapping overrides
    */
   autoFillProduct(
     wooProduct: any,
     productFlags?: {
       enableSearch?: boolean;
       enableCheckout?: boolean;
-    }
+    },
+    productOverrides?: ProductFieldOverrides
   ): Record<string, any> {
     const autoFilled: Record<string, any> = {};
 
     for (const spec of OPENAI_FEED_SPEC) {
-      const value = this.fillField(spec, wooProduct, productFlags);
+      const value = this.fillField(spec, wooProduct, productFlags, productOverrides);
 
       // Only include non-null/non-undefined values
       if (value !== null && value !== undefined) {
@@ -94,7 +104,8 @@ export class AutoFillService {
     productFlags?: {
       enableSearch?: boolean;
       enableCheckout?: boolean;
-    }
+    },
+    productOverrides?: ProductFieldOverrides
   ): any {
     // Handle product-level toggle fields
     if (spec.attribute === 'enable_search') {
@@ -109,11 +120,48 @@ export class AutoFillService {
     }
 
     const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);
-    // Check for custom mapping first
+    const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute);
+
+    // Check for product-level override FIRST (highest priority)
+    const override = productOverrides?.[spec.attribute];
+    if (override) {
+      // Static value - use directly, no transform
+      if (override.type === 'static') {
+        // Only allow static overrides for non-locked fields OR specific allowed locked fields
+        if (!isLockedField || allowsStaticOverride) {
+          return override.value;
+        }
+        // Ignore static override for fully locked fields
+        logger.warn('Static override ignored for locked field', {
+          attribute: spec.attribute,
+          shopId: this.shop.id,
+        });
+      }
+
+      // Custom mapping - only for non-locked fields
+      if (override.type === 'mapping' && !isLockedField) {
+        const customPath = override.value;
+
+        // Handle shop-level fields (prefixed with "shop.")
+        if (customPath.startsWith('shop.')) {
+          const shopField = customPath.replace('shop.', '');
+          return this.shop[shopField as keyof Shop] || null;
+        }
+
+        // Use product override mapping with spec transforms
+        const mapping = {
+          ...spec.wooCommerceMapping,  // Keep transform, fallback from spec
+          field: customPath,           // Override just the field path
+        };
+
+        return this.extractWithMapping(wooProduct, mapping, spec);
+      }
+    }
+
+    // Check for shop-level custom mapping (second priority)
     const customMappings = this.customMappings;
     let mapping = spec.wooCommerceMapping;
 
-    // Override with custom mapping if exists
     if (!isLockedField && customMappings && customMappings[spec.attribute]) {
       const customPath = customMappings[spec.attribute];
 
@@ -133,6 +181,17 @@ export class AutoFillService {
     // No mapping = null (user must provide manually or skip)
     if (!mapping) return null;
 
+    return this.extractWithMapping(wooProduct, mapping, spec);
+  }
+
+  /**
+   * Extract value using a mapping configuration
+   */
+  private extractWithMapping(
+    wooProduct: any,
+    mapping: NonNullable<OpenAIFieldSpec['wooCommerceMapping']>,
+    spec: OpenAIFieldSpec
+  ): any {
     // Shop-level field (e.g., seller_name, return_policy)
     if (mapping.shopField) {
       return this.shop[mapping.shopField as keyof Shop] || null;

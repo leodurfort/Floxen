@@ -4,7 +4,7 @@ import { logger } from '../lib/logger';
 import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation, checksum } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
-import { validateProduct } from '@productsynch/shared';
+import { validateProduct, ProductFieldOverrides } from '@productsynch/shared';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { Shop } from '@prisma/client';
 
@@ -14,6 +14,14 @@ import { Shop } from '@prisma/client';
 async function processProduct(data: any, shop: Shop, shopId: string, autoFillService: AutoFillService) {
   const existing = await prisma.product.findUnique({
     where: { shopId_wooProductId: { shopId, wooProductId: data.wooProductId } },
+    select: {
+      id: true,
+      checksum: true,
+      status: true,
+      feedEnableSearch: true,
+      feedEnableCheckout: true,
+      productFieldOverrides: true,
+    },
   });
 
   if (existing && existing.checksum === data.checksum) {
@@ -48,11 +56,15 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
   const enableSearch = existing?.feedEnableSearch ?? shop.defaultEnableSearch;
   const enableCheckout = existing?.feedEnableCheckout ?? shop.defaultEnableCheckout;
 
-  // Auto-fill all 70 OpenAI attributes from WooCommerce data (including flags)
-  const openaiAutoFilled = autoFillService.autoFillProduct(data.wooRawJson, {
-    enableSearch,
-    enableCheckout,
-  });
+  // Get existing product-level field overrides (if any)
+  const productOverrides = (existing?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+
+  // Auto-fill all 70 OpenAI attributes from WooCommerce data (including flags and overrides)
+  const openaiAutoFilled = autoFillService.autoFillProduct(
+    data.wooRawJson,
+    { enableSearch, enableCheckout },
+    productOverrides
+  );
 
   // Validate the product with auto-filled values (using shared validation)
   const validation = validateProduct(

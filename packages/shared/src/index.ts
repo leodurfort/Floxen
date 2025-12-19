@@ -36,6 +36,8 @@ export interface Shop {
   updatedAt: string;
 }
 
+import type { ProductFieldOverrides } from './openai-feed-spec';
+
 export interface Product {
   id: string;
   shopId: string;
@@ -47,6 +49,9 @@ export interface Product {
   wooCategories?: any;
   wooDateModified?: string | null;
   wooRawJson?: any;  // Full WooCommerce product JSON for field mapping preview
+
+  // Product-level field mapping overrides
+  productFieldOverrides?: ProductFieldOverrides | null;
 
   // Status fields
   status: ProductStatus;
@@ -68,3 +73,6 @@ export * from './locked-field-mappings';
 
 // Export Transform Functions
 export * from './transforms';
+
+// Export Validation Utilities
+export * from './validation/staticValueValidator';

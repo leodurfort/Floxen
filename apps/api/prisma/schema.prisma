@@ -141,6 +141,10 @@ model Product {
   feedEnableCheckout  Boolean       @default(false) @map("feed_enable_checkout")
   feedDataJson        Json?         @map("feed_data_json")
 
+  // Product-level field mapping overrides (sparse - only stores differences from shop)
+  // Format: { "fieldAttribute": { type: "mapping" | "static", value: "..." } }
+  productFieldOverrides Json?       @default("{}") @map("product_field_overrides")
+
   // Status & Validation
   status              ProductStatus @default(DRAFT)
   syncStatus          SyncStatus    @default(PENDING) @map("sync_status")

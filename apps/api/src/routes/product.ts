@@ -5,6 +5,9 @@ import {
   getProductWooData,
   listProducts,
   updateProduct,
+  getProductFieldOverrides,
+  updateProductFieldOverrides,
+  deleteProductFieldOverride,
 } from '../controllers/productController';
 import { requireAuth } from '../middleware/auth';
 
@@ -15,5 +18,10 @@ router.get('/:pid', requireAuth, getProduct);
 router.get('/:pid/woo-data', requireAuth, getProductWooData);
 router.patch('/:pid', requireAuth, updateProduct);
 router.post('/bulk', requireAuth, bulkAction);
+
+// Product field override routes
+router.get('/:pid/field-overrides', requireAuth, getProductFieldOverrides);
+router.put('/:pid/field-overrides', requireAuth, updateProductFieldOverrides);
+router.delete('/:pid/field-overrides/:attribute', requireAuth, deleteProductFieldOverride);
 
 export default router;

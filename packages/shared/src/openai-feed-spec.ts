@@ -14,7 +14,6 @@
  * - dependencies: other fields that must be present
  * - validationRules: validation constraints
  * - wooCommerceMapping: how to extract from WooCommerce data
- * - isAiEnrichable: whether AI can suggest improvements
  * - isLocked: whether the field mapping is locked and cannot be customized by users
  * - category: UI grouping category
  */
@@ -29,10 +28,19 @@ export interface OpenAIFieldSpec {
   dependencies: string | null;
   validationRules: string[];
   wooCommerceMapping: WooCommerceMapping | null;
-  isAiEnrichable: boolean;
   isLocked: boolean;
   category: OpenAIFieldCategory;
 }
+
+// Product-level field override types
+export type ProductOverrideType = 'mapping' | 'static';
+
+export interface ProductFieldOverride {
+  type: ProductOverrideType;
+  value: string;
+}
+
+export type ProductFieldOverrides = Record<string, ProductFieldOverride>;
 
 export interface WooCommerceMapping {
   field?: string;           // WooCommerce field path (e.g., "name", "price", "meta_data.gtin")
@@ -74,7 +82,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must be lowercase string "true" or "false"'],
     wooCommerceMapping: null, // User setting only
-    isAiEnrichable: false,
     isLocked: false,
     category: 'flags',
   },
@@ -88,7 +95,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'enable_search must be true',
     validationRules: ['Must be lowercase string "true" or "false"'],
     wooCommerceMapping: null, // User setting only
-    isAiEnrichable: false,
     isLocked: false,
     category: 'flags',
   },
@@ -109,7 +115,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     wooCommerceMapping: {
       field: 'id',
     },
-    isAiEnrichable: false,
     isLocked: true,
     category: 'basic_product_data',
   },
@@ -127,7 +132,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       fallback: 'meta_data',
       transform: 'extractGtin',
     },
-    isAiEnrichable: false,
     isLocked: true,
     category: 'basic_product_data',
   },
@@ -141,7 +145,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Required if gtin is not provided',
     validationRules: ['Max 70 characters'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'basic_product_data',
   },
@@ -158,7 +161,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'name',
       transform: 'cleanVariationTitle',
     },
-    isAiEnrichable: true, // ✅ AI CAN ENRICH
     isLocked: true,
     category: 'basic_product_data',
   },
@@ -176,7 +178,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       transform: 'stripHtml',
       fallback: 'short_description',
     },
-    isAiEnrichable: true, // ✅ AI CAN ENRICH
     isLocked: true,
     category: 'basic_product_data',
   },
@@ -192,7 +193,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     wooCommerceMapping: {
       field: 'permalink',
     },
-    isAiEnrichable: false,
     isLocked: true,
     category: 'basic_product_data',
   },
@@ -211,7 +211,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Required if product condition differs from new',
     validationRules: ['Must be lowercase string'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'item_information',
   },
@@ -228,7 +227,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'categories',
       transform: 'buildCategoryPath',
     },
-    isAiEnrichable: true, // ✅ AI CAN ENRICH
     isLocked: true,
     category: 'item_information',
   },
@@ -245,7 +243,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'brands[0].name',
       fallback: 'attributes.brand',
     },
-    isAiEnrichable: false,
     isLocked: true,
     category: 'item_information',
   },
@@ -259,7 +256,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Max 100 characters'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'item_information',
   },
@@ -276,7 +272,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'dimensions',
       transform: 'formatDimensions',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'item_information',
   },
@@ -293,7 +288,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'dimensions.length',
       transform: 'addUnit',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'item_information',
   },
@@ -310,7 +304,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'dimensions.width',
       transform: 'addUnit',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'item_information',
   },
@@ -327,7 +320,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'dimensions.height',
       transform: 'addUnit',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'item_information',
   },
@@ -344,7 +336,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'weight',
       transform: 'addWeightUnit',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'item_information',
   },
@@ -358,7 +349,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must be lowercase string'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'item_information',
   },
@@ -379,7 +369,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     wooCommerceMapping: {
       field: 'images[0].src',
     },
-    isAiEnrichable: false,
     isLocked: true,
     category: 'media',
   },
@@ -396,7 +385,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'images',
       transform: 'extractAdditionalImages',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'media',
   },
@@ -410,7 +398,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must be publicly accessible'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'media',
   },
@@ -424,7 +411,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['GLB/GLTF format preferred'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'media',
   },
@@ -447,7 +433,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       fallback: 'price',
       transform: 'formatPriceWithCurrency',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'price_promotions',
   },
@@ -464,7 +449,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'sale_price',
       transform: 'formatPriceWithCurrency',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'price_promotions',
   },
@@ -481,7 +465,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'date_on_sale_from',
       transform: 'formatSaleDateRange',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'price_promotions',
   },
@@ -495,7 +478,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Both unit_pricing_measure and unit_pricing_base_measure required together',
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'price_promotions',
   },
@@ -509,7 +491,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Both fields required together',
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'price_promotions',
   },
@@ -523,7 +504,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Max 80 characters'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'price_promotions',
   },
@@ -545,7 +525,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'stock_status',
       transform: 'mapStockStatus',
     },
-    isAiEnrichable: false,
     isLocked: true,
     category: 'availability_inventory',
   },
@@ -559,7 +538,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Required if availability = preorder, must be null otherwise',
     validationRules: ['Must be future date', 'ISO 8601 format', 'Must be null if availability is not preorder'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'availability_inventory',
   },
@@ -576,7 +554,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'stock_quantity',
       transform: 'defaultToZero',
     },
-    isAiEnrichable: false,
     isLocked: true,
     category: 'availability_inventory',
   },
@@ -590,7 +567,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must be future date'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'availability_inventory',
   },
@@ -604,7 +580,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must be lowercase string'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'availability_inventory',
   },
@@ -618,7 +593,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Requires pickup_method',
     validationRules: ['Positive integer + unit'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'availability_inventory',
   },
@@ -640,7 +614,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       field: 'parent_id',
       transform: 'generateGroupId',
     },
-    isAiEnrichable: false,
     isLocked: true,
     category: 'variants',
   },
@@ -654,7 +627,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Max 150 characters', 'Avoid all-caps'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -668,7 +640,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Recommended for apparel',
     validationRules: ['Max 40 characters'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -682,7 +653,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Recommended for apparel',
     validationRules: ['Max 20 characters'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -696,7 +666,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Recommended for apparel',
     validationRules: ['2-letter country code'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -710,7 +679,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Recommended for apparel',
     validationRules: ['Must be lowercase string'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -724,7 +692,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Unique within feed'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -738,7 +705,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -752,7 +718,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -766,7 +731,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -780,7 +744,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -794,7 +757,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -808,7 +770,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
   },
@@ -827,7 +788,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Required where applicable',
     validationRules: ['Use colon separators', 'Multiple entries allowed'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'fulfillment',
   },
@@ -841,7 +801,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must be future date'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'fulfillment',
   },
@@ -863,7 +822,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'sellerName',
       fallback: 'shopName',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'merchant_info',
   },
@@ -880,7 +838,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'sellerUrl',
       fallback: 'wooStoreUrl',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'merchant_info',
   },
@@ -896,7 +853,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     wooCommerceMapping: {
       shopField: 'sellerPrivacyPolicy',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'merchant_info',
   },
@@ -912,7 +868,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     wooCommerceMapping: {
       shopField: 'sellerTos',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'merchant_info',
   },
@@ -933,7 +888,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     wooCommerceMapping: {
       shopField: 'returnPolicy',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'returns',
   },
@@ -949,7 +903,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     wooCommerceMapping: {
       shopField: 'returnWindow',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'returns',
   },
@@ -968,7 +921,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['0-5 scale or merchant-defined'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'performance_signals',
   },
@@ -982,7 +934,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['0-100%'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'performance_signals',
   },
@@ -1001,7 +952,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: 'Recommended for Checkout',
     validationRules: [],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'compliance',
   },
@@ -1015,7 +965,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['If URL, must resolve HTTP 200'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'compliance',
   },
@@ -1029,7 +978,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Positive integer'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'compliance',
   },
@@ -1048,7 +996,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Non-negative integer'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'reviews_qanda',
   },
@@ -1062,7 +1009,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['0-5 scale'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'reviews_qanda',
   },
@@ -1076,7 +1022,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Non-negative integer'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'reviews_qanda',
   },
@@ -1090,7 +1035,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['0-5 scale'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'reviews_qanda',
   },
@@ -1104,7 +1048,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Plain text format'],
     wooCommerceMapping: null,
-    isAiEnrichable: true, // ✅ AI CAN ENRICH
     isLocked: false,
     category: 'reviews_qanda',
   },
@@ -1118,7 +1061,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['May include JSON blob'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'reviews_qanda',
   },
@@ -1141,7 +1083,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       transform: 'formatRelatedIds',
       fallback: 'upsell_ids',
     },
-    isAiEnrichable: false,
     isLocked: false,
     category: 'related_products',
   },
@@ -1155,7 +1096,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must be lowercase string'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'related_products',
   },
@@ -1174,7 +1114,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Must include ISO 4217 currency'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'geo_tagging',
   },
@@ -1188,7 +1127,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     dependencies: null,
     validationRules: ['Regions must be valid ISO 3166 codes'],
     wooCommerceMapping: null,
-    isAiEnrichable: false,
     isLocked: false,
     category: 'geo_tagging',
   },
@@ -1197,9 +1135,6 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPER CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════
-
-// Get all enrichable fields (4 fields: title, description, product_category, q_and_a)
-export const AI_ENRICHABLE_FIELDS = OPENAI_FEED_SPEC.filter(f => f.isAiEnrichable);
 
 // Get required fields (17 fields)
 export const REQUIRED_FIELDS = OPENAI_FEED_SPEC.filter(f => f.requirement === 'Required');
@@ -1217,7 +1152,11 @@ export const LOCKED_FIELD_MAPPINGS: Record<string, string> = LOCKED_FIELDS.reduc
 }, {} as Record<string, string>);
 
 // Set of locked field attributes for quick lookup
-export const LOCKED_FIELD_SET = new Set(Object.keys(LOCKED_FIELD_MAPPINGS));
+export const LOCKED_FIELD_SET = new Set(LOCKED_FIELDS.map(f => f.attribute));
+
+// Locked fields that allow static value overrides at product level
+// These are locked for WooCommerce mapping but can have manual static overrides
+export const STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS = new Set(['title', 'description', 'product_category']);
 
 // Get fields by category
 export const getFieldsByCategory = (category: OpenAIFieldCategory): OpenAIFieldSpec[] =>
@@ -1245,8 +1184,8 @@ export const CATEGORY_CONFIG: Record<OpenAIFieldCategory, { label: string; order
 // Field count stats
 export const FIELD_STATS = {
   total: OPENAI_FEED_SPEC.length,
-  aiEnrichable: AI_ENRICHABLE_FIELDS.length,
   required: REQUIRED_FIELDS.length,
+  locked: LOCKED_FIELDS.length,
   byCategory: Object.keys(CATEGORY_CONFIG).reduce((acc, cat) => {
     acc[cat as OpenAIFieldCategory] = getFieldsByCategory(cat as OpenAIFieldCategory).length;
     return acc;
