@@ -22,6 +22,7 @@ export interface Shop {
   isConnected: boolean;
   lastSyncAt?: string | null;
   fieldMappingsUpdatedAt?: string | null;
+  shopSettingsUpdatedAt?: string | null;
   productsReprocessedAt?: string | null;
   syncStatus: SyncStatus;
   syncEnabled: boolean;
