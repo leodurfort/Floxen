@@ -653,10 +653,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     requirement: 'Optional',
     dependencies: null,
     validationRules: ['Max 150 characters', 'Avoid all-caps'],
-    wooCommerceMapping: {
-      field: 'parent.name',
-      fallback: 'name',
-    },
+    wooCommerceMapping: null,
     isAiEnrichable: false,
     isLocked: false,
     category: 'variants',
