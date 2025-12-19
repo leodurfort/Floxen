@@ -13,7 +13,7 @@ import {
   getDefaultMappings,
 } from '../services/shopService';
 import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET } from '@productsynch/shared';
-import { productSyncQueue } from '../jobs';
+import { syncQueue } from '../jobs';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
@@ -158,7 +158,7 @@ export function oauthCallback(req: Request, res: Response) {
 
   setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret))
     .then((shop) => {
-      productSyncQueue?.queue.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
+      syncQueue?.queue.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
       logger.info('shops:oauth callback SUCCESS - stored creds', { shopId: shop.id });
       return res.json({ shop, message: 'Connection verified, sync queued' });
     })
