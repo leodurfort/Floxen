@@ -60,12 +60,21 @@ export class AutoFillService {
   /**
    * Auto-fill all OpenAI attributes from WooCommerce product data
    * Returns a record of attribute -> value for all 70 fields
+   *
+   * @param wooProduct - WooCommerce product data
+   * @param productFlags - Product-level settings (enable_search, enable_checkout)
    */
-  autoFillProduct(wooProduct: any): Record<string, any> {
+  autoFillProduct(
+    wooProduct: any,
+    productFlags?: {
+      enableSearch?: boolean;
+      enableCheckout?: boolean;
+    }
+  ): Record<string, any> {
     const autoFilled: Record<string, any> = {};
 
     for (const spec of OPENAI_FEED_SPEC) {
-      const value = this.fillField(spec, wooProduct);
+      const value = this.fillField(spec, wooProduct, productFlags);
 
       // Only include non-null/non-undefined values
       if (value !== null && value !== undefined) {
@@ -79,10 +88,24 @@ export class AutoFillService {
   /**
    * Fill a single field based on its mapping spec
    */
-  private fillField(spec: OpenAIFieldSpec, wooProduct: any): any {
-    // Skip toggle fields - these are shop-level settings, not auto-filled from WooCommerce
-    if (spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout') {
-      return null;
+  private fillField(
+    spec: OpenAIFieldSpec,
+    wooProduct: any,
+    productFlags?: {
+      enableSearch?: boolean;
+      enableCheckout?: boolean;
+    }
+  ): any {
+    // Handle product-level toggle fields
+    if (spec.attribute === 'enable_search') {
+      return productFlags?.enableSearch !== undefined
+        ? (productFlags.enableSearch ? 'true' : 'false')
+        : null;
+    }
+    if (spec.attribute === 'enable_checkout') {
+      return productFlags?.enableCheckout !== undefined
+        ? (productFlags.enableCheckout ? 'true' : 'false')
+        : null;
     }
 
     const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);

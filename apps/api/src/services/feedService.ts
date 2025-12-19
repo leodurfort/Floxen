@@ -1,6 +1,9 @@
 import { Product, Shop } from '@prisma/client';
-import { validateFeedEntry, type FeedValidationResult } from '@productsynch/shared';
+import { validateFeedEntry, type FeedValidationResult, OPENAI_FEED_SPEC } from '@productsynch/shared';
 import { logger } from '../lib/logger';
+
+// Create a set of valid OpenAI field names for filtering
+const VALID_OPENAI_FIELDS = new Set(OPENAI_FEED_SPEC.map(spec => spec.attribute));
 
 /**
  * Validation statistics for feed generation
@@ -49,86 +52,36 @@ export function generateFeedPayload(
   const items = products
     .filter(p => p.isValid && p.feedEnableSearch) // Only include valid products with search enabled
     .map((p) => {
-        // Get all auto-filled values from WooCommerce
+        // Get all auto-filled values from WooCommerce (includes all OpenAI fields)
         const autoFilled = (p.openaiAutoFilled as Record<string, any>) || {};
 
-        // Build complete feed item with all 70 attributes
-        return {
-          // Core identifiers
+        // Build feed item with auto-filled data
+        const feedItem = {
+          ...autoFilled,
+          // Ensure ID has fallback
           id: autoFilled.id || `${shop.id}-${p.wooProductId}`,
-
-          // All fields use auto-filled values from WooCommerce
-          title: autoFilled.title,
-          description: autoFilled.description,
-          product_category: autoFilled.product_category,
-          link: autoFilled.link,
-          image_link: autoFilled.image_link,
-          additional_image_links: autoFilled.additional_image_links,
-          price: autoFilled.price,
-          sale_price: autoFilled.sale_price,
-          sale_price_dates: autoFilled.sale_price_dates,
-          availability: autoFilled.availability,
-          availability_date: autoFilled.availability_date,
-          inventory: autoFilled.inventory,
-          brand: autoFilled.brand,
-          gtin: autoFilled.gtin,
-          // mpn is mutually exclusive with gtin: if gtin is provided, mpn should be null
-          mpn: autoFilled.gtin ? null : autoFilled.mpn,
-          condition: autoFilled.condition,
-          age_group: autoFilled.age_group,
-          color: autoFilled.color,
-          gender: autoFilled.gender,
-          material: autoFilled.material,
-          pattern: autoFilled.pattern,
-          size: autoFilled.size,
-          item_group_id: autoFilled.item_group_id,
-          offer_id: autoFilled.offer_id,
-          custom_variant_category: autoFilled.custom_variant_category,
-          custom_variant_option: autoFilled.custom_variant_option,
-          shipping: autoFilled.shipping,
-          shipping_weight: autoFilled.shipping_weight,
-          shipping_length: autoFilled.shipping_length,
-          shipping_width: autoFilled.shipping_width,
-          shipping_height: autoFilled.shipping_height,
-          seller_name: shop.sellerName,
-          seller_url: shop.sellerUrl,
-          seller_privacy_policy: shop.sellerPrivacyPolicy,
-          seller_terms_of_service: shop.sellerTos,
-          return_policy: shop.returnPolicy,
-          return_window_days: shop.returnWindow,
-
-          // Product details
-          energy_efficiency_class: autoFilled.energy_efficiency_class,
-          min_energy_efficiency_class: autoFilled.min_energy_efficiency_class,
-          max_energy_efficiency_class: autoFilled.max_energy_efficiency_class,
-          unit_pricing_measure: autoFilled.unit_pricing_measure,
-          unit_pricing_base_measure: autoFilled.unit_pricing_base_measure,
-          installment_months: autoFilled.installment_months,
-          installment_amount: autoFilled.installment_amount,
-          subscription_period: autoFilled.subscription_period,
-          subscription_amount: autoFilled.subscription_amount,
-
-          // Reviews and ratings
-          product_rating: autoFilled.product_rating,
-          product_review_count: autoFilled.product_review_count,
-          product_review_url: autoFilled.product_review_url,
-          product_popularity_score: autoFilled.product_popularity_score,
-
-          // Inventory management
-          multipack_quantity: autoFilled.multipack_quantity,
-          is_bundle: autoFilled.is_bundle,
-          certification: autoFilled.certification,
-          expiration_date: autoFilled.expiration_date,
-
-          // Keywords and Q&A
-          ai_keywords: autoFilled.ai_keywords,
-          q_and_a: autoFilled.q_and_a,
-          related_product_ids: autoFilled.related_product_ids,
-
-          // Control flags - OpenAI spec requires lowercase strings, not booleans
+          // Override with current product-level flags (source of truth)
           enable_search: p.feedEnableSearch ? 'true' : 'false',
           enable_checkout: p.feedEnableCheckout ? 'true' : 'false',
         };
+
+        // Filter to only include fields that are in the OpenAI spec
+        // This removes any legacy/non-spec fields that might be in autoFilled
+        const validatedItem: Record<string, any> = {};
+        for (const [key, value] of Object.entries(feedItem)) {
+          if (VALID_OPENAI_FIELDS.has(key)) {
+            validatedItem[key] = value;
+          } else {
+            // Log warning for non-spec fields (helps debugging)
+            logger.warn('[FeedService] Skipping non-spec field', {
+              shopId: shop.id,
+              productId: p.wooProductId.toString(),
+              field: key,
+            });
+          }
+        }
+
+        return validatedItem;
       })
     .map((item, index) => {
       validationStats.total++;
