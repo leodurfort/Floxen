@@ -332,39 +332,26 @@ export function ProductFieldMappingRow({
               className="w-full px-3 py-2 bg-[#1a1d29] rounded-lg border border-white/10 text-white text-sm focus:border-[#5df0c0]/50 focus:outline-none"
               disabled={wooFieldsLoading}
             >
-              {/* Current mapping at top (if any) */}
-              {selectedValue && selectedValue !== STATIC_VALUE_OPTION && (
-                <option value={selectedValue}>
-                  {getSelectionLabel(selectedValue)}
-                </option>
-              )}
+              {/* Always show "Select field or value" at the top */}
+              <option value="">Select field or value</option>
 
-              {/* Placeholder when nothing selected */}
-              {!selectedValue && (
-                <option value="">Select field or value</option>
-              )}
-
-              {/* Separator and static value option */}
-              {!isLockedField && selectedValue !== STATIC_VALUE_OPTION && (
-                <option value="" disabled>───────────────</option>
-              )}
+              {/* Static value option */}
               {(allowsStaticOverride || !isLockedField) && (
-                <option value={STATIC_VALUE_OPTION}>
-                  {selectedValue === STATIC_VALUE_OPTION ? 'Set Static Value' : '+ Set Static Value'}
-                </option>
+                <>
+                  <option value="" disabled>───────────────</option>
+                  <option value={STATIC_VALUE_OPTION}>+ Set Static Value</option>
+                </>
               )}
 
-              {/* All WooCommerce fields (excluding current selection) */}
+              {/* All WooCommerce fields */}
               {!isLockedField && wooFields.length > 0 && (
                 <>
                   <option value="" disabled>───────────────</option>
-                  {wooFields
-                    .filter(f => f.value !== selectedValue)
-                    .map((field) => (
-                      <option key={field.value} value={field.value}>
-                        {field.label}
-                      </option>
-                    ))}
+                  {wooFields.map((field) => (
+                    <option key={field.value} value={field.value}>
+                      {field.label}
+                    </option>
+                  ))}
                 </>
               )}
             </select>
