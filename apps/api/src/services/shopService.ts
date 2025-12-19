@@ -1,7 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { encrypt } from '../lib/encryption';
 import { env } from '../config/env';
-import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
 import { fetchStoreSettings } from './wooClient';
 import { logger } from '../lib/logger';
 
@@ -160,11 +159,3 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
   });
 }
 
-/**
- * Get default field mappings suggestions
- * Returns a mapping of openai_attribute -> woocommerce_field_value
- * The object is cloned to avoid accidental mutations of the defaults
- */
-export function getDefaultMappings(): Record<string, string | null> {
-  return { ...DEFAULT_FIELD_MAPPINGS };
-}
