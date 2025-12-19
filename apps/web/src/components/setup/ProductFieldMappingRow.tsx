@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   LOCKED_FIELD_MAPPINGS,
   LOCKED_FIELD_SET,
@@ -9,10 +9,10 @@ import {
   ProductFieldOverride,
   validateStaticValue,
 } from '@productsynch/shared';
-import { WooCommerceFieldSelector } from './WooCommerceFieldSelector';
 import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } from '@/lib/wooCommerceFields';
 
-type OverrideMode = 'shop_default' | 'custom_mapping' | 'static_value';
+// Special dropdown values
+const STATIC_VALUE_OPTION = '__STATIC_VALUE__';
 
 interface Props {
   spec: OpenAIFieldSpec;
@@ -59,117 +59,125 @@ export function ProductFieldMappingRow({
   const isFullyLocked = isLockedField && !allowsStaticOverride;
   const isReadOnly = isToggleField || isDimensions || isShopManagedField || isFullyLocked;
 
-  // Determine current mode
-  const getCurrentMode = (): OverrideMode => {
-    if (!productOverride) return 'shop_default';
-    return productOverride.type === 'static' ? 'static_value' : 'custom_mapping';
+  // Get the currently active mapping value
+  const getCurrentMapping = (): string | null => {
+    if (productOverride?.type === 'mapping') return productOverride.value;
+    if (productOverride?.type === 'static') return STATIC_VALUE_OPTION;
+    return shopMapping || spec.wooCommerceMapping?.field || null;
   };
 
-  const [mode, setMode] = useState<OverrideMode>(getCurrentMode());
+  // State
+  const [selectedValue, setSelectedValue] = useState<string | null>(getCurrentMapping());
   const [staticValue, setStaticValue] = useState(productOverride?.type === 'static' ? productOverride.value : '');
+  const [draftStaticValue, setDraftStaticValue] = useState(staticValue);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [customMapping, setCustomMapping] = useState(productOverride?.type === 'mapping' ? productOverride.value : null);
+  const [isStaticMode, setIsStaticMode] = useState(productOverride?.type === 'static');
 
-  // Update local state when productOverride changes
+  // Sync state when productOverride changes from parent
   useEffect(() => {
-    const newMode = getCurrentMode();
-    setMode(newMode);
+    const newMapping = getCurrentMapping();
+    setSelectedValue(newMapping);
     if (productOverride?.type === 'static') {
       setStaticValue(productOverride.value);
-    } else if (productOverride?.type === 'mapping') {
-      setCustomMapping(productOverride.value);
+      setDraftStaticValue(productOverride.value);
+      setIsStaticMode(true);
+    } else {
+      setIsStaticMode(false);
     }
-  }, [productOverride]);
+  }, [productOverride, shopMapping]);
 
-  // Handle mode change
-  const handleModeChange = (newMode: OverrideMode) => {
-    setMode(newMode);
-    setValidationError(null);
-
-    if (newMode === 'shop_default') {
-      // Clear the override
-      onOverrideChange(spec.attribute, null);
-    } else if (newMode === 'custom_mapping') {
-      // Initialize with shop mapping or null
-      const mapping = customMapping || shopMapping;
-      if (mapping) {
-        onOverrideChange(spec.attribute, { type: 'mapping', value: mapping });
-      }
-    } else if (newMode === 'static_value') {
-      // Don't save empty static value yet
-      if (staticValue) {
-        const validation = validateStaticValue(spec.attribute, staticValue);
-        if (validation.isValid) {
-          onOverrideChange(spec.attribute, { type: 'static', value: staticValue });
-        } else {
-          setValidationError(validation.error || 'Invalid value');
-        }
-      }
-    }
-  };
-
-  // Handle static value change
-  const handleStaticValueChange = (value: string) => {
-    setStaticValue(value);
-
+  // Validate the draft static value
+  const validateDraft = (value: string): boolean => {
     if (!value) {
-      setValidationError(null);
-      return;
+      setValidationError('Value is required');
+      return false;
     }
-
     const validation = validateStaticValue(spec.attribute, value);
-    if (validation.isValid) {
-      setValidationError(null);
-      onOverrideChange(spec.attribute, { type: 'static', value });
-    } else {
+    if (!validation.isValid) {
       setValidationError(validation.error || 'Invalid value');
+      return false;
+    }
+    setValidationError(null);
+    return true;
+  };
+
+  // Check if draft is valid (for enabling tick button)
+  const isDraftValid = useMemo(() => {
+    if (!draftStaticValue) return false;
+    const validation = validateStaticValue(spec.attribute, draftStaticValue);
+    return validation.isValid;
+  }, [draftStaticValue, spec.attribute]);
+
+  // Handle dropdown selection change
+  const handleDropdownChange = (value: string) => {
+    setSelectedValue(value);
+
+    if (value === STATIC_VALUE_OPTION) {
+      // Switch to static value mode
+      setIsStaticMode(true);
+      setDraftStaticValue(staticValue);
+      setValidationError(null);
+    } else if (value === '') {
+      // Clear override, use shop default
+      setIsStaticMode(false);
+      onOverrideChange(spec.attribute, null);
+    } else {
+      // Select a WooCommerce field - create mapping override
+      setIsStaticMode(false);
+      onOverrideChange(spec.attribute, { type: 'mapping', value });
     }
   };
 
-  // Handle custom mapping change
-  const handleMappingChange = (wooField: string | null) => {
-    setCustomMapping(wooField);
-    if (wooField) {
-      onOverrideChange(spec.attribute, { type: 'mapping', value: wooField });
-    } else {
-      // If cleared, fall back to shop default
-      handleModeChange('shop_default');
+  // Handle static value input change (no auto-save)
+  const handleStaticInputChange = (value: string) => {
+    setDraftStaticValue(value);
+    // Clear error while typing
+    if (validationError) {
+      setValidationError(null);
+    }
+  };
+
+  // Handle static value save (tick button click)
+  const handleStaticValueSave = () => {
+    if (validateDraft(draftStaticValue)) {
+      setStaticValue(draftStaticValue);
+      onOverrideChange(spec.attribute, { type: 'static', value: draftStaticValue });
     }
   };
 
   // Handle reset to shop default
   const handleReset = () => {
-    setMode('shop_default');
+    setSelectedValue(shopMapping || spec.wooCommerceMapping?.field || null);
     setStaticValue('');
-    setCustomMapping(null);
+    setDraftStaticValue('');
+    setIsStaticMode(false);
     setValidationError(null);
     onOverrideChange(spec.attribute, null);
-  };
-
-  // Compute effective mapping for preview
-  const getEffectiveMapping = (): string | null => {
-    if (mode === 'static_value') return null;  // Static value doesn't use mapping
-    if (mode === 'custom_mapping' && customMapping) return customMapping;
-    return shopMapping || spec.wooCommerceMapping?.field || null;
   };
 
   // Get locked field value
   const lockedMappingValue = LOCKED_FIELD_MAPPINGS[spec.attribute];
 
-  // Extract preview value
+  // Has custom override?
+  const hasOverride = productOverride !== null;
+
+  // Compute preview - only show saved values, not draft
+  const getEffectiveMapping = (): string | null => {
+    if (productOverride?.type === 'static') return null;
+    if (productOverride?.type === 'mapping') return productOverride.value;
+    return shopMapping || spec.wooCommerceMapping?.field || null;
+  };
+
   const effectiveMapping = getEffectiveMapping();
   const computedPreview = effectiveMapping && !isToggleField
     ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
     : null;
 
-  // Use API-provided preview value if available, otherwise compute
-  const previewValue = mode === 'static_value' && staticValue
-    ? staticValue
+  // Use API preview for saved static values, compute for mappings
+  const previewValue = productOverride?.type === 'static'
+    ? staticValue  // Show saved static value (not draft)
     : (apiPreviewValue ?? computedPreview);
   const formattedValue = formatFieldValue(previewValue);
-
-  // Has custom override?
-  const hasOverride = productOverride !== null;
 
   // Preview display
   let previewDisplay = formattedValue || '';
@@ -179,28 +187,21 @@ export function ProductFieldMappingRow({
     const isEnabled = shopMapping === 'ENABLED' || (spec.attribute === 'enable_search' && !shopMapping);
     previewDisplay = isEnabled ? 'true' : 'false';
     previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
-  } else if (!previewValue && mode !== 'static_value') {
+  } else if (!previewValue && !isStaticMode) {
     previewDisplay = effectiveMapping ? 'No value' : 'Not mapped';
     previewStyle = 'text-white/40';
+  } else if (isStaticMode && !productOverride) {
+    // Static mode but no saved value yet
+    previewDisplay = 'Enter value and click ✓';
+    previewStyle = 'text-white/40 italic';
   }
 
-  // Mode options based on field type
-  const getModeOptions = () => {
-    const options = [
-      { value: 'shop_default', label: 'Use Shop Default' },
-    ];
-
-    // Locked fields can only have static value (if allowed)
-    if (isLockedField) {
-      if (allowsStaticOverride) {
-        options.push({ value: 'static_value', label: 'Set Static Value' });
-      }
-    } else {
-      options.push({ value: 'custom_mapping', label: 'Custom Mapping' });
-      options.push({ value: 'static_value', label: 'Set Static Value' });
-    }
-
-    return options;
+  // Find label for current selection
+  const getSelectionLabel = (value: string | null): string => {
+    if (!value) return 'Select field or value';
+    if (value === STATIC_VALUE_OPTION) return 'Set Static Value';
+    const field = wooFields.find(f => f.value === value);
+    return field?.label || value;
   };
 
   return (
@@ -230,7 +231,7 @@ export function ProductFieldMappingRow({
         </div>
       </div>
 
-      {/* Column 2: Override Controls */}
+      {/* Column 2: Mapping Controls */}
       <div className="flex flex-col gap-2">
         {isReadOnly ? (
           // Read-only field display
@@ -242,47 +243,83 @@ export function ProductFieldMappingRow({
                lockedMappingValue || 'Locked'}
             </span>
             <span className="text-white/40 cursor-help text-sm" title="This field cannot be customized at product level">
-              ℹ️
+              i
             </span>
           </div>
         ) : (
           <>
-            {/* Mode selector */}
+            {/* Flat dropdown with all options */}
             <select
-              value={mode}
-              onChange={(e) => handleModeChange(e.target.value as OverrideMode)}
+              value={selectedValue || ''}
+              onChange={(e) => handleDropdownChange(e.target.value)}
               className="w-full px-3 py-2 bg-[#1a1d29] rounded-lg border border-white/10 text-white text-sm focus:border-[#5df0c0]/50 focus:outline-none"
+              disabled={wooFieldsLoading}
             >
-              {getModeOptions().map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
+              {/* Current mapping at top (if any) */}
+              {selectedValue && selectedValue !== STATIC_VALUE_OPTION && (
+                <option value={selectedValue}>
+                  {getSelectionLabel(selectedValue)}
+                </option>
+              )}
+
+              {/* Placeholder when nothing selected */}
+              {!selectedValue && (
+                <option value="">Select field or value</option>
+              )}
+
+              {/* Separator and static value option */}
+              {!isLockedField && selectedValue !== STATIC_VALUE_OPTION && (
+                <option value="" disabled>───────────────</option>
+              )}
+              {(allowsStaticOverride || !isLockedField) && (
+                <option value={STATIC_VALUE_OPTION}>
+                  {selectedValue === STATIC_VALUE_OPTION ? 'Set Static Value' : '+ Set Static Value'}
+                </option>
+              )}
+
+              {/* All WooCommerce fields (excluding current selection) */}
+              {!isLockedField && wooFields.length > 0 && (
+                <>
+                  <option value="" disabled>───────────────</option>
+                  {wooFields
+                    .filter(f => f.value !== selectedValue)
+                    .map((field) => (
+                      <option key={field.value} value={field.value}>
+                        {field.label}
+                      </option>
+                    ))}
+                </>
+              )}
             </select>
 
-            {/* Mode-specific input */}
-            {mode === 'custom_mapping' && (
-              <WooCommerceFieldSelector
-                value={customMapping}
-                onChange={handleMappingChange}
-                openaiAttribute={spec.attribute}
-                requirement={spec.requirement}
-                fields={wooFields}
-                loading={wooFieldsLoading}
-              />
-            )}
-
-            {mode === 'static_value' && (
+            {/* Static value input with validation button */}
+            {isStaticMode && (
               <div className="flex flex-col gap-1">
-                <input
-                  type="text"
-                  value={staticValue}
-                  onChange={(e) => handleStaticValueChange(e.target.value)}
-                  placeholder={`Enter ${spec.attribute} value...`}
-                  className={`w-full px-3 py-2 bg-[#1a1d29] rounded-lg border text-white text-sm focus:outline-none ${
-                    validationError
-                      ? 'border-red-500/50 focus:border-red-500'
-                      : 'border-white/10 focus:border-[#5df0c0]/50'
-                  }`}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={draftStaticValue}
+                    onChange={(e) => handleStaticInputChange(e.target.value)}
+                    placeholder={`Enter ${spec.attribute} value...`}
+                    className={`flex-1 px-3 py-2 bg-[#1a1d29] rounded-lg border text-white text-sm focus:outline-none ${
+                      validationError
+                        ? 'border-red-500/50 focus:border-red-500'
+                        : 'border-white/10 focus:border-[#5df0c0]/50'
+                    }`}
+                  />
+                  <button
+                    onClick={handleStaticValueSave}
+                    disabled={!isDraftValid}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      isDraftValid
+                        ? 'bg-[#5df0c0]/20 border-[#5df0c0]/50 text-[#5df0c0] hover:bg-[#5df0c0]/30 cursor-pointer'
+                        : 'bg-white/5 border-white/10 text-white/30 cursor-not-allowed'
+                    }`}
+                    title={isDraftValid ? 'Save static value' : 'Enter a valid value first'}
+                  >
+                    ✓
+                  </button>
+                </div>
                 {validationError && (
                   <span className="text-xs text-red-400">{validationError}</span>
                 )}

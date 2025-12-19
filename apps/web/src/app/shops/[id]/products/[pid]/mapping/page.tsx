@@ -219,11 +219,10 @@ export default function ProductMappingPage() {
 
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Product Field Mappings
-            </h1>
             <div className="flex items-center gap-4 mb-2">
-              <span className="text-xl text-white/80">{product?.wooTitle}</span>
+              <h1 className="text-3xl font-bold text-white">
+                {product?.wooTitle || 'Product Field Mappings'}
+              </h1>
               {overrideCount > 0 && (
                 <span className="text-xs px-2 py-1 rounded bg-[#5df0c0]/20 text-[#5df0c0] border border-[#5df0c0]/30">
                   {overrideCount} custom override{overrideCount !== 1 ? 's' : ''}
