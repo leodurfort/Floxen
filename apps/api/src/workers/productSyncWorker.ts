@@ -11,7 +11,7 @@ import { Shop } from '@prisma/client';
 /**
  * Process a single product (simple product or merged variation)
  */
-async function processProduct(data: any, shop: Shop, shopId: string) {
+async function processProduct(data: any, shop: Shop, shopId: string, autoFillService: AutoFillService) {
   const existing = await prisma.product.findUnique({
     where: { shopId_wooProductId: { shopId, wooProductId: data.wooProductId } },
   });
@@ -49,7 +49,6 @@ async function processProduct(data: any, shop: Shop, shopId: string) {
   const enableCheckout = existing?.feedEnableCheckout ?? shop.defaultEnableCheckout;
 
   // Auto-fill all 70 OpenAI attributes from WooCommerce data (including flags)
-  const autoFillService = new AutoFillService(shop);
   const openaiAutoFilled = autoFillService.autoFillProduct(data.wooRawJson, {
     enableSearch,
     enableCheckout,
@@ -189,6 +188,9 @@ export async function productSyncProcessor(job: Job) {
       categoryCount: categoryMap.size,
     });
 
+    // Create AutoFillService once with custom field mappings from database
+    const autoFillService = await AutoFillService.create(shop);
+
     for (const wooProd of products) {
       // Enrich product categories with parent field for hierarchy building
       const enrichedProduct = enrichProductCategories(wooProd, categoryMap);
@@ -215,7 +217,8 @@ export async function productSyncProcessor(job: Job) {
           await processProduct(
             mergeParentAndVariation(enrichedProduct, variation, shop.shopCurrency || 'USD'),
             shop,
-            shopId
+            shopId,
+            autoFillService
           );
         }
 
@@ -227,7 +230,7 @@ export async function productSyncProcessor(job: Job) {
         });
       } else {
         // Process simple products normally
-        await processProduct(transformWooProduct(enrichedProduct, shop.shopCurrency || 'USD'), shop, shopId);
+        await processProduct(transformWooProduct(enrichedProduct, shop.shopCurrency || 'USD'), shop, shopId, autoFillService);
       }
     }
 
