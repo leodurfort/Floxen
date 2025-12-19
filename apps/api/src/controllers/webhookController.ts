@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
-import { productSyncQueue } from '../jobs';
+import { syncQueue } from '../jobs';
 
 /**
  * Verify WooCommerce webhook signature
@@ -46,8 +46,8 @@ export async function handleWooWebhook(req: Request, res: Response) {
 
     // Enqueue sync job for the product
     const event = req.body;
-    if (event.id && productSyncQueue) {
-      await productSyncQueue.queue.add(
+    if (event.id && syncQueue) {
+      await syncQueue.queue.add(
         'product-sync',
         {
           shopId,

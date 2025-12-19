@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { ProductStatus, SyncStatus } from '@prisma/client';
 import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord } from '../services/productService';
-import { productSyncQueue } from '../jobs';
+import { syncQueue } from '../jobs';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 
@@ -125,7 +125,7 @@ export function bulkAction(req: Request, res: Response) {
         syncStatus: action === 'sync' ? 'PENDING' : undefined,
       });
       if (action === 'sync' && updated) {
-        productSyncQueue?.queue.add('product-sync', { shopId: req.params.id, productId: pid }, { removeOnComplete: true });
+        syncQueue?.queue.add('product-sync', { shopId: req.params.id, productId: pid }, { removeOnComplete: true });
       }
       return { id: pid, updated: Boolean(updated) };
     }),
