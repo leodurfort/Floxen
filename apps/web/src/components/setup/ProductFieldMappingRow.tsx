@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import {
   LOCKED_FIELD_MAPPINGS,
   LOCKED_FIELD_SET,
@@ -13,6 +14,28 @@ import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } fr
 
 // Special dropdown values
 const STATIC_VALUE_OPTION = '__STATIC_VALUE__';
+
+// Helper to generate format hint from spec
+function getFormatHint(spec: OpenAIFieldSpec): string {
+  const hints: string[] = [];
+
+  // Add supported values hint
+  if (spec.supportedValues) {
+    hints.push(`Values: ${spec.supportedValues}`);
+  }
+
+  // Add validation rules
+  if (spec.validationRules && spec.validationRules.length > 0) {
+    hints.push(...spec.validationRules);
+  }
+
+  // Add data type hint if no other hints
+  if (hints.length === 0 && spec.dataType) {
+    hints.push(`Type: ${spec.dataType}`);
+  }
+
+  return hints.join(' · ');
+}
 
 interface Props {
   spec: OpenAIFieldSpec;
@@ -195,7 +218,8 @@ export function ProductFieldMappingRow({
     previewDisplay = apiPreviewValue === 'true' ? 'true' : 'false';
     previewStyle = 'text-white/40';
   } else if (!previewValue && !isStaticMode) {
-    previewDisplay = effectiveMapping ? 'No value' : 'Not mapped';
+    // "No value" when mapped but no data, empty when not mapped
+    previewDisplay = effectiveMapping ? 'No value' : '';
     previewStyle = 'text-white/40';
   } else if (isStaticMode && !productOverride) {
     // Static mode but no saved value yet
@@ -264,16 +288,40 @@ export function ProductFieldMappingRow({
           </>
         ) : isReadOnly ? (
           // Read-only field display
-          <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-center gap-2">
-            <span className="text-white/60 text-sm">
+          <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
+            <span className="text-white text-sm font-medium">
               {isEnableCheckoutField ? 'Feature coming soon' :
                isDimensions ? 'Auto-populated' :
-               isShopManagedField ? 'Managed in Shop' :
+               isShopManagedField ? 'Managed in Shops page' :
                lockedMappingValue || 'Locked'}
             </span>
-            <span className="text-white/40 cursor-help text-sm" title={isEnableCheckoutField ? 'Checkout functionality is coming soon' : 'This field cannot be customized at product level'}>
-              ⓘ
-            </span>
+            <div className="relative group mt-[2px]">
+              <span className="text-white/60 cursor-help text-sm">ℹ️</span>
+              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-72 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
+                {isEnableCheckoutField ? (
+                  <div>
+                    <div className="font-semibold text-white mb-1">Coming Soon</div>
+                    <div>Checkout functionality will be available in a future update.</div>
+                  </div>
+                ) : isDimensions ? (
+                  <div>
+                    <div className="font-semibold text-white mb-1">Auto-filled dimensions</div>
+                    <div>Populates automatically when length, width, and height are available.</div>
+                  </div>
+                ) : isShopManagedField ? (
+                  <div>
+                    <div className="font-semibold text-white mb-1">Update in Shops page</div>
+                    <div className="mb-2">Edit this value from the Shops page to change the feed output.</div>
+                    <Link href="/shops" className="text-[#5df0c0] underline">Go to Shops</Link>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="font-semibold text-white mb-1">Managed automatically</div>
+                    <div>This mapping is predefined and cannot be edited.</div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           <>
@@ -349,6 +397,10 @@ export function ProductFieldMappingRow({
                     ✓
                   </button>
                 </div>
+                {/* Format hint - always visible in static mode */}
+                {getFormatHint(spec) && (
+                  <span className="text-xs text-white/50">{getFormatHint(spec)}</span>
+                )}
                 {validationError && (
                   <span className="text-xs text-red-400">{validationError}</span>
                 )}

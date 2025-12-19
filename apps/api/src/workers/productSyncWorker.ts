@@ -1,7 +1,7 @@
 import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories } from '../services/wooClient';
+import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation, checksum } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { validateProduct, ProductFieldOverrides } from '@productsynch/shared';
@@ -116,7 +116,7 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
 
 export async function productSyncProcessor(job: Job) {
   logger.info(`product-sync job received`, job.data);
-  const { shopId, type } = job.data as { shopId: string; type?: 'FULL' | 'INCREMENTAL' };
+  const { shopId } = job.data as { shopId: string };
   if (!shopId) return;
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) return;
@@ -184,20 +184,12 @@ export async function productSyncProcessor(job: Job) {
       }
     }
 
-    // Determine sync type: FULL if explicitly requested OR first sync
-    const isForcedFullSync = type === 'FULL';
-    const isIncrementalSync = !isForcedFullSync && shop.lastSyncAt;
-
-    const products = isIncrementalSync
-      ? await fetchModifiedProducts(client, shop.lastSyncAt!)
-      : await fetchAllProducts(client);
+    // Always do full sync - checksum optimization prevents unnecessary DB writes
+    const products = await fetchAllProducts(client);
 
     logger.info(`product-sync: fetched products`, {
       shopId,
       count: products.length,
-      syncType: isForcedFullSync ? 'full (forced)' : isIncrementalSync ? 'incremental' : 'full (first sync)',
-      lastSyncAt: shop.lastSyncAt?.toISOString(),
-      requestedType: type || 'auto',
     });
 
     // Fetch all categories to enable proper category hierarchy building
