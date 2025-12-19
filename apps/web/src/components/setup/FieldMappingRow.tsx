@@ -3,7 +3,7 @@
 import { LOCKED_FIELD_MAPPINGS, OpenAIFieldSpec } from '@productsynch/shared';
 import { WooCommerceFieldSelector } from './WooCommerceFieldSelector';
 import { ToggleSwitch } from './ToggleSwitch';
-import { extractTransformedPreviewValue, formatFieldValue } from '@/lib/wooCommerceFields';
+import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } from '@/lib/wooCommerceFields';
 
 interface Props {
   spec: OpenAIFieldSpec;
@@ -12,9 +12,11 @@ interface Props {
   onMappingChange: (attribute: string, wooField: string | null) => void;
   previewProductJson: any | null;  // WooCommerce raw JSON for selected product
   previewShopData?: any | null;    // Shop-level data (seller info, return policy, etc.)
+  wooFields: WooCommerceField[];   // WooCommerce fields fetched once by parent
+  wooFieldsLoading: boolean;       // Loading state for woo fields
 }
 
-export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappingChange, previewProductJson, previewShopData }: Props) {
+export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappingChange, previewProductJson, previewShopData, wooFields, wooFieldsLoading }: Props) {
   const requirementColors = {
     Required: 'bg-red-500/20 text-red-300 border-red-500/30',
     Recommended: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
@@ -163,6 +165,8 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
             onChange={(wooField) => onMappingChange(spec.attribute, wooField)}
             openaiAttribute={spec.attribute}
             requirement={spec.requirement}
+            fields={wooFields}
+            loading={wooFieldsLoading}
           />
         )}
       </div>
