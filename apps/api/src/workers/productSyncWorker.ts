@@ -44,15 +44,22 @@ async function processProduct(data: any, shop: Shop, shopId: string) {
     });
   }
 
-  // Auto-fill all 70 OpenAI attributes from WooCommerce data
+  // Determine product-level flags (use existing if available, otherwise shop defaults)
+  const enableSearch = existing?.feedEnableSearch ?? shop.defaultEnableSearch;
+  const enableCheckout = existing?.feedEnableCheckout ?? shop.defaultEnableCheckout;
+
+  // Auto-fill all 70 OpenAI attributes from WooCommerce data (including flags)
   const autoFillService = new AutoFillService(shop);
-  const openaiAutoFilled = autoFillService.autoFillProduct(data.wooRawJson);
+  const openaiAutoFilled = autoFillService.autoFillProduct(data.wooRawJson, {
+    enableSearch,
+    enableCheckout,
+  });
 
   // Validate the product with auto-filled values
   const validationService = new ValidationService();
   const validation = validationService.validateProduct(
     openaiAutoFilled,
-    existing?.feedEnableCheckout || false
+    enableCheckout
   );
 
   await prisma.product.upsert({
