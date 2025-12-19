@@ -180,11 +180,15 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
     }
 
     // Convert parent's "options" array to variation's "option" string
+    // BUT: use variation's specific value if it exists (fixes variant-level attribute override)
     if (Array.isArray(attr.options) && attr.options.length > 0) {
+      // Check if variation has a specific value for this attribute
+      const variationValue = varAttrs[attrName];
+
       const converted = {
         id: attr.id || 0,
         name: attr.name,
-        option: attr.options.length === 1 ? attr.options[0] : attr.options.join(', ')
+        option: variationValue || (attr.options.length === 1 ? attr.options[0] : attr.options.join(', '))
       };
       mergedAttributes.push(converted);
 
@@ -192,6 +196,7 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
         attrName: attr.name,
         originalFormat: { options: attr.options },
         convertedFormat: { option: converted.option },
+        usedVariationValue: !!variationValue,
         parentId: parent?.id,
         variationId: variation?.id,
       });
@@ -205,6 +210,9 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
     }
   });
 
+  // Track which attributes we've already added from parent
+  const addedAttrNames = new Set(mergedAttributes.map((a: any) => a.name.toLowerCase()));
+
   // Add color attribute if found in variation
   if (varAttrs.color || varAttrs.colour) {
     mergedAttributes.push({
@@ -212,6 +220,8 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
       name: 'Color',
       option: varAttrs.color || varAttrs.colour
     });
+    addedAttrNames.add('color');
+    addedAttrNames.add('colour');
     logger.info('[mergeParentAndVariation] Added Color from variation', {
       value: varAttrs.color || varAttrs.colour,
       parentId: parent?.id,
@@ -226,12 +236,33 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
       name: 'Size',
       option: varAttrs.size
     });
+    addedAttrNames.add('size');
     logger.info('[mergeParentAndVariation] Added Size from variation', {
       value: varAttrs.size,
       parentId: parent?.id,
       variationId: variation?.id,
     });
   }
+
+  // Add any remaining variation-only attributes not already covered by parent or color/size
+  Object.entries(varAttrs).forEach(([attrName, attrValue]) => {
+    if (!addedAttrNames.has(attrName) && attrValue) {
+      // Find original attribute name casing from variation
+      const originalAttr = variation.attributes?.find((a: any) => a.name.toLowerCase() === attrName);
+      mergedAttributes.push({
+        id: originalAttr?.id || 0,
+        name: originalAttr?.name || attrName.charAt(0).toUpperCase() + attrName.slice(1),
+        option: attrValue as string
+      });
+      addedAttrNames.add(attrName);
+      logger.info('[mergeParentAndVariation] Added variation-only attribute', {
+        attrName,
+        value: attrValue,
+        parentId: parent?.id,
+        variationId: variation?.id,
+      });
+    }
+  });
 
   // DETAILED LOGGING: Final merged attributes
   logger.info('[mergeParentAndVariation] Final merged attributes', {
