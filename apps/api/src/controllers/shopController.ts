@@ -10,16 +10,16 @@ import {
   listShopsByUser,
   setWooCredentials,
   updateShop as updateShopRecord,
-  getDefaultMappings,
 } from '../services/shopService';
 import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET } from '@productsynch/shared';
+import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
 import { syncQueue } from '../jobs';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 
 const TOGGLE_FIELDS = new Set(['enable_search', 'enable_checkout']);
-const ALLOWED_MAPPING_ATTRIBUTES = new Set(Object.keys(getDefaultMappings()));
+const ALLOWED_MAPPING_ATTRIBUTES = new Set(Object.keys(DEFAULT_FIELD_MAPPINGS));
 const LOCKED_ATTRIBUTES = Array.from(LOCKED_FIELD_SET);
 
 const createShopSchema = z.object({
@@ -219,7 +219,7 @@ export async function getFieldMappings(req: Request, res: Response) {
     }
 
     // Get default mappings from spec
-    const specDefaults = getDefaultMappings();
+    const specDefaults = { ...DEFAULT_FIELD_MAPPINGS };
 
     // Query field mappings from database with joins
     const fieldMappings = await prisma.fieldMapping.findMany({
