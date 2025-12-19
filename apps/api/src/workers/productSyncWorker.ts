@@ -1,7 +1,7 @@
 import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings } from '../services/wooClient';
+import { createWooClient, fetchAllProducts, fetchModifiedProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation, checksum } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { ValidationService } from '../services/validationService';
@@ -191,29 +191,38 @@ export async function productSyncProcessor(job: Job) {
       requestedType: type || 'auto',
     });
 
+    // Fetch all categories to enable proper category hierarchy building
+    const categoryMap = await fetchAllCategories(client);
+    logger.info(`product-sync: fetched categories`, {
+      shopId,
+      categoryCount: categoryMap.size,
+    });
+
     for (const wooProd of products) {
+      // Enrich product categories with parent field for hierarchy building
+      const enrichedProduct = enrichProductCategories(wooProd, categoryMap);
       // Check if this is a variable product
-      const isVariable = wooProd.type === 'variable';
+      const isVariable = enrichedProduct.type === 'variable';
 
       if (isVariable) {
         logger.info(`product-sync: detected variable product, fetching variations`, {
           shopId,
-          parentId: wooProd.id,
-          title: wooProd.name,
+          parentId: enrichedProduct.id,
+          title: enrichedProduct.name,
         });
 
         // Fetch all variations for this variable product
-        const variations = await fetchProductVariations(client, wooProd.id);
+        const variations = await fetchProductVariations(client, enrichedProduct.id);
 
         logger.info(`product-sync: processing ${variations.length} variations`, {
           shopId,
-          parentId: wooProd.id,
+          parentId: enrichedProduct.id,
         });
 
         // Process each variation
         for (const variation of variations) {
           await processProduct(
-            mergeParentAndVariation(wooProd, variation, shop.shopCurrency || 'USD'),
+            mergeParentAndVariation(enrichedProduct, variation, shop.shopCurrency || 'USD'),
             shop,
             shopId
           );
@@ -222,12 +231,12 @@ export async function productSyncProcessor(job: Job) {
         // Skip creating an entry for the parent variable product
         logger.info(`product-sync: skipped parent variable product`, {
           shopId,
-          parentId: wooProd.id,
+          parentId: enrichedProduct.id,
           variationsCount: variations.length,
         });
       } else {
         // Process simple products normally
-        await processProduct(transformWooProduct(wooProd, shop.shopCurrency || 'USD'), shop, shopId);
+        await processProduct(transformWooProduct(enrichedProduct, shop.shopCurrency || 'USD'), shop, shopId);
       }
     }
 

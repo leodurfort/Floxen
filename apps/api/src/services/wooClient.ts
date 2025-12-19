@@ -208,29 +208,52 @@ export async function fetchAllCategories(api: WooCommerceRestApi): Promise<Map<n
  * Enrich product categories with parent field from category map
  * The WooCommerce products API only returns {id, name, slug} for categories,
  * but we need the parent field to build category hierarchies
+ *
+ * This function also recursively adds all parent categories to the array,
+ * so the buildCategoryPath transform can traverse the full hierarchy
  */
 export function enrichProductCategories(product: any, categoryMap: Map<number, any>): any {
   if (!product.categories || !Array.isArray(product.categories)) {
     return product;
   }
 
-  const enrichedCategories = product.categories.map((cat: any) => {
-    const fullCategory = categoryMap.get(cat.id);
-    if (fullCategory) {
-      // Return the full category data with parent field
-      return {
-        id: fullCategory.id,
-        name: fullCategory.name,
-        slug: fullCategory.slug,
-        parent: fullCategory.parent || 0,
-      };
+  // Set to track all category IDs we've added (prevent duplicates)
+  const addedCategoryIds = new Set<number>();
+  const allCategories: any[] = [];
+
+  // Helper function to recursively add category and all its parents
+  const addCategoryWithParents = (categoryId: number) => {
+    // Skip if already added or doesn't exist
+    if (addedCategoryIds.has(categoryId) || !categoryMap.has(categoryId)) {
+      return;
     }
-    // Fallback to original category if not found in map
-    return cat;
+
+    const fullCategory = categoryMap.get(categoryId);
+
+    // Add this category
+    addedCategoryIds.add(categoryId);
+    allCategories.push({
+      id: fullCategory.id,
+      name: fullCategory.name,
+      slug: fullCategory.slug,
+      parent: fullCategory.parent || 0,
+    });
+
+    // Recursively add parent if it exists
+    if (fullCategory.parent && fullCategory.parent > 0) {
+      addCategoryWithParents(fullCategory.parent);
+    }
+  };
+
+  // Process each directly assigned category and add its full hierarchy
+  product.categories.forEach((cat: any) => {
+    if (cat.id) {
+      addCategoryWithParents(cat.id);
+    }
   });
 
   return {
     ...product,
-    categories: enrichedCategories,
+    categories: allCategories,
   };
 }
