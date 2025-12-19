@@ -98,19 +98,10 @@ async function processProduct(data: any, shop: Shop, shopId: string) {
 
 export async function productSyncProcessor(job: Job) {
   logger.info(`product-sync job received`, job.data);
-  const { shopId, productId, type } = job.data as { shopId: string; productId?: string; type?: 'FULL' | 'INCREMENTAL' };
+  const { shopId, type } = job.data as { shopId: string; type?: 'FULL' | 'INCREMENTAL' };
   if (!shopId) return;
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) return;
-
-  // If single product sync requested, just mark done for now.
-  if (productId) {
-    await prisma.product.update({
-      where: { id: productId },
-      data: { syncStatus: 'COMPLETED', status: 'SYNCED', lastSyncedAt: new Date(), updatedAt: new Date() },
-    });
-    return;
-  }
 
   // If no Woo credentials, mark sync complete.
   if (!shop.wooConsumerKey || !shop.wooConsumerSecret) {

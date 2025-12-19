@@ -2,58 +2,20 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { WooCommerceField, searchWooFields, getWooField } from '@/lib/wooCommerceFields';
-import { useAuth } from '@/store/auth';
-import { useParams } from 'next/navigation';
 
 interface Props {
   value: string | null;           // Current selected field value
   onChange: (value: string | null) => void;
   openaiAttribute: string;        // For debugging/logging
   requirement?: 'Required' | 'Recommended' | 'Optional' | 'Conditional';  // Field requirement level
+  fields: WooCommerceField[];     // WooCommerce fields passed from parent
+  loading: boolean;               // Loading state passed from parent
 }
 
-export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, requirement }: Props) {
-  const params = useParams<{ id: string }>();
-  const { accessToken } = useAuth();
-
+export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, requirement, fields, loading }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [fields, setFields] = useState<WooCommerceField[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Load fields from API
-  useEffect(() => {
-    if (!accessToken || !params.id) return;
-
-    async function loadFields() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/woo-fields`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-
-        if (!res.ok) {
-          throw new Error(`Failed to load fields: ${res.statusText}`);
-        }
-
-        const data = await res.json();
-        setFields(data.fields || []);
-      } catch (err) {
-        console.error('[WooCommerceFieldSelector] Failed to load fields', err);
-        setError(err instanceof Error ? err.message : 'Failed to load fields');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadFields();
-  }, [accessToken, params.id]);
 
   const filteredFields = searchQuery ? searchWooFields(fields, searchQuery) : fields;
   const selectedField = value ? getWooField(fields, value) : null;
@@ -91,10 +53,6 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
     buttonText = 'Loading fields...';
     buttonClass = 'text-white/40';
     borderClass = 'border-white/10';
-  } else if (error) {
-    buttonText = `⚠️ Error loading fields`;
-    buttonClass = 'text-red-400';
-    borderClass = 'border-red-400/50';
   } else if (selectedField) {
     buttonText = selectedField.label;
     buttonClass = 'text-white';
@@ -129,10 +87,10 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
     <div className="relative w-full" ref={dropdownRef}>
       {/* Trigger Button */}
       <button
-        onClick={() => !loading && !error && setIsOpen(!isOpen)}
-        disabled={loading || !!error}
+        onClick={() => !loading && setIsOpen(!isOpen)}
+        disabled={loading}
         className={`w-full h-[40px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border transition-colors flex items-center justify-between ${borderClass} ${
-          loading || error ? 'cursor-not-allowed opacity-60' : ''
+          loading ? 'cursor-not-allowed opacity-60' : ''
         }`}
       >
         <span className={`text-sm truncate ${buttonClass}`}>
@@ -144,7 +102,7 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
       </button>
 
       {/* Dropdown */}
-      {isOpen && !loading && !error && (
+      {isOpen && !loading && (
         <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[320px] overflow-hidden flex flex-col">
           {/* Search Bar */}
           <div className="p-3 border-b border-white/10">

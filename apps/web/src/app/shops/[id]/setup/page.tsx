@@ -6,6 +6,7 @@ import { useAuth } from '@/store/auth';
 import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
 import { ProductSelector } from '@/components/setup/ProductSelector';
+import { WooCommerceField } from '@/lib/wooCommerceFields';
 
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
@@ -24,6 +25,8 @@ export default function SetupPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [wooFields, setWooFields] = useState<WooCommerceField[]>([]);
+  const [wooFieldsLoading, setWooFieldsLoading] = useState(true);
 
   // Hydrate auth
   useEffect(() => {
@@ -37,11 +40,12 @@ export default function SetupPage() {
     }
   }, [hydrated, accessToken, router]);
 
-  // Load mappings and products on mount
+  // Load mappings, products, and woo fields on mount
   useEffect(() => {
     if (!accessToken || !params.id) return;
     loadMappings();
     loadProducts();
+    loadWooFields();
   }, [accessToken, params.id]);
 
   async function loadMappings() {
@@ -88,6 +92,23 @@ export default function SetupPage() {
       }
     } catch (err) {
       console.error('[Setup] Failed to load products', err);
+    }
+  }
+
+  async function loadWooFields() {
+    if (!accessToken) return;
+    setWooFieldsLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/woo-fields`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) throw new Error('Failed to load WooCommerce fields');
+      const data = await res.json();
+      setWooFields(data.fields || []);
+    } catch (err) {
+      console.error('[Setup] Failed to load WooCommerce fields', err);
+    } finally {
+      setWooFieldsLoading(false);
     }
   }
 
@@ -324,6 +345,8 @@ export default function SetupPage() {
                       onMappingChange={handleMappingChange}
                       previewProductJson={previewProductJson}
                       previewShopData={previewShopData}
+                      wooFields={wooFields}
+                      wooFieldsLoading={wooFieldsLoading}
                     />
                   ))}
                 </div>
