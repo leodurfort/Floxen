@@ -1,7 +1,7 @@
 /**
  * AutoFillService
  *
- * Automatically fills all 63 OpenAI feed attributes from WooCommerce product data
+ * Automatically fills all 70 OpenAI feed attributes from WooCommerce product data
  * using the mapping specifications and transform functions.
  */
 
@@ -59,7 +59,7 @@ export class AutoFillService {
 
   /**
    * Auto-fill all OpenAI attributes from WooCommerce product data
-   * Returns a record of attribute -> value for all 63 fields
+   * Returns a record of attribute -> value for all 70 fields
    */
   autoFillProduct(wooProduct: any): Record<string, any> {
     const autoFilled: Record<string, any> = {};

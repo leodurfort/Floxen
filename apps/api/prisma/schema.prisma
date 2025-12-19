@@ -124,7 +124,7 @@ model Product {
   wooRawJson          Json?         @map("woo_raw_json")
 
   // OpenAI Feed Data (V2 Model with JSON Storage)
-  // All 63 OpenAI attributes stored as JSON for flexibility
+  // All 70 OpenAI attributes stored as JSON for flexibility
   openaiAutoFilled    Json          @default("{}") @map("openai_auto_filled")  // Auto-filled from WooCommerce
 
   // Legacy Feed Fields (kept for backward compatibility)

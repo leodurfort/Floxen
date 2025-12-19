@@ -35,7 +35,7 @@
 ### 1.2 Core Features
 
 1. **One-Click WooCommerce Connection** - OAuth-based connection to WooCommerce stores
-2. **Complete OpenAI Spec Visibility** - Display all 63+ OpenAI feed attributes with full metadata
+2. **Complete OpenAI Spec Visibility** - Display all 70 OpenAI feed attributes with full metadata
 3. **Intelligent Auto-Mapping** - Automatically fill OpenAI fields from WooCommerce data
 4. **Manual Edit Capability** - Edit any mapped field directly in the UI
 5. **AI-Powered Enrichment** - GPT-4 suggestions for title, description, category, and Q&A
@@ -56,7 +56,7 @@
 
    ┌──────────────────────────────────────────────────────────────────────────┐
    │  OPENAI SPECIFICATION      │  WOOCOMMERCE DATA      │  AI ENRICHMENT     │
-   │  (All 63+ attributes)      │  (Auto-filled/Edit)    │  (Where applicable)│
+   │  (All 70 attributes)       │  (Auto-filled/Edit)    │  (Where applicable)│
    │                            │                        │                    │
    │  • Attribute name          │  • Mapped value     ✏️ │  • AI suggestion   │
    │  • Data type               │  • Source field        │  • Select to use   │
@@ -79,7 +79,7 @@
 
 | Feature | Benefit |
 |---------|---------|
-| All 63+ OpenAI Attributes | See every field ChatGPT expects |
+| All 70 OpenAI Attributes | See every field ChatGPT expects |
 | Full Field Metadata | Data type, requirements, validation rules visible |
 | Smart Auto-Fill | WooCommerce data mapped automatically |
 | Targeted AI Enrichment | AI only for fields where it adds value |
@@ -140,7 +140,7 @@
 │                                                                             │
 │  COLUMN 1: OpenAI Specification (Static Reference)                          │
 │  ─────────────────────────────────────────────────                          │
-│  Complete spec for all 63+ attributes stored in code                        │
+│  Complete spec for all 70 attributes stored in code                         │
 │  Each attribute includes:                                                   │
 │    - attribute (field name)                                                 │
 │    - dataType                                                               │
@@ -1503,7 +1503,7 @@ export const CATEGORY_CONFIG: Record<OpenAIFieldCategory, { label: string; order
 | Reviews & Q&A | 6 | 0 | 1 (q_and_a) |
 | Related Products | 2 | 0 | 0 |
 | Geo Tagging | 2 | 0 | 0 |
-| **TOTAL** | **63** | **17** | **4** |
+| **TOTAL** | **70** | **17** | **4** |
 
 ---
 
@@ -2926,7 +2926,7 @@ GET    /api/v1/shops/:id/analytics/timeline
   
   // Summary
   "validationSummary": {
-    "totalFields": 63,
+    "totalFields": 70,
     "validFields": 58,
     "invalidFields": 2,
     "missingRequired": 1,

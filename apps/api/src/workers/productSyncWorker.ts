@@ -44,7 +44,7 @@ async function processProduct(data: any, shop: Shop, shopId: string) {
     });
   }
 
-  // Auto-fill all 63 OpenAI attributes from WooCommerce data
+  // Auto-fill all 70 OpenAI attributes from WooCommerce data
   const autoFillService = new AutoFillService(shop);
   const openaiAutoFilled = autoFillService.autoFillProduct(data.wooRawJson);
 
