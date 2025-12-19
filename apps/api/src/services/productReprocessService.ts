@@ -128,6 +128,12 @@ export async function reprocessAllProducts(shopId: string): Promise<number> {
     await reprocessProduct(product.id);
   }
 
+  // Update shop to track when products were last reprocessed
+  await prisma.shop.update({
+    where: { id: shopId },
+    data: { productsReprocessedAt: new Date() },
+  });
+
   logger.info('Reprocessed all products for shop', {
     shopId,
     productCount: products.length,

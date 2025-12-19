@@ -43,10 +43,11 @@ export default function ShopProductsPage() {
       .finally(() => setLoading(false));
   }, [accessToken, params?.id]);
 
-  // Determine if field mappings were updated after last sync
+  // Determine if field mappings were updated after products were last reprocessed
+  // Products auto-reprocess when mappings change, so this banner rarely shows
   const needsResync = shop?.fieldMappingsUpdatedAt && (
-    !shop.lastSyncAt ||
-    new Date(shop.fieldMappingsUpdatedAt) > new Date(shop.lastSyncAt)
+    !shop.productsReprocessedAt ||
+    new Date(shop.fieldMappingsUpdatedAt) > new Date(shop.productsReprocessedAt)
   );
 
   const handleResync = async () => {
