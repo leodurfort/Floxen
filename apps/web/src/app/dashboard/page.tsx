@@ -1,17 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { listShops } from '@/lib/api';
 import { useAuth } from '@/store/auth';
-import { Shop } from '@productsynch/shared';
+import { useShops } from '@/store/shops';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, accessToken, hydrate, hydrated } = useAuth();
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { shops, loading, loadShops } = useShops();
 
   useEffect(() => {
     hydrate();
@@ -24,32 +22,10 @@ export default function DashboardPage() {
   }, [hydrated, accessToken, router]);
 
   useEffect(() => {
-    if (!accessToken) return;
-    loadShops();
-  }, [accessToken]);
-
-  async function loadShops() {
-    if (!accessToken) return;
-    setLoading(true);
-    try {
-      const shopsRes = await listShops(accessToken);
-      setShops(shopsRes.shops);
-    } catch (err) {
-      // Log error with context for debugging
-      console.error('[Dashboard] Failed to load shops', {
-        error: err instanceof Error ? {
-          message: err.message,
-          name: err.name,
-          stack: err.stack,
-        } : err,
-        userId: user?.id,
-        timestamp: new Date().toISOString(),
-      });
-      // TODO: Show error toast/notification to user
-    } finally {
-      setLoading(false);
+    if (accessToken) {
+      loadShops(accessToken);
     }
-  }
+  }, [accessToken, loadShops]);
 
   if (!hydrated) {
     return (

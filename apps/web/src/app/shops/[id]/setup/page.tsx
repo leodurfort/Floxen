@@ -270,10 +270,10 @@ export default function SetupPage() {
     .filter((cat) => cat.fields.length > 0)
     .sort((a, b) => a.order - b.order);
 
-  if (loading) {
+  if (loading || wooFieldsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-white">Loading mappings...</div>
+        <div className="text-white">Loading field mappings...</div>
       </div>
     );
   }
