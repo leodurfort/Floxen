@@ -98,22 +98,48 @@ export function getShop(req: Request, res: Response) {
     });
 }
 
-export function updateShop(req: Request, res: Response) {
+// Fields that affect auto-fill when changed (used in shop.* mappings)
+const AUTOFILL_AFFECTING_FIELDS = new Set([
+  'sellerName',
+  'sellerUrl',
+  'sellerPrivacyPolicy',
+  'sellerTos',
+  'returnPolicy',
+  'returnWindow',
+]);
+
+export async function updateShop(req: Request, res: Response) {
   const parse = updateShopSchema.safeParse(req.body);
   if (!parse.success) {
     logger.warn('shops:update invalid', parse.error.flatten());
     return res.status(400).json({ error: parse.error.flatten() });
   }
-  updateShopRecord(req.params.id, parse.data)
-    .then((shop) => {
-      if (!shop) return res.status(404).json({ error: 'Shop not found' });
-      logger.info('shops:update', { shopId: shop.id });
-      return res.json({ shop });
-    })
-    .catch((err) => {
-      logger.error('shops:update error', err);
-      res.status(500).json({ error: err.message });
-    });
+
+  try {
+    const shop = await updateShopRecord(req.params.id, parse.data);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+
+    // Check if any auto-fill affecting fields were updated
+    const updatedFields = Object.keys(parse.data);
+    const affectsAutofill = updatedFields.some((field) => AUTOFILL_AFFECTING_FIELDS.has(field));
+
+    if (affectsAutofill && syncQueue) {
+      await syncQueue.queue.add('product-reprocess', {
+        shopId: shop.id,
+        reason: 'shop_settings_updated',
+      });
+      logger.info('shops:update:queued-reprocess', {
+        shopId: shop.id,
+        updatedFields: updatedFields.filter((f) => AUTOFILL_AFFECTING_FIELDS.has(f)),
+      });
+    }
+
+    logger.info('shops:update', { shopId: shop.id });
+    return res.json({ shop });
+  } catch (err: any) {
+    logger.error('shops:update error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 export function disconnectShop(req: Request, res: Response) {
@@ -489,6 +515,15 @@ export async function updateFieldMappings(req: Request, res: Response) {
         data: { fieldMappingsUpdatedAt: new Date() },
       });
       logger.info('shops:field-mappings:updated-at', { shopId: id });
+
+      // Queue background job to reprocess all products with new mappings
+      if (syncQueue) {
+        await syncQueue.queue.add('product-reprocess', {
+          shopId: id,
+          reason: 'field_mappings_updated',
+        });
+        logger.info('shops:field-mappings:queued-reprocess', { shopId: id });
+      }
     }
 
     // Handle propagation mode: clear product overrides if 'apply_all'

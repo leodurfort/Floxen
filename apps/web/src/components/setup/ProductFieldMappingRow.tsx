@@ -45,7 +45,8 @@ export function ProductFieldMappingRow({
   };
 
   // Determine field characteristics
-  const isToggleField = spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout';
+  const isEnableSearchField = spec.attribute === 'enable_search';
+  const isEnableCheckoutField = spec.attribute === 'enable_checkout';
   const isDimensions = spec.attribute === 'dimensions';
   const isShopManagedField = [
     'seller_name', 'seller_url', 'seller_privacy_policy',
@@ -57,7 +58,8 @@ export function ProductFieldMappingRow({
 
   // Can this field be customized at product level?
   const isFullyLocked = isLockedField && !allowsStaticOverride;
-  const isReadOnly = isToggleField || isDimensions || isShopManagedField || isFullyLocked;
+  // enable_search is editable, enable_checkout is disabled (coming soon)
+  const isReadOnly = isEnableCheckoutField || isDimensions || isShopManagedField || isFullyLocked;
 
   // Get the currently active mapping value
   const getCurrentMapping = (): string | null => {
@@ -169,7 +171,7 @@ export function ProductFieldMappingRow({
   };
 
   const effectiveMapping = getEffectiveMapping();
-  const computedPreview = effectiveMapping && !isToggleField
+  const computedPreview = effectiveMapping && !isEnableSearchField && !isEnableCheckoutField
     ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
     : null;
 
@@ -183,10 +185,15 @@ export function ProductFieldMappingRow({
   let previewDisplay = formattedValue || '';
   let previewStyle = 'text-white/80';
 
-  if (isToggleField) {
-    const isEnabled = shopMapping === 'ENABLED' || (spec.attribute === 'enable_search' && !shopMapping);
-    previewDisplay = isEnabled ? 'true' : 'false';
-    previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
+  if (isEnableSearchField) {
+    // For enable_search, show the current value (from override or API preview)
+    const currentValue = productOverride?.type === 'static' ? productOverride.value : apiPreviewValue;
+    previewDisplay = currentValue === 'true' ? 'true' : currentValue === 'false' ? 'false' : 'true';
+    previewStyle = previewDisplay === 'true' ? 'text-[#5df0c0]' : 'text-white/40';
+  } else if (isEnableCheckoutField) {
+    // enable_checkout is disabled - show current value
+    previewDisplay = apiPreviewValue === 'true' ? 'true' : 'false';
+    previewStyle = 'text-white/40';
   } else if (!previewValue && !isStaticMode) {
     previewDisplay = effectiveMapping ? 'No value' : 'Not mapped';
     previewStyle = 'text-white/40';
@@ -233,17 +240,39 @@ export function ProductFieldMappingRow({
 
       {/* Column 2: Mapping Controls */}
       <div className="flex flex-col gap-2">
-        {isReadOnly ? (
+        {isEnableSearchField ? (
+          // enable_search - Simple true/false toggle dropdown
+          <>
+            <select
+              value={productOverride?.type === 'static' ? productOverride.value : (apiPreviewValue || 'true')}
+              onChange={(e) => {
+                onOverrideChange(spec.attribute, { type: 'static', value: e.target.value });
+              }}
+              className="w-full px-3 py-2 bg-[#1a1d29] rounded-lg border border-white/10 text-white text-sm focus:border-[#5df0c0]/50 focus:outline-none"
+            >
+              <option value="true">Enabled (true)</option>
+              <option value="false">Disabled (false)</option>
+            </select>
+            {hasOverride && (
+              <button
+                onClick={handleReset}
+                className="text-xs text-white/50 hover:text-white/80 underline text-left"
+              >
+                Reset to Shop Default
+              </button>
+            )}
+          </>
+        ) : isReadOnly ? (
           // Read-only field display
           <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-center gap-2">
-            <span className="text-white text-sm">
-              {isToggleField ? 'Toggle (Read-only)' :
+            <span className="text-white/60 text-sm">
+              {isEnableCheckoutField ? 'Feature coming soon' :
                isDimensions ? 'Auto-populated' :
                isShopManagedField ? 'Managed in Shop' :
                lockedMappingValue || 'Locked'}
             </span>
-            <span className="text-white/40 cursor-help text-sm" title="This field cannot be customized at product level">
-              i
+            <span className="text-white/40 cursor-help text-sm" title={isEnableCheckoutField ? 'Checkout functionality is coming soon' : 'This field cannot be customized at product level'}>
+              ⓘ
             </span>
           </div>
         ) : (

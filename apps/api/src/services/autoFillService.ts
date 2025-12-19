@@ -107,23 +107,33 @@ export class AutoFillService {
     },
     productOverrides?: ProductFieldOverrides
   ): any {
-    // Handle product-level toggle fields
-    if (spec.attribute === 'enable_search') {
-      return productFlags?.enableSearch !== undefined
-        ? (productFlags.enableSearch ? 'true' : 'false')
-        : null;
-    }
-    if (spec.attribute === 'enable_checkout') {
-      return productFlags?.enableCheckout !== undefined
-        ? (productFlags.enableCheckout ? 'true' : 'false')
-        : null;
+    // Check for product-level override FIRST for toggle fields
+    // This allows product-level overrides to take priority over productFlags
+    const override = productOverrides?.[spec.attribute];
+
+    // Handle toggle fields (enable_search, enable_checkout)
+    if (spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout') {
+      // Product override takes priority
+      if (override?.type === 'static') {
+        return override.value;
+      }
+      // Fall back to productFlags (from feedEnableSearch/feedEnableCheckout columns)
+      if (spec.attribute === 'enable_search') {
+        return productFlags?.enableSearch !== undefined
+          ? (productFlags.enableSearch ? 'true' : 'false')
+          : null;
+      }
+      if (spec.attribute === 'enable_checkout') {
+        return productFlags?.enableCheckout !== undefined
+          ? (productFlags.enableCheckout ? 'true' : 'false')
+          : null;
+      }
     }
 
     const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);
     const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute);
 
-    // Check for product-level override FIRST (highest priority)
-    const override = productOverrides?.[spec.attribute];
+    // Check for product-level override (already extracted above)
     if (override) {
       // Static value - use directly, no transform
       if (override.type === 'static') {

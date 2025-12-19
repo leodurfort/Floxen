@@ -21,10 +21,16 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
       feedEnableSearch: true,
       feedEnableCheckout: true,
       productFieldOverrides: true,
+      updatedAt: true,
     },
   });
 
-  if (existing && existing.checksum === data.checksum) {
+  // Check if field mappings or shop settings changed since product was last updated
+  const mappingsChangedSinceLastUpdate = shop.fieldMappingsUpdatedAt &&
+    existing?.updatedAt &&
+    shop.fieldMappingsUpdatedAt > existing.updatedAt;
+
+  if (existing && existing.checksum === data.checksum && !mappingsChangedSinceLastUpdate) {
     logger.info(`product-sync: skipping unchanged product`, {
       shopId,
       wooProductId: data.wooProductId,
@@ -35,13 +41,15 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
   }
 
   if (existing) {
-    logger.info(`product-sync: updating product (checksum changed)`, {
+    const reason = mappingsChangedSinceLastUpdate ? 'mappings changed' : 'checksum changed';
+    logger.info(`product-sync: updating product (${reason})`, {
       shopId,
       wooProductId: data.wooProductId,
       wooParentId: data.wooParentId,
       title: data.wooTitle,
       oldChecksum: existing.checksum,
       newChecksum: data.checksum,
+      mappingsChangedSinceLastUpdate,
     });
   } else {
     logger.info(`product-sync: creating new product`, {
