@@ -360,7 +360,10 @@ export async function updateFieldMappings(req: Request, res: Response) {
     if (Object.keys(toggleUpdates).length) {
       await prisma.shop.update({
         where: { id },
-        data: toggleUpdates,
+        data: {
+          ...toggleUpdates,
+          fieldMappingsUpdatedAt: new Date(),
+        },
       });
       logger.info('shops:field-mappings:update toggle', {
         shopId: id,
@@ -473,6 +476,15 @@ export async function updateFieldMappings(req: Request, res: Response) {
         logger.error(`Error processing mapping for ${openaiAttribute}:`, mappingErr);
         results.errors++;
       }
+    }
+
+    // Update fieldMappingsUpdatedAt if any mappings were changed
+    if (results.created > 0 || results.updated > 0 || results.deleted > 0) {
+      await prisma.shop.update({
+        where: { id },
+        data: { fieldMappingsUpdatedAt: new Date() },
+      });
+      logger.info('shops:field-mappings:updated-at', { shopId: id });
     }
 
     logger.info('shops:field-mappings:update', { shopId: id, userId, results });

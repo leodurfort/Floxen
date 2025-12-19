@@ -21,6 +21,7 @@ export interface Shop {
   weightUnit?: string | null;
   isConnected: boolean;
   lastSyncAt?: string | null;
+  fieldMappingsUpdatedAt?: string | null;
   syncStatus: SyncStatus;
   syncEnabled: boolean;
   openaiEnabled: boolean;

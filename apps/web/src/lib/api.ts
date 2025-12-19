@@ -119,6 +119,12 @@ export async function listShops(token: string) {
   });
 }
 
+export async function getShop(shopId: string, token: string) {
+  return request<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function listProducts(shopId: string, token: string) {
   return request<{ products: Product[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(
     `/api/v1/shops/${shopId}/products`,
