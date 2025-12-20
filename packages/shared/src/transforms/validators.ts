@@ -345,22 +345,26 @@ export function validateDateRange(value: any, fieldName: string): ValidationResu
 
 /**
  * Validate string length
+ * Accepts both strings and numbers (numbers are coerced to strings for alphanumeric fields)
  */
 export function validateStringLength(
   value: any,
   fieldName: string,
   maxLength: number
 ): ValidationResult {
-  if (!value) return { valid: true }; // Empty is valid for optional fields
+  if (!value && value !== 0) return { valid: true }; // Empty is valid for optional fields
 
-  if (typeof value !== 'string') {
-    return { valid: false, error: `${fieldName} must be a string` };
+  // Coerce numbers to strings (e.g., WooCommerce product IDs are often numeric)
+  const stringValue = typeof value === 'number' ? String(value) : value;
+
+  if (typeof stringValue !== 'string') {
+    return { valid: false, error: `${fieldName} must be a string or number` };
   }
 
-  if (value.length > maxLength) {
+  if (stringValue.length > maxLength) {
     return {
       valid: false,
-      error: `${fieldName} exceeds maximum length of ${maxLength} characters (current: ${value.length})`,
+      error: `${fieldName} exceeds maximum length of ${maxLength} characters (current: ${stringValue.length})`,
     };
   }
 
