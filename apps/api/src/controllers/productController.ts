@@ -242,6 +242,8 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
         openaiAutoFilled: true,
         feedEnableSearch: true,
         feedEnableCheckout: true,
+        isValid: true,
+        validationErrors: true,
       },
     });
 
@@ -279,6 +281,8 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
       resolvedValues: product.openaiAutoFilled || {},
       feedEnableSearch: product.feedEnableSearch,
       feedEnableCheckout: product.feedEnableCheckout,
+      isValid: product.isValid,
+      validationErrors: product.validationErrors,
     });
   } catch (err) {
     logger.error('Failed to get product field overrides', {
