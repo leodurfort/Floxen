@@ -62,6 +62,10 @@ export interface Product {
   feedEnableSearch?: boolean;
   feedEnableCheckout?: boolean;
   updatedAt: string;
+
+  // Validation status
+  isValid?: boolean;
+  validationErrors?: Record<string, string[]> | null;
 }
 
 export interface ApiResponse<T> {

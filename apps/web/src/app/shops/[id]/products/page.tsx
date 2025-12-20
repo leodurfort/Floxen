@@ -71,7 +71,21 @@ export default function ShopProductsPage() {
                 {products.map((p) => (
                   <tr key={p.id}>
                     <td>
-                      <div className="font-semibold">{p.wooTitle}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{p.wooTitle}</span>
+                        {p.isValid === false && (
+                          <span
+                            className="text-amber-400 cursor-help"
+                            title={
+                              p.validationErrors
+                                ? `${Object.keys(p.validationErrors).length} validation issue(s)`
+                                : 'Validation issues detected'
+                            }
+                          >
+                            ⚠️
+                          </span>
+                        )}
+                      </div>
                       <div className="subtle text-sm">SKU {p.wooSku || '—'}</div>
                     </td>
                     <td>{p.wooPrice ? `$${p.wooPrice}` : '—'}</td>
