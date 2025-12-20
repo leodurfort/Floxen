@@ -107,7 +107,7 @@ export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string
 
   // return_url: where to redirect user after approval (frontend)
   // callback_url: where to POST credentials (API)
-  const returnUrl = `https://web-production-3178a.up.railway.app/dashboard?shop=${shopId}&connected=true`;
+  const returnUrl = `https://web-production-3178a.up.railway.app/shops?shop=${shopId}&connected=true`;
 
   const url = new URL('/wc-auth/v1/authorize', storeUrl);
   url.searchParams.set('app_name', 'ProductSynch');
