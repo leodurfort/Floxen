@@ -9,8 +9,28 @@ import {
   OpenAIFieldSpec,
   ProductFieldOverride,
   validateStaticValue,
+  StaticValueValidationResult,
 } from '@productsynch/shared';
 import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField, searchWooFields } from '@/lib/wooCommerceFields';
+
+// Validate resolved value against OpenAI spec
+function validateResolvedValue(
+  attribute: string,
+  value: any,
+  requirement: string
+): StaticValueValidationResult {
+  // Skip validation for empty optional/recommended fields
+  if (value === null || value === undefined || value === '') {
+    if (requirement === 'Required') {
+      return { isValid: false, error: 'Required field has no value' };
+    }
+    return { isValid: true };
+  }
+
+  // Convert to string for validation
+  const stringValue = typeof value === 'string' ? value : String(value);
+  return validateStaticValue(attribute, stringValue);
+}
 
 // Special dropdown values
 const STATIC_VALUE_OPTION = '__STATIC_VALUE__';
@@ -228,6 +248,16 @@ export function ProductFieldMappingRow({
     ? staticValue  // Show saved static value (not draft)
     : (apiPreviewValue ?? computedPreview);
   const formattedValue = formatFieldValue(previewValue);
+
+  // Validate the resolved value (for mapped values, not static - static is validated separately)
+  const resolvedValueValidation = useMemo(() => {
+    // Don't validate if in static mode (user is editing)
+    if (isStaticMode) return { isValid: true };
+    // Don't validate enable_search/enable_checkout (they have special handling)
+    if (isEnableSearchField || isEnableCheckoutField) return { isValid: true };
+    // Validate the resolved value
+    return validateResolvedValue(spec.attribute, previewValue, spec.requirement);
+  }, [spec.attribute, spec.requirement, previewValue, isStaticMode, isEnableSearchField, isEnableCheckoutField]);
 
   // Preview display
   let previewDisplay = formattedValue || '';
@@ -489,16 +519,30 @@ export function ProductFieldMappingRow({
       </div>
 
       {/* Column 3: Preview */}
-      <div className="flex items-start pt-0">
+      <div className="flex flex-col gap-1">
         <div
-          className="w-full !h-[40px] px-4 bg-[#1a1d29] rounded-lg border border-white/10 flex items-center overflow-hidden cursor-default"
+          className={`w-full !h-[40px] px-4 bg-[#1a1d29] rounded-lg border flex items-center overflow-hidden cursor-default ${
+            !resolvedValueValidation.isValid
+              ? 'border-amber-500/50'
+              : 'border-white/10'
+          }`}
           title={previewDisplay}
           style={{ height: '40px', minHeight: '40px', maxHeight: '40px' }}
         >
+          {!resolvedValueValidation.isValid && (
+            <span className="text-amber-400 mr-2 flex-shrink-0" title={resolvedValueValidation.error}>
+              ⚠️
+            </span>
+          )}
           <span className={`text-xs ${previewStyle} truncate block w-full leading-tight`}>
             {previewDisplay}
           </span>
         </div>
+        {!resolvedValueValidation.isValid && (
+          <span className="text-xs text-amber-400">
+            {resolvedValueValidation.error}
+          </span>
+        )}
       </div>
     </div>
   );
