@@ -28,6 +28,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   const isToggleField = spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout';
   const isCheckoutField = spec.attribute === 'enable_checkout';
   const isDimensions = spec.attribute === 'dimensions';
+  const isDimensionOrWeightField = ['dimensions', 'length', 'width', 'height', 'weight'].includes(spec.attribute);
   const isShopManagedField = [
     'seller_name',
     'seller_url',
@@ -82,6 +83,15 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <span className="text-white font-medium">{spec.attribute}</span>
+          {isDimensionOrWeightField && (
+            <div className="relative group">
+              <span className="text-white/60 cursor-help text-sm">ℹ️</span>
+              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
+                <div className="font-semibold text-white mb-1">Unit from WooCommerce</div>
+                <div>The unit is automatically derived from your WooCommerce store settings.</div>
+              </div>
+            </div>
+          )}
           <span className={`text-xs px-2 py-0.5 rounded border ${requirementColors[spec.requirement]}`}>
             {spec.requirement}
           </span>
