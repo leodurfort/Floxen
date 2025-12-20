@@ -67,6 +67,7 @@ interface Props {
   previewValue?: any;  // Pre-computed resolved value from API
   wooFields: WooCommerceField[];
   wooFieldsLoading: boolean;
+  serverValidationErrors?: string[] | null;  // Server-side validation errors for this field
 }
 
 export function ProductFieldMappingRow({
@@ -79,6 +80,7 @@ export function ProductFieldMappingRow({
   previewValue: apiPreviewValue,
   wooFields,
   wooFieldsLoading,
+  serverValidationErrors,
 }: Props) {
   const requirementColors = {
     Required: 'bg-red-500/20 text-red-300 border-red-500/30',
@@ -251,14 +253,24 @@ export function ProductFieldMappingRow({
   const formattedValue = formatFieldValue(previewValue);
 
   // Validate the resolved value (for mapped values, not static - static is validated separately)
+  // Prefer server-side validation errors when available (more comprehensive)
   const resolvedValueValidation = useMemo(() => {
     // Don't validate if in static mode (user is editing)
     if (isStaticMode) return { isValid: true };
     // Don't validate enable_search/enable_checkout (they have special handling)
     if (isEnableSearchField || isEnableCheckoutField) return { isValid: true };
-    // Validate the resolved value
+
+    // Use server-side validation errors if available (from validateFeedEntry)
+    if (serverValidationErrors && serverValidationErrors.length > 0) {
+      return {
+        isValid: false,
+        error: serverValidationErrors.join('; ')
+      };
+    }
+
+    // Fall back to client-side validation
     return validateResolvedValue(spec.attribute, previewValue, spec.requirement);
-  }, [spec.attribute, spec.requirement, previewValue, isStaticMode, isEnableSearchField, isEnableCheckoutField]);
+  }, [spec.attribute, spec.requirement, previewValue, isStaticMode, isEnableSearchField, isEnableCheckoutField, serverValidationErrors]);
 
   // Preview display
   let previewDisplay = formattedValue || '';

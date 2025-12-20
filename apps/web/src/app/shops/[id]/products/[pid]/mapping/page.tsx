@@ -18,6 +18,8 @@ interface ProductInfo {
   wooTitle: string;
   feedEnableSearch: boolean;
   feedEnableCheckout: boolean;
+  isValid?: boolean;
+  validationErrors?: Record<string, string[]> | null;
 }
 
 export default function ProductMappingPage() {
@@ -74,6 +76,8 @@ export default function ProductMappingPage() {
         wooTitle: data.productTitle,
         feedEnableSearch: data.feedEnableSearch,
         feedEnableCheckout: data.feedEnableCheckout,
+        isValid: data.isValid,
+        validationErrors: data.validationErrors,
       });
       setShopMappings(data.shopMappings || {});
       setProductOverrides(data.overrides || {});
@@ -157,6 +161,14 @@ export default function ProductMappingPage() {
         // Update with server response
         setProductOverrides(data.overrides || {});
         setResolvedValues(data.resolvedValues || {});
+        // Update validation status
+        if (product) {
+          setProduct({
+            ...product,
+            isValid: data.isValid,
+            validationErrors: data.validationErrors,
+          });
+        }
       } catch (err) {
         console.error('[ProductMapping] Failed to save override', err);
         // Revert optimistic update
@@ -228,10 +240,37 @@ export default function ProductMappingPage() {
                   {overrideCount} custom override{overrideCount !== 1 ? 's' : ''}
                 </span>
               )}
+              {product?.isValid === false && (
+                <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  ⚠️ {product.validationErrors ? Object.keys(product.validationErrors).length : 0} validation issue{product.validationErrors && Object.keys(product.validationErrors).length !== 1 ? 's' : ''}
+                </span>
+              )}
             </div>
             <p className="text-white/60">
               Customize field mappings for this specific product. Overrides take priority over shop-level mappings.
             </p>
+
+            {/* Validation Errors Banner */}
+            {product?.isValid === false && product?.validationErrors && Object.keys(product.validationErrors).length > 0 && (
+              <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className="text-amber-400 text-lg">⚠️</span>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-amber-400 mb-2">
+                      Validation Issues Detected
+                    </div>
+                    <ul className="space-y-1 text-xs text-amber-400/80">
+                      {Object.entries(product.validationErrors).map(([field, errors]) => (
+                        <li key={field}>
+                          <span className="font-medium text-amber-400">{field}:</span>{' '}
+                          {Array.isArray(errors) ? errors.join(', ') : String(errors)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
             {saving && (
               <div className="mt-2 text-sm text-[#5df0c0]">Saving changes...</div>
             )}
@@ -290,6 +329,7 @@ export default function ProductMappingPage() {
                       previewValue={resolvedValues[spec.attribute]}
                       wooFields={wooFields}
                       wooFieldsLoading={wooFieldsLoading}
+                      serverValidationErrors={product?.validationErrors?.[spec.attribute] || null}
                     />
                   ))}
                 </div>
