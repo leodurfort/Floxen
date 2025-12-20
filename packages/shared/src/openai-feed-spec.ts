@@ -184,7 +184,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'link',
     dataType: 'URL',
-    supportedValues: 'e.g. https://example.com/product/SKU12345',
+    supportedValues: null,
     description: 'Product detail page URL.',
     example: 'https://example.com/product/SKU12345',
     requirement: 'Required',
@@ -217,7 +217,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'product_category',
     dataType: 'String',
-    supportedValues: 'e.g. Apparel & Accessories > Shoes',
+    supportedValues: null,
     description: 'Category path using > separator.',
     example: 'Apparel & Accessories > Shoes',
     requirement: 'Required',
@@ -262,7 +262,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'dimensions',
     dataType: 'String',
-    supportedValues: 'e.g. 12x8x5 in',
+    supportedValues: null,
     description: 'Overall dimensions.',
     example: '12x8x5 in',
     requirement: 'Optional',
@@ -360,7 +360,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'image_link',
     dataType: 'URL',
-    supportedValues: 'e.g. https://example.com/image1.jpg',
+    supportedValues: null,
     description: 'Main product image URL.',
     example: 'https://example.com/image1.jpg',
     requirement: 'Required',
@@ -375,7 +375,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'additional_image_link',
     dataType: 'URL array',
-    supportedValues: 'e.g. https://example.com/image2.jpg,...',
+    supportedValues: null,
     description: 'Extra product images.',
     example: 'https://example.com/image2.jpg,https://example.com/image3.jpg',
     requirement: 'Optional',
@@ -391,7 +391,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'video_link',
     dataType: 'URL',
-    supportedValues: 'e.g. https://youtu.be/12345',
+    supportedValues: null,
     description: 'Product video.',
     example: 'https://youtu.be/12345',
     requirement: 'Optional',
@@ -404,7 +404,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'model_3d_link',
     dataType: 'URL',
-    supportedValues: 'e.g. https://example.com/model.glb',
+    supportedValues: null,
     description: '3D model URL.',
     example: 'https://example.com/model.glb',
     requirement: 'Optional',
@@ -422,7 +422,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'price',
     dataType: 'Number + currency',
-    supportedValues: 'e.g. 79.99 USD',
+    supportedValues: null,
     description: 'Regular price.',
     example: '79.99 USD',
     requirement: 'Required',
@@ -439,7 +439,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'sale_price',
     dataType: 'Number + currency',
-    supportedValues: 'e.g. 59.99 USD',
+    supportedValues: null,
     description: 'Discounted price.',
     example: '59.99 USD',
     requirement: 'Optional',
@@ -455,7 +455,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'sale_price_effective_date',
     dataType: 'Date range',
-    supportedValues: 'e.g. 2025-07-01 / 2025-07-15',
+    supportedValues: null,
     description: 'Sale window start and end dates.',
     example: '2025-07-01 / 2025-07-15',
     requirement: 'Optional',
@@ -531,7 +531,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'availability_date',
     dataType: 'Date',
-    supportedValues: 'e.g. 2025-12-01',
+    supportedValues: null,
     description: 'Availability date if preorder. Must be null if availability is not preorder.',
     example: '2025-12-01',
     requirement: 'Conditional',
@@ -560,7 +560,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'expiration_date',
     dataType: 'Date',
-    supportedValues: 'e.g. 2025-12-01',
+    supportedValues: null,
     description: 'Remove product after this date.',
     example: '2025-12-01',
     requirement: 'Optional',
@@ -659,7 +659,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'size_system',
     dataType: 'Country code',
-    supportedValues: 'e.g. US',
+    supportedValues: null,
     description: 'Size system.',
     example: 'US',
     requirement: 'Recommended',
@@ -794,7 +794,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'delivery_estimate',
     dataType: 'Date',
-    supportedValues: 'e.g. 2025-08-12',
+    supportedValues: null,
     description: 'Estimated arrival date.',
     example: '2025-08-12',
     requirement: 'Optional',
@@ -828,7 +828,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'seller_url',
     dataType: 'URL',
-    supportedValues: 'e.g. https://example.com/store',
+    supportedValues: null,
     description: 'Seller page URL.',
     example: 'https://example.com/store',
     requirement: 'Required',
@@ -844,7 +844,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'seller_privacy_policy',
     dataType: 'URL',
-    supportedValues: 'e.g. https://example.com/privacy',
+    supportedValues: null,
     description: 'Seller-specific privacy policy.',
     example: 'https://example.com/privacy',
     requirement: 'Conditional',
@@ -859,7 +859,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'seller_tos',
     dataType: 'URL',
-    supportedValues: 'e.g. https://example.com/terms',
+    supportedValues: null,
     description: 'Seller-specific terms of service.',
     example: 'https://example.com/terms',
     requirement: 'Conditional',
@@ -879,7 +879,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'return_policy',
     dataType: 'URL',
-    supportedValues: 'e.g. https://example.com/returns',
+    supportedValues: null,
     description: 'Return policy URL.',
     example: 'https://example.com/returns',
     requirement: 'Required',
@@ -894,7 +894,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'return_window',
     dataType: 'Integer',
-    supportedValues: 'e.g. 30',
+    supportedValues: null,
     description: 'Days allowed for return.',
     example: '30',
     requirement: 'Required',
@@ -927,7 +927,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'return_rate',
     dataType: 'Number',
-    supportedValues: 'e.g. 2%',
+    supportedValues: null,
     description: 'Return rate.',
     example: '2%',
     requirement: 'Recommended',
@@ -1107,7 +1107,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'geo_price',
     dataType: 'Number + currency',
-    supportedValues: 'e.g. 79.99 USD (California)',
+    supportedValues: null,
     description: 'Price by region.',
     example: '79.99 USD (California)',
     requirement: 'Recommended',
@@ -1120,7 +1120,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   {
     attribute: 'geo_availability',
     dataType: 'String',
-    supportedValues: 'e.g. in_stock (Texas), out_of_stock (New York)',
+    supportedValues: null,
     description: 'Availability per region.',
     example: 'in_stock (Texas), out_of_stock (New York)',
     requirement: 'Recommended',
