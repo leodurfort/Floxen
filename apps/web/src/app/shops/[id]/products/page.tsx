@@ -74,16 +74,26 @@ export default function ShopProductsPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{p.wooTitle}</span>
                         {p.isValid === false && (
-                          <span
-                            className="text-amber-400 cursor-help"
-                            title={
-                              p.validationErrors
-                                ? `${Object.keys(p.validationErrors).length} validation issue(s)`
-                                : 'Validation issues detected'
-                            }
-                          >
-                            ⚠️
-                          </span>
+                          <div className="relative group">
+                            <span className="text-amber-400 cursor-help">⚠️</span>
+                            <div className="absolute left-0 top-6 hidden group-hover:block z-20 w-80 p-3 bg-gray-900 border border-amber-500/30 rounded-lg shadow-xl text-xs">
+                              <div className="font-semibold text-amber-400 mb-2">
+                                {p.validationErrors
+                                  ? `${Object.keys(p.validationErrors).length} validation issue(s)`
+                                  : 'Validation issues detected'}
+                              </div>
+                              {p.validationErrors && (
+                                <ul className="space-y-1.5 max-h-48 overflow-y-auto">
+                                  {Object.entries(p.validationErrors).map(([field, errors]) => (
+                                    <li key={field} className="text-white/80">
+                                      <span className="text-white font-medium">{field}:</span>{' '}
+                                      {Array.isArray(errors) ? errors.join(', ') : String(errors)}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
                       <div className="subtle text-sm">SKU {p.wooSku || '—'}</div>
