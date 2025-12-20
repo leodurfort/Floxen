@@ -35,7 +35,7 @@ export default function ShopsPage() {
   // Poll for sync status when any shop is syncing
   useEffect(() => {
     const hasSyncingShops = shops.some(
-      (shop) => shop.syncStatus === 'PENDING' || shop.syncStatus === 'IN_PROGRESS'
+      (shop) => shop.syncStatus === 'PENDING' || shop.syncStatus === 'SYNCING'
     );
 
     if (hasSyncingShops && accessToken) {
