@@ -323,6 +323,23 @@ export function ProductFieldMappingRow({
           <span className={`text-xs px-2 py-0.5 rounded border ${requirementColors[spec.requirement]}`}>
             {spec.requirement}
           </span>
+          {/* Info Icon with Tooltip for Conditional Fields */}
+          {spec.requirement === 'Conditional' && (
+            <div className="relative group">
+              <span className="text-yellow-400 cursor-help text-sm">ℹ️</span>
+              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 p-3 bg-gray-900 border border-yellow-400/30 rounded-lg shadow-lg text-xs text-white/80">
+                <div className="font-semibold text-yellow-300 mb-1">Conditional Field</div>
+                {spec.dependencies ? (
+                  <div>
+                    <span className="text-white/60">Required when: </span>
+                    <span className="text-white/70">{spec.dependencies}</span>
+                  </div>
+                ) : (
+                  <span className="text-white/60">This field is conditionally required based on other fields.</span>
+                )}
+              </div>
+            </div>
+          )}
           {hasOverride && (
             <span className="text-xs px-2 py-0.5 rounded bg-[#5df0c0]/20 text-[#5df0c0] border border-[#5df0c0]/30">
               Custom
