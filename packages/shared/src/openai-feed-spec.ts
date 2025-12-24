@@ -995,7 +995,9 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     requirement: 'Recommended',
     dependencies: null,
     validationRules: ['Non-negative integer'],
-    wooCommerceMapping: null,
+    wooCommerceMapping: {
+      field: 'rating_count',
+    },
     isLocked: false,
     category: 'reviews_qanda',
   },
@@ -1008,7 +1010,9 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     requirement: 'Recommended',
     dependencies: null,
     validationRules: ['0-5 scale'],
-    wooCommerceMapping: null,
+    wooCommerceMapping: {
+      field: 'average_rating',
+    },
     isLocked: false,
     category: 'reviews_qanda',
   },
