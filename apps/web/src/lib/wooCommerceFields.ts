@@ -74,7 +74,8 @@ export function extractTransformedPreviewValue(
   let value = primaryValue;
 
   // Apply fallback only for default mappings
-  if ((value === null || value === undefined) && matchesDefault && effectiveMapping.fallback) {
+  // Empty string is also considered "no value" for fallback purposes
+  if ((value === null || value === undefined || value === '') && matchesDefault && effectiveMapping.fallback) {
     value = extractFieldValue(wooRawJson, effectiveMapping.fallback, shopData);
   }
 
