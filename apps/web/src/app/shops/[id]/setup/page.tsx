@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
@@ -15,18 +15,24 @@ export default function SetupPage() {
 
   const [mappings, setMappings] = useState<Record<string, string | null>>({});
   const [userMappings, setUserMappings] = useState<Record<string, string | null>>({});
-  const [specDefaults, setSpecDefaults] = useState<Record<string, string | null>>({});
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [previewProductJson, setPreviewProductJson] = useState<any | null>(null);
-  const [previewShopData, setPreviewShopData] = useState<any | null>(null);
+  const [previewProductJson, setPreviewProductJson] = useState<Record<string, unknown> | null>(null);
+  const [previewShopData, setPreviewShopData] = useState<Record<string, unknown> | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [wooFields, setWooFields] = useState<WooCommerceField[]>([]);
   const [wooFieldsLoading, setWooFieldsLoading] = useState(true);
+
+  // Refs for cleanup
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const saveErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Propagation modal state
   const [showPropagationModal, setShowPropagationModal] = useState(false);
@@ -38,6 +44,15 @@ export default function SetupPage() {
     hydrate();
   }, [hydrate]);
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (saveErrorTimeoutRef.current) {
+        clearTimeout(saveErrorTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Redirect if not logged in
   useEffect(() => {
     if (hydrated && !accessToken) {
@@ -46,16 +61,18 @@ export default function SetupPage() {
   }, [hydrated, accessToken, router]);
 
   // Load mappings, products, and woo fields on mount
+  // Wait for hydration to complete to ensure accessToken is properly loaded from localStorage
   useEffect(() => {
-    if (!accessToken || !params.id) return;
+    if (!hydrated || !accessToken || !params.id) return;
     loadMappings();
     loadProducts();
     loadWooFields();
-  }, [accessToken, params.id]);
+  }, [hydrated, accessToken, params.id]);
 
   async function loadMappings() {
     if (!accessToken) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/field-mappings`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -74,9 +91,9 @@ export default function SetupPage() {
 
       setMappings(loadedMappings);
       setUserMappings(data.userMappings || {});
-      setSpecDefaults(data.specDefaults || {});
     } catch (err) {
       console.error('[Setup] Failed to load mappings', err);
+      setLoadError('Failed to load field mappings. Please refresh the page.');
     } finally {
       setLoading(false);
     }
@@ -84,6 +101,8 @@ export default function SetupPage() {
 
   async function loadProducts() {
     if (!accessToken) return;
+    setProductsLoading(true);
+    setProductsError(null);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -97,6 +116,9 @@ export default function SetupPage() {
       }
     } catch (err) {
       console.error('[Setup] Failed to load products', err);
+      setProductsError('Failed to load products for preview.');
+    } finally {
+      setProductsLoading(false);
     }
   }
 
@@ -117,42 +139,55 @@ export default function SetupPage() {
     }
   }
 
-  async function loadProductWooData(productId: string) {
-    if (!accessToken) return;
-    setLoadingPreview(true);
-
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${productId}/woo-data`;
-
-    try {
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to load product WooCommerce data: ${res.status} ${errorText}`);
-      }
-
-      const data = await res.json();
-      setPreviewProductJson(data.wooData);
-      setPreviewShopData(data.shopData);
-    } catch (err) {
-      console.error('[Setup] Failed to load product WooCommerce data:', err);
-      setPreviewProductJson(null);
-    } finally {
-      setLoadingPreview(false);
-    }
-  }
-
   // Load WooCommerce data when selected product changes
   useEffect(() => {
-    if (selectedProductId && accessToken) {
-      loadProductWooData(selectedProductId);
-    } else {
+    if (!selectedProductId || !accessToken) {
       setPreviewProductJson(null);
       setPreviewShopData(null);
+      return;
     }
-  }, [selectedProductId, accessToken]);
+
+    // Cancel any in-flight request
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    async function fetchPreview() {
+      setLoadingPreview(true);
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${selectedProductId}/woo-data`;
+
+      try {
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Failed to load product WooCommerce data: ${res.status} ${errorText}`);
+        }
+
+        const data = await res.json();
+        setPreviewProductJson(data.wooData);
+        setPreviewShopData(data.shopData);
+      } catch (err) {
+        // Don't update state if request was aborted
+        if (err instanceof Error && err.name === 'AbortError') return;
+        console.error('[Setup] Failed to load product WooCommerce data:', err);
+        setPreviewProductJson(null);
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoadingPreview(false);
+        }
+      }
+    }
+
+    fetchPreview();
+
+    return () => {
+      controller.abort();
+    };
+  }, [selectedProductId, accessToken, params.id]);
 
   // Save mapping with propagation mode
   async function saveMappingChange(
@@ -200,8 +235,11 @@ export default function SetupPage() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save field mapping';
       setSaveError(errorMessage);
 
-      // Auto-clear error after 5 seconds
-      setTimeout(() => setSaveError(null), 5000);
+      // Auto-clear error after 5 seconds (with cleanup)
+      if (saveErrorTimeoutRef.current) {
+        clearTimeout(saveErrorTimeoutRef.current);
+      }
+      saveErrorTimeoutRef.current = setTimeout(() => setSaveError(null), 5000);
     } finally {
       setSaving(false);
     }
@@ -274,6 +312,22 @@ export default function SetupPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-white">Loading field mappings...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="text-red-400 mb-4">{loadError}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-[#5df0c0]/10 text-[#5df0c0] rounded-lg border border-[#5df0c0]/30 hover:bg-[#5df0c0]/20"
+          >
+            Refresh Page
+          </button>
+        </div>
       </div>
     );
   }
@@ -359,11 +413,21 @@ export default function SetupPage() {
                   <span className="text-xs text-[#5df0c0]">Loading...</span>
                 )}
               </div>
-              <ProductSelector
-                products={products}
-                value={selectedProductId}
-                onChange={setSelectedProductId}
-              />
+              {productsError ? (
+                <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+                  {productsError}
+                </div>
+              ) : productsLoading ? (
+                <div className="px-4 py-2 bg-[#252936] rounded-lg border border-white/10 text-sm text-white/50">
+                  Loading products...
+                </div>
+              ) : (
+                <ProductSelector
+                  products={products}
+                  value={selectedProductId}
+                  onChange={setSelectedProductId}
+                />
+              )}
             </div>
           </div>
 
