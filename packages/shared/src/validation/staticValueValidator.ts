@@ -63,6 +63,8 @@ export function validateStaticValue(
       return validateNumberWithUnit(trimmedValue);
 
     case 'String (alphanumeric)':
+      return validateAlphanumericString(trimmedValue, spec.validationRules);
+
     case 'String (numeric)':
     case 'String (UTF-8 text)':
     case 'String':
@@ -223,6 +225,28 @@ function validateNumberWithUnit(value: string): StaticValueValidationResult {
   const numPart = parseFloat(value.split(' ')[0]);
   if (isNaN(numPart) || numPart < 0) {
     return { isValid: false, error: 'Must be a positive number with unit' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Validate alphanumeric string values (letters, numbers, dashes, underscores, spaces)
+ */
+function validateAlphanumericString(value: string, validationRules: string[]): StaticValueValidationResult {
+  // First check string validation rules (like max length)
+  const stringResult = validateString(value, validationRules);
+  if (!stringResult.isValid) {
+    return stringResult;
+  }
+
+  // Check for alphanumeric characters only
+  const alphanumericRegex = /^[a-zA-Z0-9\-_\s]+$/;
+  if (!alphanumericRegex.test(value)) {
+    return {
+      isValid: false,
+      error: 'Must be alphanumeric (letters, numbers, dashes, underscores only)',
+    };
   }
 
   return { isValid: true };
