@@ -89,10 +89,11 @@ export default function ShopProductsPage() {
                 <tr>
                   <th className="w-16">ID</th>
                   <th className="w-16">Image</th>
-                  <th>Description</th>
+                  <th>Name</th>
                   <th>URL</th>
                   <th className="w-24">Price</th>
                   <th className="w-24">Status</th>
+                  <th className="w-24">Overrides</th>
                   <th className="w-20">Valid</th>
                   <th>Last Modified</th>
                   <th className="w-24">Actions</th>
@@ -128,9 +129,9 @@ export default function ShopProductsPage() {
                         )}
                       </td>
 
-                      {/* Description */}
+                      {/* Name */}
                       <td className="text-sm text-white/80 max-w-[200px]">
-                        {truncate(p.wooDescription, 60)}
+                        {truncate(p.wooTitle, 60)}
                       </td>
 
                       {/* URL */}
@@ -156,6 +157,15 @@ export default function ShopProductsPage() {
 
                       {/* Status */}
                       <td className="subtle text-sm">{p.syncStatus}</td>
+
+                      {/* Overrides */}
+                      <td className="text-sm text-center">
+                        {p.productFieldOverrides && Object.keys(p.productFieldOverrides).length > 0 ? (
+                          <span className="text-[#5df0c0]">{Object.keys(p.productFieldOverrides).length}</span>
+                        ) : (
+                          <span className="text-white/40">—</span>
+                        )}
+                      </td>
 
                       {/* Validation */}
                       <td>
