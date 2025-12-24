@@ -102,13 +102,13 @@ export function ProductFieldMappingRow({
 
   const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);
   const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute);
-  // Fields with hardcoded transforms that ignore the mapping selection (hide WooCommerce dropdown options)
-  const hideWooFieldOptions = spec.attribute === 'sale_price_effective_date';
+  // Fields with hardcoded transforms that ignore the mapping selection
+  const isTransformLockedField = spec.attribute === 'sale_price_effective_date';
 
   // Can this field be customized at product level?
   const isFullyLocked = isLockedField && !allowsStaticOverride;
   // enable_search is editable, enable_checkout is disabled (coming soon)
-  const isReadOnly = isEnableCheckoutField || isDimensions || isShopManagedField || isFullyLocked;
+  const isReadOnly = isEnableCheckoutField || isDimensions || isShopManagedField || isFullyLocked || isTransformLockedField;
 
   // Get the currently active mapping value
   const getCurrentMapping = (): string | null => {
@@ -404,6 +404,7 @@ export function ProductFieldMappingRow({
               {isEnableCheckoutField ? 'Feature coming soon' :
                isDimensions ? 'Auto-populated' :
                isShopManagedField ? 'Managed in Shops page' :
+               isTransformLockedField ? 'Auto-combined' :
                lockedMappingValue || 'Locked'}
             </span>
             <div className="relative group mt-[2px]">
@@ -424,6 +425,11 @@ export function ProductFieldMappingRow({
                     <div className="font-semibold text-white mb-1">Update in Shops page</div>
                     <div className="mb-2">Edit this value from the Shops page to change the feed output.</div>
                     <Link href="/shops" className="text-[#5df0c0] underline">Go to Shops</Link>
+                  </div>
+                ) : isTransformLockedField ? (
+                  <div>
+                    <div className="font-semibold text-white mb-1">Auto-combined field</div>
+                    <div>Combines date_on_sale_from and date_on_sale_to from WooCommerce.</div>
                   </div>
                 ) : (
                   <div>
@@ -461,19 +467,17 @@ export function ProductFieldMappingRow({
               {/* Dropdown Panel */}
               {isDropdownOpen && !wooFieldsLoading && (
                 <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[320px] overflow-hidden flex flex-col">
-                  {/* Search Bar (hidden when WooCommerce fields are hidden) */}
-                  {!hideWooFieldOptions && (
-                    <div className="p-3 border-b border-white/10">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search fields..."
-                        className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
-                        autoFocus
-                      />
-                    </div>
-                  )}
+                  {/* Search Bar */}
+                  <div className="p-3 border-b border-white/10">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search fields..."
+                      className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+                      autoFocus
+                    />
+                  </div>
 
                   {/* Options List */}
                   <div className="overflow-y-auto">
@@ -503,8 +507,8 @@ export function ProductFieldMappingRow({
                       </button>
                     )}
 
-                    {/* WooCommerce fields (hidden for transform-locked fields like sale_price_effective_date) */}
-                    {!isLockedField && !hideWooFieldOptions && filteredFields.length > 0 ? (
+                    {/* WooCommerce fields */}
+                    {!isLockedField && filteredFields.length > 0 ? (
                       filteredFields.map((field) => (
                         <button
                           key={field.value}
@@ -520,7 +524,7 @@ export function ProductFieldMappingRow({
                           )}
                         </button>
                       ))
-                    ) : !isLockedField && !hideWooFieldOptions && searchQuery ? (
+                    ) : !isLockedField && searchQuery ? (
                       <div className="p-4 text-center text-white/40 text-sm">No fields found</div>
                     ) : null}
                   </div>
