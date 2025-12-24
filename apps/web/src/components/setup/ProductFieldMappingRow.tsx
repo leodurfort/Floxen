@@ -102,6 +102,8 @@ export function ProductFieldMappingRow({
 
   const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);
   const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute);
+  // Fields with hardcoded transforms that ignore the mapping selection (hide WooCommerce dropdown options)
+  const hideWooFieldOptions = spec.attribute === 'sale_price_effective_date';
 
   // Can this field be customized at product level?
   const isFullyLocked = isLockedField && !allowsStaticOverride;
@@ -459,17 +461,19 @@ export function ProductFieldMappingRow({
               {/* Dropdown Panel */}
               {isDropdownOpen && !wooFieldsLoading && (
                 <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[320px] overflow-hidden flex flex-col">
-                  {/* Search Bar */}
-                  <div className="p-3 border-b border-white/10">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search fields..."
-                      className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
-                      autoFocus
-                    />
-                  </div>
+                  {/* Search Bar (hidden when WooCommerce fields are hidden) */}
+                  {!hideWooFieldOptions && (
+                    <div className="p-3 border-b border-white/10">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search fields..."
+                        className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+                        autoFocus
+                      />
+                    </div>
+                  )}
 
                   {/* Options List */}
                   <div className="overflow-y-auto">
@@ -499,8 +503,8 @@ export function ProductFieldMappingRow({
                       </button>
                     )}
 
-                    {/* WooCommerce fields */}
-                    {!isLockedField && filteredFields.length > 0 ? (
+                    {/* WooCommerce fields (hidden for transform-locked fields like sale_price_effective_date) */}
+                    {!isLockedField && !hideWooFieldOptions && filteredFields.length > 0 ? (
                       filteredFields.map((field) => (
                         <button
                           key={field.value}
@@ -516,7 +520,7 @@ export function ProductFieldMappingRow({
                           )}
                         </button>
                       ))
-                    ) : !isLockedField && searchQuery ? (
+                    ) : !isLockedField && !hideWooFieldOptions && searchQuery ? (
                       <div className="p-4 text-center text-white/40 text-sm">No fields found</div>
                     ) : null}
                   </div>
