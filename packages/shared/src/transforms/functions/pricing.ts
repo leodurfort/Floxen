@@ -34,16 +34,21 @@ export const formatPriceWithCurrency: TransformFunction = (price, _, shop) => {
  * Format sale date range
  *
  * Converts WooCommerce sale dates to OpenAI format: "YYYY-MM-DD / YYYY-MM-DD"
+ * Only returns a date range if the product has an active sale_price.
  *
  * @param dateFrom - Start date (unused, extracted from wooProduct)
  * @param wooProduct - WooCommerce product object
- * @returns Formatted date range or null if dates missing
+ * @returns Formatted date range or null if sale_price is missing or dates are missing
  *
  * @example
- * // Input: date_on_sale_from="2025-07-01", date_on_sale_to="2025-07-15"
+ * // Input: sale_price="59.99", date_on_sale_from="2025-07-01", date_on_sale_to="2025-07-15"
  * // Output: "2025-07-01 / 2025-07-15"
  */
 export const formatSaleDateRange: TransformFunction = (dateFrom, wooProduct) => {
+  // Only show date range if there's an active sale price
+  const salePrice = wooProduct.sale_price;
+  if (!salePrice || salePrice === '') return null;
+
   const from = wooProduct.date_on_sale_from;
   const to = wooProduct.date_on_sale_to;
 
