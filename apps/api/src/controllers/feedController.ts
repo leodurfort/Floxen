@@ -9,6 +9,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
+import { OPENAI_FEED_SPEC } from '@productsynch/shared';
 
 /**
  * Get raw JSON feed for a shop
@@ -114,6 +115,7 @@ export async function getFeedHtml(req: Request, res: Response) {
 
 /**
  * Build the HTML page for feed visualization
+ * Shows all 70 OpenAI fields in spec order
  */
 function buildFeedHtml(
   snapshot: any,
@@ -122,60 +124,78 @@ function buildFeedHtml(
   seller: any,
   shopId: string
 ): string {
-  // Get all unique keys from items for table headers
-  const allKeys = new Set<string>();
+  // Use all 70 fields from the spec in order
+  const allFields = OPENAI_FEED_SPEC.map(spec => ({
+    attribute: spec.attribute,
+    requirement: spec.requirement,
+    category: spec.category,
+  }));
+
+  // Count filled vs null fields across all items
+  const fieldStats = new Map<string, number>();
+  allFields.forEach(f => fieldStats.set(f.attribute, 0));
   items.forEach(item => {
-    Object.keys(item).forEach(key => allKeys.add(key));
+    allFields.forEach(f => {
+      if (item[f.attribute] !== null && item[f.attribute] !== undefined) {
+        fieldStats.set(f.attribute, (fieldStats.get(f.attribute) || 0) + 1);
+      }
+    });
   });
 
-  // Priority order for columns
-  const priorityKeys = [
-    'id', 'title', 'price', 'availability', 'enable_search', 'enable_checkout',
-    'image_link', 'brand', 'product_category', 'inventory_quantity'
-  ];
-
-  const sortedKeys = [
-    ...priorityKeys.filter(k => allKeys.has(k)),
-    ...Array.from(allKeys).filter(k => !priorityKeys.includes(k)).sort()
-  ];
+  const filledFieldCount = Array.from(fieldStats.values()).filter(v => v > 0).length;
 
   const tableRows = items.map((item, idx) => {
-    const cells = sortedKeys.map(key => {
+    const cells = allFields.map(({ attribute: key }) => {
       let value = item[key];
 
       // Format special values
       if (value === null || value === undefined) {
-        return '<td class="null">-</td>';
+        return '<td class="cell-null">—</td>';
       }
       if (typeof value === 'object') {
         value = JSON.stringify(value);
       }
 
       // Truncate long values
-      const displayValue = String(value).length > 100
-        ? String(value).substring(0, 100) + '...'
+      const displayValue = String(value).length > 80
+        ? String(value).substring(0, 80) + '...'
         : String(value);
 
       // Special styling for certain columns
       if (key === 'image_link') {
-        return `<td><img src="${value}" alt="" style="max-width: 60px; max-height: 60px;" onerror="this.style.display='none'"/></td>`;
+        return `<td class="cell-image"><img src="${escapeHtml(value)}" alt="" onerror="this.style.display='none'; this.parentNode.innerHTML='—'"/></td>`;
       }
       if (key === 'enable_search' || key === 'enable_checkout') {
         const isTrue = value === 'true' || value === true;
-        return `<td class="${isTrue ? 'badge-green' : 'badge-gray'}">${value}</td>`;
+        return `<td class="cell-badge ${isTrue ? 'badge-green' : 'badge-gray'}">${value}</td>`;
       }
       if (key === 'availability') {
         const colorClass = value === 'in_stock' ? 'badge-green' : value === 'out_of_stock' ? 'badge-red' : 'badge-yellow';
-        return `<td class="${colorClass}">${value}</td>`;
+        return `<td class="cell-badge ${colorClass}">${value}</td>`;
       }
 
-      return `<td title="${String(value).replace(/"/g, '&quot;')}">${escapeHtml(displayValue)}</td>`;
+      return `<td class="cell-value" title="${escapeHtml(String(value))}">${escapeHtml(displayValue)}</td>`;
     }).join('');
 
-    return `<tr>${cells}</tr>`;
+    return `<tr><td class="row-num">${idx + 1}</td>${cells}</tr>`;
   }).join('');
 
-  const tableHeaders = sortedKeys.map(key => `<th>${escapeHtml(key)}</th>`).join('');
+  // Build headers with requirement badges
+  const tableHeaders = allFields.map(({ attribute, requirement, category }) => {
+    const reqClass = requirement === 'Required' ? 'req-required' :
+                     requirement === 'Recommended' ? 'req-recommended' :
+                     requirement === 'Conditional' ? 'req-conditional' : 'req-optional';
+    const filled = fieldStats.get(attribute) || 0;
+    const fillPercent = items.length > 0 ? Math.round((filled / items.length) * 100) : 0;
+    const fillClass = fillPercent === 100 ? 'fill-100' : fillPercent > 0 ? 'fill-partial' : 'fill-0';
+
+    return `<th class="${reqClass}">
+      <div class="th-content">
+        <span class="th-name">${escapeHtml(attribute)}</span>
+        <span class="th-meta ${fillClass}">${fillPercent}%</span>
+      </div>
+    </th>`;
+  }).join('');
 
   return `
 <!DOCTYPE html>
@@ -189,27 +209,29 @@ function buildFeedHtml(
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 0;
       background: #f5f5f5;
       color: #333;
     }
-    .container { max-width: 100%; overflow-x: auto; }
     .header {
-      background: #1a1a2e;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       color: white;
       padding: 20px 30px;
-      margin: -20px -20px 20px -20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 15px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    .header h1 { margin: 0; font-size: 1.5rem; }
-    .header-meta { font-size: 0.9rem; opacity: 0.8; }
+    .header h1 { margin: 0; font-size: 1.4rem; }
+    .header-meta { font-size: 0.85rem; opacity: 0.8; }
+    .content { padding: 20px; }
     .stats {
       display: flex;
-      gap: 20px;
+      gap: 15px;
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
@@ -218,9 +240,28 @@ function buildFeedHtml(
       padding: 15px 20px;
       border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      min-width: 120px;
     }
-    .stat-value { font-size: 1.5rem; font-weight: 600; color: #1a1a2e; }
-    .stat-label { font-size: 0.8rem; color: #666; margin-top: 4px; }
+    .stat-value { font-size: 1.4rem; font-weight: 600; color: #1a1a2e; }
+    .stat-label { font-size: 0.75rem; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .legend {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+    }
+    .legend-title { font-weight: 600; font-size: 0.85rem; color: #333; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+    .legend-dot.req { background: #dc3545; }
+    .legend-dot.rec { background: #fd7e14; }
+    .legend-dot.cond { background: #6f42c1; }
+    .legend-dot.opt { background: #6c757d; }
     .seller-info {
       background: white;
       padding: 15px 20px;
@@ -228,76 +269,109 @@ function buildFeedHtml(
       margin-bottom: 20px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    .seller-info h3 { margin: 0 0 10px 0; font-size: 1rem; }
-    .seller-info p { margin: 5px 0; font-size: 0.9rem; color: #555; }
-    .actions { margin-bottom: 20px; }
-    .btn {
-      display: inline-block;
-      padding: 10px 20px;
-      background: #1a1a2e;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      margin-right: 10px;
+    .seller-info h3 { margin: 0 0 10px 0; font-size: 0.95rem; color: #1a1a2e; }
+    .seller-info p { margin: 5px 0; font-size: 0.85rem; color: #555; }
+    .seller-info a { color: #007bff; }
+    .table-container {
+      overflow-x: auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    .btn:hover { background: #2d2d44; }
-    .btn-secondary { background: #6c757d; }
     table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
     th {
       background: #1a1a2e;
       color: white;
-      padding: 12px 10px;
+      padding: 0;
       text-align: left;
       font-weight: 500;
-      white-space: nowrap;
       position: sticky;
       top: 0;
+      z-index: 10;
+      border-left: 1px solid #2d2d44;
     }
+    th:first-child { border-left: none; }
+    .th-content {
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .th-name { font-size: 0.75rem; white-space: nowrap; }
+    .th-meta {
+      font-size: 0.65rem;
+      padding: 2px 5px;
+      border-radius: 3px;
+      display: inline-block;
+      width: fit-content;
+    }
+    .fill-100 { background: #28a745; color: white; }
+    .fill-partial { background: #ffc107; color: #333; }
+    .fill-0 { background: #6c757d; color: white; }
+    .req-required { border-top: 3px solid #dc3545; }
+    .req-recommended { border-top: 3px solid #fd7e14; }
+    .req-conditional { border-top: 3px solid #6f42c1; }
+    .req-optional { border-top: 3px solid #6c757d; }
     td {
-      padding: 10px;
+      padding: 8px;
       border-bottom: 1px solid #eee;
-      max-width: 300px;
+      border-left: 1px solid #eee;
+      max-width: 200px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      vertical-align: top;
     }
+    td:first-child { border-left: none; }
     tr:hover td { background: #f8f9fa; }
-    .null { color: #aaa; font-style: italic; }
+    .row-num {
+      background: #f8f9fa;
+      color: #666;
+      font-weight: 500;
+      text-align: center;
+      width: 40px;
+      position: sticky;
+      left: 0;
+      z-index: 5;
+    }
+    .cell-null { color: #ccc; text-align: center; font-size: 0.9rem; }
+    .cell-value { color: #333; }
+    .cell-image img { max-width: 50px; max-height: 50px; border-radius: 4px; }
+    .cell-badge { text-align: center; }
     .badge-green {
       background: #d4edda;
       color: #155724;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
       font-weight: 500;
     }
     .badge-red {
       background: #f8d7da;
       color: #721c24;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
       font-weight: 500;
     }
     .badge-yellow {
       background: #fff3cd;
       color: #856404;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
       font-weight: 500;
     }
     .badge-gray {
       background: #e9ecef;
       color: #495057;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
       font-weight: 500;
     }
     .json-link {
@@ -307,6 +381,7 @@ function buildFeedHtml(
       border-radius: 4px;
       text-decoration: none;
       font-size: 0.85rem;
+      font-weight: 500;
     }
     .json-link:hover { background: #218838; }
   </style>
@@ -320,20 +395,36 @@ function buildFeedHtml(
     <a href="/api/v1/feed/${shopId}" class="json-link">View Raw JSON</a>
   </div>
 
-  <div class="container">
+  <div class="content">
     <div class="stats">
       <div class="stat">
         <div class="stat-value">${items.length}</div>
-        <div class="stat-label">Products in Feed</div>
+        <div class="stat-label">Products</div>
       </div>
       <div class="stat">
-        <div class="stat-value">${sortedKeys.length}</div>
-        <div class="stat-label">Fields per Product</div>
+        <div class="stat-value">${allFields.length}</div>
+        <div class="stat-label">Total Fields</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${filledFieldCount}</div>
+        <div class="stat-label">Fields with Data</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${allFields.length - filledFieldCount}</div>
+        <div class="stat-label">Empty Fields</div>
       </div>
       <div class="stat">
         <div class="stat-value">${new Date(snapshot.generatedAt).toLocaleString()}</div>
-        <div class="stat-label">Generated At</div>
+        <div class="stat-label">Generated</div>
       </div>
+    </div>
+
+    <div class="legend">
+      <span class="legend-title">Field Requirements:</span>
+      <span class="legend-item"><span class="legend-dot req"></span> Required</span>
+      <span class="legend-item"><span class="legend-dot rec"></span> Recommended</span>
+      <span class="legend-item"><span class="legend-dot cond"></span> Conditional</span>
+      <span class="legend-item"><span class="legend-dot opt"></span> Optional</span>
     </div>
 
     <div class="seller-info">
@@ -345,16 +436,16 @@ function buildFeedHtml(
       <p><strong>Terms of Service:</strong> ${seller.terms_of_service ? `<a href="${escapeHtml(seller.terms_of_service)}" target="_blank">View</a>` : '-'}</p>
     </div>
 
-    <h2 style="margin: 20px 0 15px 0; font-size: 1.1rem;">Products (${items.length})</h2>
-
-    <table>
-      <thead>
-        <tr>${tableHeaders}</tr>
-      </thead>
-      <tbody>
-        ${tableRows || '<tr><td colspan="100%" style="text-align: center; padding: 40px;">No products in feed</td></tr>'}
-      </tbody>
-    </table>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr><th class="row-num">#</th>${tableHeaders}</tr>
+        </thead>
+        <tbody>
+          ${tableRows || '<tr><td colspan="71" style="text-align: center; padding: 40px;">No products in feed</td></tr>'}
+        </tbody>
+      </table>
+    </div>
   </div>
 </body>
 </html>

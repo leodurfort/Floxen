@@ -5,6 +5,9 @@ import { logger } from '../lib/logger';
 // Create a set of valid OpenAI field names for filtering
 const VALID_OPENAI_FIELDS = new Set(OPENAI_FEED_SPEC.map(spec => spec.attribute));
 
+// Ordered list of all 70 OpenAI field attributes (for consistent output)
+const ALL_OPENAI_FIELDS = OPENAI_FEED_SPEC.map(spec => spec.attribute);
+
 /**
  * Validation statistics for feed generation
  */
@@ -55,24 +58,27 @@ export function generateFeedPayload(
         // Get all auto-filled values from WooCommerce (includes all OpenAI fields)
         const autoFilled = (p.openaiAutoFilled as Record<string, any>) || {};
 
-        // Build feed item with auto-filled data
-        const feedItem = {
-          ...autoFilled,
-          // Ensure ID has fallback
-          id: autoFilled.id || `${shop.id}-${p.wooProductId}`,
-          // Override with current product-level flags (source of truth)
-          enable_search: p.feedEnableSearch ? 'true' : 'false',
-          enable_checkout: p.feedEnableCheckout ? 'true' : 'false',
-        };
+        // Build complete feed item with ALL 70 fields
+        // Fields without values will be null (consistent structure for OpenAI)
+        const completeItem: Record<string, any> = {};
 
-        // Filter to only include fields that are in the OpenAI spec
-        // This removes any legacy/non-spec fields that might be in autoFilled
-        const validatedItem: Record<string, any> = {};
-        for (const [key, value] of Object.entries(feedItem)) {
-          if (VALID_OPENAI_FIELDS.has(key)) {
-            validatedItem[key] = value;
+        for (const field of ALL_OPENAI_FIELDS) {
+          // Special handling for certain fields
+          if (field === 'id') {
+            completeItem[field] = autoFilled.id || `${shop.id}-${p.wooProductId}`;
+          } else if (field === 'enable_search') {
+            completeItem[field] = p.feedEnableSearch ? 'true' : 'false';
+          } else if (field === 'enable_checkout') {
+            completeItem[field] = p.feedEnableCheckout ? 'true' : 'false';
           } else {
-            // Log warning for non-spec fields (helps debugging)
+            // Use auto-filled value or null
+            completeItem[field] = autoFilled[field] ?? null;
+          }
+        }
+
+        // Log any non-spec fields that were in autoFilled (for debugging)
+        for (const key of Object.keys(autoFilled)) {
+          if (!VALID_OPENAI_FIELDS.has(key)) {
             logger.warn('[FeedService] Skipping non-spec field', {
               shopId: shop.id,
               productId: p.wooProductId.toString(),
@@ -81,7 +87,7 @@ export function generateFeedPayload(
           }
         }
 
-        return validatedItem;
+        return completeItem;
       })
     .map((item, index) => {
       validationStats.total++;
