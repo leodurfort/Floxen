@@ -19,6 +19,7 @@ import {
   validateDate,
   validateDateRange,
   validateStringLength,
+  validateAlphanumericString,
   validatePositiveNumber,
   type ValidationResult,
 } from './validators';
@@ -251,7 +252,7 @@ function validateFieldValue(
     case 'seller_name':
       return validateStringLength(value, attribute, 70);
     case 'mpn':
-      return validateStringLength(value, attribute, 70);
+      return validateAlphanumericString(value, attribute, 70);
     case 'item_group_id':
       return validateStringLength(value, attribute, 70);
     case 'color':
@@ -261,7 +262,7 @@ function validateFieldValue(
     case 'material':
       return validateStringLength(value, attribute, 100);
     case 'id':
-      return validateStringLength(value, attribute, 100);
+      return validateAlphanumericString(value, attribute, 100);
 
     // Positive numbers
     case 'inventory_quantity':

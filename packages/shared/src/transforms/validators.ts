@@ -372,6 +372,42 @@ export function validateStringLength(
 }
 
 /**
+ * Validate alphanumeric string (letters, numbers, and common separators like - and _)
+ */
+export function validateAlphanumericString(
+  value: any,
+  fieldName: string,
+  maxLength: number
+): ValidationResult {
+  if (!value && value !== 0) return { valid: true }; // Empty is valid for optional fields
+
+  // Coerce numbers to strings
+  const stringValue = typeof value === 'number' ? String(value) : value;
+
+  if (typeof stringValue !== 'string') {
+    return { valid: false, error: `${fieldName} must be a string or number` };
+  }
+
+  if (stringValue.length > maxLength) {
+    return {
+      valid: false,
+      error: `${fieldName} exceeds maximum length of ${maxLength} characters (current: ${stringValue.length})`,
+    };
+  }
+
+  // Check for alphanumeric characters (letters, numbers, dashes, underscores, spaces)
+  const alphanumericRegex = /^[a-zA-Z0-9\-_\s]+$/;
+  if (!alphanumericRegex.test(stringValue)) {
+    return {
+      valid: false,
+      error: `${fieldName} must be alphanumeric (letters, numbers, dashes, underscores only)`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Validate number is positive
  */
 export function validatePositiveNumber(value: any, fieldName: string): ValidationResult {
