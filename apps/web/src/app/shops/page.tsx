@@ -149,13 +149,12 @@ export default function ShopsPage() {
       clearTimeout(saveTimeouts.current[shopId]);
     }
 
-    // Update store immediately for better UX
+    // Update store immediately for better UX (don't trim yet - allow spaces while typing)
     if (field === 'returnWindow') {
       const numValue = value.trim() ? parseInt(value.trim(), 10) : null;
       updateShopInStore(shopId, { [field]: isNaN(numValue as number) ? null : numValue });
     } else {
-      const stringValue = value.trim() || null;
-      updateShopInStore(shopId, { [field]: stringValue });
+      updateShopInStore(shopId, { [field]: value });
     }
 
     // Debounce the save
