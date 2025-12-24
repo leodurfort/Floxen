@@ -473,8 +473,8 @@ export function ProductFieldMappingRow({
 
                   {/* Options List */}
                   <div className="overflow-y-auto">
-                    {/* No mapping option - exclude this field for this product */}
-                    {!searchQuery && (
+                    {/* No mapping option - only show when there's a shop mapping to override */}
+                    {!searchQuery && (shopMapping || spec.wooCommerceMapping?.field) && (
                       <button
                         onClick={() => handleDropdownChange(NO_MAPPING_OPTION)}
                         className={`w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10 ${
