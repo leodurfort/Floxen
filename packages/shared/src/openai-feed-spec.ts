@@ -1081,7 +1081,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     wooCommerceMapping: {
       field: 'related_ids',
       transform: 'formatRelatedIds',
-      fallback: 'upsell_ids',
+      fallback: 'cross_sell_ids',
     },
     isLocked: false,
     category: 'related_products',

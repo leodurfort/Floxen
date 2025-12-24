@@ -93,20 +93,17 @@ export const generateOfferId: TransformFunction = (sku, wooProduct, shop) => {
 /**
  * Format related product IDs
  *
- * Converts WooCommerce product IDs to stable IDs for cross-referencing.
+ * Converts WooCommerce product IDs array to comma-separated string.
  *
  * @param relatedIds - Array of WooCommerce product IDs
- * @param wooProduct - WooCommerce product object (unused)
- * @param shop - Shop configuration object
- * @returns Comma-separated stable IDs
+ * @returns Comma-separated product IDs
  *
  * @example
  * // Input: [123, 456, 789]
- * // Output: "shop123-123,shop123-456,shop123-789"
+ * // Output: "123,456,789"
  */
-export const formatRelatedIds: TransformFunction = (relatedIds, wooProduct, shop) => {
+export const formatRelatedIds: TransformFunction = (relatedIds) => {
   if (!Array.isArray(relatedIds) || relatedIds.length === 0) return null;
 
-  // Convert WooCommerce product IDs to our stable IDs
-  return relatedIds.map((id: number) => `${shop.id}-${id}`).join(',');
+  return relatedIds.join(',');
 };

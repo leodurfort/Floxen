@@ -420,6 +420,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
 
     // Process each mapping
     const results = { created: 0, updated: 0, deleted: 0, errors: 0 };
+    const actuallyChangedAttributes: string[] = []; // Track fields that actually changed
     const mappingEntries = Object.entries(sanitizedMappings).filter(
       ([attribute]) => !TOGGLE_FIELDS.has(attribute)
     );
@@ -502,6 +503,12 @@ export async function updateFieldMappings(req: Request, res: Response) {
           },
         });
 
+        // Track if this field actually changed
+        const didChange = !existing || existing.wooFieldId !== wooFieldId;
+        if (didChange) {
+          actuallyChangedAttributes.push(openaiAttribute);
+        }
+
         if (existing) {
           results.updated++;
         } else {
@@ -533,9 +540,9 @@ export async function updateFieldMappings(req: Request, res: Response) {
 
     // Handle propagation mode: clear product overrides if 'apply_all'
     let overridesCleared = 0;
-    if (propagationMode === 'apply_all' && (results.created > 0 || results.updated > 0)) {
-      // Clear product-level overrides for all changed fields
-      const changedAttributes = mappingEntries.map(([attribute]) => attribute);
+    if (propagationMode === 'apply_all' && actuallyChangedAttributes.length > 0) {
+      // Clear product-level overrides only for fields that actually changed
+      const changedAttributes = actuallyChangedAttributes;
 
       for (const attribute of changedAttributes) {
         const cleared = await clearOverridesForField(id, attribute);
