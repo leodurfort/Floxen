@@ -39,7 +39,9 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   ].includes(spec.attribute);
   const lockedMappingValue = LOCKED_FIELD_MAPPINGS[spec.attribute];
   const isLockedField = Boolean(lockedMappingValue);
-  const isNonEditableField = isDimensions || isShopManagedField || isLockedField;
+  // Fields with hardcoded transforms that ignore the mapping selection
+  const isTransformLockedField = spec.attribute === 'sale_price_effective_date';
+  const isNonEditableField = isDimensions || isShopManagedField || isLockedField || isTransformLockedField;
 
   // For toggle fields, mapping value is "ENABLED" or "DISABLED"
   // Default enable_search to ENABLED
@@ -131,7 +133,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
             <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
               <div className="flex flex-col">
                 <span className="text-white text-sm font-medium">
-                  {isDimensions ? 'Auto-populated' : isLockedField ? effectiveMapping : 'Managed in Shops page'}
+                  {isDimensions ? 'Auto-populated' : isLockedField ? effectiveMapping : isTransformLockedField ? 'Auto-combined' : 'Managed in Shops page'}
                 </span>
               </div>
               <div className="relative group mt-[2px]">
@@ -146,6 +148,11 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
                     <div>
                       <div className="font-semibold text-white mb-1">Managed automatically</div>
                       <div>This mapping is predefined and cannot be edited.</div>
+                    </div>
+                  ) : isTransformLockedField ? (
+                    <div>
+                      <div className="font-semibold text-white mb-1">Auto-combined field</div>
+                      <div>Combines date_on_sale_from and date_on_sale_to from WooCommerce.</div>
                     </div>
                   ) : (
                     <div>
