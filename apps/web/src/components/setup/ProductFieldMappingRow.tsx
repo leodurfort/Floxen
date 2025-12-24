@@ -34,6 +34,7 @@ function validateResolvedValue(
 
 // Special dropdown values
 const STATIC_VALUE_OPTION = '__STATIC_VALUE__';
+const NO_MAPPING_OPTION = '__NO_MAPPING__';
 
 // Helper to generate format hint from spec
 function getFormatHint(spec: OpenAIFieldSpec): string {
@@ -109,14 +110,17 @@ export function ProductFieldMappingRow({
 
   // Get the currently active mapping value
   const getCurrentMapping = (): string | null => {
-    if (productOverride?.type === 'mapping') return productOverride.value;
+    if (productOverride?.type === 'mapping') {
+      // Null value means "no mapping" override
+      return productOverride.value === null ? NO_MAPPING_OPTION : productOverride.value;
+    }
     if (productOverride?.type === 'static') return STATIC_VALUE_OPTION;
     return shopMapping || spec.wooCommerceMapping?.field || null;
   };
 
   // State
   const [selectedValue, setSelectedValue] = useState<string | null>(getCurrentMapping());
-  const [staticValue, setStaticValue] = useState(productOverride?.type === 'static' ? productOverride.value : '');
+  const [staticValue, setStaticValue] = useState(productOverride?.type === 'static' ? (productOverride.value || '') : '');
   const [draftStaticValue, setDraftStaticValue] = useState(staticValue);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isStaticMode, setIsStaticMode] = useState(productOverride?.type === 'static');
@@ -131,8 +135,8 @@ export function ProductFieldMappingRow({
     const newMapping = getCurrentMapping();
     setSelectedValue(newMapping);
     if (productOverride?.type === 'static') {
-      setStaticValue(productOverride.value);
-      setDraftStaticValue(productOverride.value);
+      setStaticValue(productOverride.value || '');
+      setDraftStaticValue(productOverride.value || '');
       setIsStaticMode(true);
     } else {
       setIsStaticMode(false);
@@ -190,10 +194,10 @@ export function ProductFieldMappingRow({
       setIsStaticMode(true);
       setDraftStaticValue(staticValue);
       setValidationError(null);
-    } else if (value === '') {
-      // Clear override, use shop default
+    } else if (value === NO_MAPPING_OPTION) {
+      // No mapping override - exclude this field for this product
       setIsStaticMode(false);
-      onOverrideChange(spec.attribute, null);
+      onOverrideChange(spec.attribute, { type: 'mapping', value: null });
     } else {
       // Select a WooCommerce field - create mapping override
       setIsStaticMode(false);
@@ -237,9 +241,15 @@ export function ProductFieldMappingRow({
   // Compute preview - only show saved values, not draft
   const getEffectiveMapping = (): string | null => {
     if (productOverride?.type === 'static') return null;
-    if (productOverride?.type === 'mapping') return productOverride.value;
+    if (productOverride?.type === 'mapping') {
+      // Null value means "no mapping" - return null (field excluded)
+      return productOverride.value;
+    }
     return shopMapping || spec.wooCommerceMapping?.field || null;
   };
+
+  // Check if this is a "no mapping" override (null value)
+  const isNoMappingOverride = productOverride?.type === 'mapping' && productOverride.value === null;
 
   const effectiveMapping = getEffectiveMapping();
   const computedPreview = effectiveMapping && !isEnableSearchField && !isEnableCheckoutField
@@ -285,6 +295,10 @@ export function ProductFieldMappingRow({
     // enable_checkout is disabled - show current value
     previewDisplay = apiPreviewValue === 'true' ? 'true' : 'false';
     previewStyle = 'text-white/40';
+  } else if (isNoMappingOverride) {
+    // "No mapping" override - show empty
+    previewDisplay = '';
+    previewStyle = 'text-white/40';
   } else if (!previewValue && !isStaticMode) {
     // "No value" when mapped but no data, empty when not mapped
     previewDisplay = effectiveMapping ? 'No value' : '';
@@ -299,6 +313,7 @@ export function ProductFieldMappingRow({
   const getSelectionLabel = (value: string | null): string => {
     if (!value) return 'Select field or value';
     if (value === STATIC_VALUE_OPTION) return '+ Set Static Value';
+    if (value === NO_MAPPING_OPTION) return 'No mapping (excluded)';
     const field = wooFields.find(f => f.value === value);
     return field?.label || value;
   };
@@ -431,6 +446,7 @@ export function ProductFieldMappingRow({
               >
                 <span className={`text-sm truncate ${
                   isStaticMode ? 'text-[#5df0c0]' :
+                  selectedValue === NO_MAPPING_OPTION ? 'text-amber-400' :
                   selectedValue ? 'text-white' : 'text-white/60'
                 }`}>
                   {wooFieldsLoading ? 'Loading fields...' : getSelectionLabel(isStaticMode ? STATIC_VALUE_OPTION : selectedValue)}
@@ -457,14 +473,16 @@ export function ProductFieldMappingRow({
 
                   {/* Options List */}
                   <div className="overflow-y-auto">
-                    {/* Clear/Reset option - only show when not searching and has a value */}
-                    {!searchQuery && selectedValue && (
+                    {/* No mapping option - exclude this field for this product */}
+                    {!searchQuery && (
                       <button
-                        onClick={() => handleDropdownChange('')}
-                        className="w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10"
+                        onClick={() => handleDropdownChange(NO_MAPPING_OPTION)}
+                        className={`w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10 ${
+                          selectedValue === NO_MAPPING_OPTION ? 'bg-[#2d3142]' : ''
+                        }`}
                       >
-                        <div className="text-sm text-white/60 italic">Select field or value</div>
-                        <div className="text-xs text-white/30 mt-0.5">Reset to shop default</div>
+                        <div className="text-sm text-amber-400 font-medium">No mapping (exclude field)</div>
+                        <div className="text-xs text-white/40 mt-0.5">This field will be empty for this product</div>
                       </button>
                     )}
 

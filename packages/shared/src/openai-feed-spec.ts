@@ -37,7 +37,7 @@ export type ProductOverrideType = 'mapping' | 'static';
 
 export interface ProductFieldOverride {
   type: ProductOverrideType;
-  value: string;
+  value: string | null;  // null for mapping type means "no mapping" (exclude field)
 }
 
 export type ProductFieldOverrides = Record<string, ProductFieldOverride>;

@@ -218,7 +218,7 @@ export async function getProductWooData(req: Request, res: Response) {
 
 const productOverrideSchema = z.object({
   type: z.enum(['mapping', 'static']),
-  value: z.string(),
+  value: z.string().nullable(),  // null for mapping type means "no mapping" (exclude field)
 });
 
 const updateOverridesSchema = z.object({
@@ -337,8 +337,12 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
         continue;
       }
 
-      // Validate static values
+      // Validate static values (null not allowed for static type)
       if (override.type === 'static') {
+        if (override.value === null) {
+          validationErrors[attribute] = 'Static value cannot be null';
+          continue;
+        }
         const validation = validateStaticValue(attribute, override.value);
         if (!validation.isValid) {
           validationErrors[attribute] = validation.error || 'Invalid value';

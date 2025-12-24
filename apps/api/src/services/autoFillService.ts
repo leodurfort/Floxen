@@ -150,6 +150,11 @@ export class AutoFillService {
 
       // Custom mapping - only for non-locked fields
       if (override.type === 'mapping' && !isLockedField) {
+        // Null value means "no mapping" - exclude this field for this product
+        if (override.value === null) {
+          return null;
+        }
+
         const customPath = override.value;
 
         // Handle shop-level fields (prefixed with "shop.")
