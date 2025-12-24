@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { listProducts, getShop } from '@/lib/api';
+import { listProducts, getShop, refreshFeed } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { Product, Shop } from '@productsynch/shared';
 
@@ -37,6 +37,8 @@ export default function ShopProductsPage() {
   const [shop, setShop] = useState<Shop | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feedRefreshing, setFeedRefreshing] = useState(false);
+  const [feedSuccess, setFeedSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     hydrate();
@@ -69,6 +71,24 @@ export default function ShopProductsPage() {
     router.push(`/shops/${params.id}/products/${productId}/mapping`);
   };
 
+  // Refresh OpenAI feed
+  const handleRefreshFeed = async () => {
+    if (!accessToken || !params?.id) return;
+    setFeedRefreshing(true);
+    setFeedSuccess(null);
+    setError(null);
+    try {
+      await refreshFeed(params.id, accessToken);
+      setFeedSuccess('Feed refreshed successfully!');
+      // Clear success message after 3 seconds
+      setTimeout(() => setFeedSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to refresh feed');
+    } finally {
+      setFeedRefreshing(false);
+    }
+  };
+
   if (!hydrated) {
     return <main className="shell"><div className="subtle">Loading session...</div></main>;
   }
@@ -77,8 +97,32 @@ export default function ShopProductsPage() {
   return (
     <main className="shell space-y-4">
       <div className="panel space-y-2">
-        <p className="uppercase tracking-[0.18em] text-xs text-white/60">Products</p>
-        <h1 className="section-title">Catalog</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="uppercase tracking-[0.18em] text-xs text-white/60">Products</p>
+            <h1 className="section-title">Catalog</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {feedSuccess && (
+              <span className="text-sm text-[#5df0c0]">{feedSuccess}</span>
+            )}
+            <button
+              onClick={handleRefreshFeed}
+              disabled={feedRefreshing}
+              className="px-4 py-2 bg-[#5df0c0] text-black font-medium rounded-lg hover:bg-[#5df0c0]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+            >
+              {feedRefreshing ? 'Refreshing...' : 'Refresh Feed'}
+            </button>
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app'}/api/v1/feed/${params.id}/view`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 border border-white/20 text-white/80 font-medium rounded-lg hover:bg-white/5 transition-all text-sm"
+            >
+              View Feed
+            </a>
+          </div>
+        </div>
         {error && <div className="text-sm text-red-300">{error}</div>}
         {loading && <div className="subtle">Loading products...</div>}
         {!loading && !products.length && <div className="subtle">No products found.</div>}

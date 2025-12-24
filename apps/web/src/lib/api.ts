@@ -161,6 +161,17 @@ export async function latestFeed(shopId: string, token: string) {
   });
 }
 
+/**
+ * Refresh the OpenAI feed for a shop
+ * Regenerates the FeedSnapshot with current product data
+ */
+export async function refreshFeed(shopId: string, token: string) {
+  return request<{ shopId: string; pushed: boolean }>(`/api/v1/shops/${shopId}/sync/push-feed`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function deleteShop(shopId: string, token: string) {
   return request<{ shop: Shop; message: string }>(`/api/v1/shops/${shopId}`, {
     method: 'DELETE',
