@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
@@ -36,14 +36,27 @@ export default function ProductMappingPage() {
   const [wooFields, setWooFields] = useState<WooCommerceField[]>([]);
   const [wooFieldsLoading, setWooFieldsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Ref for cleanup
+  const saveErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hydrate auth
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (saveErrorTimeoutRef.current) {
+        clearTimeout(saveErrorTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -53,16 +66,18 @@ export default function ProductMappingPage() {
   }, [hydrated, accessToken, router]);
 
   // Load all data on mount
+  // Wait for hydration to complete to ensure accessToken is properly loaded from localStorage
   useEffect(() => {
-    if (!accessToken || !params.id || !params.pid) return;
+    if (!hydrated || !accessToken || !params.id || !params.pid) return;
     loadProductOverrides();
     loadProductWooData();
     loadWooFields();
-  }, [accessToken, params.id, params.pid]);
+  }, [hydrated, accessToken, params.id, params.pid]);
 
   async function loadProductOverrides() {
     if (!accessToken) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${params.pid}/field-overrides`,
@@ -84,6 +99,7 @@ export default function ProductMappingPage() {
       setResolvedValues(data.resolvedValues || {});
     } catch (err) {
       console.error('[ProductMapping] Failed to load overrides', err);
+      setLoadError('Failed to load product data. Please refresh the page.');
     } finally {
       setLoading(false);
     }
@@ -175,7 +191,11 @@ export default function ProductMappingPage() {
         setProductOverrides(productOverrides);
         const errorMessage = err instanceof Error ? err.message : 'Failed to save override';
         setSaveError(errorMessage);
-        setTimeout(() => setSaveError(null), 5000);
+        // Auto-clear error after 5 seconds (with cleanup)
+        if (saveErrorTimeoutRef.current) {
+          clearTimeout(saveErrorTimeoutRef.current);
+        }
+        saveErrorTimeoutRef.current = setTimeout(() => setSaveError(null), 5000);
       } finally {
         setSaving(false);
       }
@@ -210,6 +230,22 @@ export default function ProductMappingPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-white">Loading product mappings...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="text-red-400 mb-4">{loadError}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-[#5df0c0]/10 text-[#5df0c0] rounded-lg border border-[#5df0c0]/30 hover:bg-[#5df0c0]/20"
+          >
+            Refresh Page
+          </button>
+        </div>
       </div>
     );
   }
