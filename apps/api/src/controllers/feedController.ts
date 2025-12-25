@@ -95,14 +95,6 @@ export async function getFeedHtml(req: Request, res: Response) {
   const { shopId } = req.params;
   const { snapshot: snapshotId } = req.query;
 
-  logger.info('feed:html - Request received', {
-    shopId,
-    snapshotId,
-    snapshotIdType: typeof snapshotId,
-    queryParams: req.query,
-    url: req.url,
-  });
-
   try {
     // Get all snapshots for the dropdown
     const allSnapshots = await prisma.feedSnapshot.findMany({
@@ -116,11 +108,6 @@ export async function getFeedHtml(req: Request, res: Response) {
     });
 
     // Get specific snapshot by ID or latest
-    logger.info('feed:html - Querying snapshot', {
-      hasSnapshotId: !!snapshotId,
-      snapshotId: snapshotId || 'none',
-    });
-
     const snapshot = snapshotId
       ? await prisma.feedSnapshot.findFirst({
           where: { id: snapshotId as string, shopId },
@@ -135,13 +122,6 @@ export async function getFeedHtml(req: Request, res: Response) {
             shop: { select: { sellerName: true, wooStoreUrl: true } },
           },
         });
-
-    logger.info('feed:html - Snapshot result', {
-      found: !!snapshot,
-      snapshotId: snapshot?.id || 'none',
-      productCount: snapshot?.productCount,
-      generatedAt: snapshot?.generatedAt,
-    });
 
     if (!snapshot) {
       return res.status(404).send(`
@@ -275,7 +255,6 @@ function buildFeedHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <title>Feed: ${escapeHtml(seller.name || shopId)}</title>
   <style>
     * { box-sizing: border-box; }
@@ -551,17 +530,8 @@ function buildFeedHtml(
     </div>
   </div>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var select = document.getElementById('snapshot-select');
-      if (select) {
-        select.addEventListener('change', function(e) {
-          var snapshotId = e.target.value;
-          console.log('Snapshot selected:', snapshotId);
-          var url = '/api/v1/feed/${shopId}/view?snapshot=' + snapshotId;
-          console.log('Navigating to:', url);
-          window.location.href = url;
-        });
-      }
+    document.getElementById('snapshot-select').addEventListener('change', function(e) {
+      window.location.href = '/api/v1/feed/${shopId}/view?snapshot=' + e.target.value;
     });
   </script>
 </body>
