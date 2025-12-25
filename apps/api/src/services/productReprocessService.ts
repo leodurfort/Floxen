@@ -46,7 +46,11 @@ export async function reprocessProduct(productId: string): Promise<void> {
 
   // Validate the auto-filled data
   // enable_checkout is always false, so checkout-related validation is skipped
-  const validation = validateProduct(autoFilled, false);
+  // Pass product context to properly validate conditional fields like item_group_id
+  const validation = validateProduct(autoFilled, false, {
+    isVariation: !!(product as any).wooParentId,
+    wooProductType: (wooProduct as any)?.type,
+  });
 
   await prisma.product.update({
     where: { id: productId },
