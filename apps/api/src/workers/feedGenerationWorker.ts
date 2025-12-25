@@ -53,21 +53,30 @@ export async function feedGenerationProcessor(job: Job) {
       },
     });
 
-    // Upsert FeedSnapshot for the public feed endpoint
-    await prisma.feedSnapshot.upsert({
-      where: { shopId },
-      update: {
-        feedData: payload as any,
-        productCount: payload.items.length,
-        generatedAt: new Date(),
-      },
-      create: {
+    // Create new FeedSnapshot (keeps history for 7 days)
+    await prisma.feedSnapshot.create({
+      data: {
         shopId,
         feedData: payload as any,
         productCount: payload.items.length,
         generatedAt: new Date(),
       },
     });
+
+    // Cleanup: Delete snapshots older than 7 days for this shop
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const deleted = await prisma.feedSnapshot.deleteMany({
+      where: {
+        shopId,
+        generatedAt: { lt: sevenDaysAgo },
+      },
+    });
+
+    if (deleted.count > 0) {
+      logger.info(`Cleaned up ${deleted.count} old feed snapshots for shop ${shopId}`);
+    }
 
     await prisma.shop.update({
       where: { id: shopId },
