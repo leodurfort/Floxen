@@ -92,9 +92,26 @@ export function pushFeed(req: Request, res: Response) {
     .findUnique({ where: { id: req.params.id } })
     .then((shop) => {
       if (!shop) return res.status(404).json({ error: 'Shop not found' });
+
+      // Block feed generation if sync is in progress to prevent inconsistent data
+      if (shop.syncStatus === 'SYNCING') {
+        logger.warn('feed:push blocked - sync in progress', { shopId: shop.id });
+        return res.status(409).json({
+          error: 'Sync in progress',
+          details: 'Cannot generate feed while product sync is running. Please wait for sync to complete.',
+          syncStatus: shop.syncStatus,
+          lastSyncAt: shop.lastSyncAt,
+        });
+      }
+
       syncQueue!.add('feed-generation', { shopId: shop.id }, { removeOnComplete: true });
-      logger.info('feed:push', { shopId: shop.id });
-      return res.json({ shopId: shop.id, pushed: true });
+      logger.info('feed:push', { shopId: shop.id, lastSyncAt: shop.lastSyncAt });
+      return res.json({
+        shopId: shop.id,
+        pushed: true,
+        syncStatus: shop.syncStatus,
+        lastSyncAt: shop.lastSyncAt,
+      });
     })
     .catch((err) => {
       logger.error('feed:push error', err);
