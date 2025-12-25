@@ -1,6 +1,6 @@
 'use client';
 
-import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET, OpenAIFieldSpec } from '@productsynch/shared';
+import { LOCKED_FIELD_MAPPINGS, OpenAIFieldSpec } from '@productsynch/shared';
 import { WooCommerceFieldSelector } from './WooCommerceFieldSelector';
 import { ToggleSwitch } from './ToggleSwitch';
 import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } from '@/lib/wooCommerceFields';
@@ -41,9 +41,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   const isLockedField = Boolean(lockedMappingValue);
   // Fields with hardcoded transforms that ignore the mapping selection
   const isTransformLockedField = spec.attribute === 'sale_price_effective_date';
-  // Condition field uses transform (defaultToNew) - locked at shop level but editable at product level
-  const isConditionField = spec.attribute === 'condition' && LOCKED_FIELD_SET.has(spec.attribute);
-  const isNonEditableField = isDimensions || isShopManagedField || isLockedField || isTransformLockedField || isConditionField;
+  const isNonEditableField = isDimensions || isShopManagedField || isLockedField || isTransformLockedField;
 
   // For toggle fields, mapping value is "ENABLED" or "DISABLED"
   // Default enable_search to ENABLED
@@ -73,10 +71,6 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   if (isToggleField) {
     previewDisplay = isEnabled ? 'true' : 'false';
     previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
-  } else if (isConditionField) {
-    // Condition uses defaultToNew transform - always shows "new"
-    previewDisplay = 'new';
-    previewStyle = 'text-white/80';
   } else if (!effectiveMapping) {
     previewDisplay = '';
     previewStyle = 'text-white/40';
@@ -139,7 +133,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
             <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
               <div className="flex flex-col">
                 <span className="text-white text-sm font-medium">
-                  {isDimensions ? 'Auto-populated' : isConditionField ? 'Defaults to "new"' : isLockedField ? effectiveMapping : isTransformLockedField ? 'Auto-combined' : 'Managed in Shops page'}
+                  {isDimensions ? 'Auto-populated' : isLockedField ? effectiveMapping : isTransformLockedField ? 'Auto-combined' : 'Managed in Shops page'}
                 </span>
               </div>
               <div className="relative group mt-[2px]">
@@ -149,11 +143,6 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
                     <div>
                       <div className="font-semibold text-white mb-1">Auto-filled dimensions</div>
                       <div>Populates automatically when length, width, and height are available.</div>
-                    </div>
-                  ) : isConditionField ? (
-                    <div>
-                      <div className="font-semibold text-white mb-1">Product Condition</div>
-                      <div>Automatically set to "new" for all products. Override at product level for refurbished/used items.</div>
                     </div>
                   ) : isLockedField ? (
                     <div>
