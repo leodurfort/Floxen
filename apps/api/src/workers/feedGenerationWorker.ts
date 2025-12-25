@@ -37,22 +37,6 @@ export async function feedGenerationProcessor(job: Job) {
     const key = `${shopId}/feed.json`;
     const url = await uploadJsonToStorage(key, body);
 
-    // Create SyncBatch record for history tracking
-    await prisma.syncBatch.create({
-      data: {
-        shopId,
-        status: 'COMPLETED',
-        syncType: 'FULL',
-        totalProducts: products.length,
-        syncedProducts: products.length,
-        failedProducts: 0,
-        startedAt: new Date(),
-        completedAt: new Date(),
-        feedFileUrl: url,
-        triggeredBy: job.data?.triggeredBy || 'manual',
-      },
-    });
-
     // Create new FeedSnapshot (keeps history for 7 days)
     await prisma.feedSnapshot.create({
       data: {
@@ -80,16 +64,16 @@ export async function feedGenerationProcessor(job: Job) {
 
     await prisma.shop.update({
       where: { id: shopId },
-      data: { syncStatus: 'COMPLETED', lastSyncAt: new Date() },
+      data: { feedStatus: 'COMPLETED', lastFeedGeneratedAt: new Date() },
     });
     logger.info(`Generated feed payload for shop ${shopId} (items: ${payload.items.length})`, { url });
     return { url };
   } catch (err) {
     logger.error(`feed-generation failed for shop ${shopId}`, { error: err instanceof Error ? err : new Error(String(err)) });
-    // Mark shop as failed so the status reflects the feed generation failure
+    // Mark feed as failed so the status reflects the feed generation failure
     await prisma.shop.update({
       where: { id: shopId },
-      data: { syncStatus: 'FAILED' },
+      data: { feedStatus: 'FAILED' },
     });
     throw err;
   }

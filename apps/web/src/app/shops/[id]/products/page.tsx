@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { listProducts, getShop, refreshFeed } from '@/lib/api';
+import { listProducts, getShop, refreshFeed, RefreshFeedResponse } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { Product, Shop } from '@productsynch/shared';
 
@@ -71,6 +71,22 @@ export default function ShopProductsPage() {
     router.push(`/shops/${params.id}/products/${productId}/mapping`);
   };
 
+  // Helper to format relative time
+  const formatLastSync = (date: string | null): string => {
+    if (!date) return 'never';
+    const now = new Date();
+    const syncDate = new Date(date);
+    const diffMs = now.getTime() - syncDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
   // Refresh OpenAI feed
   const handleRefreshFeed = async () => {
     if (!accessToken || !params?.id) return;
@@ -78,12 +94,18 @@ export default function ShopProductsPage() {
     setFeedSuccess(null);
     setError(null);
     try {
-      await refreshFeed(params.id, accessToken);
-      setFeedSuccess('Feed refreshed successfully!');
-      // Clear success message after 3 seconds
-      setTimeout(() => setFeedSuccess(null), 3000);
+      const result: RefreshFeedResponse = await refreshFeed(params.id, accessToken);
+      const lastSyncText = formatLastSync(result.lastSyncAt);
+      setFeedSuccess(`Feed refreshed! (last sync: ${lastSyncText})`);
+      // Clear success message after 5 seconds
+      setTimeout(() => setFeedSuccess(null), 5000);
     } catch (err: any) {
-      setError(err.message || 'Failed to refresh feed');
+      if (err.syncInProgress) {
+        const lastSyncText = formatLastSync(err.lastSyncAt);
+        setError(`Sync in progress. Please wait for it to complete. (last sync: ${lastSyncText})`);
+      } else {
+        setError(err.message || 'Failed to refresh feed');
+      }
     } finally {
       setFeedRefreshing(false);
     }

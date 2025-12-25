@@ -161,15 +161,67 @@ export async function latestFeed(shopId: string, token: string) {
   });
 }
 
+export interface RefreshFeedResponse {
+  shopId: string;
+  pushed: boolean;
+  syncStatus: string;
+  lastSyncAt: string | null;
+}
+
+export interface RefreshFeedError {
+  error: string;
+  details: string;
+  syncStatus: string;
+  lastSyncAt: string | null;
+}
+
 /**
  * Refresh the OpenAI feed for a shop
  * Regenerates the FeedSnapshot with current product data
+ * Returns 409 if sync is in progress
  */
-export async function refreshFeed(shopId: string, token: string) {
-  return request<{ shopId: string; pushed: boolean }>(`/api/v1/shops/${shopId}/sync/push`, {
+export async function refreshFeed(shopId: string, token: string, retryCount = 0): Promise<RefreshFeedResponse> {
+  const res = await fetch(`${API_URL}/api/v1/shops/${shopId}/sync/push`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    credentials: 'include',
   });
+
+  // Handle 401 Unauthorized - try to refresh token
+  if (res.status === 401 && retryCount === 0) {
+    try {
+      const newAccessToken = await refreshAccessToken();
+      return refreshFeed(shopId, newAccessToken, retryCount + 1);
+    } catch {
+      // Refresh failed - clear auth and redirect to login
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('productsynch.user');
+        localStorage.removeItem('productsynch.access');
+        localStorage.removeItem('productsynch.refresh');
+        window.location.href = '/login';
+      }
+      throw new Error('Session expired. Please log in again.');
+    }
+  }
+
+  // Handle 409 Conflict - sync in progress
+  if (res.status === 409) {
+    const errorData: RefreshFeedError = await res.json();
+    const error = new Error(errorData.details || errorData.error) as Error & { syncInProgress: boolean; lastSyncAt: string | null };
+    error.syncInProgress = true;
+    error.lastSyncAt = errorData.lastSyncAt;
+    throw error;
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || res.statusText);
+  }
+
+  return res.json();
 }
 
 export async function deleteShop(shopId: string, token: string) {
