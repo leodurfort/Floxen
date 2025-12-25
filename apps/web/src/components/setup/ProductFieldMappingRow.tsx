@@ -109,7 +109,7 @@ export function ProductFieldMappingRow({
   // Can this field be customized at product level?
   const isFullyLocked = isLockedField && !allowsStaticOverride;
   // enable_search is editable, enable_checkout is disabled (coming soon)
-  const isReadOnly = isEnableCheckoutField || isDimensions || isShopManagedField || isFullyLocked || isTransformLockedField;
+  const isReadOnly = isEnableCheckoutField || isDimensions || isShopManagedField || isFullyLocked || isTransformLockedField || isConditionField;
 
   // Get the currently active mapping value
   const getCurrentMapping = (): string | null => {
