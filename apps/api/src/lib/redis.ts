@@ -18,16 +18,26 @@ export function createQueue(name: string) {
   return { queue, events };
 }
 
+export interface WorkerOptions {
+  concurrency?: number;
+}
+
 export function createWorker<T = any>(
   name: string,
   processor: (job: any) => Promise<T>,
+  options: WorkerOptions = {},
 ) {
   if (!redisConnection) {
     logger.warn(`Redis not configured; worker ${name} disabled`);
     return null;
   }
-  const worker = new Worker(name, processor, { connection: redisConnection });
+  const { concurrency = 2 } = options; // Default to 2 concurrent jobs
+  const worker = new Worker(name, processor, {
+    connection: redisConnection,
+    concurrency,
+  });
   worker.on('failed', (job, err) => logger.error(`Job failed (${name}:${job?.id})`, { error: err instanceof Error ? err : new Error(String(err)) }));
+  logger.info(`Worker ${name} created with concurrency: ${concurrency}`);
   return worker;
 }
 
