@@ -42,6 +42,7 @@ export async function feedGenerationProcessor(job: Job) {
       data: {
         shopId,
         feedData: payload as any,
+        feedFileUrl: url,
         productCount: payload.items.length,
         generatedAt: new Date(),
       },

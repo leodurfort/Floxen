@@ -116,7 +116,7 @@ export function validateUrl(value: any, fieldName: string): ValidationResult {
 
 /**
  * Validate category path
- * Must use " > " separator
+ * Single categories are valid. For hierarchical paths, must use " > " separator.
  */
 export function validateCategoryPath(value: any): ValidationResult {
   if (!value) {
@@ -127,15 +127,7 @@ export function validateCategoryPath(value: any): ValidationResult {
     return { valid: false, error: 'Category path must be a string' };
   }
 
-  // Must use " > " separator
-  if (!value.includes(' > ')) {
-    return {
-      valid: false,
-      error: `Invalid category format: "${value}". Must use " > " separator (e.g., "Apparel > Shoes > Sneakers")`,
-    };
-  }
-
-  // Check for common mistakes
+  // Check for incorrect separators (user likely meant to use hierarchy but used wrong separator)
   if (value.includes(' / ') || value.includes(' | ') || value.includes(',')) {
     return {
       valid: false,
@@ -143,6 +135,8 @@ export function validateCategoryPath(value: any): ValidationResult {
     };
   }
 
+  // Single category (no separator) is valid, e.g., "Apparel"
+  // Hierarchical path with " > " separator is also valid, e.g., "Apparel > Shoes > Sneakers"
   return { valid: true };
 }
 

@@ -26,6 +26,8 @@ export interface Shop {
   productsReprocessedAt?: string | null;
   syncStatus: SyncStatus;
   syncEnabled: boolean;
+  feedStatus: SyncStatus;
+  lastFeedGeneratedAt?: string | null;
   openaiEnabled: boolean;
   wooStoreUrl?: string;
   sellerName?: string | null;

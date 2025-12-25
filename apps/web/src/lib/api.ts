@@ -156,7 +156,7 @@ export async function triggerProductSync(shopId: string, token: string) {
 }
 
 export async function latestFeed(shopId: string, token: string) {
-  return request<{ feedUrl: string; completedAt: string; totalProducts: number }>(`/api/v1/shops/${shopId}/sync/feed/latest`, {
+  return request<{ feedUrl: string; generatedAt: string; productCount: number }>(`/api/v1/shops/${shopId}/sync/feed/latest`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

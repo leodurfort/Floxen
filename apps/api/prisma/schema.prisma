@@ -242,6 +242,7 @@ model FeedSnapshot {
   id           String   @id @default(cuid())
   shopId       String   @map("shop_id")
   feedData     Json     @map("feed_data")
+  feedFileUrl  String?  @map("feed_file_url")
   productCount Int      @map("product_count")
   generatedAt  DateTime @map("generated_at")
   createdAt    DateTime @default(now()) @map("created_at")
