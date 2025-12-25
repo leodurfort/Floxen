@@ -97,8 +97,7 @@ export default function ProductMappingPage() {
       setShopMappings(data.shopMappings || {});
       setProductOverrides(data.overrides || {});
       setResolvedValues(data.resolvedValues || {});
-    } catch (err) {
-      console.error('[ProductMapping] Failed to load overrides', err);
+    } catch {
       setLoadError('Failed to load product data. Please refresh the page.');
     } finally {
       setLoading(false);
@@ -116,8 +115,8 @@ export default function ProductMappingPage() {
       const data = await res.json();
       setPreviewProductJson(data.wooData);
       setPreviewShopData(data.shopData);
-    } catch (err) {
-      console.error('[ProductMapping] Failed to load WooCommerce data', err);
+    } catch {
+      // WooCommerce data load failed silently
     }
   }
 
@@ -132,8 +131,8 @@ export default function ProductMappingPage() {
       if (!res.ok) throw new Error('Failed to load WooCommerce fields');
       const data = await res.json();
       setWooFields(data.fields || []);
-    } catch (err) {
-      console.error('[ProductMapping] Failed to load WooCommerce fields', err);
+    } catch {
+      // WooCommerce fields load failed silently
     } finally {
       setWooFieldsLoading(false);
     }
@@ -186,7 +185,6 @@ export default function ProductMappingPage() {
           });
         }
       } catch (err) {
-        console.error('[ProductMapping] Failed to save override', err);
         // Revert optimistic update
         setProductOverrides(productOverrides);
         const errorMessage = err instanceof Error ? err.message : 'Failed to save override';
