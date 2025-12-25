@@ -73,6 +73,10 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   if (isToggleField) {
     previewDisplay = isEnabled ? 'true' : 'false';
     previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
+  } else if (isConditionField) {
+    // Condition uses defaultToNew transform - always shows "new"
+    previewDisplay = 'new';
+    previewStyle = 'text-white/80';
   } else if (!effectiveMapping) {
     previewDisplay = '';
     previewStyle = 'text-white/40';
