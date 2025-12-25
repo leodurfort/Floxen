@@ -482,7 +482,7 @@ function buildFeedHtml(
       <div class="header-meta">Shop: ${escapeHtml(seller.name || shopId)}</div>
     </div>
     <div class="header-actions">
-      <select id="snapshot-select" onchange="window.location.href='/api/v1/feed/${shopId}/view?snapshot='+this.value" class="snapshot-select">
+      <select id="snapshot-select" class="snapshot-select">
         ${allSnapshots.map((s, i) => {
           const date = new Date(s.generatedAt);
           const label = date.toLocaleString('en-US', {
@@ -549,6 +549,20 @@ function buildFeedHtml(
       </table>
     </div>
   </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var select = document.getElementById('snapshot-select');
+      if (select) {
+        select.addEventListener('change', function(e) {
+          var snapshotId = e.target.value;
+          console.log('Snapshot selected:', snapshotId);
+          var url = '/api/v1/feed/${shopId}/view?snapshot=' + snapshotId;
+          console.log('Navigating to:', url);
+          window.location.href = url;
+        });
+      }
+    });
+  </script>
 </body>
 </html>
   `;
