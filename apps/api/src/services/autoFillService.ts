@@ -163,10 +163,13 @@ export class AutoFillService {
           return this.shop[shopField as keyof Shop] || null;
         }
 
-        // Use product override mapping with spec transforms
-        const mapping = {
-          ...spec.wooCommerceMapping,  // Keep transform, fallback from spec
-          field: customPath,           // Override just the field path
+        // Use custom path with spec transforms if they exist
+        const mapping: NonNullable<OpenAIFieldSpec['wooCommerceMapping']> = {
+          field: customPath,
+          ...(spec.wooCommerceMapping && {
+            transform: spec.wooCommerceMapping.transform,
+            fallback: spec.wooCommerceMapping.fallback,
+          }),
         };
 
         return this.extractWithMapping(wooProduct, mapping, spec);
@@ -186,10 +189,13 @@ export class AutoFillService {
         return this.shop[shopField as keyof Shop] || null;
       }
 
-      // Handle product-level fields - merge with spec defaults to preserve transform/fallback
+      // Use custom path with spec transforms if they exist
       mapping = {
-        ...spec.wooCommerceMapping,  // Keep transform, fallback from spec
-        field: customPath,           // Override just the field path
+        field: customPath,
+        ...(spec.wooCommerceMapping && {
+          transform: spec.wooCommerceMapping.transform,
+          fallback: spec.wooCommerceMapping.fallback,
+        }),
       };
     }
 
