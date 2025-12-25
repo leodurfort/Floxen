@@ -13,7 +13,7 @@ import {
 } from '../services/shopService';
 import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET } from '@productsynch/shared';
 import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
-import { syncQueue } from '../jobs';
+import { syncQueue } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
@@ -129,7 +129,7 @@ export async function updateShop(req: Request, res: Response) {
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
     if (affectsAutofill && syncQueue) {
-      await syncQueue.queue.add('product-reprocess', {
+      await syncQueue!.add('product-reprocess', {
         shopId: shop.id,
         reason: 'shop_settings_updated',
       });
@@ -190,7 +190,7 @@ export function oauthCallback(req: Request, res: Response) {
 
   setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret))
     .then((shop) => {
-      syncQueue?.queue.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
+      syncQueue?.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
       logger.info('shops:oauth callback SUCCESS - stored creds', { shopId: shop.id });
       return res.json({ shop, message: 'Connection verified, sync queued' });
     })
@@ -530,7 +530,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
 
       // Queue background job to reprocess all products with new mappings
       if (syncQueue) {
-        await syncQueue.queue.add('product-reprocess', {
+        await syncQueue!.add('product-reprocess', {
           shopId: id,
           reason: 'field_mappings_updated',
         });

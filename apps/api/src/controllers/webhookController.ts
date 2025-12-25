@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
-import { syncQueue } from '../jobs';
+import { syncQueue } from '../lib/redis';
 
 // Skip webhook sync if a full sync completed within this window
 const DEBOUNCE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -90,7 +90,7 @@ export async function handleWooWebhook(req: Request, res: Response) {
 
     // Enqueue incremental sync job for the product
     if (event.id && syncQueue) {
-      await syncQueue.queue.add(
+      await syncQueue!.add(
         'product-sync',
         {
           shopId,
