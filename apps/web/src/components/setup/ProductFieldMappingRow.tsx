@@ -202,9 +202,18 @@ export function ProductFieldMappingRow({
       setIsStaticMode(false);
       onOverrideChange(spec.attribute, { type: 'mapping', value: null });
     } else {
-      // Select a WooCommerce field - create mapping override
+      // Select a WooCommerce field
       setIsStaticMode(false);
-      onOverrideChange(spec.attribute, { type: 'mapping', value });
+
+      // Get effective shop-level mapping
+      const shopDefault = shopMapping || spec.wooCommerceMapping?.field || null;
+
+      // If selecting same as shop default, remove override instead of creating one
+      if (value === shopDefault) {
+        onOverrideChange(spec.attribute, null);
+      } else {
+        onOverrideChange(spec.attribute, { type: 'mapping', value });
+      }
     }
   };
 
