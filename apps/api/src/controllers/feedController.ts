@@ -162,9 +162,6 @@ function buildFeedHtml(
         : String(value);
 
       // Special styling for certain columns
-      if (key === 'image_link') {
-        return `<td class="cell-image"><img src="${escapeHtml(value)}" alt="" onerror="this.style.display='none'; this.parentNode.innerHTML='—'"/></td>`;
-      }
       if (key === 'enable_search' || key === 'enable_checkout') {
         const isTrue = value === 'true' || value === true;
         return `<td class="cell-badge ${isTrue ? 'badge-green' : 'badge-gray'}">${value}</td>`;
