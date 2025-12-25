@@ -83,8 +83,7 @@ export function extractTransformedPreviewValue(
   if (transformName && PREVIEW_TRANSFORMS[transformName]) {
     try {
       value = PREVIEW_TRANSFORMS[transformName](value, wooRawJson, shopData || {});
-    } catch (err) {
-      console.error('[extractTransformedPreviewValue] transform failed', { transformName, err });
+    } catch {
       value = null;
     }
   }

@@ -91,8 +91,7 @@ export default function SetupPage() {
 
       setMappings(loadedMappings);
       setUserMappings(data.userMappings || {});
-    } catch (err) {
-      console.error('[Setup] Failed to load mappings', err);
+    } catch {
       setLoadError('Failed to load field mappings. Please refresh the page.');
     } finally {
       setLoading(false);
@@ -114,8 +113,7 @@ export default function SetupPage() {
       if (data.products && data.products.length > 0) {
         setSelectedProductId(data.products[0].id);
       }
-    } catch (err) {
-      console.error('[Setup] Failed to load products', err);
+    } catch {
       setProductsError('Failed to load products for preview.');
     } finally {
       setProductsLoading(false);
@@ -132,8 +130,8 @@ export default function SetupPage() {
       if (!res.ok) throw new Error('Failed to load WooCommerce fields');
       const data = await res.json();
       setWooFields(data.fields || []);
-    } catch (err) {
-      console.error('[Setup] Failed to load WooCommerce fields', err);
+    } catch {
+      // WooCommerce fields load failed silently
     } finally {
       setWooFieldsLoading(false);
     }
@@ -173,7 +171,6 @@ export default function SetupPage() {
       } catch (err) {
         // Don't update state if request was aborted
         if (err instanceof Error && err.name === 'AbortError') return;
-        console.error('[Setup] Failed to load product WooCommerce data:', err);
         setPreviewProductJson(null);
       } finally {
         if (!controller.signal.aborted) {
@@ -225,8 +222,6 @@ export default function SetupPage() {
         throw new Error(`Failed to save mapping: ${errorText}`);
       }
     } catch (err) {
-      console.error('[Setup] Failed to save mapping', err);
-
       // Revert optimistic update
       setMappings({ ...mappings, [attribute]: oldValue });
       setUserMappings({ ...userMappings, [attribute]: oldUserValue });
