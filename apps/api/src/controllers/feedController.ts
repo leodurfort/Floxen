@@ -2,8 +2,9 @@
  * Feed Controller
  *
  * Public endpoints for accessing the OpenAI product feed.
- * - GET /feed/:shopId - Raw JSON feed for OpenAI consumption
- * - GET /feed/:shopId/view - HTML table for debugging/preview
+ * - GET /feed/:shopId - Raw JSON feed for OpenAI consumption (latest)
+ * - GET /feed/:shopId/view - HTML table for debugging/preview (supports ?snapshot=id)
+ * - GET /feed/:shopId/snapshots - List available snapshots (past 7 days)
  */
 
 import { Request, Response } from 'express';
@@ -12,24 +13,26 @@ import { logger } from '../lib/logger';
 import { OPENAI_FEED_SPEC } from '@productsynch/shared';
 
 /**
- * Get raw JSON feed for a shop
+ * Get raw JSON feed for a shop (latest snapshot)
  * This is the endpoint OpenAI will fetch from
  */
 export async function getFeedJson(req: Request, res: Response) {
   const { shopId } = req.params;
+  const { snapshot: snapshotId } = req.query;
 
   try {
-    const snapshot = await prisma.feedSnapshot.findUnique({
-      where: { shopId },
-      include: {
-        shop: {
-          select: { sellerName: true, isConnected: true },
-        },
-      },
-    });
+    // Get specific snapshot by ID or latest
+    const snapshot = snapshotId
+      ? await prisma.feedSnapshot.findFirst({
+          where: { id: snapshotId as string, shopId },
+        })
+      : await prisma.feedSnapshot.findFirst({
+          where: { shopId },
+          orderBy: { generatedAt: 'desc' },
+        });
 
     if (!snapshot) {
-      logger.warn('feed:json - No feed found', { shopId });
+      logger.warn('feed:json - No feed found', { shopId, snapshotId });
       return res.status(404).json({
         error: 'Feed not found',
         message: 'No feed has been generated for this shop yet. Trigger a sync first.',
@@ -38,6 +41,7 @@ export async function getFeedJson(req: Request, res: Response) {
 
     logger.info('feed:json - Serving feed', {
       shopId,
+      snapshotId: snapshot.id,
       productCount: snapshot.productCount,
       generatedAt: snapshot.generatedAt,
     });
@@ -46,6 +50,7 @@ export async function getFeedJson(req: Request, res: Response) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('X-Feed-Generated-At', snapshot.generatedAt.toISOString());
     res.setHeader('X-Feed-Product-Count', snapshot.productCount.toString());
+    res.setHeader('X-Feed-Snapshot-Id', snapshot.id);
 
     return res.json(snapshot.feedData);
   } catch (err: any) {
@@ -55,20 +60,68 @@ export async function getFeedJson(req: Request, res: Response) {
 }
 
 /**
- * Get HTML view of the feed for debugging
+ * List available snapshots for a shop (past 7 days)
  */
-export async function getFeedHtml(req: Request, res: Response) {
+export async function listSnapshots(req: Request, res: Response) {
   const { shopId } = req.params;
 
   try {
-    const snapshot = await prisma.feedSnapshot.findUnique({
+    const snapshots = await prisma.feedSnapshot.findMany({
       where: { shopId },
-      include: {
-        shop: {
-          select: { sellerName: true, wooStoreUrl: true },
-        },
+      orderBy: { generatedAt: 'desc' },
+      select: {
+        id: true,
+        productCount: true,
+        generatedAt: true,
       },
     });
+
+    return res.json({
+      shopId,
+      count: snapshots.length,
+      snapshots,
+    });
+  } catch (err: any) {
+    logger.error('feed:snapshots error', { shopId, error: err.message });
+    return res.status(500).json({ error: 'Failed to list snapshots' });
+  }
+}
+
+/**
+ * Get HTML view of the feed for debugging
+ * Supports ?snapshot=id to view specific snapshot
+ */
+export async function getFeedHtml(req: Request, res: Response) {
+  const { shopId } = req.params;
+  const { snapshot: snapshotId } = req.query;
+
+  try {
+    // Get all snapshots for the dropdown
+    const allSnapshots = await prisma.feedSnapshot.findMany({
+      where: { shopId },
+      orderBy: { generatedAt: 'desc' },
+      select: {
+        id: true,
+        productCount: true,
+        generatedAt: true,
+      },
+    });
+
+    // Get specific snapshot by ID or latest
+    const snapshot = snapshotId
+      ? await prisma.feedSnapshot.findFirst({
+          where: { id: snapshotId as string, shopId },
+          include: {
+            shop: { select: { sellerName: true, wooStoreUrl: true } },
+          },
+        })
+      : await prisma.feedSnapshot.findFirst({
+          where: { shopId },
+          orderBy: { generatedAt: 'desc' },
+          include: {
+            shop: { select: { sellerName: true, wooStoreUrl: true } },
+          },
+        });
 
     if (!snapshot) {
       return res.status(404).send(`
@@ -90,11 +143,12 @@ export async function getFeedHtml(req: Request, res: Response) {
 
     logger.info('feed:html - Serving feed view', {
       shopId,
+      snapshotId: snapshot.id,
       productCount: items.length,
     });
 
-    // Build HTML table
-    const html = buildFeedHtml(snapshot, feedData, items, seller, shopId);
+    // Build HTML table with snapshot selector
+    const html = buildFeedHtml(snapshot, feedData, items, seller, shopId, allSnapshots);
 
     res.setHeader('Content-Type', 'text/html');
     return res.send(html);
@@ -122,7 +176,8 @@ function buildFeedHtml(
   feedData: any,
   items: any[],
   seller: any,
-  shopId: string
+  shopId: string,
+  allSnapshots: Array<{ id: string; productCount: number; generatedAt: Date }>
 ): string {
   // Use all 70 fields from the spec in order
   const allFields = OPENAI_FEED_SPEC.map(spec => ({
@@ -371,6 +426,23 @@ function buildFeedHtml(
       font-size: 0.75rem;
       font-weight: 500;
     }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .snapshot-select {
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-size: 0.85rem;
+      cursor: pointer;
+      min-width: 200px;
+    }
+    .snapshot-select:hover { background: rgba(255,255,255,0.2); }
+    .snapshot-select option { background: #1a1a2e; color: white; }
     .json-link {
       background: #28a745;
       color: white;
@@ -389,7 +461,20 @@ function buildFeedHtml(
       <h1>OpenAI Product Feed</h1>
       <div class="header-meta">Shop: ${escapeHtml(seller.name || shopId)}</div>
     </div>
-    <a href="/api/v1/feed/${shopId}" class="json-link">View Raw JSON</a>
+    <div class="header-actions">
+      <select id="snapshot-select" onchange="window.location.href='/api/v1/feed/${shopId}/view?snapshot='+this.value" class="snapshot-select">
+        ${allSnapshots.map((s, i) => {
+          const date = new Date(s.generatedAt);
+          const label = date.toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+          const isSelected = s.id === snapshot.id;
+          const isCurrent = i === 0;
+          return `<option value="${s.id}" ${isSelected ? 'selected' : ''}>${label} (${s.productCount} products)${isCurrent ? ' - Latest' : ''}</option>`;
+        }).join('')}
+      </select>
+      <a href="/api/v1/feed/${shopId}?snapshot=${snapshot.id}" class="json-link">View Raw JSON</a>
+    </div>
   </div>
 
   <div class="content">

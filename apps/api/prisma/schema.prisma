@@ -99,7 +99,7 @@ model Shop {
   products          Product[]
   syncBatches       SyncBatch[]
   analytics         ShopAnalytics[]
-  feedSnapshot      FeedSnapshot?
+  feedSnapshots     FeedSnapshot[]
   fieldMappingsV2   FieldMapping[]
 
   @@index([userId])
@@ -238,7 +238,7 @@ model SyncBatch {
 
 model FeedSnapshot {
   id           String   @id @default(cuid())
-  shopId       String   @unique @map("shop_id")
+  shopId       String   @map("shop_id")
   feedData     Json     @map("feed_data")
   productCount Int      @map("product_count")
   generatedAt  DateTime @map("generated_at")
@@ -248,6 +248,8 @@ model FeedSnapshot {
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId])
+  @@index([shopId, generatedAt])
+  @@index([generatedAt])
   @@map("feed_snapshots")
 }
 
