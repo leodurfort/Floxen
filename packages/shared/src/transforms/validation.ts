@@ -111,8 +111,8 @@ function checkConditionalRequirement(
     return productContext?.isVariation === true;
   }
 
-  // Condition: not required - defaultToNew() transform handles missing values
-  // validateFieldValue() will check format if a value IS provided
+  // Condition: optional field, not required by default
+  // Users can map it to a WooCommerce field if needed
   if (spec.attribute === 'condition' && deps.includes('new')) {
     return false;
   }
