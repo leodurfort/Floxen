@@ -87,9 +87,10 @@ export function generateFeedPayload(
           }
         }
 
-        return completeItem;
+        // Return both item and product reference for accurate validation reporting
+        return { item: completeItem, product: p };
       })
-    .map((item, index) => {
+    .map(({ item, product }) => {
       validationStats.total++;
 
       // Validate entry if enabled
@@ -101,7 +102,7 @@ export function generateFeedPayload(
         if (!validation.valid) {
           validationStats.invalid++;
           validationStats.invalidProducts.push({
-            productId: products[index].wooProductId,
+            productId: product.wooProductId,
             errors: validation.errors.map(e => ({
               field: e.field,
               error: e.error,
@@ -110,8 +111,8 @@ export function generateFeedPayload(
 
           logger.error('[FeedService] Invalid product entry', {
             shopId: shop.id,
-            productId: products[index].wooProductId.toString(),
-            productTitle: products[index].wooTitle,
+            productId: product.wooProductId.toString(),
+            productTitle: product.wooTitle,
             errorCount: validation.errors.length,
             errors: validation.errors,
           });
@@ -129,7 +130,7 @@ export function generateFeedPayload(
           validationStats.warnings++;
           logger.warn('[FeedService] Product entry has warnings', {
             shopId: shop.id,
-            productId: products[index].wooProductId.toString(),
+            productId: product.wooProductId.toString(),
             warningCount: validation.warnings.length,
             warnings: validation.warnings,
           });

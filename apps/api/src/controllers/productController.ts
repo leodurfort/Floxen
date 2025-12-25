@@ -9,7 +9,7 @@ import {
   validateStaticValue,
 } from '@productsynch/shared';
 import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord } from '../services/productService';
-import { syncQueue } from '../jobs';
+import { syncQueue } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
@@ -133,7 +133,7 @@ export function bulkAction(req: Request, res: Response) {
         syncStatus: action === 'sync' ? 'PENDING' : undefined,
       });
       if (action === 'sync' && updated) {
-        syncQueue?.queue.add('product-sync', {
+        syncQueue?.add('product-sync', {
           shopId: req.params.id,
           productId: pid,
           type: 'INCREMENTAL',
