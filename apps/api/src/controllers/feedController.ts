@@ -95,6 +95,14 @@ export async function getFeedHtml(req: Request, res: Response) {
   const { shopId } = req.params;
   const { snapshot: snapshotId } = req.query;
 
+  logger.info('feed:html - Request received', {
+    shopId,
+    snapshotId,
+    snapshotIdType: typeof snapshotId,
+    queryParams: req.query,
+    url: req.url,
+  });
+
   try {
     // Get all snapshots for the dropdown
     const allSnapshots = await prisma.feedSnapshot.findMany({
@@ -108,6 +116,11 @@ export async function getFeedHtml(req: Request, res: Response) {
     });
 
     // Get specific snapshot by ID or latest
+    logger.info('feed:html - Querying snapshot', {
+      hasSnapshotId: !!snapshotId,
+      snapshotId: snapshotId || 'none',
+    });
+
     const snapshot = snapshotId
       ? await prisma.feedSnapshot.findFirst({
           where: { id: snapshotId as string, shopId },
@@ -122,6 +135,13 @@ export async function getFeedHtml(req: Request, res: Response) {
             shop: { select: { sellerName: true, wooStoreUrl: true } },
           },
         });
+
+    logger.info('feed:html - Snapshot result', {
+      found: !!snapshot,
+      snapshotId: snapshot?.id || 'none',
+      productCount: snapshot?.productCount,
+      generatedAt: snapshot?.generatedAt,
+    });
 
     if (!snapshot) {
       return res.status(404).send(`
