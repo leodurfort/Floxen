@@ -133,7 +133,12 @@ export function bulkAction(req: Request, res: Response) {
         syncStatus: action === 'sync' ? 'PENDING' : undefined,
       });
       if (action === 'sync' && updated) {
-        syncQueue?.queue.add('product-sync', { shopId: req.params.id, productId: pid }, { removeOnComplete: true });
+        syncQueue?.queue.add('product-sync', {
+          shopId: req.params.id,
+          productId: pid,
+          type: 'INCREMENTAL',
+          triggeredBy: 'manual',
+        }, { removeOnComplete: true });
       }
       return { id: pid, updated: Boolean(updated) };
     }),

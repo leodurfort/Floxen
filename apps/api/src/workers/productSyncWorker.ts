@@ -1,12 +1,19 @@
 import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories } from '../services/wooClient';
-import { transformWooProduct, mergeParentAndVariation, checksum } from '../services/productService';
+import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories, fetchSingleProduct } from '../services/wooClient';
+import { transformWooProduct, mergeParentAndVariation } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { validateProduct, ProductFieldOverrides } from '@productsynch/shared';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { Shop } from '@prisma/client';
+
+interface SyncJobData {
+  shopId: string;
+  productId?: string;
+  type?: 'FULL' | 'INCREMENTAL';
+  triggeredBy?: string;
+}
 
 /**
  * Process a single product (simple product or merged variation)
@@ -125,14 +132,151 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
   });
 }
 
+/**
+ * Process a single WooCommerce product (handles both simple and variable products)
+ */
+async function processSingleWooProduct(
+  wooProd: any,
+  shop: Shop,
+  shopId: string,
+  autoFillService: AutoFillService,
+  client: any,
+  categoryMap: Map<number, any>
+) {
+  const enrichedProduct = enrichProductCategories(wooProd, categoryMap);
+  const isVariable = enrichedProduct.type === 'variable';
+
+  if (isVariable) {
+    logger.info(`product-sync: detected variable product, fetching variations`, {
+      shopId,
+      parentId: enrichedProduct.id,
+      title: enrichedProduct.name,
+    });
+
+    const variations = await fetchProductVariations(client, enrichedProduct.id);
+
+    logger.info(`product-sync: processing ${variations.length} variations`, {
+      shopId,
+      parentId: enrichedProduct.id,
+    });
+
+    for (const variation of variations) {
+      await processProduct(
+        mergeParentAndVariation(enrichedProduct, variation, shop.shopCurrency || 'USD'),
+        shop,
+        shopId,
+        autoFillService
+      );
+    }
+
+    logger.info(`product-sync: skipped parent variable product`, {
+      shopId,
+      parentId: enrichedProduct.id,
+      variationsCount: variations.length,
+    });
+  } else {
+    await processProduct(
+      transformWooProduct(enrichedProduct, shop.shopCurrency || 'USD'),
+      shop,
+      shopId,
+      autoFillService
+    );
+  }
+}
+
+/**
+ * Incremental sync - fetch and process a single product
+ */
+async function runIncrementalSync(
+  shop: Shop,
+  shopId: string,
+  productId: string,
+  client: any
+) {
+  logger.info('product-sync: running incremental sync', { shopId, productId });
+
+  const wooProductId = parseInt(productId, 10);
+  if (isNaN(wooProductId)) {
+    logger.error('product-sync: invalid productId for incremental sync', { shopId, productId });
+    return;
+  }
+
+  const wooProd = await fetchSingleProduct(client, wooProductId);
+  if (!wooProd) {
+    logger.warn('product-sync: product not found in WooCommerce', { shopId, productId });
+    return;
+  }
+
+  // Fetch categories for enrichment
+  const categoryMap = await fetchAllCategories(client);
+  const autoFillService = await AutoFillService.create(shop);
+
+  await processSingleWooProduct(wooProd, shop, shopId, autoFillService, client, categoryMap);
+
+  logger.info('product-sync: incremental sync completed', { shopId, productId });
+}
+
+/**
+ * Full sync - fetch and process all products
+ */
+async function runFullSync(
+  shop: Shop,
+  shopId: string,
+  client: any
+) {
+  logger.info('product-sync: running full sync', { shopId });
+
+  const products = await fetchAllProducts(client);
+  logger.info(`product-sync: fetched products`, { shopId, count: products.length });
+
+  const categoryMap = await fetchAllCategories(client);
+  logger.info(`product-sync: fetched categories`, { shopId, categoryCount: categoryMap.size });
+
+  const autoFillService = await AutoFillService.create(shop);
+
+  for (const wooProd of products) {
+    await processSingleWooProduct(wooProd, shop, shopId, autoFillService, client, categoryMap);
+  }
+
+  // Field discovery only on full sync
+  logger.info('product-sync: triggering field discovery', { shopId });
+  try {
+    const discoveryResult = await FieldDiscoveryService.discoverFields(shopId);
+    logger.info('product-sync: field discovery completed', {
+      shopId,
+      discovered: discoveryResult.discovered.length,
+      saved: discoveryResult.saved,
+      skipped: discoveryResult.skipped,
+      errors: discoveryResult.errors.length,
+    });
+  } catch (discoveryErr) {
+    logger.error('product-sync: field discovery failed (non-fatal)', {
+      shopId,
+      error: discoveryErr instanceof Error ? discoveryErr : new Error(String(discoveryErr)),
+    });
+  }
+
+  logger.info('product-sync: full sync completed', { shopId, productCount: products.length });
+}
+
 export async function productSyncProcessor(job: Job) {
-  logger.info(`product-sync job received`, job.data);
-  const { shopId } = job.data as { shopId: string };
+  const { shopId, productId, type, triggeredBy } = job.data as SyncJobData;
+  const isIncremental = productId && type === 'INCREMENTAL';
+
+  logger.info(`product-sync job received`, {
+    shopId,
+    productId,
+    type: type || 'FULL',
+    triggeredBy,
+    isIncremental,
+  });
+
   if (!shopId) return;
+
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) return;
 
-  // If no Woo credentials, mark sync complete.
+  // If no Woo credentials, mark sync complete
   if (!shop.wooConsumerKey || !shop.wooConsumerSecret) {
     await prisma.shop.update({
       where: { id: shopId },
@@ -148,167 +292,75 @@ export async function productSyncProcessor(job: Job) {
       consumerSecret: shop.wooConsumerSecret,
     });
 
-    // Refresh shop settings from WooCommerce on each sync
-    logger.info('product-sync: refreshing shop settings from WooCommerce', { shopId });
-    const settings = await fetchStoreSettings(client, shop.wooStoreUrl);
+    // Only refresh shop settings on full sync (not needed for single product updates)
+    if (!isIncremental) {
+      logger.info('product-sync: refreshing shop settings from WooCommerce', { shopId });
+      const settings = await fetchStoreSettings(client, shop.wooStoreUrl);
 
-    if (settings) {
-      // Check if any auto-fill-affecting settings have changed
-      const settingsChanged =
-        shop.shopCurrency !== settings.shopCurrency ||
-        shop.dimensionUnit !== settings.dimensionUnit ||
-        shop.weightUnit !== settings.weightUnit;
+      if (settings) {
+        const settingsChanged =
+          shop.shopCurrency !== settings.shopCurrency ||
+          shop.dimensionUnit !== settings.dimensionUnit ||
+          shop.weightUnit !== settings.weightUnit;
 
-      const updateData: any = {
-        shopCurrency: settings.shopCurrency,
-        dimensionUnit: settings.dimensionUnit,
-        weightUnit: settings.weightUnit,
-        // Populate sellerUrl from wooStoreUrl if not set
-        sellerUrl: shop.sellerUrl || shop.wooStoreUrl,
-      };
+        const updateData: any = {
+          shopCurrency: settings.shopCurrency,
+          dimensionUnit: settings.dimensionUnit,
+          weightUnit: settings.weightUnit,
+          sellerUrl: shop.sellerUrl || shop.wooStoreUrl,
+        };
 
-      // If settings changed, update shopSettingsUpdatedAt to trigger product reprocessing
-      if (settingsChanged) {
-        updateData.shopSettingsUpdatedAt = new Date();
-        logger.info('product-sync: shop settings changed, will reprocess products', {
-          shopId,
-          oldCurrency: shop.shopCurrency,
-          newCurrency: settings.shopCurrency,
-          oldDimensionUnit: shop.dimensionUnit,
-          newDimensionUnit: settings.dimensionUnit,
-          oldWeightUnit: shop.weightUnit,
-          newWeightUnit: settings.weightUnit,
-        });
-      }
-      // sellerName, sellerPrivacyPolicy, sellerTos, returnPolicy, returnWindow are user-input only
-
-      await prisma.shop.update({
-        where: { id: shopId },
-        data: updateData,
-      });
-
-      logger.info('product-sync: shop settings refreshed', {
-        shopId,
-        shopCurrency: settings.shopCurrency,
-        dimensionUnit: settings.dimensionUnit,
-        weightUnit: settings.weightUnit,
-        settingsChanged,
-      });
-
-      // Update local shop object cache
-      if (settingsChanged) {
-        shop.shopSettingsUpdatedAt = updateData.shopSettingsUpdatedAt;
-      }
-      shop.shopCurrency = settings.shopCurrency || null;
-      shop.dimensionUnit = settings.dimensionUnit || null;
-      shop.weightUnit = settings.weightUnit || null;
-      if (!shop.sellerUrl) {
-        shop.sellerUrl = shop.wooStoreUrl;
-      }
-    } else {
-      logger.warn('product-sync: failed to fetch shop settings, using existing values', { shopId });
-
-      // Fallback: Pull currency if not set yet
-      if (!shop.shopCurrency) {
-        const currency = await fetchStoreCurrency(client);
-        if (currency) {
-          await prisma.shop.update({
-            where: { id: shopId },
-            data: { shopCurrency: currency, shopSettingsUpdatedAt: new Date() },
+        if (settingsChanged) {
+          updateData.shopSettingsUpdatedAt = new Date();
+          logger.info('product-sync: shop settings changed, will reprocess products', {
+            shopId,
+            oldCurrency: shop.shopCurrency,
+            newCurrency: settings.shopCurrency,
           });
-          logger.info('product-sync: currency updated from Woo (fallback)', { shopId, currency });
-          shop.shopCurrency = currency;
-          shop.shopSettingsUpdatedAt = new Date();
+        }
+
+        await prisma.shop.update({ where: { id: shopId }, data: updateData });
+
+        // Update local shop object
+        if (settingsChanged) shop.shopSettingsUpdatedAt = updateData.shopSettingsUpdatedAt;
+        shop.shopCurrency = settings.shopCurrency || null;
+        shop.dimensionUnit = settings.dimensionUnit || null;
+        shop.weightUnit = settings.weightUnit || null;
+        if (!shop.sellerUrl) shop.sellerUrl = shop.wooStoreUrl;
+      } else {
+        logger.warn('product-sync: failed to fetch shop settings, using existing values', { shopId });
+
+        if (!shop.shopCurrency) {
+          const currency = await fetchStoreCurrency(client);
+          if (currency) {
+            await prisma.shop.update({
+              where: { id: shopId },
+              data: { shopCurrency: currency, shopSettingsUpdatedAt: new Date() },
+            });
+            shop.shopCurrency = currency;
+            shop.shopSettingsUpdatedAt = new Date();
+          }
         }
       }
     }
 
-    // Always do full sync - checksum optimization prevents unnecessary DB writes
-    const products = await fetchAllProducts(client);
-
-    logger.info(`product-sync: fetched products`, {
-      shopId,
-      count: products.length,
-    });
-
-    // Fetch all categories to enable proper category hierarchy building
-    const categoryMap = await fetchAllCategories(client);
-    logger.info(`product-sync: fetched categories`, {
-      shopId,
-      categoryCount: categoryMap.size,
-    });
-
-    // Create AutoFillService once with custom field mappings from database
-    const autoFillService = await AutoFillService.create(shop);
-
-    for (const wooProd of products) {
-      // Enrich product categories with parent field for hierarchy building
-      const enrichedProduct = enrichProductCategories(wooProd, categoryMap);
-      // Check if this is a variable product
-      const isVariable = enrichedProduct.type === 'variable';
-
-      if (isVariable) {
-        logger.info(`product-sync: detected variable product, fetching variations`, {
-          shopId,
-          parentId: enrichedProduct.id,
-          title: enrichedProduct.name,
-        });
-
-        // Fetch all variations for this variable product
-        const variations = await fetchProductVariations(client, enrichedProduct.id);
-
-        logger.info(`product-sync: processing ${variations.length} variations`, {
-          shopId,
-          parentId: enrichedProduct.id,
-        });
-
-        // Process each variation
-        for (const variation of variations) {
-          await processProduct(
-            mergeParentAndVariation(enrichedProduct, variation, shop.shopCurrency || 'USD'),
-            shop,
-            shopId,
-            autoFillService
-          );
-        }
-
-        // Skip creating an entry for the parent variable product
-        logger.info(`product-sync: skipped parent variable product`, {
-          shopId,
-          parentId: enrichedProduct.id,
-          variationsCount: variations.length,
-        });
-      } else {
-        // Process simple products normally
-        await processProduct(transformWooProduct(enrichedProduct, shop.shopCurrency || 'USD'), shop, shopId, autoFillService);
-      }
+    // Run incremental or full sync
+    if (isIncremental) {
+      await runIncrementalSync(shop, shopId, productId, client);
+    } else {
+      await runFullSync(shop, shopId, client);
     }
 
     await prisma.shop.update({
       where: { id: shopId },
       data: { syncStatus: 'COMPLETED', lastSyncAt: new Date() },
     });
-
-    // Automatically discover meta_data fields after sync completes
-    logger.info('product-sync: triggering field discovery', { shopId });
-    try {
-      const discoveryResult = await FieldDiscoveryService.discoverFields(shopId);
-      logger.info('product-sync: field discovery completed', {
-        shopId,
-        discovered: discoveryResult.discovered.length,
-        saved: discoveryResult.saved,
-        skipped: discoveryResult.skipped,
-        errors: discoveryResult.errors.length,
-      });
-    } catch (discoveryErr) {
-      logger.error('product-sync: field discovery failed (non-fatal)', {
-        shopId,
-        error: discoveryErr instanceof Error ? discoveryErr : new Error(String(discoveryErr)),
-      });
-      // Don't fail the sync if field discovery fails
-    }
   } catch (err) {
-    logger.error(`product-sync failed for shop ${shopId}`, { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error(`product-sync failed for shop ${shopId}`, {
+      error: err instanceof Error ? err : new Error(String(err)),
+      isIncremental,
+      productId,
+    });
     await prisma.shop.update({
       where: { id: shopId },
       data: { syncStatus: 'FAILED' },

@@ -5,6 +5,9 @@ import { productReprocessProcessor } from './productReprocessWorker';
 import { feedGenerationProcessor } from './feedGenerationWorker';
 import { logger } from '../lib/logger';
 
+// Concurrency limit: keep low to avoid overwhelming WooCommerce APIs
+const WORKER_CONCURRENCY = 2;
+
 if (redisConnection) {
   // Create a single worker that handles all sync-related jobs
   const syncWorker = new Worker(
@@ -23,7 +26,7 @@ if (redisConnection) {
     },
     {
       connection: redisConnection,
-      concurrency: 5, // Process up to 5 jobs concurrently
+      concurrency: WORKER_CONCURRENCY,
     }
   );
 
@@ -35,7 +38,7 @@ if (redisConnection) {
     logger.error(`Job failed: ${job?.name} (${job?.id})`, { error: err instanceof Error ? err : new Error(String(err)) });
   });
 
-  logger.info('Workers initialized and listening for jobs');
+  logger.info(`Workers initialized with concurrency: ${WORKER_CONCURRENCY}`);
 } else {
   logger.warn('Redis not configured; workers disabled');
 }
