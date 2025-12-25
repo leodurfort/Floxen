@@ -3,7 +3,6 @@ import { redisConnection } from '../lib/redis';
 import { productSyncProcessor } from './productSyncWorker';
 import { productReprocessProcessor } from './productReprocessWorker';
 import { feedGenerationProcessor } from './feedGenerationWorker';
-import { feedSubmissionProcessor } from './feedSubmissionWorker';
 import { logger } from '../lib/logger';
 
 if (redisConnection) {
@@ -18,8 +17,6 @@ if (redisConnection) {
           return await productReprocessProcessor(job);
         case 'feed-generation':
           return await feedGenerationProcessor(job);
-        case 'feed-submission':
-          return await feedSubmissionProcessor(job);
         default:
           logger.warn(`Unknown job type: ${job.name}`);
       }

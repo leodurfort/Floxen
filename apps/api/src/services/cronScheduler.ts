@@ -3,7 +3,7 @@
  *
  * Manages all scheduled jobs for ProductSynch:
  * - Periodic sync (every 15 minutes)
- * - Feed generation and submission
+ * - Feed generation (creates FeedSnapshot for OpenAI)
  * - Health checks
  * - Analytics aggregation
  */
@@ -76,19 +76,12 @@ export class CronScheduler {
             });
 
             // 2. Feed generation (after product sync completes)
+            // This creates/updates FeedSnapshot + uploads to storage
             await syncQueue!.add('feed-generation', {
               shopId: shop.id,
             }, {
               priority: 3,
               delay: 30000, // 30 seconds after product sync
-            });
-
-            // 3. Feed submission (save to database)
-            await syncQueue!.add('feed-submission', {
-              shopId: shop.id,
-            }, {
-              priority: 3,
-              delay: 60000, // 1 minute after product sync
             });
 
             logger.info(`Cron: Enqueued jobs for shop ${shop.sellerName || shop.id}`, {

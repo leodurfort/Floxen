@@ -57,13 +57,13 @@ export async function feedGenerationProcessor(job: Job) {
     await prisma.feedSnapshot.upsert({
       where: { shopId },
       update: {
-        feedData: payload,
+        feedData: payload as any,
         productCount: payload.items.length,
         generatedAt: new Date(),
       },
       create: {
         shopId,
-        feedData: payload,
+        feedData: payload as any,
         productCount: payload.items.length,
         generatedAt: new Date(),
       },
