@@ -210,8 +210,10 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     requirement: 'Conditional',
     dependencies: 'Required if product condition differs from new',
     validationRules: ['Must be lowercase string'],
-    wooCommerceMapping: null,
-    isLocked: false,
+    wooCommerceMapping: {
+      transform: 'defaultToNew',
+    },
+    isLocked: true,
     category: 'item_information',
   },
   {
