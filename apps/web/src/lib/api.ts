@@ -166,7 +166,7 @@ export async function latestFeed(shopId: string, token: string) {
  * Regenerates the FeedSnapshot with current product data
  */
 export async function refreshFeed(shopId: string, token: string) {
-  return request<{ shopId: string; pushed: boolean }>(`/api/v1/shops/${shopId}/sync/push-feed`, {
+  return request<{ shopId: string; pushed: boolean }>(`/api/v1/shops/${shopId}/sync/push`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
