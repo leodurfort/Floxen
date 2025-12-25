@@ -251,7 +251,7 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
   // Stock: Use variation's stock data (variations have independent stock)
   merged.stock_status = variation.stock_status || '';
   merged.stock_quantity = variation.stock_quantity !== null ? variation.stock_quantity : null;
-  merged.manage_stock = variation.manage_stock || parent.manage_stock || false;
+  merged.manage_stock = variation.manage_stock ?? parent.manage_stock ?? false;
 
   // Pricing: Use variation price or parent fallback
   merged.price = price;

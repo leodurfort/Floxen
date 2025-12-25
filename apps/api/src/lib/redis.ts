@@ -1,4 +1,4 @@
-import { Queue, Worker, QueueEvents } from 'bullmq';
+import { Queue, QueueEvents } from 'bullmq';
 import Redis from 'ioredis';
 import { env } from '../config/env';
 import { logger } from './logger';
@@ -16,29 +16,6 @@ export function createQueue(name: string) {
   const events = new QueueEvents(name, { connection: redisConnection });
   events.on('error', (err) => logger.error(`QueueEvents error (${name})`, { error: err instanceof Error ? err : new Error(String(err)) }));
   return { queue, events };
-}
-
-export interface WorkerOptions {
-  concurrency?: number;
-}
-
-export function createWorker<T = any>(
-  name: string,
-  processor: (job: any) => Promise<T>,
-  options: WorkerOptions = {},
-) {
-  if (!redisConnection) {
-    logger.warn(`Redis not configured; worker ${name} disabled`);
-    return null;
-  }
-  const { concurrency = 2 } = options; // Default to 2 concurrent jobs
-  const worker = new Worker(name, processor, {
-    connection: redisConnection,
-    concurrency,
-  });
-  worker.on('failed', (job, err) => logger.error(`Job failed (${name}:${job?.id})`, { error: err instanceof Error ? err : new Error(String(err)) }));
-  logger.info(`Worker ${name} created with concurrency: ${concurrency}`);
-  return worker;
 }
 
 // Create shared queue instance for sync jobs
