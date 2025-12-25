@@ -111,7 +111,8 @@ function checkConditionalRequirement(
     return productContext?.isVariation === true;
   }
 
-  // Condition: not required - defaultToNew() transform always provides 'new'
+  // Condition: not required - defaultToNew() transform handles missing values
+  // validateFieldValue() will check format if a value IS provided
   if (spec.attribute === 'condition' && deps.includes('new')) {
     return false;
   }
