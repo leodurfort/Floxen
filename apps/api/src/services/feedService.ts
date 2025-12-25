@@ -67,9 +67,12 @@ export function generateFeedPayload(
           if (field === 'id') {
             completeItem[field] = autoFilled.id || `${shop.id}-${p.wooProductId}`;
           } else if (field === 'enable_search') {
-            completeItem[field] = p.feedEnableSearch ? 'true' : 'false';
+            // Use the resolved value from openaiAutoFilled (respects product overrides)
+            // Fall back to DB column if not present in autoFilled
+            completeItem[field] = autoFilled.enable_search ?? (p.feedEnableSearch ? 'true' : 'false');
           } else if (field === 'enable_checkout') {
-            completeItem[field] = p.feedEnableCheckout ? 'true' : 'false';
+            // enable_checkout is always false (feature not yet available)
+            completeItem[field] = 'false';
           } else {
             // Use auto-filled value or null
             completeItem[field] = autoFilled[field] ?? null;

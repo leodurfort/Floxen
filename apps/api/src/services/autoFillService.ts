@@ -112,22 +112,20 @@ export class AutoFillService {
     const override = productOverrides?.[spec.attribute];
 
     // Handle toggle fields (enable_search, enable_checkout)
-    if (spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout') {
+    if (spec.attribute === 'enable_checkout') {
+      // enable_checkout is always false (feature not yet available)
+      return 'false';
+    }
+
+    if (spec.attribute === 'enable_search') {
       // Product override takes priority
       if (override?.type === 'static') {
         return override.value;
       }
-      // Fall back to productFlags (from feedEnableSearch/feedEnableCheckout columns)
-      if (spec.attribute === 'enable_search') {
-        return productFlags?.enableSearch !== undefined
-          ? (productFlags.enableSearch ? 'true' : 'false')
-          : null;
-      }
-      if (spec.attribute === 'enable_checkout') {
-        return productFlags?.enableCheckout !== undefined
-          ? (productFlags.enableCheckout ? 'true' : 'false')
-          : null;
-      }
+      // Fall back to productFlags (from feedEnableSearch column)
+      return productFlags?.enableSearch !== undefined
+        ? (productFlags.enableSearch ? 'true' : 'false')
+        : null;
     }
 
     const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);
