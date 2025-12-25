@@ -95,6 +95,7 @@ export function ProductFieldMappingRow({
   const isEnableCheckoutField = spec.attribute === 'enable_checkout';
   const isDimensions = spec.attribute === 'dimensions';
   const isDimensionOrWeightField = ['dimensions', 'length', 'width', 'height', 'weight'].includes(spec.attribute);
+  const isConditionField = spec.attribute === 'condition';
   const isShopManagedField = [
     'seller_name', 'seller_url', 'seller_privacy_policy',
     'seller_tos', 'return_policy', 'return_window',
@@ -405,6 +406,7 @@ export function ProductFieldMappingRow({
                isDimensions ? 'Auto-populated' :
                isShopManagedField ? 'Managed in Shops page' :
                isTransformLockedField ? 'Auto-combined' :
+               isConditionField ? 'Defaults to "new"' :
                lockedMappingValue || 'Locked'}
             </span>
             <div className="relative group mt-[2px]">
@@ -430,6 +432,11 @@ export function ProductFieldMappingRow({
                   <div>
                     <div className="font-semibold text-white mb-1">Auto-combined field</div>
                     <div>Combines date_on_sale_from and date_on_sale_to from WooCommerce.</div>
+                  </div>
+                ) : isConditionField ? (
+                  <div>
+                    <div className="font-semibold text-white mb-1">Product Condition</div>
+                    <div>Automatically set to "new" for all products. Most WooCommerce stores sell new products.</div>
                   </div>
                 ) : (
                   <div>
