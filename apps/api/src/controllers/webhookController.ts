@@ -89,12 +89,16 @@ export async function handleWooWebhook(req: Request, res: Response) {
     }
 
     // Enqueue incremental sync job for the product
+    // For variations, WooCommerce sends parent_id in the webhook payload
     if (event.id && syncQueue) {
+      const parentId = event.parent_id ? event.parent_id.toString() : undefined;
+
       await syncQueue!.add(
         'product-sync',
         {
           shopId,
           productId: event.id.toString(),
+          parentId,  // Pass parent ID for variation webhooks
           type: 'INCREMENTAL',
           triggeredBy: 'webhook',
         },
@@ -104,6 +108,8 @@ export async function handleWooWebhook(req: Request, res: Response) {
       logger.info('Webhook processed and sync queued', {
         shopId,
         productId: event.id,
+        parentId: parentId || null,
+        isVariation: !!parentId,
         event: event.action || 'unknown',
       });
     }

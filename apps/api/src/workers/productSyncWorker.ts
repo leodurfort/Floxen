@@ -11,6 +11,7 @@ import { Shop } from '@prisma/client';
 interface SyncJobData {
   shopId: string;
   productId?: string;
+  parentId?: string;  // For variation webhooks: the parent product's WooCommerce ID
   type?: 'FULL' | 'INCREMENTAL';
   triggeredBy?: string;
 }
@@ -186,14 +187,19 @@ async function processSingleWooProduct(
 
 /**
  * Incremental sync - fetch and process a single product
+ *
+ * For variations: WooCommerce variations live at /products/{parent}/variations/{id},
+ * NOT at /products/{id}. So when syncing a variation, we detect this and sync the
+ * parent product instead (which fetches all its variations).
  */
 async function runIncrementalSync(
   shop: Shop,
   shopId: string,
   productId: string,
+  parentIdHint: string | undefined,
   client: any
 ) {
-  logger.info('product-sync: running incremental sync', { shopId, productId });
+  logger.info('product-sync: running incremental sync', { shopId, productId, parentIdHint });
 
   const wooProductId = parseInt(productId, 10);
   if (isNaN(wooProductId)) {
@@ -201,9 +207,56 @@ async function runIncrementalSync(
     return;
   }
 
-  const wooProd = await fetchSingleProduct(client, wooProductId);
+  // Determine the actual product ID to fetch:
+  // 1. If parentIdHint is provided (from webhook), this is a variation - sync the parent
+  // 2. If the product exists in our DB with a wooParentId, it's a known variation - sync the parent
+  // 3. Otherwise, sync the product directly
+  let targetProductId = wooProductId;
+  let isVariationSync = false;
+
+  if (parentIdHint) {
+    // Webhook provided parent ID - this is a variation
+    const parentWooId = parseInt(parentIdHint, 10);
+    if (!isNaN(parentWooId)) {
+      logger.info('product-sync: variation detected via webhook parentId, syncing parent instead', {
+        shopId,
+        variationId: wooProductId,
+        parentId: parentWooId,
+      });
+      targetProductId = parentWooId;
+      isVariationSync = true;
+    }
+  } else {
+    // Check if this product exists in our DB as a variation
+    const existingProduct = await prisma.product.findUnique({
+      where: { shopId_wooProductId: { shopId, wooProductId } },
+      select: { wooParentId: true },
+    });
+
+    if (existingProduct?.wooParentId) {
+      logger.info('product-sync: variation detected via DB lookup, syncing parent instead', {
+        shopId,
+        variationId: wooProductId,
+        parentId: existingProduct.wooParentId,
+      });
+      targetProductId = existingProduct.wooParentId;
+      isVariationSync = true;
+    }
+  }
+
+  const wooProd = await fetchSingleProduct(client, targetProductId);
   if (!wooProd) {
-    logger.warn('product-sync: product not found in WooCommerce', { shopId, productId });
+    // If we were trying to sync a variation's parent and it failed,
+    // the parent product might have been deleted
+    if (isVariationSync) {
+      logger.warn('product-sync: parent product not found in WooCommerce (variation orphaned?)', {
+        shopId,
+        originalProductId: wooProductId,
+        parentProductId: targetProductId,
+      });
+    } else {
+      logger.warn('product-sync: product not found in WooCommerce', { shopId, productId: String(targetProductId) });
+    }
     return;
   }
 
@@ -213,7 +266,12 @@ async function runIncrementalSync(
 
   await processSingleWooProduct(wooProd, shop, shopId, autoFillService, client, categoryMap);
 
-  logger.info('product-sync: incremental sync completed', { shopId, productId });
+  logger.info('product-sync: incremental sync completed', {
+    shopId,
+    productId: String(targetProductId),
+    wasVariationSync: isVariationSync,
+    originalVariationId: isVariationSync ? String(wooProductId) : undefined,
+  });
 }
 
 /**
@@ -260,12 +318,13 @@ async function runFullSync(
 }
 
 export async function productSyncProcessor(job: Job) {
-  const { shopId, productId, type, triggeredBy } = job.data as SyncJobData;
+  const { shopId, productId, parentId, type, triggeredBy } = job.data as SyncJobData;
   const isIncremental = productId && type === 'INCREMENTAL';
 
   logger.info(`product-sync job received`, {
     shopId,
     productId,
+    parentId,
     type: type || 'FULL',
     triggeredBy,
     isIncremental,
@@ -346,7 +405,7 @@ export async function productSyncProcessor(job: Job) {
 
     // Run incremental or full sync
     if (isIncremental) {
-      await runIncrementalSync(shop, shopId, productId, client);
+      await runIncrementalSync(shop, shopId, productId, parentId, client);
     } else {
       await runFullSync(shop, shopId, client);
     }
