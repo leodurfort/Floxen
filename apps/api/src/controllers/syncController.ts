@@ -149,18 +149,18 @@ export function downloadFeed(req: Request, res: Response) {
 }
 
 export function latestFeed(req: Request, res: Response) {
-  prisma.syncBatch
+  prisma.feedSnapshot
     .findFirst({
       where: { shopId: req.params.id, feedFileUrl: { not: null } },
-      orderBy: { completedAt: 'desc' },
+      orderBy: { generatedAt: 'desc' },
     })
-    .then((batch) => {
-      if (!batch) return res.status(404).json({ error: 'No feed found' });
-      logger.info('feed:latest', { shopId: batch.shopId, feedUrl: batch.feedFileUrl });
+    .then((snapshot) => {
+      if (!snapshot) return res.status(404).json({ error: 'No feed found' });
+      logger.info('feed:latest', { shopId: snapshot.shopId, feedUrl: snapshot.feedFileUrl });
       return res.json({
-        feedUrl: batch.feedFileUrl,
-        completedAt: batch.completedAt,
-        totalProducts: batch.totalProducts,
+        feedUrl: snapshot.feedFileUrl,
+        generatedAt: snapshot.generatedAt,
+        productCount: snapshot.productCount,
       });
     })
     .catch((err) => {
