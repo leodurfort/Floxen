@@ -86,6 +86,11 @@ export async function feedGenerationProcessor(job: Job) {
     return { url };
   } catch (err) {
     logger.error(`feed-generation failed for shop ${shopId}`, { error: err instanceof Error ? err : new Error(String(err)) });
+    // Mark shop as failed so the status reflects the feed generation failure
+    await prisma.shop.update({
+      where: { id: shopId },
+      data: { syncStatus: 'FAILED' },
+    });
     throw err;
   }
 }

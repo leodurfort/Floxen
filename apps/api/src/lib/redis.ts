@@ -1,4 +1,4 @@
-import { Queue, QueueEvents } from 'bullmq';
+import { Queue, QueueEvents, FlowProducer } from 'bullmq';
 import Redis from 'ioredis';
 import { env } from '../config/env';
 import { logger } from './logger';
@@ -22,6 +22,11 @@ export function createQueue(name: string) {
 const syncQueueInstance = createQueue('sync');
 
 export const syncQueue = syncQueueInstance?.queue || null;
+
+// FlowProducer for dependent job chains (e.g., product-sync → feed-generation)
+export const syncFlowProducer = redisConnection
+  ? new FlowProducer({ connection: redisConnection })
+  : null;
 
 export function isQueueAvailable(): boolean {
   return syncQueue !== null;

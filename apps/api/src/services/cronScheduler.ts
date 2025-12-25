@@ -12,7 +12,7 @@
 import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { syncQueue, isQueueAvailable } from '../lib/redis';
+import { syncQueue, syncFlowProducer, isQueueAvailable } from '../lib/redis';
 
 // If a sync is stuck in SYNCING for longer than this, reset it to FAILED
 const STUCK_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -40,10 +40,11 @@ export class CronScheduler {
   /**
    * Trigger sync for all active shops
    * Enqueues jobs for each shop with staggered delays to avoid thundering herd
+   * Uses BullMQ Flows to ensure feed-generation only runs if product-sync succeeds
    */
   async triggerAllShopsSync() {
     // Check Redis availability before attempting to queue jobs
-    if (!isQueueAvailable()) {
+    if (!isQueueAvailable() || !syncFlowProducer) {
       logger.error('Cron: Cannot trigger sync - Redis queue not available');
       return;
     }
@@ -70,25 +71,30 @@ export class CronScheduler {
 
         setTimeout(async () => {
           try {
-            // 1. Product sync (fetch from WooCommerce)
-            await syncQueue!.add('product-sync', {
-              shopId: shop.id,
-              triggeredBy: 'cron',
-            }, {
-              priority: 3, // Normal priority for scheduled syncs
-              delay: 0,
+            // Use BullMQ Flow to create dependent jobs:
+            // feed-generation (parent) only runs if product-sync (child) succeeds
+            await syncFlowProducer!.add({
+              name: 'feed-generation',
+              queueName: 'sync',
+              data: { shopId: shop.id, triggeredBy: 'cron' },
+              opts: {
+                priority: 3,
+                removeOnComplete: true,
+              },
+              children: [
+                {
+                  name: 'product-sync',
+                  queueName: 'sync',
+                  data: { shopId: shop.id, triggeredBy: 'cron' },
+                  opts: {
+                    priority: 3,
+                    removeOnComplete: true,
+                  },
+                },
+              ],
             });
 
-            // 2. Feed generation (after product sync completes)
-            // This creates/updates FeedSnapshot + uploads to storage
-            await syncQueue!.add('feed-generation', {
-              shopId: shop.id,
-            }, {
-              priority: 3,
-              delay: 30000, // 30 seconds after product sync
-            });
-
-            logger.info(`Cron: Enqueued jobs for shop ${shop.sellerName || shop.id}`, {
+            logger.info(`Cron: Enqueued sync flow for shop ${shop.sellerName || shop.id}`, {
               shopId: shop.id,
               delay: `${delay / 1000}s`,
             });
