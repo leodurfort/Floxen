@@ -96,9 +96,14 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
 
   // Validate the product with auto-filled values (using shared validation)
   // enable_checkout is always false, so checkout-related validation is skipped
+  // Pass product context to properly validate conditional fields like item_group_id
   const validation = validateProduct(
     openaiAutoFilled,
-    false
+    false,
+    {
+      isVariation: !!data.wooParentId,
+      wooProductType: data.wooRawJson?.type,
+    }
   );
 
   await prisma.product.upsert({

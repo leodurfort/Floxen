@@ -100,6 +100,10 @@ export function generateFeedPayload(
       if (validateEntries) {
         const validation = validateFeedEntry(item, {
           validateOptional: false, // Only validate required fields
+          productContext: {
+            isVariation: !!(product as any).wooParentId,
+            wooProductType: (product as any).wooRawJson?.type,
+          },
         });
 
         if (!validation.valid) {

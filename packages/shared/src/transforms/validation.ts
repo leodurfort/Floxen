@@ -43,6 +43,17 @@ export interface FeedValidationResult {
 }
 
 /**
+ * Product context for conditional validation
+ * Provides information about the product type that isn't available in the flat feed entry
+ */
+export interface ProductValidationContext {
+  /** Whether this product is a variation (has a parent product) */
+  isVariation?: boolean;
+  /** WooCommerce product type (simple, variable, grouped, external) */
+  wooProductType?: 'simple' | 'variable' | 'grouped' | 'external' | string;
+}
+
+/**
  * Validation options
  */
 export interface ValidationOptions {
@@ -54,6 +65,8 @@ export interface ValidationOptions {
   validateOptional?: boolean;
   /** Feed-level enable_checkout setting (affects conditional requirements) */
   feedEnableCheckout?: boolean;
+  /** Product context for conditional validation (identifies variations, product type) */
+  productContext?: ProductValidationContext;
 }
 
 /**
@@ -72,7 +85,8 @@ function hasValue(value: any): boolean {
 function checkConditionalRequirement(
   spec: OpenAIFieldSpec,
   entry: Record<string, any>,
-  feedEnableCheckout: boolean
+  feedEnableCheckout: boolean,
+  productContext?: ProductValidationContext
 ): boolean {
   const deps = spec.dependencies || '';
 
@@ -91,14 +105,16 @@ function checkConditionalRequirement(
     return entry['availability'] === 'preorder';
   }
 
-  // Item group ID required if variants exist (check for parent_id presence)
+  // Item group ID required if product is a variation
+  // Requires productContext to properly identify variations
   if (spec.attribute === 'item_group_id' && deps.includes('variants')) {
-    return hasValue(entry['item_group_id']) || hasValue(entry['parent_id']);
+    return productContext?.isVariation === true;
   }
 
-  // Condition required if product condition differs from new
+  // Condition: not required - defaultToNew() transform handles missing values
+  // validateFieldValue() will check format if a value IS provided
   if (spec.attribute === 'condition' && deps.includes('new')) {
-    return hasValue(entry['condition']) && entry['condition'] !== 'new';
+    return false;
   }
 
   return false;
@@ -337,6 +353,7 @@ export function validateFeedEntry(
     strictMode = false,
     validateOptional = true,
     feedEnableCheckout = false,
+    productContext,
   } = options;
 
   for (const spec of OPENAI_FEED_SPEC) {
@@ -356,7 +373,7 @@ export function validateFeedEntry(
 
     // Handle conditional requirements
     if (requirement === 'Conditional') {
-      const conditionMet = checkConditionalRequirement(spec, entry, feedEnableCheckout);
+      const conditionMet = checkConditionalRequirement(spec, entry, feedEnableCheckout, productContext);
       if (conditionMet && !hasValue(value)) {
         errors.push({
           field: attribute,
@@ -563,12 +580,14 @@ export function toApiValidationResult(result: FeedValidationResult): ApiValidati
  *
  * @param openaiAutoFilled - Auto-filled OpenAI field values
  * @param feedEnableCheckout - Whether checkout is enabled for this feed
+ * @param productContext - Optional context about product type (variation, etc.)
  * @returns API-compatible validation result
  */
 export function validateProduct(
   openaiAutoFilled: Record<string, any>,
-  feedEnableCheckout: boolean = false
+  feedEnableCheckout: boolean = false,
+  productContext?: ProductValidationContext
 ): ApiValidationResult {
-  const result = validateFeedEntry(openaiAutoFilled, { feedEnableCheckout });
+  const result = validateFeedEntry(openaiAutoFilled, { feedEnableCheckout, productContext });
   return toApiValidationResult(result);
 }
