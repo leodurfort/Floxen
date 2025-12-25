@@ -20,7 +20,7 @@ const updateProductSchema = z.object({
   manualTitle: z.string().optional(),
   manualDescription: z.string().optional(),
   feedEnableSearch: z.boolean().optional(),
-  feedEnableCheckout: z.boolean().optional(),
+  // feedEnableCheckout is not allowed - it's always false (feature not yet available)
 });
 
 const bulkActionSchema = z.object({

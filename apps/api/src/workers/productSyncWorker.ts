@@ -81,7 +81,8 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
 
   // Determine product-level flags (use existing if available, otherwise shop defaults)
   const enableSearch = existing?.feedEnableSearch ?? shop.defaultEnableSearch;
-  const enableCheckout = existing?.feedEnableCheckout ?? shop.defaultEnableCheckout;
+  // enable_checkout is always false (feature not yet available)
+  const enableCheckout = false;
 
   // Get existing product-level field overrides (if any)
   const productOverrides = (existing?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
@@ -94,9 +95,10 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
   );
 
   // Validate the product with auto-filled values (using shared validation)
+  // enable_checkout is always false, so checkout-related validation is skipped
   const validation = validateProduct(
     openaiAutoFilled,
-    enableCheckout
+    false
   );
 
   await prisma.product.upsert({
@@ -108,9 +110,9 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
       openaiAutoFilled: openaiAutoFilled as any,
       isValid: validation.isValid,
       validationErrors: validation.errors as any,
-      // Apply shop defaults for toggle fields on new products
+      // Apply shop defaults for enable_search, always false for enable_checkout
       feedEnableSearch: shop.defaultEnableSearch,
-      feedEnableCheckout: shop.defaultEnableCheckout,
+      feedEnableCheckout: false,
       ...data,
     },
     update: {

@@ -294,8 +294,8 @@ export function ProductFieldMappingRow({
     previewDisplay = currentValue === 'true' ? 'true' : currentValue === 'false' ? 'false' : 'true';
     previewStyle = previewDisplay === 'true' ? 'text-[#5df0c0]' : 'text-white/40';
   } else if (isEnableCheckoutField) {
-    // enable_checkout is disabled - show current value
-    previewDisplay = apiPreviewValue === 'true' ? 'true' : 'false';
+    // enable_checkout is always false (feature not yet available)
+    previewDisplay = 'false';
     previewStyle = 'text-white/40';
   } else if (isNoMappingOverride) {
     // "No mapping" override - show empty

@@ -282,9 +282,10 @@ export async function getFieldMappings(req: Request, res: Response) {
 
     // Add shop-level toggle defaults (these are NOT field mappings, they're shop settings)
     mappings['enable_search'] = shop.defaultEnableSearch ? 'ENABLED' : 'DISABLED';
-    mappings['enable_checkout'] = shop.defaultEnableCheckout ? 'ENABLED' : 'DISABLED';
+    // enable_checkout is always DISABLED (feature not yet available)
+    mappings['enable_checkout'] = 'DISABLED';
     userMappings['enable_search'] = shop.defaultEnableSearch ? 'ENABLED' : 'DISABLED';
-    userMappings['enable_checkout'] = shop.defaultEnableCheckout ? 'ENABLED' : 'DISABLED';
+    userMappings['enable_checkout'] = 'DISABLED';
 
     // Force locked mappings to their required values
     for (const [attribute, lockedValue] of Object.entries(LOCKED_FIELD_MAPPINGS)) {
@@ -365,31 +366,24 @@ export async function updateFieldMappings(req: Request, res: Response) {
 
     // Extract toggle fields - these are shop-level settings, NOT field mappings
     const enableSearch = sanitizedMappings['enable_search'];
-    const enableCheckout = sanitizedMappings['enable_checkout'];
+    // enable_checkout is ignored - it's always false (feature not yet available)
     delete sanitizedMappings['enable_search'];
     delete sanitizedMappings['enable_checkout'];
 
-    // Validate toggle values early
+    // Validate toggle values early (only enable_search, enable_checkout is always false)
     const invalidToggle =
-      (enableSearch !== undefined &&
-        enableSearch !== 'ENABLED' &&
-        enableSearch !== 'DISABLED') ||
-      (enableCheckout !== undefined &&
-        enableCheckout !== 'ENABLED' &&
-        enableCheckout !== 'DISABLED');
+      enableSearch !== undefined &&
+      enableSearch !== 'ENABLED' &&
+      enableSearch !== 'DISABLED';
 
     if (invalidToggle) {
       return res.status(400).json({ error: 'Invalid toggle value' });
     }
 
-    // Update shop defaults for toggle fields
+    // Update shop defaults for toggle fields (only enable_search, enable_checkout is always false)
     const toggleUpdates: Record<string, boolean> = {};
     if (enableSearch !== undefined) {
       toggleUpdates.defaultEnableSearch = enableSearch === 'ENABLED';
-    }
-
-    if (enableCheckout !== undefined) {
-      toggleUpdates.defaultEnableCheckout = enableCheckout === 'ENABLED';
     }
 
     if (Object.keys(toggleUpdates).length) {

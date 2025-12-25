@@ -38,13 +38,15 @@ export async function reprocessProduct(productId: string): Promise<void> {
     wooProduct,
     {
       enableSearch: product.feedEnableSearch,
-      enableCheckout: product.feedEnableCheckout,
+      // enable_checkout is always false (feature not yet available)
+      enableCheckout: false,
     },
     overrides
   );
 
   // Validate the auto-filled data
-  const validation = validateProduct(autoFilled, product.feedEnableCheckout);
+  // enable_checkout is always false, so checkout-related validation is skipped
+  const validation = validateProduct(autoFilled, false);
 
   await prisma.product.update({
     where: { id: productId },
