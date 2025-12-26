@@ -62,7 +62,6 @@ export interface Product {
 
   // Status fields
   status: ProductStatus;
-  syncStatus: SyncStatus;
   lastSyncedAt?: string | null;
   feedEnableSearch?: boolean;
   feedEnableCheckout?: boolean;

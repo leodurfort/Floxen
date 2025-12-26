@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { ProductStatus, SyncStatus, Prisma } from '@prisma/client';
+import { ProductStatus, Prisma } from '@prisma/client';
 import {
   ProductFieldOverrides,
   LOCKED_FIELD_SET,
@@ -22,7 +22,6 @@ function userIdFromReq(req: Request): string {
 
 const updateProductSchema = z.object({
   status: z.nativeEnum(ProductStatus).optional(),
-  syncStatus: z.nativeEnum(SyncStatus).optional(),
   manualTitle: z.string().optional(),
   manualDescription: z.string().optional(),
   feedEnableSearch: z.boolean().optional(),

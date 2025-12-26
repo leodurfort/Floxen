@@ -7,15 +7,12 @@ export async function getOverview(req: Request, res: Response) {
   const period = (req.query.period as string) || '30d';
 
   try {
-    const [totalProducts, syncedProducts] = await Promise.all([
-      prisma.product.count({ where: { shopId } }),
-      prisma.product.count({ where: { shopId, syncStatus: 'COMPLETED' } }),
-    ]);
+    const totalProducts = await prisma.product.count({ where: { shopId } });
 
     return res.json({
       period,
       totalProducts,
-      syncedProducts,
+      syncedProducts: totalProducts, // All products are considered synced (product-level sync status removed)
       enrichedProducts: 0, // AI enrichment removed
       chatgpt: {
         impressions: 0,

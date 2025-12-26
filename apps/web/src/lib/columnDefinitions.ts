@@ -15,7 +15,6 @@ import {
 // Product type from API (simplified for column definitions)
 export interface ProductData {
   id: string;
-  syncStatus: string;
   isValid: boolean;
   validationErrors: string[] | null;
   productFieldOverrides: Record<string, unknown> | null;
@@ -105,7 +104,6 @@ const DEFAULT_COLUMN_ORDER: string[] = [
   'overrides',       // Custom: Override count
   'isValid',         // Custom: Validation status
   'updatedAt',       // Custom: Last modified
-  'syncStatus',      // Custom: Sync status
   'actions',         // Actions (always last)
 ];
 
@@ -190,22 +188,6 @@ const CUSTOM_COLUMNS: ColumnDefinition[] = [
     category: 'Selection',
     categoryOrder: CUSTOM_CATEGORY_ORDER,
     getValue: () => null, // Handled specially in UI
-  },
-  {
-    id: 'syncStatus',
-    label: 'Sync Status',
-    dataType: 'enum',
-    sortable: true,
-    filterable: true,
-    defaultVisible: true,
-    category: 'Status',
-    categoryOrder: CUSTOM_CATEGORY_ORDER,
-    supportedValues: ['pending', 'syncing', 'completed', 'failed', 'paused'],
-    getValue: (product: ProductData) => product.syncStatus,
-    formatValue: (value) => {
-      if (!value) return '-';
-      return String(value).charAt(0).toUpperCase() + String(value).slice(1).toLowerCase();
-    },
   },
   {
     id: 'overrides',

@@ -26,7 +26,6 @@ export interface ListProductsOptions {
 
 // Columns stored directly in Product table - Prisma field names (camelCase)
 const DATABASE_COLUMNS: Record<string, string> = {
-  'syncStatus': 'syncStatus',
   'isValid': 'isValid',
   'updatedAt': 'updatedAt',
   'feedEnableSearch': 'feedEnableSearch',
@@ -34,7 +33,6 @@ const DATABASE_COLUMNS: Record<string, string> = {
 
 // Same columns but with actual PostgreSQL column names (snake_case) for raw SQL
 const DATABASE_COLUMNS_SQL: Record<string, string> = {
-  'syncStatus': 'sync_status',
   'isValid': 'is_valid',
   'updatedAt': 'updated_at',
   'feedEnableSearch': 'feed_enable_search',
@@ -43,7 +41,6 @@ const DATABASE_COLUMNS_SQL: Record<string, string> = {
 // Columns needed for catalog listing (optimized - only what frontend actually uses)
 const CATALOG_COLUMNS_SQL = `
   "id",
-  "sync_status",
   "is_valid",
   "validation_errors",
   "updated_at",
@@ -54,7 +51,6 @@ const CATALOG_COLUMNS_SQL = `
 
 // Map for catalog columns: PostgreSQL snake_case -> Prisma camelCase
 const CATALOG_COLUMN_MAP: Record<string, string> = {
-  sync_status: 'syncStatus',
   is_valid: 'isValid',
   validation_errors: 'validationErrors',
   updated_at: 'updatedAt',
@@ -66,7 +62,6 @@ const CATALOG_COLUMN_MAP: Record<string, string> = {
 // Prisma select for catalog listing
 const CATALOG_SELECT = {
   id: true,
-  syncStatus: true,
   isValid: true,
   validationErrors: true,
   updatedAt: true,
@@ -148,7 +143,6 @@ export async function getParentProductIds(shopId: string): Promise<number[]> {
 function getDbColumnForFilter(columnId: string): string | null {
   // Direct database column mappings
   const dbMappings: Record<string, string> = {
-    syncStatus: 'syncStatus',
     isValid: 'isValid',
     updatedAt: 'updatedAt',
     feedEnableSearch: 'feedEnableSearch',
@@ -214,12 +208,7 @@ function buildWhereClause(
 
       // Handle value filters (checkbox selections)
       if (filter.values?.length) {
-        if (columnId === 'syncStatus' && dbColumn) {
-          // syncStatus is an enum - cast values
-          andConditions.push({
-            [dbColumn]: { in: filter.values },
-          });
-        } else if ((columnId === 'isValid' || columnId === 'feedEnableSearch' || columnId === 'enable_search') && dbColumn) {
+        if ((columnId === 'isValid' || columnId === 'feedEnableSearch' || columnId === 'enable_search') && dbColumn) {
           // Boolean columns - convert string 'true'/'false' to boolean
           const boolValue = filter.values.includes('true');
           andConditions.push({ [dbColumn]: boolValue });
@@ -293,12 +282,6 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
   // Process column filters
   const cf = options.columnFilters;
   if (cf) {
-    // syncStatus column
-    if (cf.syncStatus?.values?.length) {
-      const statuses = cf.syncStatus.values.map(s => `'${escapeSqlString(s)}'`).join(',');
-      whereConditions.push(`"sync_status" IN (${statuses})`);
-    }
-
     // isValid column
     if (cf.isValid?.values?.length) {
       const boolValue = cf.isValid.values.includes('true');
@@ -338,7 +321,7 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
     // Handle OpenAI JSON column filters (text and value filters)
     for (const [columnId, filter] of Object.entries(cf)) {
       // Skip already handled columns
-      if (['syncStatus', 'isValid', 'enable_search', 'availability', 'overrides'].includes(columnId)) {
+      if (['isValid', 'enable_search', 'availability', 'overrides'].includes(columnId)) {
         continue;
       }
 
@@ -859,7 +842,7 @@ function formatValueLabel(value: string, column: string): string {
   if (value === 'false') return 'No';
 
   // Enum values - capitalize
-  if (['syncStatus', 'availability', 'condition', 'gender', 'age_group'].includes(column)) {
+  if (['availability', 'condition', 'gender', 'age_group'].includes(column)) {
     return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase().replace(/_/g, ' ');
   }
 

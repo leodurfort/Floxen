@@ -11,7 +11,6 @@ const sampleProducts: Product[] = [
     wooSku: 'LAMP-101',
     wooPrice: '120.00',
     status: 'SYNCED',
-    syncStatus: 'COMPLETED',
     lastSyncedAt: new Date().toISOString(),
     feedEnableSearch: true,
     feedEnableCheckout: true,
@@ -26,7 +25,6 @@ const sampleProducts: Product[] = [
     wooSku: 'CHAIR-204',
     wooPrice: '320.00',
     status: 'PENDING_REVIEW',
-    syncStatus: 'PENDING',
     lastSyncedAt: null,
     feedEnableSearch: true,
     feedEnableCheckout: false,
@@ -41,7 +39,6 @@ const sampleProducts: Product[] = [
     wooSku: 'HD-204',
     wooPrice: '68.00',
     status: 'APPROVED',
-    syncStatus: 'COMPLETED',
     lastSyncedAt: new Date().toISOString(),
     feedEnableSearch: true,
     feedEnableCheckout: false,
@@ -79,8 +76,8 @@ export default function HomePage() {
                   <p className="font-semibold">{p.wooTitle}</p>
                   <p className="text-sm subtle">SKU {p.wooSku}</p>
                 </div>
-                <span className={`badge ${p.syncStatus === 'COMPLETED' ? 'badge--success' : 'badge--warn'}`}>
-                  {p.syncStatus === 'COMPLETED' ? 'Synced' : 'Pending'}
+                <span className={`badge ${p.status === 'SYNCED' ? 'badge--success' : 'badge--warn'}`}>
+                  {p.status === 'SYNCED' ? 'Synced' : 'Pending'}
                 </span>
               </div>
             ))}
@@ -146,7 +143,7 @@ export default function HomePage() {
                     <div className="subtle text-sm">SKU {p.wooSku}</div>
                   </td>
                   <td>${p.wooPrice}</td>
-                  <td>{p.syncStatus === 'COMPLETED' ? 'Synced' : 'Pending'}</td>
+                  <td>{p.status === 'SYNCED' ? 'Synced' : 'Pending'}</td>
                   <td className="subtle text-sm">{p.lastSyncedAt ? new Date(p.lastSyncedAt).toLocaleString() : '—'}</td>
                 </tr>
               ))}
