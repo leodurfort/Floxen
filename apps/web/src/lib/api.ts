@@ -125,12 +125,112 @@ export async function getShop(shopId: string, token: string) {
   });
 }
 
-export async function listProducts(shopId: string, token: string) {
-  return request<{ products: Product[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(
-    `/api/v1/shops/${shopId}/products`,
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT LISTING WITH FILTERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ListProductsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: 'wooProductId' | 'wooTitle' | 'wooPrice' | 'wooStockQuantity' | 'syncStatus' | 'isValid' | 'feedEnableSearch' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
+  search?: string;
+  syncStatus?: string[];
+  isValid?: boolean;
+  feedEnableSearch?: boolean;
+  wooStockStatus?: string[];
+  hasOverrides?: boolean;
+}
+
+export interface ListProductsResult {
+  products: Product[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export async function listProducts(
+  shopId: string,
+  token: string,
+  params?: ListProductsParams
+): Promise<ListProductsResult> {
+  const searchParams = new URLSearchParams();
+
+  if (params) {
+    if (params.page) searchParams.set('page', String(params.page));
+    if (params.limit) searchParams.set('limit', String(params.limit));
+    if (params.sortBy) searchParams.set('sortBy', params.sortBy);
+    if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+    if (params.search) searchParams.set('search', params.search);
+    if (params.syncStatus) {
+      params.syncStatus.forEach(s => searchParams.append('syncStatus', s));
+    }
+    if (params.isValid !== undefined) searchParams.set('isValid', String(params.isValid));
+    if (params.feedEnableSearch !== undefined) searchParams.set('feedEnableSearch', String(params.feedEnableSearch));
+    if (params.wooStockStatus) {
+      params.wooStockStatus.forEach(s => searchParams.append('wooStockStatus', s));
+    }
+    if (params.hasOverrides !== undefined) searchParams.set('hasOverrides', String(params.hasOverrides));
+  }
+
+  const queryString = searchParams.toString();
+  const path = `/api/v1/shops/${shopId}/products${queryString ? `?${queryString}` : ''}`;
+
+  return request<ListProductsResult>(path, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BULK UPDATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface BulkUpdateFilters {
+  search?: string;
+  syncStatus?: string[];
+  isValid?: boolean;
+  feedEnableSearch?: boolean;
+  wooStockStatus?: string[];
+  hasOverrides?: boolean;
+}
+
+export type BulkUpdateOperation =
+  | { type: 'enable_search'; value: boolean }
+  | { type: 'field_mapping'; attribute: string; wooField: string | null }
+  | { type: 'static_override'; attribute: string; value: string }
+  | { type: 'remove_override'; attribute: string };
+
+export interface BulkUpdateRequest {
+  selectionMode: 'selected' | 'filtered';
+  productIds?: string[];
+  filters?: BulkUpdateFilters;
+  update: BulkUpdateOperation;
+}
+
+export interface BulkUpdateResponse {
+  success: boolean;
+  totalProducts: number;
+  processedProducts: number;
+  failedProducts: number;
+  errors: Array<{ productId: string; error: string }>;
+  completed: boolean;
+}
+
+export async function bulkUpdateProducts(
+  shopId: string,
+  token: string,
+  payload: BulkUpdateRequest
+): Promise<BulkUpdateResponse> {
+  return request<BulkUpdateResponse>(
+    `/api/v1/shops/${shopId}/products/bulk-update`,
     {
+      method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-    },
+      body: JSON.stringify(payload),
+    }
   );
 }
 

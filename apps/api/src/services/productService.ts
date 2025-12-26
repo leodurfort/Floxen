@@ -1,6 +1,23 @@
 import { prisma } from '../lib/prisma';
-import { ProductStatus, SyncStatus } from '@prisma/client';
+import { SyncStatus, Prisma } from '@prisma/client';
 import crypto from 'crypto';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LIST PRODUCTS OPTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ListProductsOptions {
+  page?: number;
+  limit?: number;
+  sortBy?: 'wooProductId' | 'wooTitle' | 'wooPrice' | 'wooStockQuantity' | 'syncStatus' | 'isValid' | 'feedEnableSearch' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
+  search?: string;
+  syncStatus?: SyncStatus[];
+  isValid?: boolean;
+  feedEnableSearch?: boolean;
+  wooStockStatus?: string[];
+  hasOverrides?: boolean;
+}
 
 /**
  * Get IDs of parent variable products (products that have variations).
@@ -19,28 +36,122 @@ export async function getParentProductIds(shopId: string): Promise<number[]> {
   return parentProductIds.map(p => p.wooParentId).filter((id): id is number => id !== null);
 }
 
-export async function listProducts(shopId: string, page = 1, limit = 20) {
-  const skip = (page - 1) * limit;
+/**
+ * Build Prisma WHERE clause from filter options
+ */
+function buildWhereClause(
+  shopId: string,
+  parentIds: number[],
+  options: ListProductsOptions
+): Prisma.ProductWhereInput {
+  const {
+    search,
+    syncStatus,
+    isValid,
+    feedEnableSearch,
+    wooStockStatus,
+    hasOverrides,
+  } = options;
 
+  const where: Prisma.ProductWhereInput = {
+    shopId,
+    wooProductId: { notIn: parentIds },
+  };
+
+  // Text search on title and SKU
+  if (search && search.trim()) {
+    where.OR = [
+      { wooTitle: { contains: search.trim(), mode: 'insensitive' } },
+      { wooSku: { contains: search.trim(), mode: 'insensitive' } },
+    ];
+  }
+
+  // Multi-select sync status filter
+  if (syncStatus && syncStatus.length > 0) {
+    where.syncStatus = { in: syncStatus };
+  }
+
+  // Boolean filters
+  if (isValid !== undefined) {
+    where.isValid = isValid;
+  }
+
+  if (feedEnableSearch !== undefined) {
+    where.feedEnableSearch = feedEnableSearch;
+  }
+
+  // Multi-select stock status filter
+  if (wooStockStatus && wooStockStatus.length > 0) {
+    where.wooStockStatus = { in: wooStockStatus };
+  }
+
+  // Has overrides filter (check if productFieldOverrides is not empty)
+  if (hasOverrides !== undefined) {
+    if (hasOverrides) {
+      // Products with non-empty overrides
+      where.NOT = {
+        OR: [
+          { productFieldOverrides: { equals: Prisma.JsonNull } },
+          { productFieldOverrides: { equals: {} } },
+        ],
+      };
+    } else {
+      // Products with empty or null overrides
+      where.OR = [
+        ...(where.OR || []),
+        { productFieldOverrides: { equals: Prisma.JsonNull } },
+        { productFieldOverrides: { equals: {} } },
+      ];
+      // If we already have OR from search, we need to restructure
+      if (search && search.trim()) {
+        where.AND = [
+          {
+            OR: [
+              { wooTitle: { contains: search.trim(), mode: 'insensitive' } },
+              { wooSku: { contains: search.trim(), mode: 'insensitive' } },
+            ],
+          },
+          {
+            OR: [
+              { productFieldOverrides: { equals: Prisma.JsonNull } },
+              { productFieldOverrides: { equals: {} } },
+            ],
+          },
+        ];
+        delete where.OR;
+      }
+    }
+  }
+
+  return where;
+}
+
+export async function listProducts(shopId: string, options: ListProductsOptions = {}) {
+  const {
+    page = 1,
+    limit = 20,
+    sortBy = 'updatedAt',
+    sortOrder = 'desc',
+  } = options;
+
+  const skip = (page - 1) * limit;
   const parentIds = await getParentProductIds(shopId);
+  const where = buildWhereClause(shopId, parentIds, options);
+
+  // Build order by clause
+  const orderBy: Prisma.ProductOrderByWithRelationInput = {
+    [sortBy]: sortOrder,
+  };
 
   // Exclude products that are parent variable products (have children)
   const [items, total] = await Promise.all([
     prisma.product.findMany({
-      where: {
-        shopId,
-        wooProductId: { notIn: parentIds },
-      },
+      where,
       skip,
       take: limit,
-      orderBy: { updatedAt: 'desc' },
+      orderBy,
     }),
-    prisma.product.count({
-      where: {
-        shopId,
-        wooProductId: { notIn: parentIds },
-      },
-    }),
+    prisma.product.count({ where }),
   ]);
 
   return {
@@ -52,6 +163,25 @@ export async function listProducts(shopId: string, page = 1, limit = 20) {
       totalPages: Math.ceil(total / limit) || 1,
     },
   };
+}
+
+/**
+ * Get filtered product IDs for bulk update operations
+ * Returns all product IDs matching the filter criteria (no pagination)
+ */
+export async function getFilteredProductIds(
+  shopId: string,
+  options: Omit<ListProductsOptions, 'page' | 'limit' | 'sortBy' | 'sortOrder'>
+): Promise<string[]> {
+  const parentIds = await getParentProductIds(shopId);
+  const where = buildWhereClause(shopId, parentIds, options);
+
+  const products = await prisma.product.findMany({
+    where,
+    select: { id: true },
+  });
+
+  return products.map(p => p.id);
 }
 
 export async function getProduct(shopId: string, productId: string) {

@@ -1,15 +1,13 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { ProductStatus, SyncStatus } from '@prisma/client';
+import { ProductStatus, SyncStatus, Prisma } from '@prisma/client';
 import {
   ProductFieldOverrides,
-  ProductFieldOverride,
   LOCKED_FIELD_SET,
   STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS,
   validateStaticValue,
 } from '@productsynch/shared';
-import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord } from '../services/productService';
-import { syncQueue } from '../lib/redis';
+import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, ListProductsOptions } from '../services/productService';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
@@ -29,23 +27,98 @@ const updateProductSchema = z.object({
   // feedEnableCheckout is not allowed - it's always false (feature not yet available)
 });
 
-const bulkActionSchema = z.object({
-  action: z.enum(['enable_search', 'disable_search', 'sync']).default('sync'),
-  productIds: z.array(z.string()).min(1),
+// ═══════════════════════════════════════════════════════════════════════════
+// BULK UPDATE SCHEMA AND TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+const bulkUpdateFilterSchema = z.object({
+  search: z.string().optional(),
+  syncStatus: z.array(z.nativeEnum(SyncStatus)).optional(),
+  isValid: z.boolean().optional(),
+  feedEnableSearch: z.boolean().optional(),
+  wooStockStatus: z.array(z.string()).optional(),
+  hasOverrides: z.boolean().optional(),
 });
+
+const bulkUpdateOperationSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('enable_search'), value: z.boolean() }),
+  z.object({
+    type: z.literal('field_mapping'),
+    attribute: z.string(),
+    wooField: z.string().nullable(),
+  }),
+  z.object({
+    type: z.literal('static_override'),
+    attribute: z.string(),
+    value: z.string(),
+  }),
+  z.object({
+    type: z.literal('remove_override'),
+    attribute: z.string(),
+  }),
+]);
+
+const bulkUpdateSchema = z.object({
+  selectionMode: z.enum(['selected', 'filtered']),
+  productIds: z.array(z.string()).optional(),
+  filters: bulkUpdateFilterSchema.optional(),
+  update: bulkUpdateOperationSchema,
+}).refine((data) => {
+  if (data.selectionMode === 'selected') {
+    return data.productIds && data.productIds.length > 0;
+  }
+  return true;
+}, { message: 'productIds required when selectionMode is "selected"' });
+
+type BulkUpdateOperation = z.infer<typeof bulkUpdateOperationSchema>;
 
 export function listProducts(req: Request, res: Response) {
   const { id } = req.params;
-  const page = Number(req.query.page || 1);
-  const limit = Number(req.query.limit || 20);
-  listProductsForShop(id, page, limit)
+
+  // Parse query parameters for filtering and sorting
+  const options: ListProductsOptions = {
+    page: Number(req.query.page || 1),
+    limit: Number(req.query.limit || 20),
+    sortBy: (req.query.sortBy as ListProductsOptions['sortBy']) || 'updatedAt',
+    sortOrder: (req.query.sortOrder as 'asc' | 'desc') || 'desc',
+    search: req.query.search as string | undefined,
+    syncStatus: req.query.syncStatus
+      ? (Array.isArray(req.query.syncStatus)
+          ? req.query.syncStatus as SyncStatus[]
+          : [req.query.syncStatus as SyncStatus])
+      : undefined,
+    isValid: req.query.isValid !== undefined
+      ? req.query.isValid === 'true'
+      : undefined,
+    feedEnableSearch: req.query.feedEnableSearch !== undefined
+      ? req.query.feedEnableSearch === 'true'
+      : undefined,
+    wooStockStatus: req.query.wooStockStatus
+      ? (Array.isArray(req.query.wooStockStatus)
+          ? req.query.wooStockStatus as string[]
+          : [req.query.wooStockStatus as string])
+      : undefined,
+    hasOverrides: req.query.hasOverrides !== undefined
+      ? req.query.hasOverrides === 'true'
+      : undefined,
+  };
+
+  listProductsForShop(id, options)
     .then((result) => {
       logger.info('Products list retrieved successfully', {
         shopId: id,
-        page,
-        limit,
+        page: options.page,
+        limit: options.limit,
         count: result.products.length,
-        total: result.pagination.total
+        total: result.pagination.total,
+        filters: {
+          search: options.search,
+          syncStatus: options.syncStatus,
+          isValid: options.isValid,
+          feedEnableSearch: options.feedEnableSearch,
+          wooStockStatus: options.wooStockStatus,
+          hasOverrides: options.hasOverrides,
+        },
       });
       res.json(result);
     })
@@ -53,8 +126,7 @@ export function listProducts(req: Request, res: Response) {
       logger.error('Failed to list products', {
         error: err,
         shopId: id,
-        page,
-        limit,
+        options,
         userId: userIdFromReq(req),
       });
       return res.status(500).json({ error: err.message });
@@ -125,38 +197,243 @@ export function updateProduct(req: Request, res: Response) {
     });
 }
 
-export function bulkAction(req: Request, res: Response) {
-  const parse = bulkActionSchema.safeParse(req.body);
+// ═══════════════════════════════════════════════════════════════════════════
+// BULK UPDATE ENDPOINT
+// ═══════════════════════════════════════════════════════════════════════════
+
+const BULK_UPDATE_CHUNK_SIZE = 100;
+
+/**
+ * Apply a single bulk update operation to a product
+ */
+async function applyBulkUpdateToProduct(
+  productId: string,
+  update: BulkUpdateOperation
+): Promise<void> {
+  switch (update.type) {
+    case 'enable_search': {
+      // Direct column update - no reprocessing needed
+      await prisma.product.update({
+        where: { id: productId },
+        data: { feedEnableSearch: update.value, updatedAt: new Date() },
+      });
+      break;
+    }
+
+    case 'field_mapping': {
+      // Validate: mapping not allowed for locked fields
+      if (LOCKED_FIELD_SET.has(update.attribute)) {
+        throw new Error(`Custom mapping not allowed for locked field: ${update.attribute}`);
+      }
+
+      // Get current overrides and merge
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { productFieldOverrides: true },
+      });
+
+      const overrides = (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+      overrides[update.attribute] = {
+        type: 'mapping',
+        value: update.wooField,
+      };
+
+      await prisma.product.update({
+        where: { id: productId },
+        data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
+      });
+
+      // Reprocess to update openaiAutoFilled
+      await reprocessProduct(productId);
+      break;
+    }
+
+    case 'static_override': {
+      // Validate: static override allowed if not locked OR in STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS
+      const isLockedField = LOCKED_FIELD_SET.has(update.attribute);
+      const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(update.attribute);
+
+      if (isLockedField && !allowsStaticOverride) {
+        throw new Error(`Static override not allowed for locked field: ${update.attribute}`);
+      }
+
+      // Validate the static value
+      const validation = validateStaticValue(update.attribute, update.value);
+      if (!validation.isValid) {
+        throw new Error(validation.error || 'Invalid value');
+      }
+
+      // Get current overrides and merge
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { productFieldOverrides: true },
+      });
+
+      const overrides = (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+      overrides[update.attribute] = {
+        type: 'static',
+        value: update.value,
+      };
+
+      await prisma.product.update({
+        where: { id: productId },
+        data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
+      });
+
+      // Reprocess to update openaiAutoFilled
+      await reprocessProduct(productId);
+      break;
+    }
+
+    case 'remove_override': {
+      // Get current overrides
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { productFieldOverrides: true },
+      });
+
+      const overrides = (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+
+      if (overrides[update.attribute]) {
+        delete overrides[update.attribute];
+
+        await prisma.product.update({
+          where: { id: productId },
+          data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
+        });
+
+        // Reprocess to update openaiAutoFilled
+        await reprocessProduct(productId);
+      }
+      break;
+    }
+  }
+}
+
+/**
+ * POST /shops/:id/products/bulk-update
+ * Bulk update products with chunked processing
+ */
+export async function bulkUpdate(req: Request, res: Response) {
+  const { id: shopId } = req.params;
+
+  const parse = bulkUpdateSchema.safeParse(req.body);
   if (!parse.success) {
-    logger.warn('products:bulk invalid', parse.error.flatten());
+    logger.warn('products:bulk-update invalid request', {
+      shopId,
+      validationErrors: parse.error.flatten(),
+    });
     return res.status(400).json({ error: parse.error.flatten() });
   }
-  const { action, productIds } = parse.data;
-  Promise.all(
-    productIds.map(async (pid) => {
-      const updated = await updateProductRecord(req.params.id, pid, {
-        feedEnableSearch: action === 'enable_search' ? true : action === 'disable_search' ? false : undefined,
-        syncStatus: action === 'sync' ? 'PENDING' : undefined,
+
+  const { selectionMode, productIds: selectedIds, filters, update } = parse.data;
+
+  try {
+    // Pre-validate update operation before processing any products
+    if (update.type === 'field_mapping' && LOCKED_FIELD_SET.has(update.attribute)) {
+      return res.status(400).json({
+        error: `Custom mapping not allowed for locked field: ${update.attribute}`,
       });
-      if (action === 'sync' && updated) {
-        syncQueue?.add('product-sync', {
-          shopId: req.params.id,
-          productId: pid,
-          type: 'INCREMENTAL',
-          triggeredBy: 'manual',
-        }, { removeOnComplete: true });
+    }
+
+    if (update.type === 'static_override') {
+      const isLockedField = LOCKED_FIELD_SET.has(update.attribute);
+      const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(update.attribute);
+
+      if (isLockedField && !allowsStaticOverride) {
+        return res.status(400).json({
+          error: `Static override not allowed for locked field: ${update.attribute}`,
+        });
       }
-      return { id: pid, updated: Boolean(updated) };
-    }),
-  )
-    .then((results) => {
-      logger.info('products:bulk', { shopId: req.params.id, action, count: results.length });
-      res.json({ action, results });
-    })
-    .catch((err) => {
-      logger.error('products:bulk error', err);
-      return res.status(500).json({ error: err.message });
+
+      const validation = validateStaticValue(update.attribute, update.value);
+      if (!validation.isValid) {
+        return res.status(400).json({
+          error: validation.error || 'Invalid static value',
+        });
+      }
+    }
+
+    // Resolve product IDs based on selection mode
+    let productIdsToUpdate: string[];
+
+    if (selectionMode === 'selected') {
+      productIdsToUpdate = selectedIds!;
+    } else {
+      // Filtered mode: get all products matching filters
+      productIdsToUpdate = await getFilteredProductIds(shopId, filters || {});
+    }
+
+    if (productIdsToUpdate.length === 0) {
+      return res.status(400).json({
+        error: 'No products match the selection criteria',
+      });
+    }
+
+    logger.info('products:bulk-update starting', {
+      shopId,
+      selectionMode,
+      totalProducts: productIdsToUpdate.length,
+      updateType: update.type,
+      userId: userIdFromReq(req),
     });
+
+    // Process in chunks
+    const errors: Array<{ productId: string; error: string }> = [];
+    let processedCount = 0;
+
+    for (let i = 0; i < productIdsToUpdate.length; i += BULK_UPDATE_CHUNK_SIZE) {
+      const chunk = productIdsToUpdate.slice(i, i + BULK_UPDATE_CHUNK_SIZE);
+
+      // Process chunk in parallel
+      const results = await Promise.allSettled(
+        chunk.map(async (productId) => {
+          await applyBulkUpdateToProduct(productId, update);
+          return productId;
+        })
+      );
+
+      // Collect results
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          processedCount++;
+        } else {
+          // Extract productId from the rejection
+          const errorMessage = result.reason?.message || 'Unknown error';
+          errors.push({ productId: 'unknown', error: errorMessage });
+        }
+      }
+    }
+
+    logger.info('products:bulk-update completed', {
+      shopId,
+      totalProducts: productIdsToUpdate.length,
+      processedProducts: processedCount,
+      failedProducts: errors.length,
+      updateType: update.type,
+      userId: userIdFromReq(req),
+    });
+
+    res.json({
+      success: errors.length === 0,
+      totalProducts: productIdsToUpdate.length,
+      processedProducts: processedCount,
+      failedProducts: errors.length,
+      errors: errors.slice(0, 100), // Limit errors in response
+      completed: true,
+    });
+  } catch (err) {
+    logger.error('products:bulk-update error', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      shopId,
+      selectionMode,
+      updateType: update.type,
+      userId: userIdFromReq(req),
+    });
+    res.status(500).json({
+      error: err instanceof Error ? err.message : 'Bulk update failed',
+    });
+  }
 }
 
 /**

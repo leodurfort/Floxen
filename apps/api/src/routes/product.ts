@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  bulkAction,
+  bulkUpdate,
   getProduct,
   getProductWooData,
   listProducts,
@@ -17,7 +17,7 @@ router.get('/', requireAuth, listProducts);
 router.get('/:pid', requireAuth, getProduct);
 router.get('/:pid/woo-data', requireAuth, getProductWooData);
 router.patch('/:pid', requireAuth, updateProduct);
-router.post('/bulk', requireAuth, bulkAction);
+router.post('/bulk-update', requireAuth, bulkUpdate);
 
 // Product field override routes
 router.get('/:pid/field-overrides', requireAuth, getProductFieldOverrides);
