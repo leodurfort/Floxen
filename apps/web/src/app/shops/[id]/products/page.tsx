@@ -69,7 +69,6 @@ function CatalogPageContent() {
     setSort,
     hasActiveFilters,
     hasColumnFilters,
-    getLegacyApiFilters,
     getColumnFilter,
     setColumnTextFilter,
     setColumnValueFilter,
@@ -131,20 +130,15 @@ function CatalogPageContent() {
       setLoading(true);
       setError(null);
       try {
-        // Use legacy filters for backward compatibility with current API
-        const legacyFilters = getLegacyApiFilters();
-
         const productsRes = await listProducts(params.id, accessToken, {
           page: filters.page,
           limit: filters.limit,
           sortBy: filters.sortBy,
           sortOrder: filters.sortOrder,
           search: filters.search || undefined,
-          syncStatus: legacyFilters.syncStatus as string[] | undefined,
-          isValid: legacyFilters.isValid as boolean | undefined,
-          feedEnableSearch: legacyFilters.feedEnableSearch as boolean | undefined,
-          wooStockStatus: legacyFilters.wooStockStatus as string[] | undefined,
-          hasOverrides: legacyFilters.hasOverrides as boolean | undefined,
+          columnFilters: Object.keys(filters.columnFilters).length > 0
+            ? filters.columnFilters
+            : undefined,
         });
         setProducts(productsRes.products);
         setTotalProducts(productsRes.pagination.total);
@@ -157,7 +151,7 @@ function CatalogPageContent() {
     };
 
     fetchProducts();
-  }, [accessToken, params?.id, filters, refreshKey, getLegacyApiFilters]);
+  }, [accessToken, params?.id, filters, refreshKey]);
 
   // Load column values for filter dropdown
   const loadColumnValues = useCallback(async (columnId: string) => {
@@ -241,7 +235,12 @@ function CatalogPageContent() {
   // Bulk action handlers
   const handleBulkUpdate = useCallback(
     async (update: BulkUpdateOperation) => {
-      const apiFilters = getLegacyApiFilters();
+      const apiFilters = {
+        search: filters.search || undefined,
+        columnFilters: Object.keys(filters.columnFilters).length > 0
+          ? filters.columnFilters
+          : undefined,
+      };
       const result = await executeBulkUpdate(
         selection.selectAllMatching ? 'filtered' : 'selected',
         selection.selectAllMatching ? undefined : selection.getSelectedIds(),
@@ -260,7 +259,7 @@ function CatalogPageContent() {
         setRefreshKey((k) => k + 1);
       }
     },
-    [selection, getLegacyApiFilters, executeBulkUpdate]
+    [selection, filters.search, filters.columnFilters, executeBulkUpdate]
   );
 
   // Column visibility

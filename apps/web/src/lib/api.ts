@@ -129,17 +129,18 @@ export async function getShop(shopId: string, token: string) {
 // PRODUCT LISTING WITH FILTERS
 // ═══════════════════════════════════════════════════════════════════════════
 
+export interface ColumnFilter {
+  text?: string;      // Text search within column
+  values?: string[];  // Selected checkbox values
+}
+
 export interface ListProductsParams {
   page?: number;
   limit?: number;
   sortBy?: string; // Any column ID (database column or OpenAI attribute)
   sortOrder?: 'asc' | 'desc';
   search?: string;
-  syncStatus?: string[];
-  isValid?: boolean;
-  feedEnableSearch?: boolean;
-  wooStockStatus?: string[];
-  hasOverrides?: boolean;
+  columnFilters?: Record<string, ColumnFilter>;
 }
 
 export interface ListProductsResult {
@@ -165,15 +166,18 @@ export async function listProducts(
     if (params.sortBy) searchParams.set('sortBy', params.sortBy);
     if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
     if (params.search) searchParams.set('search', params.search);
-    if (params.syncStatus) {
-      params.syncStatus.forEach(s => searchParams.append('syncStatus', s));
+
+    // Encode column filters: cf_{columnId}_t for text, cf_{columnId}_v for values
+    if (params.columnFilters) {
+      for (const [columnId, filter] of Object.entries(params.columnFilters)) {
+        if (filter.text) {
+          searchParams.set(`cf_${columnId}_t`, filter.text);
+        }
+        if (filter.values && filter.values.length > 0) {
+          searchParams.set(`cf_${columnId}_v`, filter.values.join(','));
+        }
+      }
     }
-    if (params.isValid !== undefined) searchParams.set('isValid', String(params.isValid));
-    if (params.feedEnableSearch !== undefined) searchParams.set('feedEnableSearch', String(params.feedEnableSearch));
-    if (params.wooStockStatus) {
-      params.wooStockStatus.forEach(s => searchParams.append('wooStockStatus', s));
-    }
-    if (params.hasOverrides !== undefined) searchParams.set('hasOverrides', String(params.hasOverrides));
   }
 
   const queryString = searchParams.toString();
@@ -227,11 +231,7 @@ export async function getColumnValues(
 
 export interface BulkUpdateFilters {
   search?: string;
-  syncStatus?: string[];
-  isValid?: boolean;
-  feedEnableSearch?: boolean;
-  wooStockStatus?: string[];
-  hasOverrides?: boolean;
+  columnFilters?: Record<string, ColumnFilter>;
 }
 
 export type BulkUpdateOperation =
