@@ -8,7 +8,6 @@ import { useCallback, useMemo } from 'react';
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface ColumnFilter {
-  text: string;      // Text search within column
   values: string[];  // Selected checkbox values
 }
 
@@ -45,12 +44,8 @@ const DEFAULT_FILTERS: CatalogFilters = {
 // URL ENCODING HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Column filter URL format:
-// cf_{columnId}_t = text filter
-// cf_{columnId}_v = value filter (comma-separated)
-
+// Column filter URL format: cf_{columnId}_v = value filter (comma-separated)
 const CF_PREFIX = 'cf_';
-const CF_TEXT_SUFFIX = '_t';
 const CF_VALUES_SUFFIX = '_v';
 
 function parseColumnFiltersFromParams(searchParams: URLSearchParams): Record<string, ColumnFilter> {
@@ -61,16 +56,10 @@ function parseColumnFiltersFromParams(searchParams: URLSearchParams): Record<str
 
     const withoutPrefix = key.slice(CF_PREFIX.length);
 
-    if (withoutPrefix.endsWith(CF_TEXT_SUFFIX)) {
-      const columnId = withoutPrefix.slice(0, -CF_TEXT_SUFFIX.length);
-      if (!columnFilters[columnId]) {
-        columnFilters[columnId] = { text: '', values: [] };
-      }
-      columnFilters[columnId].text = value;
-    } else if (withoutPrefix.endsWith(CF_VALUES_SUFFIX)) {
+    if (withoutPrefix.endsWith(CF_VALUES_SUFFIX)) {
       const columnId = withoutPrefix.slice(0, -CF_VALUES_SUFFIX.length);
       if (!columnFilters[columnId]) {
-        columnFilters[columnId] = { text: '', values: [] };
+        columnFilters[columnId] = { values: [] };
       }
       columnFilters[columnId].values = value.split(',').filter(Boolean);
     }
@@ -84,9 +73,6 @@ function encodeColumnFiltersToParams(
   params: URLSearchParams
 ): void {
   for (const [columnId, filter] of Object.entries(columnFilters)) {
-    if (filter.text) {
-      params.set(`${CF_PREFIX}${columnId}${CF_TEXT_SUFFIX}`, filter.text);
-    }
     if (filter.values.length > 0) {
       params.set(`${CF_PREFIX}${columnId}${CF_VALUES_SUFFIX}`, filter.values.join(','));
     }
@@ -152,49 +138,14 @@ export function useCatalogFilters() {
   // COLUMN FILTER METHODS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Set text filter for a column
-  const setColumnTextFilter = useCallback((columnId: string, text: string) => {
-    const newColumnFilters = { ...filters.columnFilters };
-
-    if (!text) {
-      // Remove text filter
-      if (newColumnFilters[columnId]) {
-        newColumnFilters[columnId] = { ...newColumnFilters[columnId], text: '' };
-        // Clean up empty filters
-        if (!newColumnFilters[columnId].text && newColumnFilters[columnId].values.length === 0) {
-          delete newColumnFilters[columnId];
-        }
-      }
-    } else {
-      // Set text filter
-      if (!newColumnFilters[columnId]) {
-        newColumnFilters[columnId] = { text: '', values: [] };
-      }
-      newColumnFilters[columnId] = { ...newColumnFilters[columnId], text };
-    }
-
-    setFilters({ columnFilters: newColumnFilters });
-  }, [filters.columnFilters, setFilters]);
-
   // Set value filter for a column
   const setColumnValueFilter = useCallback((columnId: string, values: string[]) => {
     const newColumnFilters = { ...filters.columnFilters };
 
     if (values.length === 0) {
-      // Remove value filter
-      if (newColumnFilters[columnId]) {
-        newColumnFilters[columnId] = { ...newColumnFilters[columnId], values: [] };
-        // Clean up empty filters
-        if (!newColumnFilters[columnId].text && newColumnFilters[columnId].values.length === 0) {
-          delete newColumnFilters[columnId];
-        }
-      }
+      delete newColumnFilters[columnId];
     } else {
-      // Set value filter
-      if (!newColumnFilters[columnId]) {
-        newColumnFilters[columnId] = { text: '', values: [] };
-      }
-      newColumnFilters[columnId] = { ...newColumnFilters[columnId], values };
+      newColumnFilters[columnId] = { values };
     }
 
     setFilters({ columnFilters: newColumnFilters });
@@ -214,14 +165,13 @@ export function useCatalogFilters() {
 
   // Get filter for a specific column
   const getColumnFilter = useCallback((columnId: string): ColumnFilter => {
-    return filters.columnFilters[columnId] || { text: '', values: [] };
+    return filters.columnFilters[columnId] || { values: [] };
   }, [filters.columnFilters]);
 
   // Check if a column has active filters
   const hasColumnFilter = useCallback((columnId: string): boolean => {
     const filter = filters.columnFilters[columnId];
-    if (!filter) return false;
-    return Boolean(filter.text) || filter.values.length > 0;
+    return filter ? filter.values.length > 0 : false;
   }, [filters.columnFilters]);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -245,7 +195,6 @@ export function useCatalogFilters() {
     setSort,
 
     // Column filter methods
-    setColumnTextFilter,
     setColumnValueFilter,
     clearColumnFilter,
     clearAllColumnFilters,

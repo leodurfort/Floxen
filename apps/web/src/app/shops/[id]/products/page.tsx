@@ -70,7 +70,6 @@ function CatalogPageContent() {
     hasActiveFilters,
     hasColumnFilters,
     getColumnFilter,
-    setColumnTextFilter,
     setColumnValueFilter,
     clearColumnFilter,
     clearAllColumnFilters,
@@ -519,13 +518,11 @@ function CatalogPageContent() {
                           sortable={column.sortable}
                           filterable={column.filterable}
                           currentSort={currentSort}
-                          currentTextFilter={columnFilter.text}
                           currentValueFilter={columnFilter.values}
                           uniqueValues={columnValuesCache[column.id] || []}
                           loadingValues={loadingColumnValues[column.id] || false}
                           onLoadValues={() => loadColumnValues(column.id)}
                           onSort={(order) => setSort(column.id, order)}
-                          onTextFilter={(text) => setColumnTextFilter(column.id, text)}
                           onValueFilter={(values) => setColumnValueFilter(column.id, values)}
                           onClearFilter={() => clearColumnFilter(column.id)}
                         />

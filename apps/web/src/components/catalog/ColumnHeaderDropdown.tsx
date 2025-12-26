@@ -20,7 +20,6 @@ export interface ColumnHeaderDropdownProps {
 
   // Current state
   currentSort: { column: string; order: 'asc' | 'desc' } | null;
-  currentTextFilter: string;
   currentValueFilter: string[];
 
   // Unique values for checkbox list
@@ -30,7 +29,6 @@ export interface ColumnHeaderDropdownProps {
 
   // Callbacks
   onSort: (order: 'asc' | 'desc' | null) => void;
-  onTextFilter: (text: string) => void;
   onValueFilter: (values: string[]) => void;
   onClearFilter: () => void;
 }
@@ -45,13 +43,11 @@ export function ColumnHeaderDropdown({
   sortable = true,
   filterable = true,
   currentSort,
-  currentTextFilter,
   currentValueFilter,
   uniqueValues,
   loadingValues = false,
   onLoadValues,
   onSort,
-  onTextFilter,
   onValueFilter,
   onClearFilter,
 }: ColumnHeaderDropdownProps) {
@@ -66,7 +62,7 @@ export function ColumnHeaderDropdown({
   const sortOrder = isSorted ? currentSort.order : null;
 
   // Check if this column has active filters
-  const hasActiveFilter = Boolean(currentTextFilter) || currentValueFilter.length > 0;
+  const hasActiveFilter = currentValueFilter.length > 0;
 
   // Check if pending values differ from current (user has unapplied changes)
   const hasPendingChanges = isOpen && (
