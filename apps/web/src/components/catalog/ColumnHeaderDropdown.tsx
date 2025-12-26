@@ -56,7 +56,8 @@ export function ColumnHeaderDropdown({
   onClearFilter,
 }: ColumnHeaderDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchInput, setSearchInput] = useState(currentTextFilter);
+  const [searchInput, setSearchInput] = useState(''); // Local search for filtering the list (not a filter itself)
+  const [pendingValues, setPendingValues] = useState<string[]>([]); // Pending checkbox selections
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -67,10 +68,19 @@ export function ColumnHeaderDropdown({
   // Check if this column has active filters
   const hasActiveFilter = Boolean(currentTextFilter) || currentValueFilter.length > 0;
 
-  // Sync search input with prop
+  // Check if pending values differ from current (user has unapplied changes)
+  const hasPendingChanges = isOpen && (
+    pendingValues.length !== currentValueFilter.length ||
+    !pendingValues.every(v => currentValueFilter.includes(v))
+  );
+
+  // Initialize pending values when dropdown opens
   useEffect(() => {
-    setSearchInput(currentTextFilter);
-  }, [currentTextFilter]);
+    if (isOpen) {
+      setPendingValues([...currentValueFilter]);
+      setSearchInput(''); // Reset search when opening
+    }
+  }, [isOpen, currentValueFilter]);
 
   // Load values when dropdown opens
   useEffect(() => {
@@ -79,7 +89,7 @@ export function ColumnHeaderDropdown({
     }
   }, [isOpen, filterable, onLoadValues, uniqueValues.length, loadingValues]);
 
-  // Close on click outside
+  // Close on click outside (discards pending changes)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -89,6 +99,7 @@ export function ColumnHeaderDropdown({
         !buttonRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
+        // Pending changes are discarded automatically since we reset on next open
       }
     }
 
@@ -98,36 +109,33 @@ export function ColumnHeaderDropdown({
     }
   }, [isOpen]);
 
-  // Debounced text filter
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput !== currentTextFilter) {
-        onTextFilter(searchInput);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput, currentTextFilter, onTextFilter]);
-
-  // Toggle value selection
+  // Toggle value in pending selection (does NOT apply immediately)
   const toggleValue = useCallback(
     (value: string) => {
-      const newValues = currentValueFilter.includes(value)
-        ? currentValueFilter.filter((v) => v !== value)
-        : [...currentValueFilter, value];
-      onValueFilter(newValues);
+      setPendingValues(prev =>
+        prev.includes(value)
+          ? prev.filter((v) => v !== value)
+          : [...prev, value]
+      );
     },
-    [currentValueFilter, onValueFilter]
+    []
   );
 
-  // Select all values
-  const selectAll = useCallback(() => {
-    onValueFilter(uniqueValues.map((v) => v.value));
-  }, [uniqueValues, onValueFilter]);
+  // Select all values in pending
+  const selectAllPending = useCallback(() => {
+    setPendingValues(uniqueValues.map((v) => v.value));
+  }, [uniqueValues]);
 
-  // Deselect all values
-  const deselectAll = useCallback(() => {
-    onValueFilter([]);
-  }, [onValueFilter]);
+  // Deselect all in pending
+  const deselectAllPending = useCallback(() => {
+    setPendingValues([]);
+  }, []);
+
+  // Apply pending filter and close dropdown
+  const applyFilter = useCallback(() => {
+    onValueFilter(pendingValues);
+    setIsOpen(false);
+  }, [pendingValues, onValueFilter]);
 
   // Clear all filters for this column
   const handleClear = useCallback(() => {
@@ -281,14 +289,14 @@ export function ColumnHeaderDropdown({
                     {/* Select All / Deselect All */}
                     <div className="px-2 py-1.5 border-b border-white/10 flex gap-2">
                       <button
-                        onClick={selectAll}
+                        onClick={selectAllPending}
                         className="text-xs text-[#5df0c0] hover:text-[#5df0c0]/80"
                       >
                         Select All
                       </button>
                       <span className="text-white/20">|</span>
                       <button
-                        onClick={deselectAll}
+                        onClick={deselectAllPending}
                         className="text-xs text-white/60 hover:text-white"
                       >
                         Clear
@@ -303,7 +311,7 @@ export function ColumnHeaderDropdown({
                       >
                         <input
                           type="checkbox"
-                          checked={currentValueFilter.includes(item.value)}
+                          checked={pendingValues.includes(item.value)}
                           onChange={() => toggleValue(item.value)}
                           className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50"
                         />
@@ -316,6 +324,28 @@ export function ColumnHeaderDropdown({
                   </>
                 )}
               </div>
+
+              {/* Apply Filter Button */}
+              {filteredValues.length > 0 && (
+                <div className="p-2 border-t border-white/10">
+                  <button
+                    onClick={applyFilter}
+                    disabled={!hasPendingChanges && pendingValues.length === 0}
+                    className={`
+                      w-full px-3 py-2 text-sm font-medium rounded transition-colors
+                      ${hasPendingChanges || pendingValues.length > 0
+                        ? 'bg-[#5df0c0] text-black hover:bg-[#4de0b0]'
+                        : 'bg-white/10 text-white/40 cursor-not-allowed'
+                      }
+                    `}
+                  >
+                    {pendingValues.length > 0
+                      ? `Apply Filter (${pendingValues.length} selected)`
+                      : 'Apply Filter'
+                    }
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
