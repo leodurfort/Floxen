@@ -7,8 +7,6 @@ interface BulkActionToolbarProps {
   onSelectAllMatching: () => void;
   onClearSelection: () => void;
   onBulkEdit: () => void;
-  onEnableSearch: () => void;
-  onDisableSearch: () => void;
   isProcessing: boolean;
 }
 
@@ -19,8 +17,6 @@ export function BulkActionToolbar({
   onSelectAllMatching,
   onClearSelection,
   onBulkEdit,
-  onEnableSearch,
-  onDisableSearch,
   isProcessing,
 }: BulkActionToolbarProps) {
   const displayCount = selectAllMatching ? totalMatchingCount : selectedCount;
@@ -49,22 +45,6 @@ export function BulkActionToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          onClick={onEnableSearch}
-          disabled={isProcessing}
-          className="px-3 py-1.5 text-sm bg-[#5df0c0]/20 text-[#5df0c0] rounded-lg hover:bg-[#5df0c0]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          Enable Search
-        </button>
-
-        <button
-          onClick={onDisableSearch}
-          disabled={isProcessing}
-          className="px-3 py-1.5 text-sm bg-white/10 text-white/80 rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          Disable Search
-        </button>
-
         <button
           onClick={onBulkEdit}
           disabled={isProcessing}

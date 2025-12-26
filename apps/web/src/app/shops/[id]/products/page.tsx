@@ -245,9 +245,6 @@ function CatalogPageContent() {
     }
   }, [selection, getApiFilters, executeBulkUpdate]);
 
-  const handleEnableSearch = () => handleBulkUpdate({ type: 'enable_search', value: true });
-  const handleDisableSearch = () => handleBulkUpdate({ type: 'enable_search', value: false });
-
   // Column visibility
   const handleSaveColumns = (columns: string[]) => {
     setVisibleColumns(columns);
@@ -373,8 +370,6 @@ function CatalogPageContent() {
             onSelectAllMatching={handleSelectAllMatching}
             onClearSelection={selection.clearSelection}
             onBulkEdit={() => setShowBulkEditModal(true)}
-            onEnableSearch={handleEnableSearch}
-            onDisableSearch={handleDisableSearch}
             isProcessing={bulkProgress.isProcessing}
           />
         )}
