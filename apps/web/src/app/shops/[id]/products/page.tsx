@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { listProducts, refreshFeed, RefreshFeedResponse, BulkUpdateOperation, getColumnValues } from '@/lib/api';
+import { listProducts, refreshFeed, RefreshFeedResponse, BulkUpdateOperation, getColumnValues, CurrentFiltersForColumnValues } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
@@ -152,7 +152,31 @@ function CatalogPageContent() {
     fetchProducts();
   }, [accessToken, params?.id, filters, refreshKey]);
 
-  // Load column values for filter dropdown
+  // Build current filters for cascading filter support
+  const currentFiltersForColumnValues: CurrentFiltersForColumnValues | undefined =
+    filters.search || Object.keys(filters.columnFilters).length > 0
+      ? {
+          globalSearch: filters.search || undefined,
+          columnFilters: Object.keys(filters.columnFilters).length > 0 ? filters.columnFilters : undefined,
+        }
+      : undefined;
+
+  // Invalidate column values cache when filters change (cascading filters)
+  const filtersSignature = JSON.stringify({
+    search: filters.search,
+    columnFilters: filters.columnFilters,
+  });
+  const prevFiltersSignatureRef = useRef(filtersSignature);
+
+  useEffect(() => {
+    if (prevFiltersSignatureRef.current !== filtersSignature) {
+      // Filters changed - clear the column values cache so new values are fetched
+      setColumnValuesCache({});
+      prevFiltersSignatureRef.current = filtersSignature;
+    }
+  }, [filtersSignature]);
+
+  // Load column values for filter dropdown (with cascading filter support)
   const loadColumnValues = useCallback(async (columnId: string) => {
     if (!accessToken || !params?.id) return;
     if (columnValuesCache[columnId]) return;
@@ -161,7 +185,14 @@ function CatalogPageContent() {
     setLoadingColumnValues((prev) => ({ ...prev, [columnId]: true }));
 
     try {
-      const result = await getColumnValues(params.id, accessToken, columnId, 100);
+      const result = await getColumnValues(
+        params.id,
+        accessToken,
+        columnId,
+        100,
+        undefined, // search within values (not used here)
+        currentFiltersForColumnValues
+      );
       setColumnValuesCache((prev) => ({
         ...prev,
         [columnId]: result.values,
@@ -171,7 +202,7 @@ function CatalogPageContent() {
     } finally {
       setLoadingColumnValues((prev) => ({ ...prev, [columnId]: false }));
     }
-  }, [accessToken, params?.id, columnValuesCache, loadingColumnValues]);
+  }, [accessToken, params?.id, columnValuesCache, loadingColumnValues, currentFiltersForColumnValues]);
 
   // Navigate to product mapping page
   const handleRowClick = (productId: string) => {
