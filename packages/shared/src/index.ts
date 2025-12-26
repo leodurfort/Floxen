@@ -50,9 +50,12 @@ export interface Product {
   wooDescription?: string | null;
   wooSku?: string | null;
   wooPrice?: string | null;
+  wooStockStatus?: string | null;
+  wooStockQuantity?: number | null;
   wooCategories?: any;
   wooDateModified?: string | null;
   wooRawJson?: any;  // Full WooCommerce product JSON for field mapping preview
+  wooPermalink?: string | null;
 
   // Product-level field mapping overrides
   productFieldOverrides?: ProductFieldOverrides | null;

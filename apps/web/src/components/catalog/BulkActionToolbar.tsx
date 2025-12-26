@@ -1,0 +1,101 @@
+'use client';
+
+interface BulkActionToolbarProps {
+  selectedCount: number;
+  totalMatchingCount: number;
+  selectAllMatching: boolean;
+  onSelectAllMatching: () => void;
+  onClearSelection: () => void;
+  onBulkEdit: () => void;
+  onEnableSearch: () => void;
+  onDisableSearch: () => void;
+  isProcessing: boolean;
+}
+
+export function BulkActionToolbar({
+  selectedCount,
+  totalMatchingCount,
+  selectAllMatching,
+  onSelectAllMatching,
+  onClearSelection,
+  onBulkEdit,
+  onEnableSearch,
+  onDisableSearch,
+  isProcessing,
+}: BulkActionToolbarProps) {
+  const displayCount = selectAllMatching ? totalMatchingCount : selectedCount;
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 bg-[#5df0c0]/10 border border-[#5df0c0]/30 rounded-lg mb-4">
+      <div className="flex items-center gap-4">
+        <span className="text-[#5df0c0] font-medium">
+          {displayCount.toLocaleString()} product{displayCount !== 1 ? 's' : ''} selected
+        </span>
+
+        {!selectAllMatching && selectedCount > 0 && selectedCount < totalMatchingCount && (
+          <button
+            onClick={onSelectAllMatching}
+            className="text-sm text-white/60 hover:text-white underline"
+          >
+            Select all {totalMatchingCount.toLocaleString()} matching products
+          </button>
+        )}
+
+        {selectAllMatching && (
+          <span className="text-sm text-white/60">
+            All products matching current filters are selected
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onEnableSearch}
+          disabled={isProcessing}
+          className="px-3 py-1.5 text-sm bg-[#5df0c0]/20 text-[#5df0c0] rounded-lg hover:bg-[#5df0c0]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Enable Search
+        </button>
+
+        <button
+          onClick={onDisableSearch}
+          disabled={isProcessing}
+          className="px-3 py-1.5 text-sm bg-white/10 text-white/80 rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Disable Search
+        </button>
+
+        <button
+          onClick={onBulkEdit}
+          disabled={isProcessing}
+          className="px-3 py-1.5 text-sm bg-[#5df0c0] text-black font-medium rounded-lg hover:bg-[#5df0c0]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+        >
+          {isProcessing ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Processing...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Bulk Edit
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={onClearSelection}
+          disabled={isProcessing}
+          className="px-3 py-1.5 text-sm text-white/60 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  );
+}
