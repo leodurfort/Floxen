@@ -10,7 +10,8 @@ const SYNC_POLL_INTERVAL = 5000; // 5 seconds
 
 export default function ShopsPage() {
   const router = useRouter();
-  const { accessToken, hydrate, hydrated } = useAuth();
+  // Note: hydrate() is called by AppLayout, no need to call it here
+  const { accessToken, hydrated } = useAuth();
   const { shops, loading, loadShops, removeShop, updateShop: updateShopInStore } = useShops();
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [storeUrl, setStoreUrl] = useState('');
@@ -19,10 +20,6 @@ export default function ShopsPage() {
   const [isSyncPolling, setIsSyncPolling] = useState(false);
   const saveTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   useEffect(() => {
     if (hydrated && !accessToken) router.push('/login');

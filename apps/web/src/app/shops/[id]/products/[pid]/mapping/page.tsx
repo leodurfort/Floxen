@@ -25,7 +25,8 @@ interface ProductInfo {
 export default function ProductMappingPage() {
   const params = useParams<{ id: string; pid: string }>();
   const router = useRouter();
-  const { accessToken, hydrate, hydrated } = useAuth();
+  // Note: hydrate() is called by AppLayout, no need to call it here
+  const { accessToken, hydrated } = useAuth();
 
   const [product, setProduct] = useState<ProductInfo | null>(null);
   const [shopMappings, setShopMappings] = useState<Record<string, string | null>>({});
@@ -43,11 +44,6 @@ export default function ProductMappingPage() {
 
   // Ref for cleanup
   const saveErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Hydrate auth
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {

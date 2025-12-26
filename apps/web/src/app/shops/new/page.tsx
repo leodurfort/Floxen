@@ -7,16 +7,13 @@ import { createShop } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 
 export default function NewShopPage() {
-  const { accessToken, hydrate, hydrated } = useAuth();
+  // Note: hydrate() is called by AppLayout, no need to call it here
+  const { accessToken, hydrated } = useAuth();
   const router = useRouter();
   const [storeUrl, setStoreUrl] = useState('');
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   useEffect(() => {
     if (hydrated && !accessToken) {
