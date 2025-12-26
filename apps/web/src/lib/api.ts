@@ -132,7 +132,7 @@ export async function getShop(shopId: string, token: string) {
 export interface ListProductsParams {
   page?: number;
   limit?: number;
-  sortBy?: 'wooProductId' | 'wooTitle' | 'wooPrice' | 'wooStockQuantity' | 'syncStatus' | 'isValid' | 'feedEnableSearch' | 'updatedAt';
+  sortBy?: string; // Any column ID (database column or OpenAI attribute)
   sortOrder?: 'asc' | 'desc';
   search?: string;
   syncStatus?: string[];

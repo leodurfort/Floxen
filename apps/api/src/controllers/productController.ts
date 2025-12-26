@@ -535,14 +535,6 @@ export async function getProductWooData(req: Request, res: Response) {
       wooProductId: (product.wooRawJson as any)?.id,
     });
 
-    logger.info('Sending shop data in response', {
-      shopId,
-      productId,
-      shopData: shop,
-      hasSellerName: !!shop?.sellerName,
-      hasSellerUrl: !!shop?.sellerUrl,
-    });
-
     res.json({
       wooData: product.wooRawJson,
       shopData: shop,
