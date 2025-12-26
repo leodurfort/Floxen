@@ -57,7 +57,7 @@ export function listProducts(req: Request, res: Response) {
         limit,
         userId: userIdFromReq(req),
       });
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     });
 }
 
@@ -83,7 +83,7 @@ export function getProduct(req: Request, res: Response) {
         productId: pid,
         userId: userIdFromReq(req),
       });
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     });
 }
 
@@ -121,7 +121,7 @@ export function updateProduct(req: Request, res: Response) {
         updateData: parse.data,
         userId: userIdFromReq(req),
       });
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     });
 }
 
@@ -155,7 +155,7 @@ export function bulkAction(req: Request, res: Response) {
     })
     .catch((err) => {
       logger.error('products:bulk error', err);
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     });
 }
 
