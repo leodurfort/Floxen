@@ -9,7 +9,7 @@ import {
   OPENAI_FEED_SPEC,
   isProductEditable,
 } from '@productsynch/shared';
-import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, ListProductsOptions } from '../services/productService';
+import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, getColumnValues as getColumnValuesService, ListProductsOptions } from '../services/productService';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
@@ -455,6 +455,42 @@ export async function bulkUpdate(req: Request, res: Response) {
     res.status(500).json({
       error: err instanceof Error ? err.message : 'Bulk update failed',
     });
+  }
+}
+
+/**
+ * GET /shops/:id/products/column-values
+ * Get unique values for a column to populate filter dropdown
+ */
+export async function getColumnValues(req: Request, res: Response) {
+  const { id: shopId } = req.params;
+  const column = req.query.column as string;
+  const limit = Number(req.query.limit) || 100;
+  const search = req.query.search as string | undefined;
+
+  if (!column) {
+    return res.status(400).json({ error: 'column query parameter is required' });
+  }
+
+  try {
+    const result = await getColumnValuesService(shopId, column, limit, search);
+
+    logger.info('Column values retrieved', {
+      shopId,
+      column,
+      valueCount: result.values.length,
+      totalDistinct: result.totalDistinct,
+    });
+
+    res.json(result);
+  } catch (err) {
+    logger.error('Failed to get column values', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      shopId,
+      column,
+      userId: userIdFromReq(req),
+    });
+    res.status(500).json({ error: 'Failed to fetch column values' });
   }
 }
 

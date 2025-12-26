@@ -203,6 +203,201 @@ export function checksum(data: unknown) {
   return crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// COLUMN VALUES FOR FILTERING
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ColumnValueResult {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface GetColumnValuesResult {
+  column: string;
+  values: ColumnValueResult[];
+  totalDistinct: number;
+  truncated: boolean;
+}
+
+// Columns that are stored directly in the Product table
+const DATABASE_COLUMNS: Record<string, string> = {
+  syncStatus: 'syncStatus',
+  isValid: 'isValid',
+  feedEnableSearch: 'feedEnableSearch',
+};
+
+// OpenAI attributes that can be queried from openaiAutoFilled JSON
+const OPENAI_COLUMNS = new Set([
+  'enable_search', 'id', 'title', 'description', 'link', 'brand', 'product_category',
+  'price', 'sale_price', 'availability', 'inventory_quantity', 'condition',
+  'material', 'weight', 'age_group', 'image_link', 'color', 'size', 'gender',
+  'item_group_id', 'shipping', 'seller_name', 'return_policy', 'return_window',
+]);
+
+/**
+ * Get unique values for a column to populate filter dropdown
+ */
+export async function getColumnValues(
+  shopId: string,
+  column: string,
+  limit: number = 100,
+  search?: string
+): Promise<GetColumnValuesResult> {
+  const parentIds = await getParentProductIds(shopId);
+
+  // Check if it's a database column
+  if (DATABASE_COLUMNS[column]) {
+    return getDatabaseColumnValues(shopId, parentIds, column, limit, search);
+  }
+
+  // Check if it's an OpenAI attribute
+  if (OPENAI_COLUMNS.has(column)) {
+    return getOpenAIColumnValues(shopId, parentIds, column, limit, search);
+  }
+
+  // Default: try as OpenAI attribute
+  return getOpenAIColumnValues(shopId, parentIds, column, limit, search);
+}
+
+/**
+ * Get unique values for a database column
+ */
+async function getDatabaseColumnValues(
+  shopId: string,
+  parentIds: number[],
+  column: string,
+  limit: number,
+  search?: string
+): Promise<GetColumnValuesResult> {
+  const dbColumn = DATABASE_COLUMNS[column] || column;
+
+  // Use raw SQL for efficient distinct + count
+  const products = await prisma.product.findMany({
+    where: {
+      shopId,
+      wooProductId: { notIn: parentIds },
+    },
+    select: {
+      [dbColumn]: true,
+    },
+  });
+
+  // Count occurrences
+  const valueCounts = new Map<string, number>();
+  for (const product of products) {
+    const value = String((product as any)[dbColumn] ?? '');
+    valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
+  }
+
+  // Convert to array and sort by count
+  let values = Array.from(valueCounts.entries())
+    .map(([value, count]) => ({
+      value,
+      label: formatValueLabel(value, column),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Filter by search if provided
+  if (search && search.trim()) {
+    const searchLower = search.toLowerCase();
+    values = values.filter(
+      v => v.value.toLowerCase().includes(searchLower) ||
+           v.label.toLowerCase().includes(searchLower)
+    );
+  }
+
+  const totalDistinct = values.length;
+  const truncated = values.length > limit;
+
+  return {
+    column,
+    values: values.slice(0, limit),
+    totalDistinct,
+    truncated,
+  };
+}
+
+/**
+ * Get unique values for an OpenAI attribute from openaiAutoFilled JSON
+ */
+async function getOpenAIColumnValues(
+  shopId: string,
+  parentIds: number[],
+  column: string,
+  limit: number,
+  search?: string
+): Promise<GetColumnValuesResult> {
+  // Fetch openaiAutoFilled for all products
+  const products = await prisma.product.findMany({
+    where: {
+      shopId,
+      wooProductId: { notIn: parentIds },
+    },
+    select: {
+      openaiAutoFilled: true,
+    },
+  });
+
+  // Extract values from JSON
+  const valueCounts = new Map<string, number>();
+  for (const product of products) {
+    const openai = product.openaiAutoFilled as Record<string, unknown> | null;
+    if (!openai) continue;
+
+    const rawValue = openai[column];
+    if (rawValue === null || rawValue === undefined || rawValue === '') continue;
+
+    const value = String(rawValue);
+    valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
+  }
+
+  // Convert to array and sort by count
+  let values = Array.from(valueCounts.entries())
+    .map(([value, count]) => ({
+      value,
+      label: formatValueLabel(value, column),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Filter by search if provided
+  if (search && search.trim()) {
+    const searchLower = search.toLowerCase();
+    values = values.filter(
+      v => v.value.toLowerCase().includes(searchLower) ||
+           v.label.toLowerCase().includes(searchLower)
+    );
+  }
+
+  const totalDistinct = values.length;
+  const truncated = values.length > limit;
+
+  return {
+    column,
+    values: values.slice(0, limit),
+    totalDistinct,
+    truncated,
+  };
+}
+
+/**
+ * Format value for display label
+ */
+function formatValueLabel(value: string, column: string): string {
+  // Boolean values
+  if (value === 'true') return 'Yes';
+  if (value === 'false') return 'No';
+
+  // Enum values - capitalize
+  if (['syncStatus', 'availability', 'condition', 'gender', 'age_group'].includes(column)) {
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase().replace(/_/g, ' ');
+  }
+
+  return value;
+}
+
 export function transformWooProduct(woo: any, shopCurrency: string) {
   return {
     wooProductId: woo.id,

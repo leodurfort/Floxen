@@ -185,6 +185,43 @@ export async function listProducts(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// COLUMN VALUES FOR FILTERING
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ColumnValueResult {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface GetColumnValuesResult {
+  column: string;
+  values: ColumnValueResult[];
+  totalDistinct: number;
+  truncated: boolean;
+}
+
+export async function getColumnValues(
+  shopId: string,
+  token: string,
+  column: string,
+  limit: number = 100,
+  search?: string
+): Promise<GetColumnValuesResult> {
+  const params = new URLSearchParams();
+  params.set('column', column);
+  params.set('limit', String(limit));
+  if (search) params.set('search', search);
+
+  return request<GetColumnValuesResult>(
+    `/api/v1/shops/${shopId}/products/column-values?${params.toString()}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // BULK UPDATE
 // ═══════════════════════════════════════════════════════════════════════════
 
