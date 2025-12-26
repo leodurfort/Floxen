@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { logger } from '../lib/logger';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import { JwtUser } from './auth';
 
 interface ErrorResponse {
   error: string;
@@ -17,7 +18,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     path: req.path,
     params: req.params,
     query: req.query,
-    userId: (req as any).user?.id,
+    userId: (req as Request & { user?: JwtUser }).user?.sub,
     ip: req.ip,
   };
 

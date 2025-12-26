@@ -13,6 +13,12 @@ import { syncQueue } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
+import { JwtUser } from '../middleware/auth';
+
+function userIdFromReq(req: Request): string {
+  const user = (req as Request & { user?: JwtUser }).user;
+  return user?.sub || '';
+}
 
 const updateProductSchema = z.object({
   status: z.nativeEnum(ProductStatus).optional(),
@@ -49,7 +55,7 @@ export function listProducts(req: Request, res: Response) {
         shopId: id,
         page,
         limit,
-        userId: (req as any).user?.id,
+        userId: userIdFromReq(req),
       });
       res.status(500).json({ error: err.message });
     });
@@ -75,7 +81,7 @@ export function getProduct(req: Request, res: Response) {
         error: err,
         shopId: id,
         productId: pid,
-        userId: (req as any).user?.id,
+        userId: userIdFromReq(req),
       });
       res.status(500).json({ error: err.message });
     });
@@ -103,7 +109,7 @@ export function updateProduct(req: Request, res: Response) {
         shopId: id,
         productId: pid,
         updatedFields: Object.keys(parse.data),
-        userId: (req as any).user?.id,
+        userId: userIdFromReq(req),
       });
       return res.json({ product });
     })
@@ -113,7 +119,7 @@ export function updateProduct(req: Request, res: Response) {
         shopId: id,
         productId: pid,
         updateData: parse.data,
-        userId: (req as any).user?.id,
+        userId: userIdFromReq(req),
       });
       res.status(500).json({ error: err.message });
     });
@@ -211,7 +217,7 @@ export async function getProductWooData(req: Request, res: Response) {
       error: err instanceof Error ? err : new Error(String(err)),
       shopId,
       productId,
-      userId: (req as any).user?.id,
+      userId: userIdFromReq(req),
     });
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to fetch product data' });
   }
