@@ -55,49 +55,32 @@ export async function disconnectShop(shopId: string) {
 }
 
 export async function deleteShop(shopId: string) {
-  // Delete all related data in the correct order to respect foreign key constraints
-  // First, delete ProductVariants (they reference Products)
-  await prisma.productVariant.deleteMany({
-    where: {
-      product: {
-        shopId: shopId,
-      },
-    },
-  });
+  // Use transaction to ensure all-or-nothing deletion
+  return prisma.$transaction(async (tx) => {
+    // Delete all related data in the correct order to respect foreign key constraints
+    await tx.productVariant.deleteMany({
+      where: { product: { shopId } },
+    });
 
-  // Delete ProductAnalytics (they reference Products)
-  await prisma.productAnalytics.deleteMany({
-    where: {
-      product: {
-        shopId: shopId,
-      },
-    },
-  });
+    await tx.productAnalytics.deleteMany({
+      where: { product: { shopId } },
+    });
 
-  // Delete Products (they reference Shop)
-  await prisma.product.deleteMany({
-    where: {
-      shopId: shopId,
-    },
-  });
+    await tx.product.deleteMany({
+      where: { shopId },
+    });
 
-  // Delete SyncBatches (they reference Shop)
-  await prisma.syncBatch.deleteMany({
-    where: {
-      shopId: shopId,
-    },
-  });
+    await tx.syncBatch.deleteMany({
+      where: { shopId },
+    });
 
-  // Delete ShopAnalytics (they reference Shop)
-  await prisma.shopAnalytics.deleteMany({
-    where: {
-      shopId: shopId,
-    },
-  });
+    await tx.shopAnalytics.deleteMany({
+      where: { shopId },
+    });
 
-  // Finally, delete the Shop itself
-  return prisma.shop.delete({
-    where: { id: shopId },
+    return tx.shop.delete({
+      where: { id: shopId },
+    });
   });
 }
 
