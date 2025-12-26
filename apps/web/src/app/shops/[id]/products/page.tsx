@@ -1,17 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { listProducts, getShop, refreshFeed, RefreshFeedResponse, BulkUpdateOperation } from '@/lib/api';
+import { listProducts, refreshFeed, RefreshFeedResponse, BulkUpdateOperation } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
 import { useBulkUpdate } from '@/hooks/useBulkUpdate';
-import { Product, Shop } from '@productsynch/shared';
+import { Product } from '@productsynch/shared';
 import { SearchFilter, FilterDropdown, BooleanFilter } from '@/components/catalog/FilterDropdown';
 import { BulkActionToolbar } from '@/components/catalog/BulkActionToolbar';
 import { BulkEditModal } from '@/components/catalog/BulkEditModal';
-import { EditColumnsModal, DEFAULT_COLUMNS, getStoredColumns, saveStoredColumns } from '@/components/catalog/EditColumnsModal';
+import { EditColumnsModal, getStoredColumns, saveStoredColumns } from '@/components/catalog/EditColumnsModal';
 import { Toast } from '@/components/catalog/Toast';
 
 // Helper to truncate text
@@ -63,11 +63,11 @@ function CatalogPageContent() {
   const router = useRouter();
   const { accessToken, hydrate, hydrated } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
-  const [shop, setShop] = useState<Shop | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalProducts, setTotalProducts] = useState(0);
   const [feedRefreshing, setFeedRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -79,10 +79,14 @@ function CatalogPageContent() {
   // Column visibility
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
 
+  // Local search input state for debouncing
+  const [searchInput, setSearchInput] = useState('');
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   // Use hooks
   const { filters, setFilters, resetFilters, toggleSort, hasActiveFilters, getApiFilters } = useCatalogFilters();
   const selection = useCatalogSelection();
-  const { progress: bulkProgress, executeBulkUpdate, reset: resetBulkProgress } = useBulkUpdate(params?.id || '');
+  const { progress: bulkProgress, executeBulkUpdate } = useBulkUpdate(params?.id || '');
 
   // Initialize
   useEffect(() => {
@@ -103,7 +107,32 @@ function CatalogPageContent() {
     }
   }, [params?.id]);
 
-  // Fetch products when filters change
+  // Sync searchInput with URL filter on mount/URL change
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
+
+  // Debounce search input - update URL filter after 300ms of no typing
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    // Don't debounce on initial sync (when searchInput matches filters.search)
+    if (searchInput === filters.search) return;
+
+    searchDebounceRef.current = setTimeout(() => {
+      setFilters({ search: searchInput });
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [searchInput, filters.search, setFilters]);
+
+  // Fetch products when filters change or refreshKey changes
   useEffect(() => {
     if (!accessToken || !params?.id) return;
 
@@ -111,24 +140,20 @@ function CatalogPageContent() {
       setLoading(true);
       setError(null);
       try {
-        const [productsRes, shopRes] = await Promise.all([
-          listProducts(params.id, accessToken, {
-            page: filters.page,
-            limit: filters.limit,
-            sortBy: filters.sortBy,
-            sortOrder: filters.sortOrder,
-            search: filters.search || undefined,
-            syncStatus: filters.syncStatus.length > 0 ? filters.syncStatus : undefined,
-            isValid: filters.isValid,
-            feedEnableSearch: filters.feedEnableSearch,
-            wooStockStatus: filters.wooStockStatus.length > 0 ? filters.wooStockStatus : undefined,
-            hasOverrides: filters.hasOverrides,
-          }),
-          getShop(params.id, accessToken),
-        ]);
+        const productsRes = await listProducts(params.id, accessToken, {
+          page: filters.page,
+          limit: filters.limit,
+          sortBy: filters.sortBy,
+          sortOrder: filters.sortOrder,
+          search: filters.search || undefined,
+          syncStatus: filters.syncStatus.length > 0 ? filters.syncStatus : undefined,
+          isValid: filters.isValid,
+          feedEnableSearch: filters.feedEnableSearch,
+          wooStockStatus: filters.wooStockStatus.length > 0 ? filters.wooStockStatus : undefined,
+          hasOverrides: filters.hasOverrides,
+        });
         setProducts(productsRes.products);
         setTotalProducts(productsRes.pagination.total);
-        setShop(shopRes.shop);
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load products';
         setError(errorMessage);
@@ -138,7 +163,7 @@ function CatalogPageContent() {
     };
 
     fetchProducts();
-  }, [accessToken, params?.id, filters]);
+  }, [accessToken, params?.id, filters, refreshKey]);
 
   // Navigate to product mapping page
   const handleRowClick = (productId: string) => {
@@ -215,10 +240,10 @@ function CatalogPageContent() {
         message: `Updated ${result.processedProducts} products${result.failedProducts > 0 ? ` (${result.failedProducts} failed)` : ''}`,
         type: result.failedProducts > 0 ? 'error' : 'success',
       });
-      // Refresh the product list
-      setFilters({ page: filters.page });
+      // Refresh the product list by incrementing refreshKey
+      setRefreshKey(k => k + 1);
     }
-  }, [selection, getApiFilters, executeBulkUpdate, setFilters, filters.page]);
+  }, [selection, getApiFilters, executeBulkUpdate]);
 
   const handleEnableSearch = () => handleBulkUpdate({ type: 'enable_search', value: true });
   const handleDisableSearch = () => handleBulkUpdate({ type: 'enable_search', value: false });
@@ -289,8 +314,8 @@ function CatalogPageContent() {
         {/* Filters Bar */}
         <div className="flex items-center gap-4 flex-wrap">
           <SearchFilter
-            value={filters.search}
-            onChange={(value) => setFilters({ search: value })}
+            value={searchInput}
+            onChange={setSearchInput}
             placeholder="Search products..."
           />
           <FilterDropdown
