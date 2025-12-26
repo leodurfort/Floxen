@@ -471,7 +471,8 @@ export async function bulkUpdate(req: Request, res: Response) {
 
 /**
  * GET /shops/:id/products/column-values
- * Get unique values for a column to populate filter dropdown
+ * Get unique values for a column to populate filter dropdown.
+ * Supports cascading filters: pass current filters to get contextual values.
  */
 export async function getColumnValues(req: Request, res: Response) {
   const { id: shopId } = req.params;
@@ -483,14 +484,26 @@ export async function getColumnValues(req: Request, res: Response) {
     return res.status(400).json({ error: 'column query parameter is required' });
   }
 
+  // Parse current filters for cascading filter support
+  const columnFilters = parseColumnFilters(req.query as Record<string, unknown>);
+  const currentFilters: ListProductsOptions | undefined = columnFilters
+    ? {
+        search: req.query.globalSearch as string | undefined,
+        columnFilters,
+      }
+    : req.query.globalSearch
+      ? { search: req.query.globalSearch as string }
+      : undefined;
+
   try {
-    const result = await getColumnValuesService(shopId, column, limit, search);
+    const result = await getColumnValuesService(shopId, column, limit, search, currentFilters);
 
     logger.info('Column values retrieved', {
       shopId,
       column,
       valueCount: result.values.length,
       totalDistinct: result.totalDistinct,
+      hasCascadingFilters: !!currentFilters,
     });
 
     res.json(result);
