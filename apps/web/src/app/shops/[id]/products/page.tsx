@@ -369,9 +369,6 @@ function CatalogPageContent() {
         return <span className="text-white/40">—</span>;
       }
 
-      case 'syncStatus':
-        return <span className="text-sm text-white/60">{product.syncStatus}</span>;
-
       case 'overrides': {
         const count = getColumnValue(productData, 'overrides') as number;
         return count > 0 ? (

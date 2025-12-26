@@ -111,7 +111,6 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
     create: {
       shopId,
       status: existing?.status || 'PENDING_REVIEW',
-      syncStatus: 'PENDING',
       openaiAutoFilled: openaiAutoFilled as any,
       isValid: validation.isValid,
       validationErrors: validation.errors as any,
@@ -126,7 +125,6 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
       validationErrors: validation.errors as any,
       ...data,
       status: existing?.status || 'PENDING_REVIEW',
-      syncStatus: 'PENDING',
       // DON'T update toggle fields on sync - preserve user's product-level settings
     },
   });

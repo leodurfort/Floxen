@@ -151,7 +151,6 @@ model Product {
 
   // Status & Validation
   status              ProductStatus @default(DRAFT)
-  syncStatus          SyncStatus    @default(PENDING) @map("sync_status")
   lastSyncedAt        DateTime?     @map("last_synced_at")
   syncError           String?       @map("sync_error")
   checksum            String?
