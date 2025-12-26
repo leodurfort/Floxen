@@ -8,12 +8,9 @@ import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, accessToken, hydrate, hydrated } = useAuth();
+  // Note: hydrate() is called by AppLayout, no need to call it here
+  const { user, accessToken, hydrated } = useAuth();
   const { shops, loading, loadShops } = useShops();
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   useEffect(() => {
     if (hydrated && !accessToken) {

@@ -11,10 +11,15 @@ import { WooCommerceField } from '@/lib/wooCommerceFields';
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { accessToken, hydrate, hydrated } = useAuth();
+  // Note: hydrate() is called by AppLayout, no need to call it here
+  const { accessToken, hydrated } = useAuth();
 
   const [mappings, setMappings] = useState<Record<string, string | null>>({});
   const [userMappings, setUserMappings] = useState<Record<string, string | null>>({});
+
+  // Refs to track current state - prevents stale closure issues in async operations
+  const mappingsRef = useRef<Record<string, string | null>>({});
+  const userMappingsRef = useRef<Record<string, string | null>>({});
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
@@ -39,11 +44,6 @@ export default function SetupPage() {
   const [skipPropagationModal, setSkipPropagationModal] = useState(false);
   const [pendingChange, setPendingChange] = useState<{ attribute: string; newValue: string | null } | null>(null);
 
-  // Hydrate auth
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
-
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -52,6 +52,15 @@ export default function SetupPage() {
       }
     };
   }, []);
+
+  // Keep refs in sync with state to avoid stale closures
+  useEffect(() => {
+    mappingsRef.current = mappings;
+  }, [mappings]);
+
+  useEffect(() => {
+    userMappingsRef.current = userMappings;
+  }, [userMappings]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -89,6 +98,9 @@ export default function SetupPage() {
         loadedMappings.enable_search = 'ENABLED';
       }
 
+      // Update both state and refs
+      mappingsRef.current = loadedMappings;
+      userMappingsRef.current = data.userMappings || {};
       setMappings(loadedMappings);
       setUserMappings(data.userMappings || {});
     } catch {
@@ -192,16 +204,24 @@ export default function SetupPage() {
     wooField: string | null,
     propagationMode: 'apply_all' | 'preserve_overrides'
   ) {
+    // Use refs to get current state (avoids stale closure issues)
+    const currentMappings = mappingsRef.current;
+    const currentUserMappings = userMappingsRef.current;
+
     // Save old values for rollback
-    const oldValue = mappings[attribute];
-    const oldUserValue = userMappings[attribute];
+    const oldValue = currentMappings[attribute] ?? null;
+    const oldUserValue = currentUserMappings[attribute] ?? null;
 
     // Clear any previous errors
     setSaveError(null);
 
-    // Optimistic update
-    const newMappings = { ...mappings, [attribute]: wooField };
-    const newUserMappings = { ...userMappings, [attribute]: wooField };
+    // Build new mappings with the update
+    const newMappings = { ...currentMappings, [attribute]: wooField };
+    const newUserMappings = { ...currentUserMappings, [attribute]: wooField };
+
+    // Optimistic update - also update refs immediately for any concurrent operations
+    mappingsRef.current = newMappings;
+    userMappingsRef.current = newUserMappings;
     setMappings(newMappings);
     setUserMappings(newUserMappings);
 
@@ -222,9 +242,12 @@ export default function SetupPage() {
         throw new Error(`Failed to save mapping: ${errorText}`);
       }
     } catch (err) {
-      // Revert optimistic update
-      setMappings({ ...mappings, [attribute]: oldValue });
-      setUserMappings({ ...userMappings, [attribute]: oldUserValue });
+      // Revert optimistic update using functional form for safety
+      setMappings(prev => ({ ...prev, [attribute]: oldValue }));
+      setUserMappings(prev => ({ ...prev, [attribute]: oldUserValue }));
+      // Also revert refs
+      mappingsRef.current = { ...mappingsRef.current, [attribute]: oldValue };
+      userMappingsRef.current = { ...userMappingsRef.current, [attribute]: oldUserValue };
 
       // Show error message
       const errorMessage = err instanceof Error ? err.message : 'Failed to save field mapping';

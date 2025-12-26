@@ -36,7 +36,8 @@ function truncate(text: string | null | undefined, maxLength: number): string {
 function CatalogPageContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { accessToken, hydrate, hydrated } = useAuth();
+  // Note: hydrate() is called by AppLayout, no need to call it here
+  const { accessToken, hydrated } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,11 +77,6 @@ function CatalogPageContent() {
   } = useCatalogFilters(params?.id);
   const selection = useCatalogSelection();
   const { progress: bulkProgress, executeBulkUpdate } = useBulkUpdate(params?.id || '');
-
-  // Initialize
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   useEffect(() => {
     if (hydrated && !accessToken) {
