@@ -7,7 +7,7 @@ import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS, LOCKED_FIE
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
 import { ProductSelector } from '@/components/setup/ProductSelector';
 import { WooCommerceField } from '@/lib/wooCommerceFields';
-import { API_URL } from '@/lib/api';
+import { getFieldMappings, getWooFields, updateFieldMappings, listProducts, API_URL } from '@/lib/api';
 
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
@@ -80,15 +80,11 @@ export default function SetupPage() {
   }, [hydrated, accessToken, params.id]);
 
   async function loadMappings() {
-    if (!accessToken) return;
+    if (!accessToken || !params.id) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`${API_URL}/api/v1/shops/${params.id}/field-mappings`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!res.ok) throw new Error('Failed to load mappings');
-      const data = await res.json();
+      const data = await getFieldMappings(params.id, accessToken);
 
       // Initialize enable_search to ENABLED by default if not set
       const loadedMappings = { ...(data.mappings || {}) };
@@ -112,15 +108,11 @@ export default function SetupPage() {
   }
 
   async function loadProducts() {
-    if (!accessToken) return;
+    if (!accessToken || !params.id) return;
     setProductsLoading(true);
     setProductsError(null);
     try {
-      const res = await fetch(`${API_URL}/api/v1/shops/${params.id}/products`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!res.ok) throw new Error('Failed to load products');
-      const data = await res.json();
+      const data = await listProducts(params.id, accessToken);
       setProducts(data.products || []);
       // Auto-select first product if available
       if (data.products && data.products.length > 0) {
@@ -134,14 +126,10 @@ export default function SetupPage() {
   }
 
   async function loadWooFields() {
-    if (!accessToken) return;
+    if (!accessToken || !params.id) return;
     setWooFieldsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/v1/shops/${params.id}/woo-fields`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!res.ok) throw new Error('Failed to load WooCommerce fields');
-      const data = await res.json();
+      const data = await getWooFields(params.id, accessToken);
       setWooFields(data.fields || []);
     } catch (error) {
       console.error('Failed to load WooCommerce fields:', error);
@@ -226,22 +214,11 @@ export default function SetupPage() {
     setMappings(newMappings);
     setUserMappings(newUserMappings);
 
-    // Auto-save to API
+    // Auto-save to API (uses request helper with automatic token refresh)
     setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/api/v1/shops/${params.id}/field-mappings`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ mappings: newMappings, propagationMode }),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to save mapping: ${errorText}`);
-      }
+      if (!params.id) throw new Error('Shop ID is required');
+      await updateFieldMappings(params.id, newMappings, propagationMode, accessToken!);
     } catch (err) {
       // Revert optimistic update using functional form for safety
       setMappings(prev => ({ ...prev, [attribute]: oldValue }));
