@@ -85,17 +85,21 @@ export function createShop(req: Request, res: Response) {
     });
 }
 
-export function getShop(req: Request, res: Response) {
-  getShopRecord(req.params.id)
-    .then((shop) => {
-      if (!shop) return res.status(404).json({ error: 'Shop not found' });
-      logger.info('shops:get', { shopId: shop.id });
-      return res.json({ shop });
-    })
-    .catch((err) => {
-      logger.error('shops:get error', err);
-      res.status(500).json({ error: err.message });
-    });
+export async function getShop(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const shop = await getShopRecord(req.params.id);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    if (shop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    logger.info('shops:get', { shopId: shop.id, userId });
+    return res.json({ shop });
+  } catch (err: any) {
+    logger.error('shops:get error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 // Fields that affect auto-fill when changed (used in shop.* mappings)
@@ -109,6 +113,9 @@ const AUTOFILL_AFFECTING_FIELDS = new Set([
 ]);
 
 export async function updateShop(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
   const parse = updateShopSchema.safeParse(req.body);
   if (!parse.success) {
     logger.warn('shops:update invalid', parse.error.flatten());
@@ -116,6 +123,11 @@ export async function updateShop(req: Request, res: Response) {
   }
 
   try {
+    // Verify ownership before updating
+    const existingShop = await getShopRecord(req.params.id);
+    if (!existingShop) return res.status(404).json({ error: 'Shop not found' });
+    if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
     // Check if any auto-fill affecting fields were updated
     const updatedFields = Object.keys(parse.data);
     const affectsAutofill = updatedFields.some((field) => AUTOFILL_AFFECTING_FIELDS.has(field));
@@ -147,17 +159,23 @@ export async function updateShop(req: Request, res: Response) {
   }
 }
 
-export function disconnectShop(req: Request, res: Response) {
-  deleteShopRecord(req.params.id)
-    .then((shop) => {
-      if (!shop) return res.status(404).json({ error: 'Shop not found' });
-      logger.info('shops:delete', { shopId: shop.id });
-      return res.json({ shop, message: 'Shop deleted successfully' });
-    })
-    .catch((err) => {
-      logger.error('shops:delete error', err);
-      res.status(500).json({ error: err.message });
-    });
+export async function disconnectShop(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    // Verify ownership before deleting
+    const existingShop = await getShopRecord(req.params.id);
+    if (!existingShop) return res.status(404).json({ error: 'Shop not found' });
+    if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    const shop = await deleteShopRecord(req.params.id);
+    logger.info('shops:delete', { shopId: shop?.id, userId });
+    return res.json({ shop, message: 'Shop deleted successfully' });
+  } catch (err: any) {
+    logger.error('shops:delete error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 export function oauthCallback(req: Request, res: Response) {
@@ -200,38 +218,50 @@ export function oauthCallback(req: Request, res: Response) {
     });
 }
 
-export function verifyConnection(req: Request, res: Response) {
-  getShopRecord(req.params.id)
-    .then((shop) => {
-      if (!shop) return res.status(404).json({ error: 'Shop not found' });
-      logger.info('shops:verify', { shopId: shop.id, isConnected: shop.isConnected });
-      return res.json({ shopId: shop.id, verified: true, status: 'connected' });
-    })
-    .catch((err) => {
-      logger.error('shops:verify error', err);
-      res.status(500).json({ error: err.message });
-    });
+export async function verifyConnection(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const shop = await getShopRecord(req.params.id);
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    if (shop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    logger.info('shops:verify', { shopId: shop.id, userId, isConnected: shop.isConnected });
+    return res.json({ shopId: shop.id, verified: true, status: 'connected' });
+  } catch (err: any) {
+    logger.error('shops:verify error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
-export function configureOpenAI(req: Request, res: Response) {
+export async function configureOpenAI(req: Request, res: Response) {
+  const userId = userIdFromReq(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
   const parse = openAiConfigSchema.safeParse(req.body);
   if (!parse.success) {
     return res.status(400).json({ error: parse.error.flatten() });
   }
-  updateShopRecord(req.params.id, {
-    openaiEnabled: parse.data.openaiEnabled,
-    openaiEndpoint: parse.data.openaiEndpoint,
-    openaiMerchantId: parse.data.openaiMerchantId,
-  })
-    .then((shop) => {
-      if (!shop) return res.status(404).json({ error: 'Shop not found' });
-      logger.info('shops:configure openai', { shopId: shop.id, enabled: shop.openaiEnabled });
-      return res.json({ shop });
-    })
-    .catch((err) => {
-      logger.error('shops:configure openai error', err);
-      res.status(500).json({ error: err.message });
+
+  try {
+    // Verify ownership before updating
+    const existingShop = await getShopRecord(req.params.id);
+    if (!existingShop) return res.status(404).json({ error: 'Shop not found' });
+    if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    const shop = await updateShopRecord(req.params.id, {
+      openaiEnabled: parse.data.openaiEnabled,
+      openaiEndpoint: parse.data.openaiEndpoint,
+      openaiMerchantId: parse.data.openaiMerchantId,
     });
+
+    logger.info('shops:configure openai', { shopId: shop?.id, userId, enabled: shop?.openaiEnabled });
+    return res.json({ shop });
+  } catch (err: any) {
+    logger.error('shops:configure openai error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 export async function getFieldMappings(req: Request, res: Response) {
