@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { generateFeedPayload } from '../services/feedService';
 import { logger } from '../lib/logger';
 import { uploadJsonToStorage } from '../services/storage';
+import { getParentProductIds } from '../services/productService';
 
 export async function feedGenerationProcessor(job: Job) {
   const { shopId } = job.data as { shopId: string };
@@ -10,17 +11,7 @@ export async function feedGenerationProcessor(job: Job) {
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) return;
 
-  // Get all product IDs that are used as parent IDs (exclude these parent variable products)
-  const parentProductIds = await prisma.product.findMany({
-    where: {
-      shopId,
-      wooParentId: { not: null },
-    },
-    select: { wooParentId: true },
-    distinct: ['wooParentId'],
-  });
-
-  const parentIds = parentProductIds.map(p => p.wooParentId).filter((id): id is number => id !== null);
+  const parentIds = await getParentProductIds(shopId);
 
   // Get products excluding parent variable products
   const products = await prisma.product.findMany({
