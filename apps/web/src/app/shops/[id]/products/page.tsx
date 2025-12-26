@@ -258,8 +258,9 @@ function CatalogPageContent() {
   // Calculate selection state
   const pageIds = products.map(p => p.id);
   const selectedOnPage = pageIds.filter(id => selection.isSelected(id)).length;
-  const allOnPageSelected = pageIds.length > 0 && selectedOnPage === pageIds.length;
-  const someOnPageSelected = selectedOnPage > 0 && selectedOnPage < pageIds.length;
+  // When selectAllMatching is true, all products are considered selected
+  const allOnPageSelected = selection.selectAllMatching || (pageIds.length > 0 && selectedOnPage === pageIds.length);
+  const someOnPageSelected = !selection.selectAllMatching && selectedOnPage > 0 && selectedOnPage < pageIds.length;
   const hasSelection = selection.getSelectedCount() > 0 || selection.selectAllMatching;
   const displayedSelectionCount = selection.selectAllMatching ? totalProducts : selection.getSelectedCount();
 
@@ -367,6 +368,7 @@ function CatalogPageContent() {
             selectedCount={displayedSelectionCount}
             totalMatchingCount={totalProducts}
             selectAllMatching={selection.selectAllMatching}
+            hasActiveFilters={hasActiveFilters}
             onSelectAllMatching={handleSelectAllMatching}
             onClearSelection={selection.clearSelection}
             onBulkEdit={() => setShowBulkEditModal(true)}
@@ -486,7 +488,8 @@ function CatalogPageContent() {
                   const productUrl = getProductUrl(p.wooRawJson);
                   const validationCount = p.validationErrors ? Object.keys(p.validationErrors as object).length : 0;
                   const overrideCount = p.productFieldOverrides ? Object.keys(p.productFieldOverrides as object).length : 0;
-                  const isSelected = selection.isSelected(p.id);
+                  // When selectAllMatching is true, all visible products are considered selected
+                  const isSelected = selection.selectAllMatching || selection.isSelected(p.id);
 
                   return (
                     <tr

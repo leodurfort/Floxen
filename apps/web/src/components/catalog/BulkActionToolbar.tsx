@@ -4,6 +4,7 @@ interface BulkActionToolbarProps {
   selectedCount: number;
   totalMatchingCount: number;
   selectAllMatching: boolean;
+  hasActiveFilters: boolean;
   onSelectAllMatching: () => void;
   onClearSelection: () => void;
   onBulkEdit: () => void;
@@ -14,6 +15,7 @@ export function BulkActionToolbar({
   selectedCount,
   totalMatchingCount,
   selectAllMatching,
+  hasActiveFilters,
   onSelectAllMatching,
   onClearSelection,
   onBulkEdit,
@@ -28,7 +30,8 @@ export function BulkActionToolbar({
           {displayCount.toLocaleString()} product{displayCount !== 1 ? 's' : ''} selected
         </span>
 
-        {!selectAllMatching && selectedCount > 0 && selectedCount < totalMatchingCount && (
+        {/* Only show "Select all matching" when filters are active and not all are selected */}
+        {!selectAllMatching && hasActiveFilters && selectedCount > 0 && selectedCount < totalMatchingCount && (
           <button
             onClick={onSelectAllMatching}
             className="text-sm text-white/60 hover:text-white underline"
@@ -37,7 +40,7 @@ export function BulkActionToolbar({
           </button>
         )}
 
-        {selectAllMatching && (
+        {selectAllMatching && hasActiveFilters && (
           <span className="text-sm text-white/60">
             All products matching current filters are selected
           </span>
