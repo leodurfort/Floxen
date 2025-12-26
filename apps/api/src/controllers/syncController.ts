@@ -26,7 +26,7 @@ export function triggerSync(req: Request, res: Response) {
     })
     .catch((err) => {
       logger.error('sync:trigger error', err);
-      res.status(404).json({ error: 'Shop not found' });
+      return res.status(404).json({ error: 'Shop not found' });
     });
 }
 
@@ -48,7 +48,7 @@ export async function getSyncStatus(req: Request, res: Response) {
     });
   } catch (err: any) {
     logger.error('sync:status error', err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
 
@@ -74,7 +74,7 @@ export async function getSyncHistory(req: Request, res: Response) {
     return res.json({ history });
   } catch (err: any) {
     logger.error('sync:history error', err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
 
@@ -115,7 +115,7 @@ export function pushFeed(req: Request, res: Response) {
     })
     .catch((err) => {
       logger.error('feed:push error', err);
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     });
 }
 
@@ -132,7 +132,9 @@ export function previewFeed(req: Request, res: Response) {
         })),
       }),
     )
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
 }
 
 export function downloadFeed(req: Request, res: Response) {
@@ -145,7 +147,9 @@ export function downloadFeed(req: Request, res: Response) {
         items: products,
       }),
     )
-    .catch((err) => res.status(500).json({ error: err.message }));
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
 }
 
 export function latestFeed(req: Request, res: Response) {
@@ -165,6 +169,6 @@ export function latestFeed(req: Request, res: Response) {
     })
     .catch((err) => {
       logger.error('feed:latest error', err);
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     });
 }
