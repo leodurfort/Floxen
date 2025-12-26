@@ -137,7 +137,7 @@ function CatalogPageContent() {
         const productsRes = await listProducts(params.id, accessToken, {
           page: filters.page,
           limit: filters.limit,
-          sortBy: filters.sortBy as any,
+          sortBy: filters.sortBy,
           sortOrder: filters.sortOrder,
           search: filters.search || undefined,
           syncStatus: legacyFilters.syncStatus as string[] | undefined,
