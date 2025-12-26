@@ -2,10 +2,9 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  OPENAI_FEED_SPEC,
   CATEGORY_CONFIG,
   LOCKED_FIELD_SET,
-  STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS,
+  PRODUCT_EDITABLE_FIELDS,
   validateStaticValue,
   OpenAIFieldCategory,
   OpenAIFieldSpec,
@@ -55,6 +54,7 @@ export function BulkEditModal({
       setSelectedWooField(null);
       setWooFieldSearch('');
       setIsWooDropdownOpen(false);
+      setEnableSearchValue('true');
     }
   }, [isOpen]);
 
@@ -102,19 +102,13 @@ export function BulkEditModal({
     return fields.slice().sort((a, b) => a.label.localeCompare(b.label));
   }, [wooFields, wooFieldSearch]);
 
-  // Get available fields (exclude fully locked fields and flags)
-  const availableFields = useMemo(() => {
-    return OPENAI_FEED_SPEC.filter(spec => {
-      // Skip enable_search and enable_checkout (handled by toolbar buttons)
-      if (spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout') {
-        return false;
-      }
-      // Allow fields that are not locked, or are locked but allow static overrides
-      const isFullyLocked = LOCKED_FIELD_SET.has(spec.attribute) &&
-                           !STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute);
-      return !isFullyLocked;
-    });
-  }, []);
+  // Get available fields - use PRODUCT_EDITABLE_FIELDS from shared package
+  // This automatically excludes: auto-populated, shop-managed, feature-disabled, and fully locked fields
+  const availableFields = PRODUCT_EDITABLE_FIELDS;
+
+  // Check if enable_search is selected (needs special dropdown UI)
+  const isEnableSearchField = selectedAttribute === 'enable_search';
+  const [enableSearchValue, setEnableSearchValue] = useState<'true' | 'false'>('true');
 
   // Group by category
   const categories = useMemo(() => {
@@ -163,7 +157,10 @@ export function BulkEditModal({
 
     let update: BulkUpdateOperation;
 
-    if (overrideType === 'remove') {
+    // Special handling for enable_search - use dedicated update type
+    if (isEnableSearchField) {
+      update = { type: 'enable_search', value: enableSearchValue === 'true' };
+    } else if (overrideType === 'remove') {
       update = { type: 'remove_override', attribute: selectedAttribute };
     } else if (overrideType === 'static') {
       if (!staticValue.trim()) {
@@ -188,10 +185,12 @@ export function BulkEditModal({
   // - An attribute is selected
   // - No validation errors
   // - Not processing
+  // - For enable_search: always (uses dropdown)
   // - For static: value is entered
   // - For mapping: either a field is selected OR null is intentional (exclude)
   const canSubmit = selectedAttribute && !validationError && !isProcessing &&
-    (overrideType === 'remove' ||
+    (isEnableSearchField ||  // enable_search always has a valid value from dropdown
+     overrideType === 'remove' ||
      (overrideType === 'static' && staticValue.trim()) ||
      overrideType === 'mapping'); // mapping can be null (exclude) or a field
 
@@ -269,8 +268,28 @@ export function BulkEditModal({
               </div>
             )}
 
-            {/* Override Type */}
-            {selectedAttribute && (
+            {/* enable_search - Special dropdown UI */}
+            {isEnableSearchField && (
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Search Visibility
+                </label>
+                <select
+                  value={enableSearchValue}
+                  onChange={(e) => setEnableSearchValue(e.target.value as 'true' | 'false')}
+                  className="w-full px-4 py-3 bg-[#252936] text-white rounded-lg border border-white/10 focus:outline-none focus:border-[#5df0c0]/50"
+                >
+                  <option value="true">Enabled (true) - Products appear in ChatGPT search</option>
+                  <option value="false">Disabled (false) - Products hidden from search</option>
+                </select>
+                <p className="mt-2 text-xs text-white/40">
+                  This controls whether products can be surfaced in ChatGPT search results.
+                </p>
+              </div>
+            )}
+
+            {/* Override Type - for non-enable_search fields */}
+            {selectedAttribute && !isEnableSearchField && (
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
                   Update Type

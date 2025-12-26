@@ -6,6 +6,8 @@ import {
   LOCKED_FIELD_SET,
   STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS,
   validateStaticValue,
+  OPENAI_FEED_SPEC,
+  isProductEditable,
 } from '@productsynch/shared';
 import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, ListProductsOptions } from '../services/productService';
 import { logger } from '../lib/logger';
@@ -330,6 +332,20 @@ export async function bulkUpdate(req: Request, res: Response) {
 
   try {
     // Pre-validate update operation before processing any products
+    // Skip editability check for enable_search (handled by toolbar, always allowed)
+    if (update.type !== 'enable_search') {
+      const spec = OPENAI_FEED_SPEC.find(s => s.attribute === update.attribute);
+      if (spec && !isProductEditable(spec)) {
+        const reason = spec.isFeatureDisabled ? 'feature not yet available'
+          : spec.isAutoPopulated ? 'auto-populated from other fields'
+          : spec.isShopManaged ? 'managed at shop level'
+          : 'not editable at product level';
+        return res.status(400).json({
+          error: `Field "${update.attribute}" cannot be edited: ${reason}`,
+        });
+      }
+    }
+
     if (update.type === 'field_mapping' && LOCKED_FIELD_SET.has(update.attribute)) {
       return res.status(400).json({
         error: `Custom mapping not allowed for locked field: ${update.attribute}`,
@@ -617,6 +633,19 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
     const validationErrors: Record<string, string> = {};
 
     for (const [attribute, override] of Object.entries(overrides)) {
+      // Check if field is editable at product level (skip for enable_search which has special handling)
+      if (attribute !== 'enable_search') {
+        const spec = OPENAI_FEED_SPEC.find(s => s.attribute === attribute);
+        if (spec && !isProductEditable(spec)) {
+          const reason = spec.isFeatureDisabled ? 'feature not yet available'
+            : spec.isAutoPopulated ? 'auto-populated from other fields'
+            : spec.isShopManaged ? 'managed at shop level'
+            : 'not editable at product level';
+          validationErrors[attribute] = `Cannot edit: ${reason}`;
+          continue;
+        }
+      }
+
       const isLockedField = LOCKED_FIELD_SET.has(attribute);
       const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(attribute);
 

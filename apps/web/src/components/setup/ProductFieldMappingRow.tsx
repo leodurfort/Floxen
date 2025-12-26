@@ -10,6 +10,7 @@ import {
   ProductFieldOverride,
   validateStaticValue,
   StaticValueValidationResult,
+  isProductEditable,
 } from '@productsynch/shared';
 import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField, searchWooFields } from '@/lib/wooCommerceFields';
 
@@ -90,25 +91,16 @@ export function ProductFieldMappingRow({
     Conditional: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   };
 
-  // Determine field characteristics
+  // Determine field characteristics using spec properties
   const isEnableSearchField = spec.attribute === 'enable_search';
-  const isEnableCheckoutField = spec.attribute === 'enable_checkout';
-  const isDimensions = spec.attribute === 'dimensions';
   const isDimensionOrWeightField = ['dimensions', 'length', 'width', 'height', 'weight'].includes(spec.attribute);
-  const isShopManagedField = [
-    'seller_name', 'seller_url', 'seller_privacy_policy',
-    'seller_tos', 'return_policy', 'return_window',
-  ].includes(spec.attribute);
 
   const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);
   const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute);
-  // Fields with hardcoded transforms that ignore the mapping selection
-  const isTransformLockedField = spec.attribute === 'sale_price_effective_date';
 
-  // Can this field be customized at product level?
-  const isFullyLocked = isLockedField && !allowsStaticOverride;
-  // enable_search is editable, enable_checkout is disabled (coming soon)
-  const isReadOnly = isEnableCheckoutField || isDimensions || isShopManagedField || isFullyLocked || isTransformLockedField;
+  // Use spec properties for editability instead of hardcoded field names
+  // isReadOnly = true when field is NOT product-editable (per spec) AND not enable_search (which has special toggle UI)
+  const isReadOnly = !isEnableSearchField && !isProductEditable(spec);
 
   // Get the currently active mapping value
   const getCurrentMapping = (): string | null => {
@@ -263,7 +255,7 @@ export function ProductFieldMappingRow({
   const isNoMappingOverride = productOverride?.type === 'mapping' && productOverride.value === null;
 
   const effectiveMapping = getEffectiveMapping();
-  const computedPreview = effectiveMapping && !isEnableSearchField && !isEnableCheckoutField
+  const computedPreview = effectiveMapping && !isEnableSearchField && !spec.isFeatureDisabled
     ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
     : null;
 
@@ -278,8 +270,8 @@ export function ProductFieldMappingRow({
   const resolvedValueValidation = useMemo(() => {
     // Don't validate if in static mode (user is editing)
     if (isStaticMode) return { isValid: true };
-    // Don't validate enable_search/enable_checkout (they have special handling)
-    if (isEnableSearchField || isEnableCheckoutField) return { isValid: true };
+    // Don't validate enable_search or feature-disabled fields (they have special handling)
+    if (isEnableSearchField || spec.isFeatureDisabled) return { isValid: true };
 
     // Use server-side validation errors if available (from validateFeedEntry)
     if (serverValidationErrors && serverValidationErrors.length > 0) {
@@ -291,7 +283,7 @@ export function ProductFieldMappingRow({
 
     // Fall back to client-side validation
     return validateResolvedValue(spec.attribute, previewValue, spec.requirement);
-  }, [spec.attribute, spec.requirement, previewValue, isStaticMode, isEnableSearchField, isEnableCheckoutField, serverValidationErrors]);
+  }, [spec.attribute, spec.requirement, spec.isFeatureDisabled, previewValue, isStaticMode, isEnableSearchField, serverValidationErrors]);
 
   // Preview display
   let previewDisplay = formattedValue || '';
@@ -302,8 +294,8 @@ export function ProductFieldMappingRow({
     const currentValue = productOverride?.type === 'static' ? productOverride.value : apiPreviewValue;
     previewDisplay = currentValue === 'true' ? 'true' : currentValue === 'false' ? 'false' : 'true';
     previewStyle = previewDisplay === 'true' ? 'text-[#5df0c0]' : 'text-white/40';
-  } else if (isEnableCheckoutField) {
-    // enable_checkout is always false (feature not yet available)
+  } else if (spec.isFeatureDisabled) {
+    // Feature disabled fields always show false
     previewDisplay = 'false';
     previewStyle = 'text-white/40';
   } else if (isNoMappingOverride) {
@@ -407,38 +399,32 @@ export function ProductFieldMappingRow({
             )}
           </>
         ) : isReadOnly ? (
-          // Read-only field display
+          // Read-only field display - use spec properties for display text
           <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
             <span className="text-white text-sm font-medium">
-              {isEnableCheckoutField ? 'Feature coming soon' :
-               isDimensions ? 'Auto-populated' :
-               isShopManagedField ? 'Managed in Shops page' :
-               isTransformLockedField ? 'Auto-combined' :
+              {spec.isFeatureDisabled ? 'Feature coming soon' :
+               spec.isAutoPopulated ? 'Auto-populated' :
+               spec.isShopManaged ? 'Managed in Shops page' :
                lockedMappingValue || 'Locked'}
             </span>
             <div className="relative group mt-[2px]">
               <span className="text-white/60 cursor-help text-sm">ℹ️</span>
               <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-72 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
-                {isEnableCheckoutField ? (
+                {spec.isFeatureDisabled ? (
                   <div>
                     <div className="font-semibold text-white mb-1">Coming Soon</div>
-                    <div>Checkout functionality will be available in a future update.</div>
+                    <div>This functionality will be available in a future update.</div>
                   </div>
-                ) : isDimensions ? (
+                ) : spec.isAutoPopulated ? (
                   <div>
-                    <div className="font-semibold text-white mb-1">Auto-filled dimensions</div>
-                    <div>Populates automatically when length, width, and height are available.</div>
+                    <div className="font-semibold text-white mb-1">Auto-populated field</div>
+                    <div>This value is computed automatically from other product data.</div>
                   </div>
-                ) : isShopManagedField ? (
+                ) : spec.isShopManaged ? (
                   <div>
                     <div className="font-semibold text-white mb-1">Update in Shops page</div>
                     <div className="mb-2">Edit this value from the Shops page to change the feed output.</div>
                     <Link href="/shops" className="text-[#5df0c0] underline">Go to Shops</Link>
-                  </div>
-                ) : isTransformLockedField ? (
-                  <div>
-                    <div className="font-semibold text-white mb-1">Auto-combined field</div>
-                    <div>Combines date_on_sale_from and date_on_sale_to from WooCommerce.</div>
                   </div>
                 ) : (
                   <div>

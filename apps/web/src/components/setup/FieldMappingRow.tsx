@@ -24,24 +24,14 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     Conditional: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   };
 
-  // Check if this is a toggle field
+  // Check if this is a toggle field (enable_search, enable_checkout)
   const isToggleField = spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout';
-  const isCheckoutField = spec.attribute === 'enable_checkout';
-  const isDimensions = spec.attribute === 'dimensions';
   const isDimensionOrWeightField = ['dimensions', 'length', 'width', 'height', 'weight'].includes(spec.attribute);
-  const isShopManagedField = [
-    'seller_name',
-    'seller_url',
-    'seller_privacy_policy',
-    'seller_tos',
-    'return_policy',
-    'return_window',
-  ].includes(spec.attribute);
   const lockedMappingValue = LOCKED_FIELD_MAPPINGS[spec.attribute];
   const isLockedField = Boolean(lockedMappingValue);
-  // Fields with hardcoded transforms that ignore the mapping selection
-  const isTransformLockedField = spec.attribute === 'sale_price_effective_date';
-  const isNonEditableField = isDimensions || isShopManagedField || isLockedField || isTransformLockedField;
+
+  // Use spec properties for non-editable field detection (consistent with ProductFieldMappingRow)
+  const isNonEditableField = spec.isAutoPopulated || spec.isShopManaged || isLockedField;
 
   // For toggle fields, mapping value is "ENABLED" or "DISABLED"
   // Default enable_search to ENABLED
@@ -50,7 +40,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     : false;
 
   const defaultMapping = spec.wooCommerceMapping?.field || null;
-  const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping || (isDimensions ? defaultMapping : null)) || null;
+  const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping || (spec.isAutoPopulated ? defaultMapping : null)) || null;
 
   // Extract and format preview value
   // Show preview if:
@@ -133,26 +123,21 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
             <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
               <div className="flex flex-col">
                 <span className="text-white text-sm font-medium">
-                  {isDimensions ? 'Auto-populated' : isLockedField ? effectiveMapping : isTransformLockedField ? 'Auto-combined' : 'Managed in Shops page'}
+                  {spec.isAutoPopulated ? 'Auto-populated' : isLockedField ? effectiveMapping : 'Managed in Shops page'}
                 </span>
               </div>
               <div className="relative group mt-[2px]">
                 <span className="text-white/60 cursor-help text-sm">ℹ️</span>
                 <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-72 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
-                  {isDimensions ? (
+                  {spec.isAutoPopulated ? (
                     <div>
-                      <div className="font-semibold text-white mb-1">Auto-filled dimensions</div>
-                      <div>Populates automatically when length, width, and height are available.</div>
+                      <div className="font-semibold text-white mb-1">Auto-populated field</div>
+                      <div>This value is computed automatically from other product data.</div>
                     </div>
                   ) : isLockedField ? (
                     <div>
                       <div className="font-semibold text-white mb-1">Managed automatically</div>
                       <div>This mapping is predefined and cannot be edited.</div>
-                    </div>
-                  ) : isTransformLockedField ? (
-                    <div>
-                      <div className="font-semibold text-white mb-1">Auto-combined field</div>
-                      <div>Combines date_on_sale_from and date_on_sale_to from WooCommerce.</div>
                     </div>
                   ) : (
                     <div>
@@ -170,10 +155,10 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
             <ToggleSwitch
               enabled={isEnabled}
               onChange={(enabled) => onMappingChange(spec.attribute, enabled ? 'ENABLED' : 'DISABLED')}
-              disabled={isCheckoutField}
+              disabled={spec.isFeatureDisabled}
               label={isEnabled ? 'Enabled' : 'Disabled'}
             />
-            {isCheckoutField && (
+            {spec.isFeatureDisabled && (
               <div className="mt-2 flex items-center gap-1.5 text-xs text-white/50">
                 <span title="This feature will be available soon">ℹ️</span>
                 <span>Feature coming soon</span>

@@ -15,6 +15,9 @@
  * - validationRules: validation constraints
  * - wooCommerceMapping: how to extract from WooCommerce data
  * - isLocked: whether the field mapping is locked and cannot be customized by users
+ * - isAutoPopulated: whether the field value is computed from other fields via a transform
+ * - isShopManaged: whether the field value comes from shop-level settings
+ * - isFeatureDisabled: whether the feature is not yet available
  * - category: UI grouping category
  */
 
@@ -29,6 +32,9 @@ export interface OpenAIFieldSpec {
   validationRules: string[];
   wooCommerceMapping: WooCommerceMapping | null;
   isLocked: boolean;
+  isAutoPopulated?: boolean;   // Value is computed from other fields via transform (e.g., dimensions)
+  isShopManaged?: boolean;     // Value comes from shop-level settings (e.g., seller_name)
+  isFeatureDisabled?: boolean; // Feature not yet available (e.g., enable_checkout)
   category: OpenAIFieldCategory;
 }
 
@@ -96,6 +102,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     validationRules: ['Must be lowercase string "true" or "false"'],
     wooCommerceMapping: null, // User setting only
     isLocked: false,
+    isFeatureDisabled: true, // Feature not yet available
     category: 'flags',
   },
 
@@ -273,6 +280,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       transform: 'formatDimensions',
     },
     isLocked: false,
+    isAutoPopulated: true, // Auto-computed from length, width, height
     category: 'item_information',
   },
   {
@@ -466,6 +474,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       transform: 'formatSaleDateRange',
     },
     isLocked: false,
+    isAutoPopulated: true, // Auto-combined from date_on_sale_from and date_on_sale_to
     category: 'price_promotions',
   },
   {
@@ -823,6 +832,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       fallback: 'shopName',
     },
     isLocked: false,
+    isShopManaged: true, // Value comes from shop settings
     category: 'merchant_info',
   },
   {
@@ -839,6 +849,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       fallback: 'wooStoreUrl',
     },
     isLocked: false,
+    isShopManaged: true, // Value comes from shop settings
     category: 'merchant_info',
   },
   {
@@ -854,6 +865,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'sellerPrivacyPolicy',
     },
     isLocked: false,
+    isShopManaged: true, // Value comes from shop settings
     category: 'merchant_info',
   },
   {
@@ -869,6 +881,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'sellerTos',
     },
     isLocked: false,
+    isShopManaged: true, // Value comes from shop settings
     category: 'merchant_info',
   },
 
@@ -889,6 +902,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'returnPolicy',
     },
     isLocked: false,
+    isShopManaged: true, // Value comes from shop settings
     category: 'returns',
   },
   {
@@ -904,6 +918,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'returnWindow',
     },
     isLocked: false,
+    isShopManaged: true, // Value comes from shop settings
     category: 'returns',
   },
 
@@ -1195,3 +1210,49 @@ export const FIELD_STATS = {
     return acc;
   }, {} as Record<OpenAIFieldCategory, number>),
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT-LEVEL EDITABILITY
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Determines if a field can be edited at the product level.
+ * A field is NOT editable if any of these conditions are true:
+ * - isFeatureDisabled: Feature not yet available (e.g., enable_checkout)
+ * - isAutoPopulated: Value is computed from other fields (e.g., dimensions)
+ * - isShopManaged: Value comes from shop-level settings (e.g., seller_name)
+ * - Fully locked: isLocked=true AND not in STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS
+ *
+ * Note: enable_search is a special case - it's editable but handled separately
+ * via toolbar buttons, so it's excluded from bulk edit field selection.
+ */
+export function isProductEditable(spec: OpenAIFieldSpec): boolean {
+  // Feature disabled
+  if (spec.isFeatureDisabled) return false;
+
+  // Auto-populated fields (value computed from other fields)
+  if (spec.isAutoPopulated) return false;
+
+  // Shop-managed fields (value from shop settings)
+  if (spec.isShopManaged) return false;
+
+  // Fully locked fields (locked mapping AND no static override allowed)
+  if (spec.isLocked && !STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Get all fields that can be edited at the product level.
+ * Excludes enable_checkout (feature disabled) and other non-editable fields.
+ */
+export const PRODUCT_EDITABLE_FIELDS = OPENAI_FEED_SPEC.filter(spec => {
+  return isProductEditable(spec);
+});
+
+/**
+ * Set of product-editable field attributes for quick lookup.
+ */
+export const PRODUCT_EDITABLE_FIELD_SET = new Set(PRODUCT_EDITABLE_FIELDS.map(f => f.attribute));
