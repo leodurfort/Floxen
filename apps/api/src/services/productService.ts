@@ -2,10 +2,11 @@ import { prisma } from '../lib/prisma';
 import { ProductStatus, SyncStatus } from '@prisma/client';
 import crypto from 'crypto';
 
-export async function listProducts(shopId: string, page = 1, limit = 20) {
-  const skip = (page - 1) * limit;
-
-  // Get all product IDs that are used as parent IDs (these are parent variable products)
+/**
+ * Get IDs of parent variable products (products that have variations).
+ * These are identified by finding all distinct wooParentId values from products that have a parent.
+ */
+export async function getParentProductIds(shopId: string): Promise<number[]> {
   const parentProductIds = await prisma.product.findMany({
     where: {
       shopId,
@@ -15,7 +16,13 @@ export async function listProducts(shopId: string, page = 1, limit = 20) {
     distinct: ['wooParentId'],
   });
 
-  const parentIds = parentProductIds.map(p => p.wooParentId).filter((id): id is number => id !== null);
+  return parentProductIds.map(p => p.wooParentId).filter((id): id is number => id !== null);
+}
+
+export async function listProducts(shopId: string, page = 1, limit = 20) {
+  const skip = (page - 1) * limit;
+
+  const parentIds = await getParentProductIds(shopId);
 
   // Exclude products that are parent variable products (have children)
   const [items, total] = await Promise.all([

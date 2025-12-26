@@ -173,7 +173,7 @@ export async function getProductWooData(req: Request, res: Response) {
     });
 
     if (!product) {
-      logger.warn('Product WooCommerce data fetched successfully', { shopId, productId, wooProductId: (product as any)?.wooProductId });
+      logger.warn('Product not found for WooCommerce data', { shopId, productId });
       return res.status(404).json({ error: 'Product not found' });
     }
 
