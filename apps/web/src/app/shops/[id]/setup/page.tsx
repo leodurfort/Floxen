@@ -7,6 +7,7 @@ import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS, LOCKED_FIE
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
 import { ProductSelector } from '@/components/setup/ProductSelector';
 import { WooCommerceField } from '@/lib/wooCommerceFields';
+import { API_URL } from '@/lib/api';
 
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
@@ -83,7 +84,7 @@ export default function SetupPage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/field-mappings`, {
+      const res = await fetch(`${API_URL}/api/v1/shops/${params.id}/field-mappings`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!res.ok) throw new Error('Failed to load mappings');
@@ -115,7 +116,7 @@ export default function SetupPage() {
     setProductsLoading(true);
     setProductsError(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products`, {
+      const res = await fetch(`${API_URL}/api/v1/shops/${params.id}/products`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!res.ok) throw new Error('Failed to load products');
@@ -136,7 +137,7 @@ export default function SetupPage() {
     if (!accessToken) return;
     setWooFieldsLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/woo-fields`, {
+      const res = await fetch(`${API_URL}/api/v1/shops/${params.id}/woo-fields`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!res.ok) throw new Error('Failed to load WooCommerce fields');
@@ -164,7 +165,7 @@ export default function SetupPage() {
 
     async function fetchPreview() {
       setLoadingPreview(true);
-      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${selectedProductId}/woo-data`;
+      const url = `${API_URL}/api/v1/shops/${params.id}/products/${selectedProductId}/woo-data`;
 
       try {
         const res = await fetch(url, {
@@ -228,7 +229,7 @@ export default function SetupPage() {
     // Auto-save to API
     setSaving(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/field-mappings`, {
+      const res = await fetch(`${API_URL}/api/v1/shops/${params.id}/field-mappings`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${accessToken}`,
