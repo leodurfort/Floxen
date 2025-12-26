@@ -385,22 +385,28 @@ export async function bulkUpdate(req: Request, res: Response) {
     for (let i = 0; i < productIdsToUpdate.length; i += BULK_UPDATE_CHUNK_SIZE) {
       const chunk = productIdsToUpdate.slice(i, i + BULK_UPDATE_CHUNK_SIZE);
 
-      // Process chunk in parallel
-      const results = await Promise.allSettled(
+      // Process chunk in parallel - wrap each in try/catch to preserve productId on error
+      const results = await Promise.all(
         chunk.map(async (productId) => {
-          await applyBulkUpdateToProduct(productId, update);
-          return productId;
+          try {
+            await applyBulkUpdateToProduct(productId, update);
+            return { productId, success: true as const };
+          } catch (err) {
+            return {
+              productId,
+              success: false as const,
+              error: err instanceof Error ? err.message : 'Unknown error',
+            };
+          }
         })
       );
 
       // Collect results
       for (const result of results) {
-        if (result.status === 'fulfilled') {
+        if (result.success) {
           processedCount++;
         } else {
-          // Extract productId from the rejection
-          const errorMessage = result.reason?.message || 'Unknown error';
-          errors.push({ productId: 'unknown', error: errorMessage });
+          errors.push({ productId: result.productId, error: result.error });
         }
       }
     }
