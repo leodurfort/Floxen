@@ -545,33 +545,60 @@ export interface GetColumnValuesResult {
 }
 
 /**
- * Get unique values for a column to populate filter dropdown
+ * Check if there are any active filters in the options
+ */
+function hasActiveFilters(options: ListProductsOptions): boolean {
+  if (options.search?.trim()) return true;
+  if (!options.columnFilters) return false;
+  return Object.values(options.columnFilters).some(
+    filter => (filter.values && filter.values.length > 0) || filter.text?.trim()
+  );
+}
+
+/**
+ * Get unique values for a column to populate filter dropdown.
+ * Supports cascading filters: pass currentFilters to get values based on already filtered products.
+ * The column being queried is automatically excluded from currentFilters (self-exclusion).
  */
 export async function getColumnValues(
   shopId: string,
   column: string,
   limit: number = 100,
-  search?: string
+  search?: string,
+  currentFilters?: ListProductsOptions
 ): Promise<GetColumnValuesResult> {
   const parentIds = await getParentProductIds(shopId);
 
+  // Remove the current column from filters (self-exclusion)
+  // This allows users to change their selection without clearing first
+  const filtersExcludingSelf: ListProductsOptions | undefined = currentFilters
+    ? {
+        ...currentFilters,
+        columnFilters: currentFilters.columnFilters
+          ? Object.fromEntries(
+              Object.entries(currentFilters.columnFilters).filter(([key]) => key !== column)
+            )
+          : undefined,
+      }
+    : undefined;
+
   // Check if it's a database column
   if (DATABASE_COLUMNS[column]) {
-    return getDatabaseColumnValues(shopId, parentIds, column, limit, search);
+    return getDatabaseColumnValues(shopId, parentIds, column, limit, search, filtersExcludingSelf);
   }
 
   // Check if it's a computed column
   if (COMPUTED_SORT_COLUMNS.has(column)) {
-    return getComputedColumnValues(shopId, parentIds, column, limit, search);
+    return getComputedColumnValues(shopId, parentIds, column, limit, search, filtersExcludingSelf);
   }
 
   // Check if it's an OpenAI attribute
   if (OPENAI_COLUMNS.has(column)) {
-    return getOpenAIColumnValues(shopId, parentIds, column, limit, search);
+    return getOpenAIColumnValues(shopId, parentIds, column, limit, search, filtersExcludingSelf);
   }
 
   // Default: try as OpenAI attribute
-  return getOpenAIColumnValues(shopId, parentIds, column, limit, search);
+  return getOpenAIColumnValues(shopId, parentIds, column, limit, search, filtersExcludingSelf);
 }
 
 /**
@@ -582,19 +609,34 @@ async function getComputedColumnValues(
   parentIds: number[],
   column: string,
   limit: number,
-  search?: string
+  search?: string,
+  currentFilters?: ListProductsOptions
 ): Promise<GetColumnValuesResult> {
   if (column === 'overrides') {
-    // Count products by override count (0, 1, 2, 3+)
-    const products = await prisma.product.findMany({
-      where: {
-        shopId,
-        wooProductId: { notIn: parentIds },
-      },
-      select: {
-        productFieldOverrides: true,
-      },
-    });
+    // Apply cascading filters if provided
+    let products: { productFieldOverrides: unknown }[];
+
+    if (currentFilters && hasActiveFilters(currentFilters)) {
+      // Use raw SQL to get filtered products with only the column we need
+      const whereClause = buildRawWhereClause(shopId, parentIds, currentFilters);
+      const rawProducts = await prisma.$queryRawUnsafe<{ product_field_overrides: unknown }[]>(`
+        SELECT "product_field_overrides" FROM "Product"
+        WHERE ${whereClause}
+      `);
+      // Transform snake_case to camelCase
+      products = rawProducts.map(p => ({ productFieldOverrides: p.product_field_overrides }));
+    } else {
+      // No filters, use simple Prisma query
+      products = await prisma.product.findMany({
+        where: {
+          shopId,
+          wooProductId: { notIn: parentIds },
+        },
+        select: {
+          productFieldOverrides: true,
+        },
+      });
+    }
 
     const valueCounts = new Map<string, number>();
     for (const product of products) {
@@ -644,27 +686,43 @@ async function getDatabaseColumnValues(
   parentIds: number[],
   column: string,
   limit: number,
-  search?: string
+  search?: string,
+  currentFilters?: ListProductsOptions
 ): Promise<GetColumnValuesResult> {
   const dbColumn = DATABASE_COLUMNS[column] || column;
+  const dbColumnSql = DATABASE_COLUMNS_SQL[column] || column;
 
-  // Fetch all values and count in memory (simple approach for small datasets)
-  const products = await prisma.product.findMany({
-    where: {
-      shopId,
-      wooProductId: { notIn: parentIds },
-    },
-    select: {
-      [dbColumn]: true,
-    },
-  });
+  // Fetch all values and count in memory
+  let products: { value: unknown }[];
+
+  if (currentFilters && hasActiveFilters(currentFilters)) {
+    // Apply cascading filters using raw SQL
+    const whereClause = buildRawWhereClause(shopId, parentIds, currentFilters);
+    const rawProducts = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(`
+      SELECT "${dbColumnSql}" as value FROM "Product"
+      WHERE ${whereClause}
+    `);
+    products = rawProducts.map(p => ({ value: p.value }));
+  } else {
+    // No filters, use simple Prisma query
+    const prismaProducts = await prisma.product.findMany({
+      where: {
+        shopId,
+        wooProductId: { notIn: parentIds },
+      },
+      select: {
+        [dbColumn]: true,
+      },
+    });
+    products = prismaProducts.map(p => ({ value: (p as Record<string, unknown>)[dbColumn] }));
+  }
 
   // Count occurrences (including empty/null values)
   const valueCounts = new Map<string, number>();
   const EMPTY_VALUE_KEY = '__empty__';
 
   for (const product of products) {
-    const rawValue = (product as any)[dbColumn];
+    const rawValue = product.value;
     if (rawValue === null || rawValue === undefined || rawValue === '') {
       valueCounts.set(EMPTY_VALUE_KEY, (valueCounts.get(EMPTY_VALUE_KEY) || 0) + 1);
     } else {
@@ -710,18 +768,32 @@ async function getOpenAIColumnValues(
   parentIds: number[],
   column: string,
   limit: number,
-  search?: string
+  search?: string,
+  currentFilters?: ListProductsOptions
 ): Promise<GetColumnValuesResult> {
-  // Fetch openaiAutoFilled for all products
-  const products = await prisma.product.findMany({
-    where: {
-      shopId,
-      wooProductId: { notIn: parentIds },
-    },
-    select: {
-      openaiAutoFilled: true,
-    },
-  });
+  // Fetch openaiAutoFilled for products (filtered if cascading filters active)
+  let products: { openaiAutoFilled: unknown }[];
+
+  if (currentFilters && hasActiveFilters(currentFilters)) {
+    // Apply cascading filters using raw SQL
+    const whereClause = buildRawWhereClause(shopId, parentIds, currentFilters);
+    const rawProducts = await prisma.$queryRawUnsafe<{ openai_auto_filled: unknown }[]>(`
+      SELECT "openai_auto_filled" FROM "Product"
+      WHERE ${whereClause}
+    `);
+    products = rawProducts.map(p => ({ openaiAutoFilled: p.openai_auto_filled }));
+  } else {
+    // No filters, use simple Prisma query
+    products = await prisma.product.findMany({
+      where: {
+        shopId,
+        wooProductId: { notIn: parentIds },
+      },
+      select: {
+        openaiAutoFilled: true,
+      },
+    });
+  }
 
   // Extract values from JSON (including empty/null values)
   const valueCounts = new Map<string, number>();
