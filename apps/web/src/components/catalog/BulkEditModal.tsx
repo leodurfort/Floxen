@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   OPENAI_FEED_SPEC,
   CATEGORY_CONFIG,
@@ -11,6 +11,7 @@ import {
   OpenAIFieldSpec,
 } from '@productsynch/shared';
 import { BulkUpdateOperation } from '@/lib/api';
+import { WooCommerceField, searchWooFields } from '@/lib/wooCommerceFields';
 
 interface BulkEditModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ interface BulkEditModalProps {
   onSubmit: (update: BulkUpdateOperation) => Promise<void>;
   selectedCount: number;
   isProcessing: boolean;
+  shopId: string;
+  accessToken: string | null;
 }
 
 export function BulkEditModal({
@@ -26,11 +29,21 @@ export function BulkEditModal({
   onSubmit,
   selectedCount,
   isProcessing,
+  shopId,
+  accessToken,
 }: BulkEditModalProps) {
   const [selectedAttribute, setSelectedAttribute] = useState<string | null>(null);
   const [overrideType, setOverrideType] = useState<'mapping' | 'static' | 'remove'>('static');
   const [staticValue, setStaticValue] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // WooCommerce field selector state
+  const [wooFields, setWooFields] = useState<WooCommerceField[]>([]);
+  const [wooFieldsLoading, setWooFieldsLoading] = useState(false);
+  const [selectedWooField, setSelectedWooField] = useState<string | null>(null);
+  const [wooFieldSearch, setWooFieldSearch] = useState('');
+  const [isWooDropdownOpen, setIsWooDropdownOpen] = useState(false);
+  const wooDropdownRef = useRef<HTMLDivElement>(null);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -39,8 +52,55 @@ export function BulkEditModal({
       setOverrideType('static');
       setStaticValue('');
       setValidationError(null);
+      setSelectedWooField(null);
+      setWooFieldSearch('');
+      setIsWooDropdownOpen(false);
     }
   }, [isOpen]);
+
+  // Load WooCommerce fields when modal opens
+  useEffect(() => {
+    if (isOpen && accessToken && shopId) {
+      loadWooFields();
+    }
+  }, [isOpen, accessToken, shopId]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wooDropdownRef.current && !wooDropdownRef.current.contains(event.target as Node)) {
+        setIsWooDropdownOpen(false);
+        setWooFieldSearch('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  async function loadWooFields() {
+    if (!accessToken) return;
+    setWooFieldsLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${shopId}/woo-fields`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (!res.ok) throw new Error('Failed to load WooCommerce fields');
+      const data = await res.json();
+      setWooFields(data.fields || []);
+    } catch {
+      // WooCommerce fields load failed silently
+      setWooFields([]);
+    } finally {
+      setWooFieldsLoading(false);
+    }
+  }
+
+  // Filter WooCommerce fields based on search
+  const filteredWooFields = useMemo(() => {
+    const fields = wooFieldSearch ? searchWooFields(wooFields, wooFieldSearch) : wooFields;
+    return fields.slice().sort((a, b) => a.label.localeCompare(b.label));
+  }, [wooFields, wooFieldSearch]);
 
   // Get available fields (exclude fully locked fields and flags)
   const availableFields = useMemo(() => {
@@ -91,6 +151,13 @@ export function BulkEditModal({
     }
   }, [overrideType, selectedAttribute, staticValue]);
 
+  // Get label for selected WooCommerce field
+  const getSelectedWooFieldLabel = () => {
+    if (!selectedWooField) return 'Select WooCommerce field...';
+    const field = wooFields.find(f => f.value === selectedWooField);
+    return field?.label || selectedWooField;
+  };
+
   const handleSubmit = async () => {
     if (!selectedAttribute) return;
 
@@ -110,15 +177,23 @@ export function BulkEditModal({
       }
       update = { type: 'static_override', attribute: selectedAttribute, value: staticValue };
     } else {
-      // mapping type - for now just set to null (no mapping)
-      update = { type: 'field_mapping', attribute: selectedAttribute, wooField: null };
+      // mapping type - use selected WooCommerce field (can be null for "exclude")
+      update = { type: 'field_mapping', attribute: selectedAttribute, wooField: selectedWooField };
     }
 
     await onSubmit(update);
   };
 
+  // Can submit when:
+  // - An attribute is selected
+  // - No validation errors
+  // - Not processing
+  // - For static: value is entered
+  // - For mapping: either a field is selected OR null is intentional (exclude)
   const canSubmit = selectedAttribute && !validationError && !isProcessing &&
-    (overrideType !== 'static' || staticValue.trim());
+    (overrideType === 'remove' ||
+     (overrideType === 'static' && staticValue.trim()) ||
+     overrideType === 'mapping'); // mapping can be null (exclude) or a field
 
   if (!isOpen) return null;
 
@@ -158,6 +233,7 @@ export function BulkEditModal({
                   setSelectedAttribute(e.target.value || null);
                   setStaticValue('');
                   setValidationError(null);
+                  setSelectedWooField(null);
                   // Default to static for locked fields
                   if (e.target.value && LOCKED_FIELD_SET.has(e.target.value)) {
                     setOverrideType('static');
@@ -213,7 +289,10 @@ export function BulkEditModal({
                   </button>
                   {!isLockedField && (
                     <button
-                      onClick={() => setOverrideType('mapping')}
+                      onClick={() => {
+                        setOverrideType('mapping');
+                        setSelectedWooField(null); // Reset to allow fresh selection
+                      }}
                       className={`
                         px-4 py-2 rounded-lg border text-sm font-medium transition-colors
                         ${overrideType === 'mapping'
@@ -221,7 +300,7 @@ export function BulkEditModal({
                           : 'bg-[#252936] border-white/10 text-white/60 hover:text-white'}
                       `}
                     >
-                      Clear Mapping
+                      Custom Mapping
                     </button>
                   )}
                   <button
@@ -264,20 +343,122 @@ export function BulkEditModal({
               </div>
             )}
 
+            {/* WooCommerce Field Selector */}
+            {selectedAttribute && overrideType === 'mapping' && (
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  WooCommerce Field Mapping
+                </label>
+
+                {/* Custom styled dropdown for WooCommerce fields */}
+                <div className="relative" ref={wooDropdownRef}>
+                  <button
+                    onClick={() => !wooFieldsLoading && setIsWooDropdownOpen(!isWooDropdownOpen)}
+                    disabled={wooFieldsLoading}
+                    className={`
+                      w-full h-[44px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border
+                      transition-colors flex items-center justify-between border-white/10
+                      ${wooFieldsLoading ? 'cursor-not-allowed opacity-60' : ''}
+                    `}
+                  >
+                    <span className={`text-sm truncate ${
+                      selectedWooField ? 'text-white' : 'text-white/60'
+                    }`}>
+                      {wooFieldsLoading ? 'Loading fields...' : getSelectedWooFieldLabel()}
+                    </span>
+                    <svg className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown Panel */}
+                  {isWooDropdownOpen && !wooFieldsLoading && (
+                    <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[280px] overflow-hidden flex flex-col">
+                      {/* Search Bar */}
+                      <div className="p-3 border-b border-white/10">
+                        <input
+                          type="text"
+                          value={wooFieldSearch}
+                          onChange={(e) => setWooFieldSearch(e.target.value)}
+                          placeholder="Search fields..."
+                          className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* Options List */}
+                      <div className="overflow-y-auto">
+                        {/* "No mapping" option - exclude field */}
+                        {!wooFieldSearch && (
+                          <button
+                            onClick={() => {
+                              setSelectedWooField(null);
+                              setIsWooDropdownOpen(false);
+                              setWooFieldSearch('');
+                            }}
+                            className={`
+                              w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10
+                              ${selectedWooField === null ? 'bg-[#2d3142]' : ''}
+                            `}
+                          >
+                            <div className="text-sm text-amber-400 font-medium">No mapping (exclude field)</div>
+                            <div className="text-xs text-white/40 mt-0.5">This field will be empty for selected products</div>
+                          </button>
+                        )}
+
+                        {/* WooCommerce fields */}
+                        {filteredWooFields.length > 0 ? (
+                          filteredWooFields.map((field) => (
+                            <button
+                              key={field.value}
+                              onClick={() => {
+                                setSelectedWooField(field.value);
+                                setIsWooDropdownOpen(false);
+                                setWooFieldSearch('');
+                              }}
+                              className={`
+                                w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/5 last:border-0
+                                ${selectedWooField === field.value ? 'bg-[#2d3142]' : ''}
+                              `}
+                            >
+                              <div className="text-sm text-white font-medium">{field.label}</div>
+                              <div className="text-xs text-white/40 mt-0.5">{field.value}</div>
+                              {field.description && (
+                                <div className="text-xs text-white/30 mt-1">{field.description}</div>
+                              )}
+                            </button>
+                          ))
+                        ) : wooFieldSearch ? (
+                          <div className="p-4 text-center text-white/40 text-sm">No fields found</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info about the selected mapping */}
+                {selectedWooField === null && (
+                  <div className="mt-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                    <p className="text-sm text-amber-400">
+                      This will exclude "{selectedAttribute}" from the feed for all selected products.
+                    </p>
+                  </div>
+                )}
+                {selectedWooField && (
+                  <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                    <p className="text-sm text-blue-400">
+                      This will map "{selectedAttribute}" to WooCommerce field "{selectedWooField}" for all selected products.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Remove Override Warning */}
             {selectedAttribute && overrideType === 'remove' && (
               <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
                 <p className="text-sm text-amber-400">
                   This will remove any existing override for "{selectedAttribute}" and revert to shop-level defaults.
-                </p>
-              </div>
-            )}
-
-            {/* Clear Mapping Info */}
-            {selectedAttribute && overrideType === 'mapping' && (
-              <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
-                <p className="text-sm text-blue-400">
-                  This will set the mapping to "No mapping" for "{selectedAttribute}", excluding this field from the feed.
                 </p>
               </div>
             )}

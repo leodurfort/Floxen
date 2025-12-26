@@ -705,6 +705,8 @@ function CatalogPageContent() {
         onSubmit={handleBulkUpdate}
         selectedCount={displayedSelectionCount}
         isProcessing={bulkProgress.isProcessing}
+        shopId={params?.id || ''}
+        accessToken={accessToken}
       />
 
       <EditColumnsModal
