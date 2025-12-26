@@ -2,44 +2,42 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 
-export function getOverview(req: Request, res: Response) {
+export async function getOverview(req: Request, res: Response) {
   const shopId = req.params.id;
   const period = (req.query.period as string) || '30d';
-  prisma.product
-    .findMany({ where: { shopId } })
-    .then((products) => {
-      const synced = products.filter((p) => p.syncStatus === 'COMPLETED').length;
-      const enriched = 0; // AI enrichment removed
 
-      // TODO: Implement real analytics tracking
-      // These values should come from an analytics database or external service
-      return res.json({
-        period,
-        totalProducts: products.length,
-        syncedProducts: synced,
-        enrichedProducts: enriched,
-        chatgpt: {
-          impressions: 0,
-          clicks: 0,
-          conversions: 0,
-          traffic: 0,
-          revenue: 0,
-        },
-        changes: {
-          impressions: 0,
-          clicks: 0,
-          conversions: 0,
-        },
-      });
-    })
-    .catch((err) => {
-      logger.error('Failed to get analytics overview', {
-        error: err,
-        shopId,
-        period,
-      });
-      res.status(500).json({ error: err.message });
+  try {
+    const [totalProducts, syncedProducts] = await Promise.all([
+      prisma.product.count({ where: { shopId } }),
+      prisma.product.count({ where: { shopId, syncStatus: 'COMPLETED' } }),
+    ]);
+
+    return res.json({
+      period,
+      totalProducts,
+      syncedProducts,
+      enrichedProducts: 0, // AI enrichment removed
+      chatgpt: {
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        traffic: 0,
+        revenue: 0,
+      },
+      changes: {
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+      },
     });
+  } catch (err) {
+    logger.error('Failed to get analytics overview', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      shopId,
+      period,
+    });
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' });
+  }
 }
 
 export function getProductAnalytics(req: Request, res: Response) {
