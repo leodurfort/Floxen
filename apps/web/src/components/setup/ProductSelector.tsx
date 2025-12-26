@@ -14,9 +14,12 @@ export function ProductSelector({ products, value, onChange }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Use wooTitle - it contains the full product name (parent + variation attributes)
+  // Use OpenAI title with fallback to wooTitle for backwards compatibility
+  // Cast through unknown to access openaiAutoFilled which exists on API response but not in shared Product type
   const getProductName = (product: Product): string => {
-    return product.wooTitle;
+    const productWithOpenai = product as unknown as { openaiAutoFilled?: Record<string, unknown> };
+    const openaiTitle = productWithOpenai.openaiAutoFilled?.title as string | undefined;
+    return openaiTitle || product.wooTitle;
   };
 
   const filteredProducts = searchQuery
