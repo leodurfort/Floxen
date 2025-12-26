@@ -139,26 +139,6 @@ export function useCatalogFilters() {
     router.push(`${pathname}${queryString ? `?${queryString}` : ''}`, { scroll: false });
   }, [filters, router, pathname]);
 
-  // Reset all filters to defaults
-  const resetFilters = useCallback(() => {
-    router.push(pathname, { scroll: false });
-  }, [router, pathname]);
-
-  // Toggle sort direction or change sort column
-  const toggleSort = useCallback((column: string) => {
-    if (filters.sortBy === column) {
-      // Toggle direction: asc -> desc -> unsorted (reset to default)
-      if (filters.sortOrder === 'asc') {
-        setFilters({ sortOrder: 'desc' });
-      } else {
-        setFilters({ sortBy: 'updatedAt', sortOrder: 'desc' });
-      }
-    } else {
-      // New column: start with ascending
-      setFilters({ sortBy: column, sortOrder: 'asc' });
-    }
-  }, [filters.sortBy, filters.sortOrder, setFilters]);
-
   // Set sort directly
   const setSort = useCallback((column: string, order: 'asc' | 'desc' | null) => {
     if (order === null) {
@@ -259,70 +239,9 @@ export function useCatalogFilters() {
     return Object.keys(filters.columnFilters).length > 0;
   }, [filters.columnFilters]);
 
-  // Get column filters in API format for backend
-  const getApiFilters = useCallback(() => {
-    // Convert column filters to API format
-    // The backend will need to handle these new filters
-    return {
-      search: filters.search || undefined,
-      columnFilters: Object.keys(filters.columnFilters).length > 0
-        ? filters.columnFilters
-        : undefined,
-    };
-  }, [filters]);
-
-  // Get legacy filters for backward compatibility
-  // Maps column filters back to old format for existing API
-  const getLegacyApiFilters = useCallback(() => {
-    const legacy: Record<string, unknown> = {
-      search: filters.search || undefined,
-    };
-
-    // Map specific columns to legacy filters
-    const cf = filters.columnFilters;
-
-    // syncStatus column -> syncStatus array
-    if (cf.syncStatus?.values.length) {
-      legacy.syncStatus = cf.syncStatus.values;
-    }
-
-    // isValid column -> isValid boolean
-    if (cf.isValid?.values.length) {
-      legacy.isValid = cf.isValid.values.includes('true');
-    }
-
-    // enable_search column -> feedEnableSearch boolean
-    if (cf.enable_search?.values.length) {
-      legacy.feedEnableSearch = cf.enable_search.values.includes('true');
-    }
-
-    // availability column -> wooStockStatus array (needs mapping)
-    if (cf.availability?.values.length) {
-      // Map OpenAI availability values to WooCommerce stock status
-      const stockMap: Record<string, string> = {
-        'in_stock': 'instock',
-        'out_of_stock': 'outofstock',
-        'preorder': 'onbackorder',
-      };
-      legacy.wooStockStatus = cf.availability.values
-        .map(v => stockMap[v] || v)
-        .filter(Boolean);
-    }
-
-    // overrides column -> hasOverrides boolean
-    if (cf.overrides?.values.length) {
-      legacy.hasOverrides = cf.overrides.values.includes('true') ||
-                           !cf.overrides.values.includes('0');
-    }
-
-    return legacy;
-  }, [filters]);
-
   return {
     filters,
     setFilters,
-    resetFilters,
-    toggleSort,
     setSort,
 
     // Column filter methods
@@ -336,7 +255,5 @@ export function useCatalogFilters() {
     // Computed
     hasActiveFilters,
     hasColumnFilters,
-    getApiFilters,
-    getLegacyApiFilters,
   };
 }

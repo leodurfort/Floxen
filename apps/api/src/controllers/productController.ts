@@ -33,13 +33,14 @@ const updateProductSchema = z.object({
 // BULK UPDATE SCHEMA AND TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
+const columnFilterSchema = z.object({
+  text: z.string().optional(),
+  values: z.array(z.string()).optional(),
+});
+
 const bulkUpdateFilterSchema = z.object({
   search: z.string().optional(),
-  syncStatus: z.array(z.nativeEnum(SyncStatus)).optional(),
-  isValid: z.boolean().optional(),
-  feedEnableSearch: z.boolean().optional(),
-  wooStockStatus: z.array(z.string()).optional(),
-  hasOverrides: z.boolean().optional(),
+  columnFilters: z.record(columnFilterSchema).optional(),
 });
 
 const bulkUpdateOperationSchema = z.discriminatedUnion('type', [
@@ -74,8 +75,40 @@ const bulkUpdateSchema = z.object({
 
 type BulkUpdateOperation = z.infer<typeof bulkUpdateOperationSchema>;
 
+/**
+ * Parse column filters from query parameters
+ * Format: cf_{columnId}_t for text, cf_{columnId}_v for values (comma-separated)
+ */
+function parseColumnFilters(query: Record<string, unknown>): Record<string, { text?: string; values?: string[] }> | undefined {
+  const columnFilters: Record<string, { text?: string; values?: string[] }> = {};
+  const CF_PREFIX = 'cf_';
+  const CF_TEXT_SUFFIX = '_t';
+  const CF_VALUES_SUFFIX = '_v';
+
+  for (const [key, value] of Object.entries(query)) {
+    if (!key.startsWith(CF_PREFIX) || typeof value !== 'string') continue;
+
+    const withoutPrefix = key.slice(CF_PREFIX.length);
+
+    if (withoutPrefix.endsWith(CF_TEXT_SUFFIX)) {
+      const columnId = withoutPrefix.slice(0, -CF_TEXT_SUFFIX.length);
+      if (!columnFilters[columnId]) columnFilters[columnId] = {};
+      columnFilters[columnId].text = value;
+    } else if (withoutPrefix.endsWith(CF_VALUES_SUFFIX)) {
+      const columnId = withoutPrefix.slice(0, -CF_VALUES_SUFFIX.length);
+      if (!columnFilters[columnId]) columnFilters[columnId] = {};
+      columnFilters[columnId].values = value.split(',').filter(Boolean);
+    }
+  }
+
+  return Object.keys(columnFilters).length > 0 ? columnFilters : undefined;
+}
+
 export function listProducts(req: Request, res: Response) {
   const { id } = req.params;
+
+  // Parse column filters from query params (cf_columnId_t, cf_columnId_v)
+  const columnFilters = parseColumnFilters(req.query as Record<string, unknown>);
 
   // Parse query parameters for filtering and sorting
   const options: ListProductsOptions = {
@@ -84,25 +117,7 @@ export function listProducts(req: Request, res: Response) {
     sortBy: (req.query.sortBy as ListProductsOptions['sortBy']) || 'updatedAt',
     sortOrder: (req.query.sortOrder as 'asc' | 'desc') || 'desc',
     search: req.query.search as string | undefined,
-    syncStatus: req.query.syncStatus
-      ? (Array.isArray(req.query.syncStatus)
-          ? req.query.syncStatus as SyncStatus[]
-          : [req.query.syncStatus as SyncStatus])
-      : undefined,
-    isValid: req.query.isValid !== undefined
-      ? req.query.isValid === 'true'
-      : undefined,
-    feedEnableSearch: req.query.feedEnableSearch !== undefined
-      ? req.query.feedEnableSearch === 'true'
-      : undefined,
-    wooStockStatus: req.query.wooStockStatus
-      ? (Array.isArray(req.query.wooStockStatus)
-          ? req.query.wooStockStatus as string[]
-          : [req.query.wooStockStatus as string])
-      : undefined,
-    hasOverrides: req.query.hasOverrides !== undefined
-      ? req.query.hasOverrides === 'true'
-      : undefined,
+    columnFilters,
   };
 
   listProductsForShop(id, options)
@@ -115,11 +130,7 @@ export function listProducts(req: Request, res: Response) {
         total: result.pagination.total,
         filters: {
           search: options.search,
-          syncStatus: options.syncStatus,
-          isValid: options.isValid,
-          feedEnableSearch: options.feedEnableSearch,
-          wooStockStatus: options.wooStockStatus,
-          hasOverrides: options.hasOverrides,
+          columnFilters: options.columnFilters,
         },
       });
       res.json(result);

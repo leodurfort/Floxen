@@ -1,10 +1,15 @@
 import { prisma } from '../lib/prisma';
-import { SyncStatus, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // LIST PRODUCTS OPTIONS
 // ═══════════════════════════════════════════════════════════════════════════
+
+export interface ColumnFilter {
+  text?: string;      // Text search within column
+  values?: string[];  // Selected checkbox values
+}
 
 export interface ListProductsOptions {
   page?: number;
@@ -12,11 +17,7 @@ export interface ListProductsOptions {
   sortBy?: string; // Any column ID (database column or OpenAI attribute)
   sortOrder?: 'asc' | 'desc';
   search?: string;
-  syncStatus?: SyncStatus[];
-  isValid?: boolean;
-  feedEnableSearch?: boolean;
-  wooStockStatus?: string[];
-  hasOverrides?: boolean;
+  columnFilters?: Record<string, ColumnFilter>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -85,6 +86,22 @@ export async function getParentProductIds(shopId: string): Promise<number[]> {
 }
 
 /**
+ * Map column filter to database column name
+ * Returns null if the column doesn't have a direct database mapping
+ */
+function getDbColumnForFilter(columnId: string): string | null {
+  // Direct database column mappings
+  const dbMappings: Record<string, string> = {
+    syncStatus: 'syncStatus',
+    isValid: 'isValid',
+    updatedAt: 'updatedAt',
+    feedEnableSearch: 'feedEnableSearch',
+    enable_search: 'feedEnableSearch', // OpenAI attribute name maps to DB column
+  };
+  return dbMappings[columnId] || null;
+}
+
+/**
  * Build Prisma WHERE clause from filter options
  */
 function buildWhereClause(
@@ -92,83 +109,85 @@ function buildWhereClause(
   parentIds: number[],
   options: ListProductsOptions
 ): Prisma.ProductWhereInput {
-  const {
-    search,
-    syncStatus,
-    isValid,
-    feedEnableSearch,
-    wooStockStatus,
-    hasOverrides,
-  } = options;
+  const { search, columnFilters } = options;
 
   const where: Prisma.ProductWhereInput = {
     shopId,
     wooProductId: { notIn: parentIds },
   };
 
-  // Text search on title and SKU
+  const andConditions: Prisma.ProductWhereInput[] = [];
+
+  // Global text search on title and SKU
   if (search && search.trim()) {
-    where.OR = [
-      { wooTitle: { contains: search.trim(), mode: 'insensitive' } },
-      { wooSku: { contains: search.trim(), mode: 'insensitive' } },
-    ];
+    andConditions.push({
+      OR: [
+        { wooTitle: { contains: search.trim(), mode: 'insensitive' } },
+        { wooSku: { contains: search.trim(), mode: 'insensitive' } },
+      ],
+    });
   }
 
-  // Multi-select sync status filter
-  if (syncStatus && syncStatus.length > 0) {
-    where.syncStatus = { in: syncStatus };
-  }
+  // Process column filters
+  if (columnFilters) {
+    for (const [columnId, filter] of Object.entries(columnFilters)) {
+      if (!filter.values?.length && !filter.text) continue;
 
-  // Boolean filters
-  if (isValid !== undefined) {
-    where.isValid = isValid;
-  }
+      const dbColumn = getDbColumnForFilter(columnId);
 
-  if (feedEnableSearch !== undefined) {
-    where.feedEnableSearch = feedEnableSearch;
-  }
+      // Handle value filters (checkbox selections)
+      if (filter.values?.length) {
+        if (columnId === 'syncStatus' && dbColumn) {
+          // syncStatus is an enum - cast values
+          andConditions.push({
+            [dbColumn]: { in: filter.values },
+          });
+        } else if ((columnId === 'isValid' || columnId === 'feedEnableSearch' || columnId === 'enable_search') && dbColumn) {
+          // Boolean columns - convert string 'true'/'false' to boolean
+          const boolValue = filter.values.includes('true');
+          andConditions.push({ [dbColumn]: boolValue });
+        } else if (columnId === 'availability') {
+          // Map OpenAI availability values to WooCommerce stock status
+          const stockMap: Record<string, string> = {
+            'in_stock': 'instock',
+            'out_of_stock': 'outofstock',
+            'preorder': 'onbackorder',
+          };
+          const mappedValues = filter.values.map(v => stockMap[v] || v);
+          andConditions.push({ wooStockStatus: { in: mappedValues } });
+        } else if (columnId === 'overrides') {
+          // Overrides column - filter by override count
+          const hasOverrides = filter.values.some(v => v !== '0');
+          const hasNoOverrides = filter.values.includes('0');
 
-  // Multi-select stock status filter
-  if (wooStockStatus && wooStockStatus.length > 0) {
-    where.wooStockStatus = { in: wooStockStatus };
-  }
-
-  // Has overrides filter (check if productFieldOverrides is not empty)
-  if (hasOverrides !== undefined) {
-    if (hasOverrides) {
-      // Products with non-empty overrides
-      where.NOT = {
-        OR: [
-          { productFieldOverrides: { equals: Prisma.JsonNull } },
-          { productFieldOverrides: { equals: {} } },
-        ],
-      };
-    } else {
-      // Products with empty or null overrides
-      where.OR = [
-        ...(where.OR || []),
-        { productFieldOverrides: { equals: Prisma.JsonNull } },
-        { productFieldOverrides: { equals: {} } },
-      ];
-      // If we already have OR from search, we need to restructure
-      if (search && search.trim()) {
-        where.AND = [
-          {
-            OR: [
-              { wooTitle: { contains: search.trim(), mode: 'insensitive' } },
-              { wooSku: { contains: search.trim(), mode: 'insensitive' } },
-            ],
-          },
-          {
-            OR: [
-              { productFieldOverrides: { equals: Prisma.JsonNull } },
-              { productFieldOverrides: { equals: {} } },
-            ],
-          },
-        ];
-        delete where.OR;
+          if (hasOverrides && !hasNoOverrides) {
+            // Only products with overrides
+            andConditions.push({
+              NOT: {
+                OR: [
+                  { productFieldOverrides: { equals: Prisma.JsonNull } },
+                  { productFieldOverrides: { equals: {} } },
+                ],
+              },
+            });
+          } else if (hasNoOverrides && !hasOverrides) {
+            // Only products without overrides
+            andConditions.push({
+              OR: [
+                { productFieldOverrides: { equals: Prisma.JsonNull } },
+                { productFieldOverrides: { equals: {} } },
+              ],
+            });
+          }
+          // If both selected, no filter needed (show all)
+        }
+        // Note: OpenAI JSON column filters are handled in raw SQL path
       }
     }
+  }
+
+  if (andConditions.length > 0) {
+    where.AND = andConditions;
   }
 
   return where;
@@ -220,36 +239,78 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
     `"wooProductId" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})`,
   ];
 
+  // Global text search
   if (options.search?.trim()) {
     const searchEscaped = escapeSqlString(options.search.trim());
     whereConditions.push(`("wooTitle" ILIKE '%${searchEscaped}%' OR "wooSku" ILIKE '%${searchEscaped}%')`);
   }
 
-  if (options.syncStatus?.length) {
-    // SyncStatus is a Prisma enum - values are already validated
-    const statuses = options.syncStatus.map(s => `'${escapeSqlString(s)}'`).join(',');
-    whereConditions.push(`"syncStatus" IN (${statuses})`);
-  }
+  // Process column filters
+  const cf = options.columnFilters;
+  if (cf) {
+    // syncStatus column
+    if (cf.syncStatus?.values?.length) {
+      const statuses = cf.syncStatus.values.map(s => `'${escapeSqlString(s)}'`).join(',');
+      whereConditions.push(`"syncStatus" IN (${statuses})`);
+    }
 
-  if (options.isValid !== undefined) {
-    whereConditions.push(`"isValid" = ${options.isValid}`);
-  }
+    // isValid column
+    if (cf.isValid?.values?.length) {
+      const boolValue = cf.isValid.values.includes('true');
+      whereConditions.push(`"isValid" = ${boolValue}`);
+    }
 
-  if (options.feedEnableSearch !== undefined) {
-    whereConditions.push(`"feedEnableSearch" = ${options.feedEnableSearch}`);
-  }
+    // enable_search / feedEnableSearch column
+    if (cf.enable_search?.values?.length) {
+      const boolValue = cf.enable_search.values.includes('true');
+      whereConditions.push(`"feedEnableSearch" = ${boolValue}`);
+    }
 
-  if (options.wooStockStatus?.length) {
-    // Escape each status value to prevent SQL injection
-    const statuses = options.wooStockStatus.map(s => `'${escapeSqlString(s)}'`).join(',');
-    whereConditions.push(`"wooStockStatus" IN (${statuses})`);
-  }
+    // availability column -> maps to wooStockStatus
+    if (cf.availability?.values?.length) {
+      const stockMap: Record<string, string> = {
+        'in_stock': 'instock',
+        'out_of_stock': 'outofstock',
+        'preorder': 'onbackorder',
+      };
+      const mappedValues = cf.availability.values.map(v => stockMap[v] || v);
+      const statuses = mappedValues.map(s => `'${escapeSqlString(s)}'`).join(',');
+      whereConditions.push(`"wooStockStatus" IN (${statuses})`);
+    }
 
-  if (options.hasOverrides !== undefined) {
-    if (options.hasOverrides) {
-      whereConditions.push(`("productFieldOverrides" IS NOT NULL AND "productFieldOverrides" != '{}'::jsonb)`);
-    } else {
-      whereConditions.push(`("productFieldOverrides" IS NULL OR "productFieldOverrides" = '{}'::jsonb)`);
+    // overrides column
+    if (cf.overrides?.values?.length) {
+      const hasOverrides = cf.overrides.values.some(v => v !== '0');
+      const hasNoOverrides = cf.overrides.values.includes('0');
+
+      if (hasOverrides && !hasNoOverrides) {
+        whereConditions.push(`("productFieldOverrides" IS NOT NULL AND "productFieldOverrides" != '{}'::jsonb)`);
+      } else if (hasNoOverrides && !hasOverrides) {
+        whereConditions.push(`("productFieldOverrides" IS NULL OR "productFieldOverrides" = '{}'::jsonb)`);
+      }
+    }
+
+    // Handle OpenAI JSON column filters (text and value filters)
+    for (const [columnId, filter] of Object.entries(cf)) {
+      // Skip already handled columns
+      if (['syncStatus', 'isValid', 'enable_search', 'availability', 'overrides'].includes(columnId)) {
+        continue;
+      }
+
+      // Check if it's an OpenAI attribute
+      if (OPENAI_COLUMNS.has(columnId)) {
+        // Text filter on OpenAI JSON attribute
+        if (filter.text?.trim()) {
+          const textEscaped = escapeSqlString(filter.text.trim());
+          whereConditions.push(`"openaiAutoFilled"->>'${columnId}' ILIKE '%${textEscaped}%'`);
+        }
+
+        // Value filter on OpenAI JSON attribute
+        if (filter.values?.length) {
+          const values = filter.values.map(v => `'${escapeSqlString(v)}'`).join(',');
+          whereConditions.push(`"openaiAutoFilled"->>'${columnId}' IN (${values})`);
+        }
+      }
     }
   }
 
