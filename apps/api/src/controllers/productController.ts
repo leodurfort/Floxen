@@ -225,11 +225,14 @@ async function applyBulkUpdateToProduct(
 ): Promise<void> {
   switch (update.type) {
     case 'enable_search': {
-      // Direct column update - no reprocessing needed
+      // Update feedEnableSearch column
       await prisma.product.update({
         where: { id: productId },
         data: { feedEnableSearch: update.value, updatedAt: new Date() },
       });
+
+      // Reprocess to update openaiAutoFilled.enable_search for catalog display
+      await reprocessProduct(productId);
       break;
     }
 
