@@ -102,6 +102,30 @@ function getDbColumnForFilter(columnId: string): string | null {
 }
 
 /**
+ * Check if any column filter requires raw SQL (can't be handled by Prisma)
+ * This includes: computed columns (overrides), OpenAI JSON columns
+ */
+function requiresRawSqlFiltering(columnFilters?: Record<string, ColumnFilter>): boolean {
+  if (!columnFilters) return false;
+
+  for (const columnId of Object.keys(columnFilters)) {
+    const filter = columnFilters[columnId];
+    if (!filter.values?.length && !filter.text) continue;
+
+    // Computed columns require raw SQL
+    if (COMPUTED_SORT_COLUMNS.has(columnId)) return true;
+
+    // OpenAI JSON columns require raw SQL
+    if (OPENAI_COLUMNS.has(columnId)) return true;
+
+    // availability maps to wooStockStatus but uses different values - needs mapping
+    if (columnId === 'availability') return true;
+  }
+
+  return false;
+}
+
+/**
  * Build Prisma WHERE clause from filter options
  */
 function buildWhereClause(
@@ -146,42 +170,9 @@ function buildWhereClause(
           // Boolean columns - convert string 'true'/'false' to boolean
           const boolValue = filter.values.includes('true');
           andConditions.push({ [dbColumn]: boolValue });
-        } else if (columnId === 'availability') {
-          // Map OpenAI availability values to WooCommerce stock status
-          const stockMap: Record<string, string> = {
-            'in_stock': 'instock',
-            'out_of_stock': 'outofstock',
-            'preorder': 'onbackorder',
-          };
-          const mappedValues = filter.values.map(v => stockMap[v] || v);
-          andConditions.push({ wooStockStatus: { in: mappedValues } });
-        } else if (columnId === 'overrides') {
-          // Overrides column - filter by override count
-          const hasOverrides = filter.values.some(v => v !== '0');
-          const hasNoOverrides = filter.values.includes('0');
-
-          if (hasOverrides && !hasNoOverrides) {
-            // Only products with overrides
-            andConditions.push({
-              NOT: {
-                OR: [
-                  { productFieldOverrides: { equals: Prisma.JsonNull } },
-                  { productFieldOverrides: { equals: {} } },
-                ],
-              },
-            });
-          } else if (hasNoOverrides && !hasOverrides) {
-            // Only products without overrides
-            andConditions.push({
-              OR: [
-                { productFieldOverrides: { equals: Prisma.JsonNull } },
-                { productFieldOverrides: { equals: {} } },
-              ],
-            });
-          }
-          // If both selected, no filter needed (show all)
         }
-        // Note: OpenAI JSON column filters are handled in raw SQL path
+        // Note: availability, overrides, and OpenAI JSON column filters
+        // are handled in raw SQL path (requiresRawSqlFiltering returns true for these)
       }
     }
   }
@@ -278,16 +269,16 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
       whereConditions.push(`"wooStockStatus" IN (${statuses})`);
     }
 
-    // overrides column
+    // overrides column - filter by exact override count
     if (cf.overrides?.values?.length) {
-      const hasOverrides = cf.overrides.values.some(v => v !== '0');
-      const hasNoOverrides = cf.overrides.values.includes('0');
-
-      if (hasOverrides && !hasNoOverrides) {
-        whereConditions.push(`("productFieldOverrides" IS NOT NULL AND "productFieldOverrides" != '{}'::jsonb)`);
-      } else if (hasNoOverrides && !hasOverrides) {
-        whereConditions.push(`("productFieldOverrides" IS NULL OR "productFieldOverrides" = '{}'::jsonb)`);
-      }
+      const counts = cf.overrides.values.map(v => `'${escapeSqlString(v)}'`).join(',');
+      // Compute override count and match against selected values
+      whereConditions.push(`(
+        CASE
+          WHEN "productFieldOverrides" IS NULL OR "productFieldOverrides" = '{}'::jsonb THEN '0'
+          ELSE (SELECT count(*)::text FROM jsonb_object_keys("productFieldOverrides"))
+        END
+      ) IN (${counts})`);
     }
 
     // Handle OpenAI JSON column filters (text and value filters)
@@ -342,17 +333,28 @@ export async function listProducts(shopId: string, options: ListProductsOptions 
   const parentIds = await getParentProductIds(shopId);
   const sortType = buildOrderByClause(sortBy, sortOrder);
 
-  // Handle JSON and computed sorts with raw SQL (Prisma can't order by JSONB paths)
-  if (sortType.type === 'json' || sortType.type === 'computed') {
+  // Use raw SQL when:
+  // 1. Sorting by JSON or computed columns (Prisma can't order by JSONB paths)
+  // 2. Filtering by columns that require raw SQL (computed, OpenAI JSON)
+  const needsRawSql = sortType.type === 'json' ||
+                      sortType.type === 'computed' ||
+                      requiresRawSqlFiltering(options.columnFilters);
+
+  if (needsRawSql) {
     // Use raw SQL WHERE clause for these queries
     const whereClause = buildRawWhereClause(shopId, parentIds, options);
-    const direction = sortType.order.toUpperCase();
+    const direction = sortOrder.toUpperCase();
 
+    // Build ORDER BY clause based on sort type
     let orderByClause: string;
     if (sortType.type === 'json') {
       orderByClause = `"openaiAutoFilled"->>'${sortType.attribute}' ${direction} NULLS LAST`;
-    } else {
+    } else if (sortType.type === 'computed') {
       orderByClause = getComputedOrderBy(sortType.column, direction);
+    } else {
+      // Prisma sort type - use database column directly
+      const dbColumn = DATABASE_COLUMNS[sortBy] || 'updatedAt';
+      orderByClause = `"${dbColumn}" ${direction}`;
     }
 
     const items = await prisma.$queryRawUnsafe<any[]>(`
@@ -411,8 +413,19 @@ export async function getFilteredProductIds(
   options: Omit<ListProductsOptions, 'page' | 'limit' | 'sortBy' | 'sortOrder'>
 ): Promise<string[]> {
   const parentIds = await getParentProductIds(shopId);
-  const where = buildWhereClause(shopId, parentIds, options);
 
+  // Use raw SQL when filters require it (computed columns, OpenAI JSON)
+  if (requiresRawSqlFiltering(options.columnFilters)) {
+    const whereClause = buildRawWhereClause(shopId, parentIds, options);
+    const products = await prisma.$queryRawUnsafe<{ id: string }[]>(`
+      SELECT "id" FROM "Product"
+      WHERE ${whereClause}
+    `);
+    return products.map(p => p.id);
+  }
+
+  // Use Prisma for simple database column filters
+  const where = buildWhereClause(shopId, parentIds, options);
   const products = await prisma.product.findMany({
     where,
     select: { id: true },
