@@ -205,17 +205,38 @@ export interface GetColumnValuesResult {
   truncated: boolean;
 }
 
+export interface CurrentFiltersForColumnValues {
+  globalSearch?: string;
+  columnFilters?: Record<string, ColumnFilter>;
+}
+
 export async function getColumnValues(
   shopId: string,
   token: string,
   column: string,
   limit: number = 100,
-  search?: string
+  search?: string,
+  currentFilters?: CurrentFiltersForColumnValues
 ): Promise<GetColumnValuesResult> {
   const params = new URLSearchParams();
   params.set('column', column);
   params.set('limit', String(limit));
   if (search) params.set('search', search);
+
+  // Pass current filters for cascading filter support
+  if (currentFilters?.globalSearch) {
+    params.set('globalSearch', currentFilters.globalSearch);
+  }
+  if (currentFilters?.columnFilters) {
+    for (const [columnId, filter] of Object.entries(currentFilters.columnFilters)) {
+      if (filter.values && filter.values.length > 0) {
+        params.set(`cf_${columnId}_v`, filter.values.join(','));
+      }
+      if (filter.text) {
+        params.set(`cf_${columnId}_t`, filter.text);
+      }
+    }
+  }
 
   return request<GetColumnValuesResult>(
     `/api/v1/shops/${shopId}/products/column-values?${params.toString()}`,
