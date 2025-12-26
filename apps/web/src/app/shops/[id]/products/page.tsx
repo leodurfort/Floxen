@@ -2,17 +2,29 @@
 
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { listProducts, refreshFeed, RefreshFeedResponse, BulkUpdateOperation } from '@/lib/api';
+import { listProducts, refreshFeed, RefreshFeedResponse, BulkUpdateOperation, getColumnValues } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
 import { useBulkUpdate } from '@/hooks/useBulkUpdate';
 import { Product } from '@productsynch/shared';
-import { SearchFilter, FilterDropdown, BooleanFilter } from '@/components/catalog/FilterDropdown';
+import { SearchFilter } from '@/components/catalog/FilterDropdown';
 import { BulkActionToolbar } from '@/components/catalog/BulkActionToolbar';
 import { BulkEditModal } from '@/components/catalog/BulkEditModal';
 import { EditColumnsModal, getStoredColumns, saveStoredColumns } from '@/components/catalog/EditColumnsModal';
 import { Toast } from '@/components/catalog/Toast';
+import { ColumnHeaderDropdown, type ColumnValue } from '@/components/catalog/ColumnHeaderDropdown';
+import { ClearFiltersButton } from '@/components/catalog/ClearFiltersButton';
+import {
+  COLUMN_MAP,
+  formatColumnValue,
+  getColumnValue,
+  type ColumnDefinition,
+  type ProductData,
+} from '@/lib/columnDefinitions';
+
+// Page size options
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 // Helper to truncate text
 function truncate(text: string | null | undefined, maxLength: number): string {
@@ -20,43 +32,6 @@ function truncate(text: string | null | undefined, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + '...';
 }
-
-// Helper to get image from WooCommerce raw JSON
-function getProductImage(wooRawJson: unknown): string | null {
-  if (!wooRawJson || typeof wooRawJson !== 'object') return null;
-  const json = wooRawJson as Record<string, unknown>;
-  const images = json.images;
-  if (Array.isArray(images) && images.length > 0 && images[0].src) {
-    return images[0].src;
-  }
-  return null;
-}
-
-// Helper to get permalink from WooCommerce raw JSON
-function getProductUrl(wooRawJson: unknown): string | null {
-  if (!wooRawJson || typeof wooRawJson !== 'object') return null;
-  const json = wooRawJson as Record<string, unknown>;
-  return (json.permalink as string) || null;
-}
-
-// Sync status options
-const SYNC_STATUS_OPTIONS = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'SYNCING', label: 'Syncing' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'FAILED', label: 'Failed' },
-  { value: 'PAUSED', label: 'Paused' },
-];
-
-// Stock status options
-const STOCK_STATUS_OPTIONS = [
-  { value: 'instock', label: 'In Stock' },
-  { value: 'outofstock', label: 'Out of Stock' },
-  { value: 'onbackorder', label: 'On Backorder' },
-];
-
-// Page size options
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 function CatalogPageContent() {
   const params = useParams<{ id: string }>();
@@ -68,6 +43,10 @@ function CatalogPageContent() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [feedRefreshing, setFeedRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Column values cache for filter dropdowns
+  const [columnValuesCache, setColumnValuesCache] = useState<Record<string, ColumnValue[]>>({});
+  const [loadingColumnValues, setLoadingColumnValues] = useState<Record<string, boolean>>({});
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -84,7 +63,19 @@ function CatalogPageContent() {
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use hooks
-  const { filters, setFilters, resetFilters, toggleSort, hasActiveFilters, getApiFilters } = useCatalogFilters();
+  const {
+    filters,
+    setFilters,
+    setSort,
+    hasActiveFilters,
+    hasColumnFilters,
+    getLegacyApiFilters,
+    getColumnFilter,
+    setColumnTextFilter,
+    setColumnValueFilter,
+    clearColumnFilter,
+    clearAllColumnFilters,
+  } = useCatalogFilters();
   const selection = useCatalogSelection();
   const { progress: bulkProgress, executeBulkUpdate } = useBulkUpdate(params?.id || '');
 
@@ -140,17 +131,20 @@ function CatalogPageContent() {
       setLoading(true);
       setError(null);
       try {
+        // Use legacy filters for backward compatibility with current API
+        const legacyFilters = getLegacyApiFilters();
+
         const productsRes = await listProducts(params.id, accessToken, {
           page: filters.page,
           limit: filters.limit,
-          sortBy: filters.sortBy,
+          sortBy: filters.sortBy as any,
           sortOrder: filters.sortOrder,
           search: filters.search || undefined,
-          syncStatus: filters.syncStatus.length > 0 ? filters.syncStatus : undefined,
-          isValid: filters.isValid,
-          feedEnableSearch: filters.feedEnableSearch,
-          wooStockStatus: filters.wooStockStatus.length > 0 ? filters.wooStockStatus : undefined,
-          hasOverrides: filters.hasOverrides,
+          syncStatus: legacyFilters.syncStatus as string[] | undefined,
+          isValid: legacyFilters.isValid as boolean | undefined,
+          feedEnableSearch: legacyFilters.feedEnableSearch as boolean | undefined,
+          wooStockStatus: legacyFilters.wooStockStatus as string[] | undefined,
+          hasOverrides: legacyFilters.hasOverrides as boolean | undefined,
         });
         setProducts(productsRes.products);
         setTotalProducts(productsRes.pagination.total);
@@ -163,7 +157,28 @@ function CatalogPageContent() {
     };
 
     fetchProducts();
-  }, [accessToken, params?.id, filters, refreshKey]);
+  }, [accessToken, params?.id, filters, refreshKey, getLegacyApiFilters]);
+
+  // Load column values for filter dropdown
+  const loadColumnValues = useCallback(async (columnId: string) => {
+    if (!accessToken || !params?.id) return;
+    if (columnValuesCache[columnId]) return;
+    if (loadingColumnValues[columnId]) return;
+
+    setLoadingColumnValues((prev) => ({ ...prev, [columnId]: true }));
+
+    try {
+      const result = await getColumnValues(params.id, accessToken, columnId, 100);
+      setColumnValuesCache((prev) => ({
+        ...prev,
+        [columnId]: result.values,
+      }));
+    } catch (err) {
+      console.error(`Failed to load values for column ${columnId}:`, err);
+    } finally {
+      setLoadingColumnValues((prev) => ({ ...prev, [columnId]: false }));
+    }
+  }, [accessToken, params?.id, columnValuesCache, loadingColumnValues]);
 
   // Navigate to product mapping page
   const handleRowClick = (productId: string) => {
@@ -210,8 +225,8 @@ function CatalogPageContent() {
 
   // Selection handlers
   const handleToggleAll = () => {
-    const pageIds = products.map(p => p.id);
-    const allSelected = pageIds.every(id => selection.isSelected(id));
+    const pageIds = products.map((p) => p.id);
+    const allSelected = pageIds.every((id) => selection.isSelected(id));
     if (allSelected) {
       selection.deselectAllOnPage(pageIds);
     } else {
@@ -224,26 +239,29 @@ function CatalogPageContent() {
   };
 
   // Bulk action handlers
-  const handleBulkUpdate = useCallback(async (update: BulkUpdateOperation) => {
-    const apiFilters = getApiFilters();
-    const result = await executeBulkUpdate(
-      selection.selectAllMatching ? 'filtered' : 'selected',
-      selection.selectAllMatching ? undefined : selection.getSelectedIds(),
-      selection.selectAllMatching ? apiFilters : undefined,
-      update
-    );
+  const handleBulkUpdate = useCallback(
+    async (update: BulkUpdateOperation) => {
+      const apiFilters = getLegacyApiFilters();
+      const result = await executeBulkUpdate(
+        selection.selectAllMatching ? 'filtered' : 'selected',
+        selection.selectAllMatching ? undefined : selection.getSelectedIds(),
+        selection.selectAllMatching ? apiFilters : undefined,
+        update
+      );
 
-    if (result) {
-      selection.clearSelection();
-      setShowBulkEditModal(false);
-      setToast({
-        message: `Updated ${result.processedProducts} products${result.failedProducts > 0 ? ` (${result.failedProducts} failed)` : ''}`,
-        type: result.failedProducts > 0 ? 'error' : 'success',
-      });
-      // Refresh the product list by incrementing refreshKey
-      setRefreshKey(k => k + 1);
-    }
-  }, [selection, getApiFilters, executeBulkUpdate]);
+      if (result) {
+        selection.clearSelection();
+        setShowBulkEditModal(false);
+        setToast({
+          message: `Updated ${result.processedProducts} products${result.failedProducts > 0 ? ` (${result.failedProducts} failed)` : ''}`,
+          type: result.failedProducts > 0 ? 'error' : 'success',
+        });
+        // Refresh the product list by incrementing refreshKey
+        setRefreshKey((k) => k + 1);
+      }
+    },
+    [selection, getLegacyApiFilters, executeBulkUpdate]
+  );
 
   // Column visibility
   const handleSaveColumns = (columns: string[]) => {
@@ -253,12 +271,14 @@ function CatalogPageContent() {
     }
   };
 
-  const isColumnVisible = (columnId: string) => visibleColumns.includes(columnId);
+  // Get visible column definitions
+  const visibleColumnDefs = visibleColumns
+    .map((id) => COLUMN_MAP.get(id))
+    .filter((col): col is ColumnDefinition => col !== undefined);
 
   // Calculate selection state
-  const pageIds = products.map(p => p.id);
-  const selectedOnPage = pageIds.filter(id => selection.isSelected(id)).length;
-  // When selectAllMatching is true, all products are considered selected
+  const pageIds = products.map((p) => p.id);
+  const selectedOnPage = pageIds.filter((id) => selection.isSelected(id)).length;
   const allOnPageSelected = selection.selectAllMatching || (pageIds.length > 0 && selectedOnPage === pageIds.length);
   const someOnPageSelected = !selection.selectAllMatching && selectedOnPage > 0 && selectedOnPage < pageIds.length;
   const hasSelection = selection.getSelectedCount() > 0 || selection.selectAllMatching;
@@ -266,6 +286,125 @@ function CatalogPageContent() {
 
   // Pagination
   const totalPages = Math.ceil(totalProducts / filters.limit) || 1;
+
+  // Render cell value based on column definition
+  const renderCellValue = (column: ColumnDefinition, product: Product) => {
+    const productData = product as unknown as ProductData;
+
+    // Special rendering for certain columns
+    switch (column.id) {
+      case 'checkbox':
+        return null; // Handled separately
+
+      case 'actions':
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRowClick(product.id);
+            }}
+            className="text-[#5df0c0] hover:text-[#5df0c0]/80 text-sm font-medium"
+          >
+            Edit
+          </button>
+        );
+
+      case 'image_link': {
+        const imageUrl = getColumnValue(productData, 'image_link') as string | null;
+        if (imageUrl) {
+          return <img src={imageUrl} alt={product.wooTitle || 'Product'} className="w-10 h-10 object-cover rounded" />;
+        }
+        return <div className="w-10 h-10 bg-white/10 rounded flex items-center justify-center text-white/30 text-xs">—</div>;
+      }
+
+      case 'title':
+        return <span className="text-sm text-white/80">{truncate(formatColumnValue(productData, 'title'), 60)}</span>;
+
+      case 'link': {
+        const url = getColumnValue(productData, 'link') as string | null;
+        if (url) {
+          return (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[#5df0c0] hover:text-[#5df0c0]/80 truncate block text-sm"
+              title={url}
+            >
+              {truncate(url, 30)}
+            </a>
+          );
+        }
+        return <span className="text-white/40">—</span>;
+      }
+
+      case 'syncStatus':
+        return <span className="text-sm text-white/60">{product.syncStatus}</span>;
+
+      case 'overrides': {
+        const count = getColumnValue(productData, 'overrides') as number;
+        return count > 0 ? (
+          <span className="text-[#5df0c0]">{count}</span>
+        ) : (
+          <span className="text-white/40">—</span>
+        );
+      }
+
+      case 'isValid': {
+        const validationCount = product.validationErrors ? Object.keys(product.validationErrors as object).length : 0;
+        if (product.isValid === false) {
+          return (
+            <div className="relative group">
+              <span className="text-amber-400 cursor-help">⚠️ {validationCount}</span>
+              <div className="absolute left-0 top-6 hidden group-hover:block z-20 w-80 p-3 bg-gray-900 border border-amber-500/30 rounded-lg shadow-xl text-xs">
+                <div className="font-semibold text-amber-400 mb-2">
+                  {validationCount} validation issue{validationCount !== 1 ? 's' : ''}
+                </div>
+                {product.validationErrors && (
+                  <ul className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {Object.entries(product.validationErrors as object).map(([field, errors]) => (
+                      <li key={field} className="text-white/80">
+                        <span className="text-white font-medium">{field}:</span>{' '}
+                        {Array.isArray(errors) ? errors.join(', ') : String(errors)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          );
+        }
+        return <span className="text-[#5df0c0]">✓</span>;
+      }
+
+      case 'updatedAt':
+        return (
+          <span className="text-sm text-white/60 whitespace-nowrap">
+            {product.updatedAt
+              ? new Date(product.updatedAt).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })
+              : '—'}
+          </span>
+        );
+
+      case 'enable_search':
+        return product.feedEnableSearch ? (
+          <span className="text-[#5df0c0]">Enabled</span>
+        ) : (
+          <span className="text-white/40">Disabled</span>
+        );
+
+      default: {
+        // Default rendering for other columns
+        const value = formatColumnValue(productData, column.id);
+        return <span className="text-sm text-white/70">{truncate(value, 50)}</span>;
+      }
+    }
+  };
 
   if (!hydrated) {
     return <main className="shell"><div className="subtle">Loading session...</div></main>;
@@ -275,13 +414,7 @@ function CatalogPageContent() {
   return (
     <main className="shell space-y-4">
       {/* Toast */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="panel space-y-4">
         {/* Header */}
@@ -311,47 +444,9 @@ function CatalogPageContent() {
 
         {/* Filters Bar */}
         <div className="flex items-center gap-4 flex-wrap">
-          <SearchFilter
-            value={searchInput}
-            onChange={setSearchInput}
-            placeholder="Search products..."
-          />
-          <FilterDropdown
-            label="Status"
-            options={SYNC_STATUS_OPTIONS}
-            selected={filters.syncStatus}
-            onChange={(values) => setFilters({ syncStatus: values })}
-          />
-          <BooleanFilter
-            label="Valid"
-            value={filters.isValid}
-            onChange={(value) => setFilters({ isValid: value })}
-          />
-          <BooleanFilter
-            label="Search Enabled"
-            value={filters.feedEnableSearch}
-            onChange={(value) => setFilters({ feedEnableSearch: value })}
-          />
-          <FilterDropdown
-            label="Stock"
-            options={STOCK_STATUS_OPTIONS}
-            selected={filters.wooStockStatus}
-            onChange={(values) => setFilters({ wooStockStatus: values })}
-          />
-          <BooleanFilter
-            label="Has Overrides"
-            value={filters.hasOverrides}
-            onChange={(value) => setFilters({ hasOverrides: value })}
-          />
-          {hasActiveFilters && (
-            <button
-              onClick={resetFilters}
-              className="text-sm text-white/60 hover:text-white underline"
-            >
-              Clear Filters
-            </button>
-          )}
+          <SearchFilter value={searchInput} onChange={setSearchInput} placeholder="Search products..." />
           <div className="flex-1" />
+          <ClearFiltersButton hasActiveFilters={hasColumnFilters} onClear={clearAllColumnFilters} />
           <button
             onClick={() => setShowEditColumnsModal(true)}
             className="px-3 py-1.5 text-sm text-white/60 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
@@ -376,119 +471,71 @@ function CatalogPageContent() {
           />
         )}
 
-        {/* Table */}
+        {/* Table with Horizontal Scroll */}
         {loading && <div className="subtle">Loading products...</div>}
         {!loading && !products.length && <div className="subtle">No products found.</div>}
         {!loading && products.length > 0 && (
-          <div className="overflow-hidden rounded-2xl border border-white/10">
-            <table className="table">
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <table className="table min-w-max">
               <thead>
                 <tr>
-                  {isColumnVisible('checkbox') && (
-                    <th className="w-12">
-                      <input
-                        type="checkbox"
-                        checked={allOnPageSelected}
-                        ref={(el) => { if (el) el.indeterminate = someOnPageSelected; }}
-                        onChange={handleToggleAll}
-                        className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50"
-                      />
-                    </th>
-                  )}
-                  {isColumnVisible('wooProductId') && (
-                    <th className="w-16 cursor-pointer" onClick={() => toggleSort('wooProductId')}>
-                      <div className="flex items-center gap-1">
-                        ID
-                        {filters.sortBy === 'wooProductId' && (
-                          <span className="text-[#5df0c0]">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  )}
-                  {isColumnVisible('image') && <th className="w-16">Image</th>}
-                  {isColumnVisible('wooTitle') && (
-                    <th className="cursor-pointer" onClick={() => toggleSort('wooTitle')}>
-                      <div className="flex items-center gap-1">
-                        Name
-                        {filters.sortBy === 'wooTitle' && (
-                          <span className="text-[#5df0c0]">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  )}
-                  {isColumnVisible('wooPermalink') && <th>URL</th>}
-                  {isColumnVisible('wooPrice') && (
-                    <th className="w-24 cursor-pointer" onClick={() => toggleSort('wooPrice')}>
-                      <div className="flex items-center gap-1">
-                        Price
-                        {filters.sortBy === 'wooPrice' && (
-                          <span className="text-[#5df0c0]">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  )}
-                  {isColumnVisible('syncStatus') && (
-                    <th className="w-24 cursor-pointer" onClick={() => toggleSort('syncStatus')}>
-                      <div className="flex items-center gap-1">
-                        Status
-                        {filters.sortBy === 'syncStatus' && (
-                          <span className="text-[#5df0c0]">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  )}
-                  {isColumnVisible('overrides') && <th className="w-24">Overrides</th>}
-                  {isColumnVisible('isValid') && (
-                    <th className="w-20 cursor-pointer" onClick={() => toggleSort('isValid')}>
-                      <div className="flex items-center gap-1">
-                        Valid
-                        {filters.sortBy === 'isValid' && (
-                          <span className="text-[#5df0c0]">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  )}
-                  {isColumnVisible('updatedAt') && (
-                    <th className="cursor-pointer" onClick={() => toggleSort('updatedAt')}>
-                      <div className="flex items-center gap-1">
-                        Last Modified
-                        {filters.sortBy === 'updatedAt' && (
-                          <span className="text-[#5df0c0]">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  )}
-                  {isColumnVisible('feedEnableSearch') && (
-                    <th className="w-28 cursor-pointer" onClick={() => toggleSort('feedEnableSearch')}>
-                      <div className="flex items-center gap-1">
-                        Search
-                        {filters.sortBy === 'feedEnableSearch' && (
-                          <span className="text-[#5df0c0]">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  )}
-                  {isColumnVisible('wooStockStatus') && <th className="w-28">Stock</th>}
-                  {isColumnVisible('wooStockQuantity') && (
-                    <th className="w-20 cursor-pointer" onClick={() => toggleSort('wooStockQuantity')}>
-                      <div className="flex items-center gap-1">
-                        Qty
-                        {filters.sortBy === 'wooStockQuantity' && (
-                          <span className="text-[#5df0c0]">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                  )}
-                  <th className="w-20">Actions</th>
+                  {visibleColumnDefs.map((column) => {
+                    // Checkbox column - sticky left
+                    if (column.id === 'checkbox') {
+                      return (
+                        <th key={column.id} className="w-12 sticky left-0 z-10 bg-[#1a1d29]">
+                          <input
+                            type="checkbox"
+                            checked={allOnPageSelected}
+                            ref={(el) => {
+                              if (el) el.indeterminate = someOnPageSelected;
+                            }}
+                            onChange={handleToggleAll}
+                            className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50"
+                          />
+                        </th>
+                      );
+                    }
+
+                    // Actions column
+                    if (column.id === 'actions') {
+                      return (
+                        <th key={column.id} className="w-20">
+                          Actions
+                        </th>
+                      );
+                    }
+
+                    // Regular columns with filter dropdown
+                    const columnFilter = getColumnFilter(column.id);
+                    const currentSort =
+                      filters.sortBy === column.id ? { column: column.id, order: filters.sortOrder } : null;
+
+                    return (
+                      <th key={column.id} className="min-w-[120px]">
+                        <ColumnHeaderDropdown
+                          columnId={column.id}
+                          label={column.label}
+                          sortable={column.sortable}
+                          filterable={column.filterable}
+                          currentSort={currentSort}
+                          currentTextFilter={columnFilter.text}
+                          currentValueFilter={columnFilter.values}
+                          uniqueValues={columnValuesCache[column.id] || []}
+                          loadingValues={loadingColumnValues[column.id] || false}
+                          onLoadValues={() => loadColumnValues(column.id)}
+                          onSort={(order) => setSort(column.id, order)}
+                          onTextFilter={(text) => setColumnTextFilter(column.id, text)}
+                          onValueFilter={(values) => setColumnValueFilter(column.id, values)}
+                          onClearFilter={() => clearColumnFilter(column.id)}
+                        />
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {products.map((p) => {
-                  const imageUrl = getProductImage(p.wooRawJson);
-                  const productUrl = getProductUrl(p.wooRawJson);
-                  const validationCount = p.validationErrors ? Object.keys(p.validationErrors as object).length : 0;
-                  const overrideCount = p.productFieldOverrides ? Object.keys(p.productFieldOverrides as object).length : 0;
-                  // When selectAllMatching is true, all visible products are considered selected
                   const isSelected = selection.selectAllMatching || selection.isSelected(p.id);
 
                   return (
@@ -496,155 +543,37 @@ function CatalogPageContent() {
                       key={p.id}
                       className={`cursor-pointer hover:bg-white/5 transition-colors ${isSelected ? 'bg-[#5df0c0]/5' : ''}`}
                     >
-                      {/* Checkbox */}
-                      {isColumnVisible('checkbox') && (
-                        <td onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => selection.toggleProduct(p.id)}
-                            className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50"
-                          />
-                        </td>
-                      )}
+                      {visibleColumnDefs.map((column) => {
+                        // Checkbox column - sticky left
+                        if (column.id === 'checkbox') {
+                          return (
+                            <td key={column.id} className="sticky left-0 z-10 bg-[#1a1d29]" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => selection.toggleProduct(p.id)}
+                                className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50"
+                              />
+                            </td>
+                          );
+                        }
 
-                      {/* ID */}
-                      {isColumnVisible('wooProductId') && (
-                        <td onClick={() => handleRowClick(p.id)} className="font-mono text-sm">{p.wooProductId}</td>
-                      )}
+                        // Actions column
+                        if (column.id === 'actions') {
+                          return (
+                            <td key={column.id} onClick={(e) => e.stopPropagation()}>
+                              {renderCellValue(column, p)}
+                            </td>
+                          );
+                        }
 
-                      {/* Image */}
-                      {isColumnVisible('image') && (
-                        <td onClick={() => handleRowClick(p.id)}>
-                          {imageUrl ? (
-                            <img src={imageUrl} alt={p.wooTitle || 'Product'} className="w-10 h-10 object-cover rounded" />
-                          ) : (
-                            <div className="w-10 h-10 bg-white/10 rounded flex items-center justify-center text-white/30 text-xs">—</div>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Name */}
-                      {isColumnVisible('wooTitle') && (
-                        <td onClick={() => handleRowClick(p.id)} className="text-sm text-white/80 max-w-[200px]">
-                          {truncate(p.wooTitle, 60)}
-                        </td>
-                      )}
-
-                      {/* URL */}
-                      {isColumnVisible('wooPermalink') && (
-                        <td className="text-sm max-w-[180px]">
-                          {productUrl ? (
-                            <a
-                              href={productUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-[#5df0c0] hover:text-[#5df0c0]/80 truncate block"
-                              title={productUrl}
-                            >
-                              {truncate(productUrl, 30)}
-                            </a>
-                          ) : (
-                            <span className="text-white/40">—</span>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Price */}
-                      {isColumnVisible('wooPrice') && (
-                        <td onClick={() => handleRowClick(p.id)}>{p.wooPrice ? `$${p.wooPrice}` : '—'}</td>
-                      )}
-
-                      {/* Status */}
-                      {isColumnVisible('syncStatus') && (
-                        <td onClick={() => handleRowClick(p.id)} className="subtle text-sm">{p.syncStatus}</td>
-                      )}
-
-                      {/* Overrides */}
-                      {isColumnVisible('overrides') && (
-                        <td onClick={() => handleRowClick(p.id)} className="text-sm text-center">
-                          {overrideCount > 0 ? (
-                            <span className="text-[#5df0c0]">{overrideCount}</span>
-                          ) : (
-                            <span className="text-white/40">—</span>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Validation */}
-                      {isColumnVisible('isValid') && (
-                        <td onClick={() => handleRowClick(p.id)}>
-                          {p.isValid === false ? (
-                            <div className="relative group">
-                              <span className="text-amber-400 cursor-help">⚠️ {validationCount}</span>
-                              <div className="absolute left-0 top-6 hidden group-hover:block z-20 w-80 p-3 bg-gray-900 border border-amber-500/30 rounded-lg shadow-xl text-xs">
-                                <div className="font-semibold text-amber-400 mb-2">
-                                  {validationCount} validation issue{validationCount !== 1 ? 's' : ''}
-                                </div>
-                                {p.validationErrors && (
-                                  <ul className="space-y-1.5 max-h-48 overflow-y-auto">
-                                    {Object.entries(p.validationErrors as object).map(([field, errors]) => (
-                                      <li key={field} className="text-white/80">
-                                        <span className="text-white font-medium">{field}:</span>{' '}
-                                        {Array.isArray(errors) ? errors.join(', ') : String(errors)}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-[#5df0c0]">✓</span>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Last Modified */}
-                      {isColumnVisible('updatedAt') && (
-                        <td onClick={() => handleRowClick(p.id)} className="subtle text-sm whitespace-nowrap">
-                          {p.updatedAt ? new Date(p.updatedAt).toLocaleString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          }) : '—'}
-                        </td>
-                      )}
-
-                      {/* Enable Search */}
-                      {isColumnVisible('feedEnableSearch') && (
-                        <td onClick={() => handleRowClick(p.id)} className="text-sm">
-                          {p.feedEnableSearch ? (
-                            <span className="text-[#5df0c0]">Enabled</span>
-                          ) : (
-                            <span className="text-white/40">Disabled</span>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Stock Status */}
-                      {isColumnVisible('wooStockStatus') && (
-                        <td onClick={() => handleRowClick(p.id)} className="text-sm text-white/60">
-                          {p.wooStockStatus || '—'}
-                        </td>
-                      )}
-
-                      {/* Stock Quantity */}
-                      {isColumnVisible('wooStockQuantity') && (
-                        <td onClick={() => handleRowClick(p.id)} className="text-sm text-white/60">
-                          {p.wooStockQuantity ?? '—'}
-                        </td>
-                      )}
-
-                      {/* Actions */}
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleRowClick(p.id)}
-                          className="text-[#5df0c0] hover:text-[#5df0c0]/80 text-sm font-medium"
-                        >
-                          Edit
-                        </button>
-                      </td>
+                        // Regular columns - clickable to navigate
+                        return (
+                          <td key={column.id} onClick={() => handleRowClick(p.id)}>
+                            {renderCellValue(column, p)}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}
@@ -657,7 +586,8 @@ function CatalogPageContent() {
         {totalProducts > 0 && (
           <div className="flex items-center justify-between pt-4">
             <div className="text-sm text-white/60">
-              Showing {((filters.page - 1) * filters.limit) + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of {totalProducts.toLocaleString()} products
+              Showing {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of{' '}
+              {totalProducts.toLocaleString()} products
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -667,8 +597,10 @@ function CatalogPageContent() {
                   onChange={(e) => setFilters({ limit: Number(e.target.value), page: 1 })}
                   className="px-2 py-1 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]/50"
                 >
-                  {PAGE_SIZE_OPTIONS.map(size => (
-                    <option key={size} value={size}>{size}</option>
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -710,6 +642,7 @@ function CatalogPageContent() {
       <EditColumnsModal
         isOpen={showEditColumnsModal}
         onClose={() => setShowEditColumnsModal(false)}
+        shopId={params?.id || ''}
         visibleColumns={visibleColumns}
         onSave={handleSaveColumns}
       />
