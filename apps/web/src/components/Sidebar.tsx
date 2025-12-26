@@ -39,7 +39,6 @@ export function Sidebar() {
       { href: `/shops/${selectedShop.id}/products`, label: 'Products', icon: '📦' },
     ] : []),
     { href: '/shops', label: 'Shops', icon: '🏪' },
-    { href: '/settings', label: 'Settings', icon: '🔧' },
   ];
 
   return (
@@ -148,17 +147,9 @@ export function Sidebar() {
 
           {showAccountMenu && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#252936] rounded-lg border border-white/10 shadow-xl">
-              <Link
-                href="/settings"
-                className="flex items-center gap-3 px-4 py-3 hover:bg-[#2d3142] transition-colors rounded-t-lg"
-                onClick={() => setShowAccountMenu(false)}
-              >
-                <span className="text-white/60">⚙️</span>
-                <span className="text-sm text-white">Account settings</span>
-              </Link>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#2d3142] transition-colors rounded-b-lg"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#2d3142] transition-colors rounded-lg"
               >
                 <span className="text-white/60">→</span>
                 <span className="text-sm text-white">Log out</span>
