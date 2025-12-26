@@ -296,16 +296,30 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
 
       // Check if it's an OpenAI attribute
       if (OPENAI_COLUMNS.has(columnId)) {
-        // Text filter on OpenAI JSON attribute
-        if (filter.text?.trim()) {
-          const textEscaped = escapeSqlString(filter.text.trim());
-          whereConditions.push(`"openai_auto_filled"->>'${columnId}' ILIKE '%${textEscaped}%'`);
-        }
-
         // Value filter on OpenAI JSON attribute
         if (filter.values?.length) {
-          const values = filter.values.map(v => `'${escapeSqlString(v)}'`).join(',');
-          whereConditions.push(`"openai_auto_filled"->>'${columnId}' IN (${values})`);
+          const hasEmpty = filter.values.includes('__empty__');
+          const nonEmptyValues = filter.values.filter(v => v !== '__empty__');
+
+          if (hasEmpty && nonEmptyValues.length > 0) {
+            // Filter for empty OR specific values
+            const values = nonEmptyValues.map(v => `'${escapeSqlString(v)}'`).join(',');
+            whereConditions.push(`(
+              "openai_auto_filled"->>'${columnId}' IS NULL
+              OR "openai_auto_filled"->>'${columnId}' = ''
+              OR "openai_auto_filled"->>'${columnId}' IN (${values})
+            )`);
+          } else if (hasEmpty) {
+            // Filter for empty only
+            whereConditions.push(`(
+              "openai_auto_filled"->>'${columnId}' IS NULL
+              OR "openai_auto_filled"->>'${columnId}' = ''
+            )`);
+          } else {
+            // Filter for specific values only
+            const values = filter.values.map(v => `'${escapeSqlString(v)}'`).join(',');
+            whereConditions.push(`"openai_auto_filled"->>'${columnId}' IN (${values})`);
+          }
         }
       }
     }
@@ -593,11 +607,18 @@ async function getDatabaseColumnValues(
     },
   });
 
-  // Count occurrences
+  // Count occurrences (including empty/null values)
   const valueCounts = new Map<string, number>();
+  const EMPTY_VALUE_KEY = '__empty__';
+
   for (const product of products) {
-    const value = String((product as any)[dbColumn] ?? '');
-    valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
+    const rawValue = (product as any)[dbColumn];
+    if (rawValue === null || rawValue === undefined || rawValue === '') {
+      valueCounts.set(EMPTY_VALUE_KEY, (valueCounts.get(EMPTY_VALUE_KEY) || 0) + 1);
+    } else {
+      const value = String(rawValue);
+      valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
+    }
   }
 
   // Convert to array and sort by count
@@ -650,14 +671,24 @@ async function getOpenAIColumnValues(
     },
   });
 
-  // Extract values from JSON
+  // Extract values from JSON (including empty/null values)
   const valueCounts = new Map<string, number>();
+  const EMPTY_VALUE_KEY = '__empty__';
+
   for (const product of products) {
     const openai = product.openaiAutoFilled as Record<string, unknown> | null;
-    if (!openai) continue;
+
+    // Check if value is empty/null/undefined
+    if (!openai) {
+      valueCounts.set(EMPTY_VALUE_KEY, (valueCounts.get(EMPTY_VALUE_KEY) || 0) + 1);
+      continue;
+    }
 
     const rawValue = openai[column];
-    if (rawValue === null || rawValue === undefined || rawValue === '') continue;
+    if (rawValue === null || rawValue === undefined || rawValue === '') {
+      valueCounts.set(EMPTY_VALUE_KEY, (valueCounts.get(EMPTY_VALUE_KEY) || 0) + 1);
+      continue;
+    }
 
     const value = String(rawValue);
     valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
@@ -696,6 +727,9 @@ async function getOpenAIColumnValues(
  * Format value for display label
  */
 function formatValueLabel(value: string, column: string): string {
+  // Empty/null values
+  if (value === '__empty__') return '(Empty)';
+
   // Boolean values
   if (value === 'true') return 'Yes';
   if (value === 'false') return 'No';
