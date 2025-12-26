@@ -40,6 +40,54 @@ const DATABASE_COLUMNS_SQL: Record<string, string> = {
   'feedEnableSearch': 'feed_enable_search',
 };
 
+// Columns needed for catalog listing (optimized - only what frontend actually uses)
+const CATALOG_COLUMNS_SQL = `
+  "id",
+  "sync_status",
+  "is_valid",
+  "validation_errors",
+  "updated_at",
+  "feed_enable_search",
+  "openai_auto_filled",
+  "product_field_overrides"
+`;
+
+// Map for catalog columns: PostgreSQL snake_case -> Prisma camelCase
+const CATALOG_COLUMN_MAP: Record<string, string> = {
+  sync_status: 'syncStatus',
+  is_valid: 'isValid',
+  validation_errors: 'validationErrors',
+  updated_at: 'updatedAt',
+  feed_enable_search: 'feedEnableSearch',
+  openai_auto_filled: 'openaiAutoFilled',
+  product_field_overrides: 'productFieldOverrides',
+};
+
+// Prisma select for catalog listing
+const CATALOG_SELECT = {
+  id: true,
+  syncStatus: true,
+  isValid: true,
+  validationErrors: true,
+  updatedAt: true,
+  feedEnableSearch: true,
+  openaiAutoFilled: true,
+  productFieldOverrides: true,
+};
+
+/**
+ * Transform raw SQL product result from snake_case to camelCase
+ * Only transforms catalog-specific columns for efficiency
+ */
+function transformRawProductToCamelCase(raw: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const camelKey = CATALOG_COLUMN_MAP[key] || key;
+    result[camelKey] = value;
+  }
+  return result;
+}
+
 // Computed columns that require special SQL handling
 const COMPUTED_SORT_COLUMNS = new Set([
   'overrides', // Sort by count of keys in productFieldOverrides JSON
@@ -379,12 +427,15 @@ export async function listProducts(shopId: string, options: ListProductsOptions 
       orderByClause = `"${dbColumn}" ${direction}`;
     }
 
-    const items = await prisma.$queryRawUnsafe<any[]>(`
-      SELECT * FROM "Product"
+    const rawItems = await prisma.$queryRawUnsafe<any[]>(`
+      SELECT ${CATALOG_COLUMNS_SQL} FROM "Product"
       WHERE ${whereClause}
       ORDER BY ${orderByClause}
       LIMIT ${limit} OFFSET ${skip}
     `);
+
+    // Transform snake_case columns to camelCase (raw SQL returns DB column names)
+    const items = rawItems.map(transformRawProductToCamelCase);
 
     const countResult = await prisma.$queryRawUnsafe<{ count: bigint }[]>(`
       SELECT COUNT(*) as count FROM "Product"
@@ -403,7 +454,7 @@ export async function listProducts(shopId: string, options: ListProductsOptions 
     };
   }
 
-  // Standard Prisma query for database columns
+  // Standard Prisma query for database columns (optimized select)
   const where = buildWhereClause(shopId, parentIds, options);
   const [items, total] = await Promise.all([
     prisma.product.findMany({
@@ -411,6 +462,7 @@ export async function listProducts(shopId: string, options: ListProductsOptions 
       skip,
       take: limit,
       orderBy: sortType.orderBy,
+      select: CATALOG_SELECT,
     }),
     prisma.product.count({ where }),
   ]);
