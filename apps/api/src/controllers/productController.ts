@@ -622,9 +622,13 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
       overrideCount: Object.keys(productOverrides).length,
     });
 
+    // Use OpenAI title with fallback to wooTitle
+    const openaiData = product.openaiAutoFilled as Record<string, unknown> | null;
+    const productTitle = (openaiData?.title as string) || product.wooTitle;
+
     res.json({
       productId: product.id,
-      productTitle: product.wooTitle,
+      productTitle,
       overrides: productOverrides,
       shopMappings,
       resolvedValues: product.openaiAutoFilled || {},

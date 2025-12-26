@@ -24,12 +24,20 @@ export interface ListProductsOptions {
 // COLUMN CONFIGURATION (used for both sorting and filtering)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Columns stored directly in Product table (for Prisma queries)
+// Columns stored directly in Product table - Prisma field names (camelCase)
 const DATABASE_COLUMNS: Record<string, string> = {
   'syncStatus': 'syncStatus',
   'isValid': 'isValid',
   'updatedAt': 'updatedAt',
   'feedEnableSearch': 'feedEnableSearch',
+};
+
+// Same columns but with actual PostgreSQL column names (snake_case) for raw SQL
+const DATABASE_COLUMNS_SQL: Record<string, string> = {
+  'syncStatus': 'sync_status',
+  'isValid': 'is_valid',
+  'updatedAt': 'updated_at',
+  'feedEnableSearch': 'feed_enable_search',
 };
 
 // Computed columns that require special SQL handling
@@ -102,10 +110,14 @@ function getDbColumnForFilter(columnId: string): string | null {
 }
 
 /**
- * Check if any column filter requires raw SQL (can't be handled by Prisma)
- * This includes: computed columns (overrides), OpenAI JSON columns
+ * Check if query requires raw SQL (can't be handled by Prisma)
+ * This includes: computed columns (overrides), OpenAI JSON columns, global search
  */
-function requiresRawSqlFiltering(columnFilters?: Record<string, ColumnFilter>): boolean {
+function requiresRawSqlFiltering(options: ListProductsOptions): boolean {
+  // Global search requires raw SQL for case-insensitive JSON search on OpenAI attributes
+  if (options.search?.trim()) return true;
+
+  const columnFilters = options.columnFilters;
   if (!columnFilters) return false;
 
   for (const columnId of Object.keys(columnFilters)) {
@@ -127,13 +139,16 @@ function requiresRawSqlFiltering(columnFilters?: Record<string, ColumnFilter>): 
 
 /**
  * Build Prisma WHERE clause from filter options
+ * NOTE: This is only used when requiresRawSqlFiltering() returns false,
+ * which means no search term and only simple database column filters.
+ * Global search always uses raw SQL path for OpenAI JSON queries.
  */
 function buildWhereClause(
   shopId: string,
   parentIds: number[],
   options: ListProductsOptions
 ): Prisma.ProductWhereInput {
-  const { search, columnFilters } = options;
+  const { columnFilters } = options;
 
   const where: Prisma.ProductWhereInput = {
     shopId,
@@ -142,17 +157,7 @@ function buildWhereClause(
 
   const andConditions: Prisma.ProductWhereInput[] = [];
 
-  // Global text search on title and SKU
-  if (search && search.trim()) {
-    andConditions.push({
-      OR: [
-        { wooTitle: { contains: search.trim(), mode: 'insensitive' } },
-        { wooSku: { contains: search.trim(), mode: 'insensitive' } },
-      ],
-    });
-  }
-
-  // Process column filters
+  // Process column filters (only simple database columns)
   if (columnFilters) {
     for (const [columnId, filter] of Object.entries(columnFilters)) {
       if (!filter.values?.length && !filter.text) continue;
@@ -223,17 +228,18 @@ function escapeSqlString(value: string): string {
 
 /**
  * Build raw SQL WHERE clause for complex queries
+ * NOTE: Uses actual PostgreSQL column names (snake_case) not Prisma field names (camelCase)
  */
 function buildRawWhereClause(shopId: string, parentIds: number[], options: ListProductsOptions): string {
   const whereConditions: string[] = [
-    `"shopId" = '${escapeSqlString(shopId)}'`,
-    `"wooProductId" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})`,
+    `"shop_id" = '${escapeSqlString(shopId)}'`,
+    `"woo_product_id" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})`,
   ];
 
-  // Global text search
+  // Global text search on OpenAI attributes (title, sku)
   if (options.search?.trim()) {
     const searchEscaped = escapeSqlString(options.search.trim());
-    whereConditions.push(`("wooTitle" ILIKE '%${searchEscaped}%' OR "wooSku" ILIKE '%${searchEscaped}%')`);
+    whereConditions.push(`("openai_auto_filled"->>'title' ILIKE '%${searchEscaped}%' OR "openai_auto_filled"->>'sku' ILIKE '%${searchEscaped}%')`);
   }
 
   // Process column filters
@@ -242,19 +248,19 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
     // syncStatus column
     if (cf.syncStatus?.values?.length) {
       const statuses = cf.syncStatus.values.map(s => `'${escapeSqlString(s)}'`).join(',');
-      whereConditions.push(`"syncStatus" IN (${statuses})`);
+      whereConditions.push(`"sync_status" IN (${statuses})`);
     }
 
     // isValid column
     if (cf.isValid?.values?.length) {
       const boolValue = cf.isValid.values.includes('true');
-      whereConditions.push(`"isValid" = ${boolValue}`);
+      whereConditions.push(`"is_valid" = ${boolValue}`);
     }
 
     // enable_search / feedEnableSearch column
     if (cf.enable_search?.values?.length) {
       const boolValue = cf.enable_search.values.includes('true');
-      whereConditions.push(`"feedEnableSearch" = ${boolValue}`);
+      whereConditions.push(`"feed_enable_search" = ${boolValue}`);
     }
 
     // availability column -> maps to wooStockStatus
@@ -266,7 +272,7 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
       };
       const mappedValues = cf.availability.values.map(v => stockMap[v] || v);
       const statuses = mappedValues.map(s => `'${escapeSqlString(s)}'`).join(',');
-      whereConditions.push(`"wooStockStatus" IN (${statuses})`);
+      whereConditions.push(`"woo_stock_status" IN (${statuses})`);
     }
 
     // overrides column - filter by exact override count
@@ -275,8 +281,8 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
       // Compute override count and match against selected values
       whereConditions.push(`(
         CASE
-          WHEN "productFieldOverrides" IS NULL OR "productFieldOverrides" = '{}'::jsonb THEN '0'
-          ELSE (SELECT count(*)::text FROM jsonb_object_keys("productFieldOverrides"))
+          WHEN "product_field_overrides" IS NULL OR "product_field_overrides" = '{}'::jsonb THEN '0'
+          ELSE (SELECT count(*)::text FROM jsonb_object_keys("product_field_overrides"))
         END
       ) IN (${counts})`);
     }
@@ -293,13 +299,13 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
         // Text filter on OpenAI JSON attribute
         if (filter.text?.trim()) {
           const textEscaped = escapeSqlString(filter.text.trim());
-          whereConditions.push(`"openaiAutoFilled"->>'${columnId}' ILIKE '%${textEscaped}%'`);
+          whereConditions.push(`"openai_auto_filled"->>'${columnId}' ILIKE '%${textEscaped}%'`);
         }
 
         // Value filter on OpenAI JSON attribute
         if (filter.values?.length) {
           const values = filter.values.map(v => `'${escapeSqlString(v)}'`).join(',');
-          whereConditions.push(`"openaiAutoFilled"->>'${columnId}' IN (${values})`);
+          whereConditions.push(`"openai_auto_filled"->>'${columnId}' IN (${values})`);
         }
       }
     }
@@ -310,14 +316,15 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
 
 /**
  * Get ORDER BY SQL for computed columns
+ * NOTE: Uses actual PostgreSQL column names (snake_case)
  */
 function getComputedOrderBy(column: string, direction: string): string {
   switch (column) {
     case 'overrides':
-      // Sort by count of keys in productFieldOverrides JSON
-      return `COALESCE(jsonb_array_length(jsonb_path_query_array("productFieldOverrides", '$.*')), 0) ${direction}`;
+      // Sort by count of keys in product_field_overrides JSON
+      return `COALESCE(jsonb_array_length(jsonb_path_query_array("product_field_overrides", '$.*')), 0) ${direction}`;
     default:
-      return `"updatedAt" ${direction}`;
+      return `"updated_at" ${direction}`;
   }
 }
 
@@ -338,7 +345,7 @@ export async function listProducts(shopId: string, options: ListProductsOptions 
   // 2. Filtering by columns that require raw SQL (computed, OpenAI JSON)
   const needsRawSql = sortType.type === 'json' ||
                       sortType.type === 'computed' ||
-                      requiresRawSqlFiltering(options.columnFilters);
+                      requiresRawSqlFiltering(options);
 
   if (needsRawSql) {
     // Use raw SQL WHERE clause for these queries
@@ -346,14 +353,15 @@ export async function listProducts(shopId: string, options: ListProductsOptions 
     const direction = sortOrder.toUpperCase();
 
     // Build ORDER BY clause based on sort type
+    // NOTE: Uses actual PostgreSQL column names (snake_case)
     let orderByClause: string;
     if (sortType.type === 'json') {
-      orderByClause = `"openaiAutoFilled"->>'${sortType.attribute}' ${direction} NULLS LAST`;
+      orderByClause = `"openai_auto_filled"->>'${sortType.attribute}' ${direction} NULLS LAST`;
     } else if (sortType.type === 'computed') {
       orderByClause = getComputedOrderBy(sortType.column, direction);
     } else {
-      // Prisma sort type - use database column directly
-      const dbColumn = DATABASE_COLUMNS[sortBy] || 'updatedAt';
+      // Prisma sort type - use database column directly (snake_case for raw SQL)
+      const dbColumn = DATABASE_COLUMNS_SQL[sortBy] || 'updated_at';
       orderByClause = `"${dbColumn}" ${direction}`;
     }
 
@@ -415,7 +423,7 @@ export async function getFilteredProductIds(
   const parentIds = await getParentProductIds(shopId);
 
   // Use raw SQL when filters require it (computed columns, OpenAI JSON)
-  if (requiresRawSqlFiltering(options.columnFilters)) {
+  if (requiresRawSqlFiltering(options)) {
     const whereClause = buildRawWhereClause(shopId, parentIds, options);
     const products = await prisma.$queryRawUnsafe<{ id: string }[]>(`
       SELECT "id" FROM "Product"

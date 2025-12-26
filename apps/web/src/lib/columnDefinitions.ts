@@ -15,7 +15,6 @@ import {
 // Product type from API (simplified for column definitions)
 export interface ProductData {
   id: string;
-  wooProductId: number;
   syncStatus: string;
   isValid: boolean;
   validationErrors: string[] | null;
