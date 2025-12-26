@@ -73,7 +73,7 @@ function CatalogPageContent() {
     setColumnValueFilter,
     clearColumnFilter,
     clearAllColumnFilters,
-  } = useCatalogFilters();
+  } = useCatalogFilters(params?.id);
   const selection = useCatalogSelection();
   const { progress: bulkProgress, executeBulkUpdate } = useBulkUpdate(params?.id || '');
 

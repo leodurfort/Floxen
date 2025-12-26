@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -39,6 +39,46 @@ const DEFAULT_FILTERS: CatalogFilters = {
   limit: 50,
   columnFilters: {},
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOCAL STORAGE PERSISTENCE
+// ═══════════════════════════════════════════════════════════════════════════
+
+const STORAGE_KEY_PREFIX = 'productsynch:catalog:filters:';
+
+// Fields to persist (excluding page which should reset on return)
+interface PersistedFilters {
+  search: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  limit: number;
+  columnFilters: Record<string, ColumnFilter>;
+}
+
+function getStoredFilters(shopId: string): Partial<PersistedFilters> | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}${shopId}`);
+    if (stored) {
+      return JSON.parse(stored) as PersistedFilters;
+    }
+  } catch {
+    // Invalid JSON, ignore
+  }
+  return null;
+}
+
+function saveFilters(shopId: string, filters: CatalogFilters): void {
+  if (typeof window === 'undefined') return;
+  const toStore: PersistedFilters = {
+    search: filters.search,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
+    limit: filters.limit,
+    columnFilters: filters.columnFilters,
+  };
+  localStorage.setItem(`${STORAGE_KEY_PREFIX}${shopId}`, JSON.stringify(toStore));
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // URL ENCODING HELPERS
@@ -83,22 +123,59 @@ function encodeColumnFiltersToParams(
 // HOOK
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function useCatalogFilters() {
+export function useCatalogFilters(shopId?: string) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const hasRestoredFromStorage = useRef(false);
 
-  // Parse filters from URL
-  const filters = useMemo<CatalogFilters>(() => {
-    return {
-      search: searchParams.get('search') || '',
-      sortBy: searchParams.get('sortBy') || 'updatedAt',
-      sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc',
-      page: parseInt(searchParams.get('page') || '1', 10),
-      limit: parseInt(searchParams.get('limit') || '50', 10),
-      columnFilters: parseColumnFiltersFromParams(searchParams),
-    };
+  // Check if URL has any filter params (user explicitly navigated with filters)
+  const hasUrlParams = useMemo(() => {
+    return searchParams.has('search') ||
+           searchParams.has('sortBy') ||
+           searchParams.has('sortOrder') ||
+           searchParams.has('page') ||
+           searchParams.has('limit') ||
+           Array.from(searchParams.keys()).some(k => k.startsWith(CF_PREFIX));
   }, [searchParams]);
+
+  // Parse filters from URL, falling back to localStorage if no URL params
+  const filters = useMemo<CatalogFilters>(() => {
+    // If URL has explicit params, use them (URL takes precedence)
+    if (hasUrlParams) {
+      return {
+        search: searchParams.get('search') || '',
+        sortBy: searchParams.get('sortBy') || 'updatedAt',
+        sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc',
+        page: parseInt(searchParams.get('page') || '1', 10),
+        limit: parseInt(searchParams.get('limit') || '50', 10),
+        columnFilters: parseColumnFiltersFromParams(searchParams),
+      };
+    }
+
+    // No URL params - try to restore from localStorage
+    const stored = shopId ? getStoredFilters(shopId) : null;
+    if (stored) {
+      return {
+        search: stored.search ?? '',
+        sortBy: stored.sortBy ?? 'updatedAt',
+        sortOrder: stored.sortOrder ?? 'desc',
+        page: 1, // Always reset page when restoring
+        limit: stored.limit ?? 50,
+        columnFilters: stored.columnFilters ?? {},
+      };
+    }
+
+    // Default filters
+    return { ...DEFAULT_FILTERS };
+  }, [searchParams, hasUrlParams, shopId]);
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    if (shopId) {
+      saveFilters(shopId, filters);
+    }
+  }, [shopId, filters]);
 
   // Update URL with new filters
   const setFilters = useCallback((updates: Partial<CatalogFilters>) => {
