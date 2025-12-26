@@ -94,23 +94,23 @@ function isFilterable(spec: OpenAIFieldSpec): boolean {
   return true;
 }
 
-// Default visible columns (by ID)
-const DEFAULT_VISIBLE_COLUMNS = new Set([
-  'checkbox',
-  'id',
-  'image_link',
-  'title',
-  'link',
-  'price',
-  'syncStatus',
-  'overrides',
-  'isValid',
-  'updatedAt',
-  'enable_search',
-  'availability',
-  'inventory_quantity',
-  'actions',
-]);
+// Default visible columns in exact display order
+// This order is used when user first loads the catalog
+const DEFAULT_COLUMN_ORDER: string[] = [
+  'checkbox',        // Selection (always first)
+  'id',              // OpenAI: Basic Product Data
+  'image_link',      // OpenAI: Media
+  'title',           // OpenAI: Basic Product Data
+  'enable_search',   // OpenAI: Flags
+  'overrides',       // Custom: Override count
+  'isValid',         // Custom: Validation status
+  'updatedAt',       // Custom: Last modified
+  'syncStatus',      // Custom: Sync status
+  'actions',         // Actions (always last)
+];
+
+// Set for quick lookup of default visible columns
+const DEFAULT_VISIBLE_COLUMNS = new Set(DEFAULT_COLUMN_ORDER);
 
 // Generate column definitions from OpenAI spec
 function generateOpenAIColumns(): ColumnDefinition[] {
@@ -274,9 +274,10 @@ export const COLUMN_MAP: Map<string, ColumnDefinition> = new Map(
   ALL_COLUMNS.map((col) => [col.id, col])
 );
 
-// Get default visible column IDs
+// Get default visible column IDs in the correct display order
 export function getDefaultVisibleColumns(): string[] {
-  return ALL_COLUMNS.filter((col) => col.defaultVisible).map((col) => col.id);
+  // Return default columns in their exact defined order
+  return DEFAULT_COLUMN_ORDER.filter((id) => COLUMN_MAP.has(id));
 }
 
 // Get columns grouped by category
