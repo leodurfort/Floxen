@@ -418,7 +418,7 @@ export async function updateShop(
  * Get field mappings for a shop
  */
 export async function getFieldMappings(shopId: string, token: string) {
-  return request<{ mappings: Record<string, string> }>(
+  return request<{ mappings: Record<string, string | null>; userMappings: Record<string, string | null> }>(
     `/api/v1/shops/${shopId}/field-mappings`,
     {
       headers: { Authorization: `Bearer ${token}` },
@@ -431,15 +431,40 @@ export async function getFieldMappings(shopId: string, token: string) {
  */
 export async function updateFieldMappings(
   shopId: string,
-  mappings: Record<string, string>,
+  mappings: Record<string, string | null>,
+  propagationMode: 'apply_all' | 'preserve_overrides',
   token: string
 ) {
-  return request<{ shop: Shop }>(
+  return request<{ success: boolean }>(
     `/api/v1/shops/${shopId}/field-mappings`,
     {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ mappings }),
+      body: JSON.stringify({ mappings, propagationMode }),
+    }
+  );
+}
+
+/**
+ * Get WooCommerce fields available for mapping
+ */
+export async function getWooFields(shopId: string, token: string) {
+  return request<{ fields: Array<{ value: string; label: string; category: string; description?: string }> }>(
+    `/api/v1/shops/${shopId}/woo-fields`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+/**
+ * Get WooCommerce data for a specific product (for preview)
+ */
+export async function getProductWooData(shopId: string, productId: string, token: string) {
+  return request<{ wooData: Record<string, unknown>; shopData: Record<string, unknown> }>(
+    `/api/v1/shops/${shopId}/products/${productId}/woo-data`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
     }
   );
 }
