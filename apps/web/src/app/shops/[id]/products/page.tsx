@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { listProducts, refreshFeed, RefreshFeedResponse, BulkUpdateOperation, getColumnValues, CurrentFiltersForColumnValues } from '@/lib/api';
+import { API_URL, listProducts, refreshFeed, RefreshFeedResponse, BulkUpdateOperation, getColumnValues, CurrentFiltersForColumnValues } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
@@ -455,7 +455,7 @@ function CatalogPageContent() {
               {feedRefreshing ? 'Refreshing...' : 'Refresh Feed'}
             </button>
             <a
-              href={`${process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app'}/api/v1/feed/${params.id}/view`}
+              href={`${API_URL}/api/v1/feed/${params.id}/view`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2 border border-white/20 text-white/80 font-medium rounded-lg hover:bg-white/5 transition-all text-sm"

@@ -9,7 +9,7 @@ import {
   OpenAIFieldCategory,
   OpenAIFieldSpec,
 } from '@productsynch/shared';
-import { BulkUpdateOperation } from '@/lib/api';
+import { API_URL, BulkUpdateOperation } from '@/lib/api';
 import { WooCommerceField, searchWooFields } from '@/lib/wooCommerceFields';
 
 interface BulkEditModalProps {
@@ -82,7 +82,7 @@ export function BulkEditModal({
     setWooFieldsLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${shopId}/woo-fields`,
+        `${API_URL}/api/v1/shops/${shopId}/woo-fields`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (!res.ok) throw new Error('Failed to load WooCommerce fields');

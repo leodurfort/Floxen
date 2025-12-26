@@ -1,6 +1,6 @@
 import { ApiResponse, Product, Shop, User } from '@productsynch/shared';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app';
 
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;

@@ -12,6 +12,7 @@ import {
 } from '@productsynch/shared';
 import { ProductFieldMappingRow } from '@/components/setup/ProductFieldMappingRow';
 import { WooCommerceField } from '@/lib/wooCommerceFields';
+import { API_URL } from '@/lib/api';
 
 interface ProductInfo {
   id: string;
@@ -76,7 +77,7 @@ export default function ProductMappingPage() {
     setLoadError(null);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${params.pid}/field-overrides`,
+        `${API_URL}/api/v1/shops/${params.id}/products/${params.pid}/field-overrides`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (!res.ok) throw new Error('Failed to load product overrides');
@@ -104,7 +105,7 @@ export default function ProductMappingPage() {
     if (!accessToken) return;
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${params.pid}/woo-data`,
+        `${API_URL}/api/v1/shops/${params.id}/products/${params.pid}/woo-data`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (!res.ok) throw new Error('Failed to load WooCommerce data');
@@ -121,7 +122,7 @@ export default function ProductMappingPage() {
     setWooFieldsLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/woo-fields`,
+        `${API_URL}/api/v1/shops/${params.id}/woo-fields`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (!res.ok) throw new Error('Failed to load WooCommerce fields');
@@ -152,7 +153,7 @@ export default function ProductMappingPage() {
       setSaving(true);
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/shops/${params.id}/products/${params.pid}/field-overrides`,
+          `${API_URL}/api/v1/shops/${params.id}/products/${params.pid}/field-overrides`,
           {
             method: 'PUT',
             headers: {
