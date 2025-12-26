@@ -1,7 +1,7 @@
 /**
  * Column Definitions for Product Catalog Table
  *
- * Defines all 75 columns (70 OpenAI attributes + 5 custom columns)
+ * Defines all 76 columns (70 OpenAI attributes + 6 custom columns)
  * Used for dynamic column rendering, filtering, and sorting.
  */
 
@@ -22,7 +22,6 @@ export interface ProductData {
   openaiAutoFilled: Record<string, unknown> | null;
   wooRawJson: Record<string, unknown> | null;
   updatedAt: string;
-  createdAt: string;
 }
 
 export type ColumnDataType = 'string' | 'number' | 'boolean' | 'enum' | 'date' | 'url' | 'image';
@@ -38,14 +37,12 @@ export interface ColumnDefinition {
   category: string;
   categoryOrder: number;
   supportedValues?: string[]; // For enum types
-  width?: string; // CSS width
   getValue: (product: ProductData) => unknown;
   formatValue?: (value: unknown) => string; // Format for display
 }
 
-// Custom column category
-const CUSTOM_CATEGORY = 'custom';
-const CUSTOM_CATEGORY_ORDER = 0; // Show first
+// Custom column category order (show first)
+const CUSTOM_CATEGORY_ORDER = 0;
 
 // Helper to extract value from openaiAutoFilled
 function getOpenAIValue(product: ProductData, attribute: string): unknown {
@@ -90,7 +87,7 @@ function isSortable(spec: OpenAIFieldSpec, dataType: ColumnDataType): boolean {
 }
 
 // Helper to determine if column is filterable
-function isFilterable(spec: OpenAIFieldSpec, dataType: ColumnDataType): boolean {
+function isFilterable(spec: OpenAIFieldSpec): boolean {
   // Arrays and complex JSON are not filterable
   if (spec.dataType.toLowerCase().includes('array')) return false;
   if (spec.attribute === 'raw_review_data') return false;
@@ -127,13 +124,13 @@ function generateOpenAIColumns(): ColumnDefinition[] {
       openaiAttribute: spec.attribute,
       dataType,
       sortable: isSortable(spec, dataType),
-      filterable: isFilterable(spec, dataType),
+      filterable: isFilterable(spec),
       defaultVisible: DEFAULT_VISIBLE_COLUMNS.has(spec.attribute),
       category: categoryConfig?.label || spec.category,
       categoryOrder: categoryConfig?.order || 99,
       supportedValues: parseSupportedValues(spec),
       getValue: (product: ProductData) => getOpenAIValue(product, spec.attribute),
-      formatValue: getFormatFunction(dataType, spec),
+      formatValue: getFormatFunction(dataType),
     };
   });
 }
@@ -147,10 +144,7 @@ function formatLabel(attribute: string): string {
 }
 
 // Get format function based on data type
-function getFormatFunction(
-  dataType: ColumnDataType,
-  spec: OpenAIFieldSpec
-): ((value: unknown) => string) | undefined {
+function getFormatFunction(dataType: ColumnDataType): ((value: unknown) => string) | undefined {
   switch (dataType) {
     case 'boolean':
     case 'enum':
@@ -254,14 +248,7 @@ const CUSTOM_COLUMNS: ColumnDefinition[] = [
     category: 'Status',
     categoryOrder: CUSTOM_CATEGORY_ORDER,
     getValue: (product: ProductData) => product.updatedAt,
-    formatValue: (value) => {
-      if (!value) return '-';
-      try {
-        return new Date(String(value)).toLocaleDateString();
-      } catch {
-        return '-';
-      }
-    },
+    formatValue: getFormatFunction('date'),
   },
   {
     id: 'actions',
@@ -311,22 +298,6 @@ export function getColumnsByCategory(): Map<string, ColumnDefinition[]> {
   }
 
   return grouped;
-}
-
-// Get sortable columns
-export function getSortableColumns(): ColumnDefinition[] {
-  return ALL_COLUMNS.filter((col) => col.sortable);
-}
-
-// Get filterable columns
-export function getFilterableColumns(): ColumnDefinition[] {
-  return ALL_COLUMNS.filter((col) => col.filterable);
-}
-
-// Check if column is an OpenAI attribute
-export function isOpenAIColumn(columnId: string): boolean {
-  const col = COLUMN_MAP.get(columnId);
-  return col?.openaiAttribute !== undefined;
 }
 
 // Get column value from product
@@ -380,8 +351,3 @@ export function saveStoredColumns(shopId: string, columns: string[]): void {
     localStorage.setItem(`${STORAGE_KEY_PREFIX}${shopId}`, JSON.stringify(columns));
   }
 }
-
-// Export constants
-export const TOTAL_COLUMNS = ALL_COLUMNS.length;
-export const OPENAI_COLUMN_COUNT = OPENAI_FEED_SPEC.length;
-export const CUSTOM_COLUMN_COUNT = CUSTOM_COLUMNS.length;
