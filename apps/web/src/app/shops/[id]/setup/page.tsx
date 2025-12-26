@@ -130,8 +130,8 @@ export default function SetupPage() {
       if (!res.ok) throw new Error('Failed to load WooCommerce fields');
       const data = await res.json();
       setWooFields(data.fields || []);
-    } catch {
-      // WooCommerce fields load failed silently
+    } catch (error) {
+      console.error('Failed to load WooCommerce fields:', error);
     } finally {
       setWooFieldsLoading(false);
     }
