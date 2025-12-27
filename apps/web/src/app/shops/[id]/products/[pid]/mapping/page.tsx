@@ -283,6 +283,7 @@ export default function ProductMappingPage() {
                       serverValidationErrors={overridesData?.validationErrors?.[spec.attribute] || null}
                       feedEnableSearch={overridesData?.feedEnableSearch}
                       onEnableSearchChange={handleEnableSearchChange}
+                      shopDefaultEnableSearch={overridesData?.shopDefaultEnableSearch}
                     />
                   ))}
                 </div>

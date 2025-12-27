@@ -195,8 +195,38 @@ export async function updateProduct(req: Request, res: Response) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // If feedEnableSearch was updated, reprocess to update openaiAutoFilled
+    // If feedEnableSearch was updated, manage the marker in productFieldOverrides
     if (parse.data.feedEnableSearch !== undefined) {
+      // Get shop's default to compare
+      const shop = await prisma.shop.findUnique({
+        where: { id },
+        select: { defaultEnableSearch: true },
+      });
+
+      // Get current overrides
+      const currentProduct = await prisma.product.findUnique({
+        where: { id: pid },
+        select: { productFieldOverrides: true },
+      });
+      const overrides = (currentProduct?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+
+      // Add or remove marker based on whether value differs from shop default
+      const isCustomized = parse.data.feedEnableSearch !== shop?.defaultEnableSearch;
+      if (isCustomized) {
+        // Add marker to track customization (for override count)
+        overrides['enable_search'] = { type: 'static', value: parse.data.feedEnableSearch ? 'true' : 'false' };
+      } else {
+        // Remove marker if back to shop default
+        delete overrides['enable_search'];
+      }
+
+      // Update overrides
+      await prisma.product.update({
+        where: { id: pid },
+        data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue },
+      });
+
+      // Reprocess to update openaiAutoFilled
       await reprocessProduct(pid);
     }
 
@@ -236,7 +266,8 @@ const BULK_UPDATE_CHUNK_SIZE = 100;
  */
 async function applyBulkUpdateToProduct(
   productId: string,
-  update: BulkUpdateOperation
+  update: BulkUpdateOperation,
+  shopId: string
 ): Promise<void> {
   switch (update.type) {
     case 'enable_search': {
@@ -244,6 +275,33 @@ async function applyBulkUpdateToProduct(
       await prisma.product.update({
         where: { id: productId },
         data: { feedEnableSearch: update.value, updatedAt: new Date() },
+      });
+
+      // Get shop's default to compare
+      const shop = await prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { defaultEnableSearch: true },
+      });
+
+      // Get current overrides
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { productFieldOverrides: true },
+      });
+      const overrides = (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+
+      // Add or remove marker based on whether value differs from shop default
+      const isCustomized = update.value !== shop?.defaultEnableSearch;
+      if (isCustomized) {
+        overrides['enable_search'] = { type: 'static', value: update.value ? 'true' : 'false' };
+      } else {
+        delete overrides['enable_search'];
+      }
+
+      // Update overrides
+      await prisma.product.update({
+        where: { id: productId },
+        data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue },
       });
 
       // Reprocess to update openaiAutoFilled.enable_search for catalog display
@@ -434,7 +492,7 @@ export async function bulkUpdate(req: Request, res: Response) {
       const results = await Promise.all(
         chunk.map(async (productId) => {
           try {
-            await applyBulkUpdateToProduct(productId, update);
+            await applyBulkUpdateToProduct(productId, update, shopId);
             return { productId, success: true as const };
           } catch (err) {
             return {
@@ -631,6 +689,12 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
+    // Get shop to retrieve defaultEnableSearch
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { defaultEnableSearch: true },
+    });
+
     // Get shop-level mappings for reference
     const fieldMappings = await prisma.fieldMapping.findMany({
       where: { shopId },
@@ -665,6 +729,7 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
       resolvedValues: product.openaiAutoFilled || {},
       feedEnableSearch: product.feedEnableSearch,
       feedEnableCheckout: product.feedEnableCheckout,
+      shopDefaultEnableSearch: shop?.defaultEnableSearch ?? true,
       isValid: product.isValid,
       validationErrors: product.validationErrors,
     });

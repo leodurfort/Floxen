@@ -73,6 +73,7 @@ interface Props {
   // enable_search uses the feedEnableSearch column directly (not overrides)
   feedEnableSearch?: boolean;
   onEnableSearchChange?: (enableSearch: boolean) => void;
+  shopDefaultEnableSearch?: boolean;  // Shop-level default for enable_search
 }
 
 export function ProductFieldMappingRow({
@@ -88,6 +89,7 @@ export function ProductFieldMappingRow({
   serverValidationErrors,
   feedEnableSearch,
   onEnableSearchChange,
+  shopDefaultEnableSearch,
 }: Props) {
   const requirementColors = {
     Required: 'bg-red-500/20 text-red-300 border-red-500/30',
@@ -382,16 +384,27 @@ export function ProductFieldMappingRow({
       <div className="flex flex-col gap-2">
         {isEnableSearchField ? (
           // enable_search - uses feedEnableSearch column directly (not overrides)
-          <select
-            value={feedEnableSearch ? 'true' : 'false'}
-            onChange={(e) => {
-              onEnableSearchChange?.(e.target.value === 'true');
-            }}
-            className="w-full px-3 py-2 bg-[#1a1d29] rounded-lg border border-white/10 text-white text-sm focus:border-[#5df0c0]/50 focus:outline-none"
-          >
-            <option value="true">Enabled (true)</option>
-            <option value="false">Disabled (false)</option>
-          </select>
+          <>
+            <select
+              value={feedEnableSearch ? 'true' : 'false'}
+              onChange={(e) => {
+                onEnableSearchChange?.(e.target.value === 'true');
+              }}
+              className="w-full px-3 py-2 bg-[#1a1d29] rounded-lg border border-white/10 text-white text-sm focus:border-[#5df0c0]/50 focus:outline-none"
+            >
+              <option value="true">Enabled (true)</option>
+              <option value="false">Disabled (false)</option>
+            </select>
+            {/* Reset button when enable_search differs from shop default */}
+            {shopDefaultEnableSearch !== undefined && feedEnableSearch !== shopDefaultEnableSearch && (
+              <button
+                onClick={() => onEnableSearchChange?.(shopDefaultEnableSearch)}
+                className="text-xs text-white/50 hover:text-white/80 underline text-left"
+              >
+                Reset to Shop Default ({shopDefaultEnableSearch ? 'Enabled' : 'Disabled'})
+              </button>
+            )}
+          </>
         ) : isReadOnly ? (
           // Read-only field display - use spec properties for display text
           <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">

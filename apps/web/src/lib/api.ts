@@ -500,6 +500,7 @@ export interface ProductOverridesResponse {
   resolvedValues: Record<string, unknown>;
   feedEnableSearch: boolean;
   feedEnableCheckout: boolean;
+  shopDefaultEnableSearch: boolean;
   isValid?: boolean;
   validationErrors?: Record<string, string[]> | null;
 }
