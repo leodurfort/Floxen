@@ -9,6 +9,7 @@ const display = Space_Grotesk({
   weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
   display: 'swap',
+  preload: false, // Only used on homepage, don't preload on every page
 });
 
 const body = Manrope({
