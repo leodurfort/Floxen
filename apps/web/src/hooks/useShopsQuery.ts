@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/store/auth';
-import { useShops } from '@/store/shops';
 import * as api from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
 import type { Shop } from '@productsynch/shared';
@@ -61,11 +60,13 @@ export function useCreateShopMutation() {
 
 /**
  * Mutation hook for deleting a shop
- * Handles Zustand store cleanup and query invalidation
+ * Handles optimistic update and query invalidation
+ *
+ * Note: With URL-first architecture, no Zustand store cleanup needed.
+ * The sidebar's useCurrentShop will recompute based on the new shops list.
  */
 export function useDeleteShopMutation() {
   const queryClient = useQueryClient();
-  const { selectedShop, setSelectedShop } = useShops();
 
   return useMutation({
     mutationFn: async (shopId: string) => {
@@ -82,13 +83,6 @@ export function useDeleteShopMutation() {
       queryClient.setQueryData<Shop[]>(queryKeys.shops.all, (old) =>
         old?.filter((s) => s.id !== shopId) ?? []
       );
-
-      // If deleted shop was selected, clear selection
-      if (selectedShop?.id === shopId) {
-        const remaining = previousShops?.filter((s) => s.id !== shopId) ?? [];
-        const connected = remaining.find((s) => s.isConnected);
-        setSelectedShop(connected || remaining[0] || null);
-      }
 
       return { previousShops };
     },
