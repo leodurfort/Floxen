@@ -161,7 +161,7 @@ export default function ProductMappingPage() {
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-2">
               <h1 className="text-3xl font-bold text-white">
-                {product?.wooTitle || 'Product Field Mappings'}
+                {(typeof resolvedValues['title'] === 'string' && resolvedValues['title']) || 'Untitled Product'}
               </h1>
               {overrideCount > 0 && (
                 <span className="text-xs px-2 py-1 rounded bg-[#5df0c0]/20 text-[#5df0c0] border border-[#5df0c0]/30">
