@@ -4,26 +4,22 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { useShops } from '@/store/shops';
-import { useShopsQuery } from '@/hooks/useShopsQuery';
-import { Shop } from '@productsynch/shared';
+import { useCurrentShop } from '@/hooks/useCurrentShop';
+import type { Shop } from '@productsynch/shared';
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, clear } = useAuth();
 
-  // React Query for shops data (replaces loadShops from Zustand)
-  const { data: shops = [] } = useShopsQuery();
-
-  // Keep selection state in Zustand for coordination with other components
-  const { selectedShop, setSelectedShop } = useShops();
+  // URL-first shop selection - derives current shop from URL
+  const { currentShop, shops } = useCurrentShop();
 
   const [showShopDropdown, setShowShopDropdown] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
 
   function handleShopChange(shop: Shop) {
-    setSelectedShop(shop);
+    // Just navigate - the URL becomes the source of truth
     setShowShopDropdown(false);
     router.push(`/shops/${shop.id}/products`);
   }
@@ -33,11 +29,12 @@ export function Sidebar() {
     router.push('/login');
   }
 
+  // Build nav items based on current shop from URL
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-    ...(selectedShop?.isConnected ? [
-      { href: `/shops/${selectedShop.id}/setup`, label: 'Setup', icon: '⚙️' },
-      { href: `/shops/${selectedShop.id}/products`, label: 'Products', icon: '📦' },
+    ...(currentShop?.isConnected ? [
+      { href: `/shops/${currentShop.id}/setup`, label: 'Setup', icon: '⚙️' },
+      { href: `/shops/${currentShop.id}/products`, label: 'Products', icon: '📦' },
     ] : []),
     { href: '/shops', label: 'Shops', icon: '🏪' },
   ];
@@ -61,7 +58,7 @@ export function Sidebar() {
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-white/40 mb-1">Current Shop</div>
                   <div className="text-sm text-white font-medium truncate">
-                    {selectedShop?.shopName || 'Select a shop'}
+                    {currentShop?.shopName || 'Select a shop'}
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +74,7 @@ export function Sidebar() {
                     key={shop.id}
                     onClick={() => handleShopChange(shop)}
                     className={`w-full p-3 text-left hover:bg-[#2d3142] transition-colors ${
-                      selectedShop?.id === shop.id ? 'bg-[#2d3142]' : ''
+                      currentShop?.id === shop.id ? 'bg-[#2d3142]' : ''
                     }`}
                   >
                     <div className="text-sm text-white font-medium">{shop.shopName}</div>
@@ -102,7 +99,7 @@ export function Sidebar() {
           } else if (item.label === 'Products') {
             isActive = pathname.includes('/products');
           } else if (item.label === 'Shops') {
-            isActive = pathname === '/shops' || (pathname === '/shops' && !pathname.includes('/products'));
+            isActive = pathname === '/shops';
           } else {
             isActive = pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/');
           }

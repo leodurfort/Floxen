@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
@@ -17,12 +17,28 @@ import {
 
 export default function ShopsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
 
   // React Query hooks
   const { data: shops = [], isLoading: loading } = useShopsQuery();
+
+  // Handle OAuth redirect: /shops?shop=abc123&connected=true
+  // Redirect to the newly connected shop's products page
+  const shopIdFromUrl = searchParams.get('shop');
+  const isOAuthRedirect = searchParams.get('connected') === 'true';
+
+  useEffect(() => {
+    if (isOAuthRedirect && shopIdFromUrl && shops.length > 0) {
+      // Verify the shop exists and redirect to its products page
+      const shop = shops.find((s) => s.id === shopIdFromUrl);
+      if (shop) {
+        router.replace(`/shops/${shopIdFromUrl}/products`);
+      }
+    }
+  }, [isOAuthRedirect, shopIdFromUrl, shops, router]);
 
   // Determine if we need polling
   const hasSyncingShops = shops.some(
