@@ -825,9 +825,17 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
       select: {
         productFieldOverrides: true,
         openaiAutoFilled: true,
+        feedEnableSearch: true,
+        feedEnableCheckout: true,
         isValid: true,
         validationErrors: true,
       },
+    });
+
+    // Get shop to retrieve defaultEnableSearch
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { defaultEnableSearch: true },
     });
 
     logger.info('Product field overrides updated', {
@@ -840,6 +848,9 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
       success: true,
       overrides: updatedProduct?.productFieldOverrides || {},
       resolvedValues: updatedProduct?.openaiAutoFilled || {},
+      feedEnableSearch: updatedProduct?.feedEnableSearch,
+      feedEnableCheckout: updatedProduct?.feedEnableCheckout,
+      shopDefaultEnableSearch: shop?.defaultEnableSearch ?? true,
       isValid: updatedProduct?.isValid,
       validationErrors: updatedProduct?.validationErrors,
     });

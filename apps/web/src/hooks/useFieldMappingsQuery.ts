@@ -130,11 +130,11 @@ export function useUpdateProductOverridesMutation(shopId: string | undefined, pr
         queryKeys.fieldMappings.productOverrides(shopId, productId)
       );
 
-      // Optimistic update
+      // Optimistic update - use correct field name 'overrides'
       queryClient.setQueryData(
         queryKeys.fieldMappings.productOverrides(shopId, productId),
         (old: ProductOverridesResponse | undefined) =>
-          old ? { ...old, productOverrides: overrides } : old
+          old ? { ...old, overrides } : old
       );
 
       return { previousData };
@@ -148,13 +148,24 @@ export function useUpdateProductOverridesMutation(shopId: string | undefined, pr
         );
       }
     },
-    onSuccess: (data) => {
-      // Update with server response (includes resolvedValues, validation)
+    onSuccess: (data, _vars, context) => {
+      // Merge server response with existing cache to preserve fields not in response
+      // (e.g., feedEnableSearch is not returned by PUT but must be preserved)
       if (shopId && productId) {
+        const previousData = context?.previousData;
         queryClient.setQueryData(
           queryKeys.fieldMappings.productOverrides(shopId, productId),
-          data
+          (old: ProductOverridesResponse | undefined) => ({
+            ...old,
+            ...previousData,
+            ...data,
+          })
         );
+        // Invalidate products list so catalog shows updated override count
+        queryClient.invalidateQueries({
+          queryKey: ['products', shopId],
+          exact: false,
+        });
       }
     },
   });
