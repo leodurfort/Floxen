@@ -114,18 +114,20 @@ export default function DashboardPage() {
               </Link>
             )}
 
-            <Link
-              href="/settings"
-              className="flex items-center gap-4 p-4 bg-[#252936] hover:bg-[#2d3142] rounded-lg transition-colors group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
-                <span className="text-xl">⚙️</span>
-              </div>
-              <div>
-                <h3 className="text-white font-medium">Settings</h3>
-                <p className="text-sm text-white/40">Configure your account and preferences</p>
-              </div>
-            </Link>
+            {connectedShops.length > 0 && (
+              <Link
+                href={`/shops/${connectedShops[0].id}/setup`}
+                className="flex items-center gap-4 p-4 bg-[#252936] hover:bg-[#2d3142] rounded-lg transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
+                  <span className="text-xl">⚙️</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-medium">Field Mapping</h3>
+                  <p className="text-sm text-white/40">Configure WooCommerce to OpenAI field mappings</p>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
 
