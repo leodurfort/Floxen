@@ -76,7 +76,7 @@ export interface Product {
 export interface CatalogProduct {
   id: string;
   isValid: boolean;
-  validationErrors: string[] | null;
+  validationErrors: Record<string, string[]> | null;
   updatedAt: string;
   feedEnableSearch: boolean;
   openaiAutoFilled: Record<string, unknown> | null;

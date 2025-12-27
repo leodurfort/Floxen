@@ -16,10 +16,10 @@ import {
 export interface ProductData {
   id: string;
   isValid: boolean;
-  validationErrors: string[] | null;
+  validationErrors: Record<string, string[]> | null;
   productFieldOverrides: Record<string, unknown> | null;
   openaiAutoFilled: Record<string, unknown> | null;
-  wooRawJson: Record<string, unknown> | null;
+  feedEnableSearch: boolean;
   updatedAt: string;
 }
 
