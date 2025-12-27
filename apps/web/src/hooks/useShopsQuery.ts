@@ -166,6 +166,7 @@ export function useUpdateShopMutation() {
     }: {
       shopId: string;
       data: {
+        sellerName?: string | null;
         sellerPrivacyPolicy?: string | null;
         sellerTos?: string | null;
         returnPolicy?: string | null;

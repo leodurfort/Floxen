@@ -206,6 +206,7 @@ export async function toggleShopSync(shopId: string, syncEnabled: boolean) {
 export async function updateShop(
   shopId: string,
   data: {
+    sellerName?: string | null;
     sellerPrivacyPolicy?: string | null;
     sellerTos?: string | null;
     returnPolicy?: string | null;
