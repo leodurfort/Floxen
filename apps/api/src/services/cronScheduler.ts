@@ -5,6 +5,8 @@
  * - Periodic sync (every 15 minutes)
  * - Feed generation (creates FeedSnapshot for OpenAI)
  * - Stuck sync recovery (every minute)
+ * - Account deletion execution (daily at midnight)
+ * - Token cleanup (hourly)
  * - Health checks
  * - Analytics aggregation
  */
@@ -13,6 +15,8 @@ import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { syncFlowProducer, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
+import { executeScheduledDeletions } from './accountDeletionService';
+import { cleanupExpiredTokens } from './verificationService';
 
 // If a sync is stuck in SYNCING for longer than this, reset it to FAILED
 const STUCK_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -166,6 +170,56 @@ export class CronScheduler {
   }
 
   /**
+   * Schedule account deletion execution daily at midnight
+   * Executes pending deletions past their 30-day grace period
+   */
+  scheduleAccountDeletionExecution() {
+    const job = cron.schedule('0 0 * * *', async () => {
+      logger.info('Cron: Account deletion execution triggered');
+      try {
+        const deletedCount = await executeScheduledDeletions();
+        if (deletedCount > 0) {
+          logger.info(`Cron: Deleted ${deletedCount} accounts past grace period`);
+        }
+      } catch (err) {
+        logger.error('Cron: Failed to execute account deletions', {
+          error: err instanceof Error ? err : new Error(String(err)),
+        });
+      }
+    }, {
+      scheduled: false,
+    });
+
+    this.jobs.set('account-deletion', job);
+    logger.info('Cron: Account deletion execution scheduled (daily at midnight)');
+  }
+
+  /**
+   * Schedule expired token cleanup hourly
+   * Removes expired and used verification tokens
+   */
+  scheduleTokenCleanup() {
+    const job = cron.schedule('0 * * * *', async () => {
+      logger.info('Cron: Token cleanup triggered');
+      try {
+        const cleanedCount = await cleanupExpiredTokens();
+        if (cleanedCount > 0) {
+          logger.info(`Cron: Cleaned up ${cleanedCount} expired tokens`);
+        }
+      } catch (err) {
+        logger.error('Cron: Failed to cleanup expired tokens', {
+          error: err instanceof Error ? err : new Error(String(err)),
+        });
+      }
+    }, {
+      scheduled: false,
+    });
+
+    this.jobs.set('token-cleanup', job);
+    logger.info('Cron: Token cleanup scheduled (hourly)');
+  }
+
+  /**
    * Start all scheduled jobs
    */
   start() {
@@ -176,6 +230,8 @@ export class CronScheduler {
 
     this.schedulePeriodicSync();
     this.scheduleStuckSyncRecovery();
+    this.scheduleAccountDeletionExecution();
+    this.scheduleTokenCleanup();
 
     // Start all jobs
     this.jobs.forEach((job, name) => {

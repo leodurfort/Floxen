@@ -164,11 +164,140 @@ export async function login(payload: { email: string; password: string }) {
   });
 }
 
-export async function register(payload: { email: string; password: string; name?: string }) {
-  return request<{ user: User; tokens: { accessToken: string; refreshToken: string } }>('/api/v1/auth/register', {
+// ═══════════════════════════════════════════════════════════════════════════
+// MULTI-STEP REGISTRATION FLOW
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function registerStart(payload: { email: string }) {
+  return request<{ success: boolean; message: string }>('/api/v1/auth/register/start', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function registerVerify(payload: { email: string; code: string }) {
+  return request<{ success: boolean; message: string }>('/api/v1/auth/register/verify', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function registerResend(payload: { email: string }) {
+  return request<{ success: boolean; message: string }>('/api/v1/auth/register/resend', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function registerPassword(payload: { email: string; password: string }) {
+  return request<{
+    success: boolean;
+    user: Partial<User>;
+    tokens: { accessToken: string; refreshToken: string };
+  }>('/api/v1/auth/register/password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function registerComplete(payload: { email: string; firstName: string; surname: string }) {
+  return request<{
+    success: boolean;
+    user: User;
+    tokens: { accessToken: string; refreshToken: string };
+  }>('/api/v1/auth/register/complete', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FORGOT PASSWORD FLOW
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function forgotPassword(payload: { email: string }) {
+  return request<{ success: boolean; message: string }>('/api/v1/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function forgotPasswordVerify(payload: { email: string; code: string }) {
+  return request<{ success: boolean; message: string }>('/api/v1/auth/forgot-password/verify', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function forgotPasswordReset(payload: { email: string; code: string; password: string }) {
+  return request<{
+    success: boolean;
+    message: string;
+    user: Partial<User>;
+    tokens: { accessToken: string; refreshToken: string };
+  }>('/api/v1/auth/forgot-password/reset', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// USER PROFILE
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function getProfile() {
+  return requestWithAuth<User>('/api/v1/users/me');
+}
+
+export async function updateProfile(payload: { firstName?: string; surname?: string }) {
+  return requestWithAuth<{ success: boolean; user: User }>('/api/v1/users/me/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function changeEmail(payload: { newEmail: string; password: string }) {
+  return requestWithAuth<{ success: boolean; message: string }>('/api/v1/users/me/change-email', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function changeEmailVerify(payload: { code: string }) {
+  return requestWithAuth<{ success: boolean; message: string; user: User }>('/api/v1/users/me/change-email/verify', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function changePassword(payload: { currentPassword: string; newPassword: string }) {
+  return requestWithAuth<{ success: boolean; message: string }>('/api/v1/users/me/change-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getDeletionStatus() {
+  return requestWithAuth<{
+    scheduled: boolean;
+    scheduledFor?: string;
+    requestedAt?: string;
+  }>('/api/v1/users/me/delete');
+}
+
+export async function scheduleAccountDeletion() {
+  return requestWithAuth<{
+    success: boolean;
+    message: string;
+    scheduledFor: string;
+  }>('/api/v1/users/me/delete', { method: 'POST' });
+}
+
+export async function cancelAccountDeletion() {
+  return requestWithAuth<{
+    success: boolean;
+    message: string;
+  }>('/api/v1/users/me/delete/cancel', { method: 'POST' });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

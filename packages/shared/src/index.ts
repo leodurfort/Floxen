@@ -6,6 +6,10 @@ export interface User {
   id: string;
   email: string;
   name?: string;
+  firstName?: string;
+  surname?: string;
+  emailVerified: boolean;
+  onboardingComplete: boolean;
   subscriptionTier: SubscriptionTier;
   createdAt: string;
   updatedAt: string;

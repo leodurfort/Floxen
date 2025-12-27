@@ -128,11 +128,11 @@ export function Sidebar() {
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#252936] transition-colors"
           >
             <div className="w-8 h-8 rounded-full bg-[#4c5fd5] flex items-center justify-center text-white text-sm font-semibold">
-              {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+              {user?.firstName?.charAt(0) || user?.email?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 text-left min-w-0">
               <div className="text-sm text-white font-medium truncate">
-                {user?.name || user?.email || 'Account'}
+                {user?.firstName || user?.email || 'Account'}
               </div>
               <div className="text-xs text-white/40">
                 {user?.subscriptionTier || 'FREE'}
@@ -145,9 +145,18 @@ export function Sidebar() {
 
           {showAccountMenu && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#252936] rounded-lg border border-white/10 shadow-xl">
+              <Link
+                href="/settings"
+                onClick={() => setShowAccountMenu(false)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#2d3142] transition-colors rounded-t-lg"
+              >
+                <span className="text-white/60">⚙</span>
+                <span className="text-sm text-white">Settings</span>
+              </Link>
+              <div className="border-t border-white/5" />
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#2d3142] transition-colors rounded-lg"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#2d3142] transition-colors rounded-b-lg"
               >
                 <span className="text-white/60">→</span>
                 <span className="text-sm text-white">Log out</span>

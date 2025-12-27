@@ -14,6 +14,7 @@ interface AuthState {
   user: User | null;
   hydrated: boolean;
   setSession: (user: User, accessToken: string, refreshToken: string) => void;
+  setUser: (user: User) => void;
   clear: () => void;
   hydrate: () => void;
 }
@@ -31,6 +32,17 @@ export const useAuth = create<AuthState>((set) => ({
       localStorage.setItem('productsynch.user', JSON.stringify(user));
       localStorage.setItem('productsynch.access', accessToken);
       localStorage.setItem('productsynch.refresh', refreshToken);
+    }
+    set({ user });
+  },
+
+  /**
+   * Update user without changing tokens
+   * Used for profile updates
+   */
+  setUser: (user) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('productsynch.user', JSON.stringify(user));
     }
     set({ user });
   },

@@ -37,7 +37,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <p className="text-xs uppercase tracking-wider text-white/40 mb-1">WELCOME</p>
-          <h1 className="text-3xl font-bold text-white mb-2">Hi {user.name || user.email}</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Hi {user.firstName || user.email}</h1>
           <p className="text-white/60">
             Manage your WooCommerce shops and sync products to OpenAI feeds with AI enrichment.
           </p>

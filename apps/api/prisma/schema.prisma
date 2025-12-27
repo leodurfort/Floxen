@@ -27,18 +27,29 @@ enum SyncType {
   MANUAL
 }
 
-model User {
-  id               String          @id @default(cuid())
-  email            String          @unique
-  passwordHash     String          @map("password_hash")
-  name             String?
-  emailVerified    Boolean         @default(false) @map("email_verified")
-  subscriptionTier SubscriptionTier @default(FREE) @map("subscription_tier")
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @updatedAt @map("updated_at")
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  EMAIL_CHANGE
+}
 
-  shops    Shop[]
-  settings UserSettings?
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  passwordHash     String           @map("password_hash")
+  name             String?          // Deprecated: use firstName + surname
+  firstName        String?          @map("first_name")
+  surname          String?
+  emailVerified    Boolean          @default(false) @map("email_verified")
+  onboardingComplete Boolean        @default(false) @map("onboarding_complete")
+  subscriptionTier SubscriptionTier @default(FREE) @map("subscription_tier")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  shops              Shop[]
+  settings           UserSettings?
+  verificationTokens VerificationToken[]
+  accountDeletion    AccountDeletion?
 }
 
 model UserSettings {
@@ -48,6 +59,35 @@ model UserSettings {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  userId    String?   @map("user_id")
+  email     String
+  code      String
+  type      TokenType
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email, type])
+  @@map("verification_tokens")
+}
+
+model AccountDeletion {
+  id           String    @id @default(cuid())
+  userId       String    @unique @map("user_id")
+  scheduledFor DateTime  @map("scheduled_for")
+  requestedAt  DateTime  @map("requested_at")
+  cancelledAt  DateTime? @map("cancelled_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("account_deletions")
 }
 
 model Shop {
