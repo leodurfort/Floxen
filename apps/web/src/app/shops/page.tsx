@@ -216,6 +216,7 @@ export default function ShopsPage() {
       setError(null);
 
       const updateData: {
+        sellerName?: string | null;
         sellerPrivacyPolicy?: string | null;
         sellerTos?: string | null;
         returnPolicy?: string | null;
@@ -234,10 +235,8 @@ export default function ShopsPage() {
           updateData.returnWindow = null;
         }
       } else if (field === 'sellerName') {
-        // sellerName is not supported by the updateShop API mutation
-        // Skip for now - this was already handled by optimistic update
-        setSavingShopId(null);
-        return;
+        // Plain string field - save trimmed value or null
+        updateData.sellerName = value.trim() || null;
       } else {
         // URL fields - only save if valid URL or empty
         if (value.trim()) {
