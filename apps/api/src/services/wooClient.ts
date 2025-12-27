@@ -2,6 +2,9 @@ import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 import { decrypt } from '../lib/encryption';
 import { logger } from '../lib/logger';
 
+// 30 second timeout per WooCommerce API request
+const WOO_REQUEST_TIMEOUT_MS = 30000;
+
 export interface WooConfig {
   storeUrl: string;
   consumerKey: string;
@@ -14,6 +17,7 @@ export function createWooClient(config: WooConfig) {
     consumerKey: decrypt(config.consumerKey),
     consumerSecret: decrypt(config.consumerSecret),
     version: 'wc/v3',
+    timeout: WOO_REQUEST_TIMEOUT_MS,
   });
 }
 

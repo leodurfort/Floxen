@@ -1,4 +1,4 @@
-import { Queue, QueueEvents, FlowProducer } from 'bullmq';
+import { Queue, QueueEvents, FlowProducer, JobsOptions } from 'bullmq';
 import Redis from 'ioredis';
 import { env } from '../config/env';
 import { logger } from './logger';
@@ -27,6 +27,35 @@ export const syncQueue = syncQueueInstance?.queue || null;
 export const syncFlowProducer = redisConnection
   ? new FlowProducer({ connection: redisConnection })
   : null;
+
+/**
+ * Default job options for all sync-related jobs
+ *
+ * Retry Strategy:
+ * - 3 total attempts (1 initial + 2 retries)
+ * - Exponential backoff: 5s → 10s → 20s
+ * - Failed jobs kept for debugging
+ */
+export const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts: 3,
+  backoff: {
+    type: 'exponential',
+    delay: 5000, // 5 seconds base delay
+  },
+  removeOnComplete: true,
+  removeOnFail: false, // Keep failed jobs for investigation
+};
+
+/**
+ * Priority levels for different job sources
+ * Lower number = higher priority
+ */
+export const JOB_PRIORITIES = {
+  WEBHOOK: 1, // Highest priority - real-time updates
+  MANUAL: 2, // User-triggered syncs
+  CRON: 3, // Background scheduled syncs
+  REPROCESS: 4, // Lowest priority - non-urgent
+} as const;
 
 export function isQueueAvailable(): boolean {
   return syncQueue !== null;

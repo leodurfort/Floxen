@@ -31,14 +31,38 @@ if (redisConnection) {
   );
 
   syncWorker.on('completed', (job) => {
-    logger.info(`Job completed: ${job.name} (${job.id})`);
+    logger.info(`Job completed: ${job.name}`, {
+      jobId: job.id,
+      shopId: job.data?.shopId,
+      attemptsMade: job.attemptsMade,
+    });
   });
 
   syncWorker.on('failed', (job, err) => {
-    logger.error(`Job failed: ${job?.name} (${job?.id})`, { error: err instanceof Error ? err : new Error(String(err)) });
+    const willRetry = job && job.attemptsMade < (job.opts.attempts || 1);
+
+    logger.error(`Job failed: ${job?.name}`, {
+      error: err instanceof Error ? err : new Error(String(err)),
+      jobId: job?.id,
+      shopId: job?.data?.shopId,
+      attemptsMade: job?.attemptsMade,
+      maxAttempts: job?.opts.attempts,
+      willRetry,
+    });
   });
 
-  logger.info(`Workers initialized with concurrency: ${WORKER_CONCURRENCY}`);
+  syncWorker.on('error', (err) => {
+    logger.error('Worker error', {
+      error: err instanceof Error ? err : new Error(String(err)),
+    });
+  });
+
+  logger.info('Workers initialized', {
+    concurrency: WORKER_CONCURRENCY,
+    defaultAttempts: 3,
+    backoffType: 'exponential',
+    backoffDelay: '5s base',
+  });
 } else {
   logger.warn('Redis not configured; workers disabled');
 }
