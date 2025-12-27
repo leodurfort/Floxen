@@ -139,10 +139,12 @@ export function useCatalogFilters(shopId?: string) {
            Array.from(searchParams.keys()).some(k => k.startsWith(CF_PREFIX));
   }, [searchParams]);
 
-  // Parse filters from URL, falling back to localStorage if no URL params
+  // Parse filters from URL, falling back to localStorage ONLY on initial load
   const filters = useMemo<CatalogFilters>(() => {
     // If URL has explicit params, use them (URL takes precedence)
     if (hasUrlParams) {
+      // Mark that we've initialized from URL
+      hasRestoredFromStorage.current = true;
       return {
         search: searchParams.get('search') || '',
         sortBy: searchParams.get('sortBy') || 'updatedAt',
@@ -153,20 +155,24 @@ export function useCatalogFilters(shopId?: string) {
       };
     }
 
-    // No URL params - try to restore from localStorage
-    const stored = shopId ? getStoredFilters(shopId) : null;
-    if (stored) {
-      return {
-        search: stored.search ?? '',
-        sortBy: stored.sortBy ?? 'updatedAt',
-        sortOrder: stored.sortOrder ?? 'desc',
-        page: 1, // Always reset page when restoring
-        limit: stored.limit ?? 50,
-        columnFilters: stored.columnFilters ?? {},
-      };
+    // Only restore from localStorage ONCE on initial page load
+    // This prevents cleared filters from being restored from stale localStorage
+    if (!hasRestoredFromStorage.current) {
+      const stored = shopId ? getStoredFilters(shopId) : null;
+      if (stored) {
+        hasRestoredFromStorage.current = true;
+        return {
+          search: stored.search ?? '',
+          sortBy: stored.sortBy ?? 'updatedAt',
+          sortOrder: stored.sortOrder ?? 'desc',
+          page: 1, // Always reset page when restoring
+          limit: stored.limit ?? 50,
+          columnFilters: stored.columnFilters ?? {},
+        };
+      }
     }
 
-    // Default filters
+    // Default filters (either no stored data or already restored once)
     return { ...DEFAULT_FILTERS };
   }, [searchParams, hasUrlParams, shopId]);
 
