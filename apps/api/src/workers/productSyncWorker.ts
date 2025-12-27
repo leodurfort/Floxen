@@ -168,7 +168,7 @@ async function processSingleWooProduct(
 
     for (const variation of variations) {
       await processProduct(
-        mergeParentAndVariation(enrichedProduct, variation, shop.shopCurrency || 'USD'),
+        mergeParentAndVariation(enrichedProduct, variation),
         shop,
         shopId,
         autoFillService
@@ -182,7 +182,7 @@ async function processSingleWooProduct(
     });
   } else {
     await processProduct(
-      transformWooProduct(enrichedProduct, shop.shopCurrency || 'USD'),
+      transformWooProduct(enrichedProduct),
       shop,
       shopId,
       autoFillService
