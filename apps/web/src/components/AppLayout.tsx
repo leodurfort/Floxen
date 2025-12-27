@@ -8,17 +8,17 @@ import { Sidebar } from './Sidebar';
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { accessToken, hydrated, hydrate } = useAuth();
+  const { user, hydrated, hydrate } = useAuth();
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
   useEffect(() => {
-    if (hydrated && !accessToken && pathname !== '/login' && pathname !== '/register') {
+    if (hydrated && !user && pathname !== '/login' && pathname !== '/register') {
       router.push('/login');
     }
-  }, [hydrated, accessToken, pathname, router]);
+  }, [hydrated, user, pathname, router]);
 
   // Don't show sidebar on login/register pages
   const isAuthPage = pathname === '/login' || pathname === '/register';
@@ -31,7 +31,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isAuthPage || !accessToken) {
+  if (isAuthPage || !user) {
     return <>{children}</>;
   }
 

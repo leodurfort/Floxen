@@ -3,17 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { register } from '@/lib/api';
 import { useAuth } from '@/store/auth';
+import { useRegisterMutation } from '@/hooks/useAuthMutations';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { setSession, hydrate, user, hydrated } = useAuth();
+  const { hydrate, user, hydrated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const registerMutation = useRegisterMutation();
 
   useEffect(() => {
     hydrate();
@@ -25,19 +25,9 @@ export default function RegisterPage() {
     }
   }, [hydrated, user, router]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await register({ email, password, name });
-      setSession(result.user, result.tokens.accessToken, result.tokens.refreshToken);
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    registerMutation.mutate({ email, password, name: name || undefined });
   }
 
   return (
@@ -61,9 +51,11 @@ export default function RegisterPage() {
             <span className="subtle text-sm">Password</span>
             <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
           </label>
-          {error && <div className="text-sm text-red-300">{error}</div>}
-          <button className="btn btn--primary w-full" type="submit" disabled={loading}>
-            {loading ? 'Creating...' : 'Create account'}
+          {registerMutation.error && (
+            <div className="text-sm text-red-300">{registerMutation.error.message}</div>
+          )}
+          <button className="btn btn--primary w-full" type="submit" disabled={registerMutation.isPending}>
+            {registerMutation.isPending ? 'Creating...' : 'Create account'}
           </button>
         </form>
         <p className="text-sm subtle">

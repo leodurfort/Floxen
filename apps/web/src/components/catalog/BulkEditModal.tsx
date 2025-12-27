@@ -9,8 +9,9 @@ import {
   OpenAIFieldCategory,
   OpenAIFieldSpec,
 } from '@productsynch/shared';
-import { API_URL, BulkUpdateOperation } from '@/lib/api';
-import { WooCommerceField, searchWooFields } from '@/lib/wooCommerceFields';
+import { BulkUpdateOperation } from '@/lib/api';
+import { searchWooFields } from '@/lib/wooCommerceFields';
+import { useWooFieldsQuery } from '@/hooks/useWooFieldsQuery';
 
 interface BulkEditModalProps {
   isOpen: boolean;
@@ -19,7 +20,6 @@ interface BulkEditModalProps {
   selectedCount: number;
   isProcessing: boolean;
   shopId: string;
-  accessToken: string | null;
 }
 
 export function BulkEditModal({
@@ -29,16 +29,14 @@ export function BulkEditModal({
   selectedCount,
   isProcessing,
   shopId,
-  accessToken,
 }: BulkEditModalProps) {
   const [selectedAttribute, setSelectedAttribute] = useState<string | null>(null);
   const [overrideType, setOverrideType] = useState<'mapping' | 'static' | 'remove'>('static');
   const [staticValue, setStaticValue] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // WooCommerce field selector state
-  const [wooFields, setWooFields] = useState<WooCommerceField[]>([]);
-  const [wooFieldsLoading, setWooFieldsLoading] = useState(false);
+  // WooCommerce field selector state - now using React Query
+  const { data: wooFields = [], isLoading: wooFieldsLoading } = useWooFieldsQuery(isOpen ? shopId : undefined);
   const [selectedWooField, setSelectedWooField] = useState<string | null>(null);
   const [wooFieldSearch, setWooFieldSearch] = useState('');
   const [isWooDropdownOpen, setIsWooDropdownOpen] = useState(false);
@@ -58,13 +56,6 @@ export function BulkEditModal({
     }
   }, [isOpen]);
 
-  // Load WooCommerce fields when modal opens
-  useEffect(() => {
-    if (isOpen && accessToken && shopId) {
-      loadWooFields();
-    }
-  }, [isOpen, accessToken, shopId]);
-
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -76,25 +67,6 @@ export function BulkEditModal({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  async function loadWooFields() {
-    if (!accessToken) return;
-    setWooFieldsLoading(true);
-    try {
-      const res = await fetch(
-        `${API_URL}/api/v1/shops/${shopId}/woo-fields`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      if (!res.ok) throw new Error('Failed to load WooCommerce fields');
-      const data = await res.json();
-      setWooFields(data.fields || []);
-    } catch {
-      // WooCommerce fields load failed silently
-      setWooFields([]);
-    } finally {
-      setWooFieldsLoading(false);
-    }
-  }
 
   // Filter WooCommerce fields based on search
   const filteredWooFields = useMemo(() => {

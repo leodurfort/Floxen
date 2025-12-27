@@ -1,9 +1,34 @@
-import { ApiResponse, Product, Shop, User } from '@productsynch/shared';
+import { Product, Shop, User, ProductFieldOverrides } from '@productsynch/shared';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app';
 
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOKEN MANAGEMENT - Single source of truth is localStorage
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get the current access token from localStorage
+ * Returns null on server-side or if not authenticated
+ */
+function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('productsynch.access');
+}
+
+/**
+ * Clear all auth data and redirect to login
+ */
+function clearAuthAndRedirect(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('productsynch.user');
+    localStorage.removeItem('productsynch.access');
+    localStorage.removeItem('productsynch.refresh');
+    window.location.href = '/login';
+  }
+}
 
 /**
  * Refresh the access token using the refresh token
@@ -57,7 +82,14 @@ async function refreshAccessToken(): Promise<string> {
   return refreshPromise;
 }
 
-async function request<T>(path: string, options: RequestInit = {}, retryCount = 0): Promise<T> {
+// ═══════════════════════════════════════════════════════════════════════════
+// REQUEST HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Make an unauthenticated request (for login/register)
+ */
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
@@ -67,26 +99,48 @@ async function request<T>(path: string, options: RequestInit = {}, retryCount = 
     credentials: 'include',
   });
 
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || res.statusText);
+  }
+
+  return res.json();
+}
+
+/**
+ * Make an authenticated request
+ * Automatically includes auth header and handles token refresh on 401
+ */
+async function requestWithAuth<T>(path: string, options: RequestInit = {}, retryCount = 0): Promise<T> {
+  const token = getAccessToken();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
+
   // Handle 401 Unauthorized - try to refresh token
-  if (res.status === 401 && retryCount === 0 && path !== '/api/v1/auth/refresh') {
+  if (res.status === 401 && retryCount === 0) {
     try {
       const newAccessToken = await refreshAccessToken();
 
       // Retry the original request with new token
-      const newHeaders = { ...options.headers } as Record<string, string>;
-      if (newHeaders.Authorization) {
-        newHeaders.Authorization = `Bearer ${newAccessToken}`;
-      }
+      headers.Authorization = `Bearer ${newAccessToken}`;
 
-      return request<T>(path, { ...options, headers: newHeaders }, retryCount + 1);
-    } catch (refreshError) {
+      return requestWithAuth<T>(path, { ...options, headers }, retryCount + 1);
+    } catch {
       // Refresh failed - clear auth and redirect to login
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('productsynch.user');
-        localStorage.removeItem('productsynch.access');
-        localStorage.removeItem('productsynch.refresh');
-        window.location.href = '/login';
-      }
+      clearAuthAndRedirect();
       throw new Error('Session expired. Please log in again.');
     }
   }
@@ -98,6 +152,10 @@ async function request<T>(path: string, options: RequestInit = {}, retryCount = 
 
   return res.json();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUTH ENDPOINTS (unauthenticated)
+// ═══════════════════════════════════════════════════════════════════════════
 
 export async function login(payload: { email: string; password: string }) {
   return request<{ user: User; tokens: { accessToken: string; refreshToken: string } }>('/api/v1/auth/login', {
@@ -113,16 +171,63 @@ export async function register(payload: { email: string; password: string; name?
   });
 }
 
-export async function listShops(token: string) {
-  return request<{ shops: Shop[] }>('/api/v1/shops', {
-    headers: { Authorization: `Bearer ${token}` },
+// ═══════════════════════════════════════════════════════════════════════════
+// SHOPS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function listShops() {
+  return requestWithAuth<{ shops: Shop[] }>('/api/v1/shops');
+}
+
+export async function getShop(shopId: string) {
+  return requestWithAuth<{ shop: Shop }>(`/api/v1/shops/${shopId}`);
+}
+
+export async function createShop(payload: { storeUrl: string; shopName?: string; shopCurrency?: string }) {
+  return requestWithAuth<{ shop: Shop; authUrl: string }>('/api/v1/shops', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }
 
-export async function getShop(shopId: string, token: string) {
-  return request<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
-    headers: { Authorization: `Bearer ${token}` },
+export async function deleteShop(shopId: string) {
+  return requestWithAuth<{ shop: Shop; message: string }>(`/api/v1/shops/${shopId}`, {
+    method: 'DELETE',
   });
+}
+
+export async function toggleShopSync(shopId: string, syncEnabled: boolean) {
+  return requestWithAuth<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ syncEnabled }),
+  });
+}
+
+export async function updateShop(
+  shopId: string,
+  data: {
+    sellerPrivacyPolicy?: string | null;
+    sellerTos?: string | null;
+    returnPolicy?: string | null;
+    returnWindow?: number | null;
+  }
+) {
+  return requestWithAuth<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function triggerProductSync(shopId: string) {
+  return requestWithAuth<{ shopId: string; status: string }>(`/api/v1/shops/${shopId}/sync`, {
+    method: 'POST',
+  });
+}
+
+export async function latestFeed(shopId: string) {
+  return requestWithAuth<{ feedUrl: string; generatedAt: string; productCount: number }>(
+    `/api/v1/shops/${shopId}/sync/feed/latest`
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -155,7 +260,6 @@ export interface ListProductsResult {
 
 export async function listProducts(
   shopId: string,
-  token: string,
   params?: ListProductsParams
 ): Promise<ListProductsResult> {
   const searchParams = new URLSearchParams();
@@ -183,9 +287,11 @@ export async function listProducts(
   const queryString = searchParams.toString();
   const path = `/api/v1/shops/${shopId}/products${queryString ? `?${queryString}` : ''}`;
 
-  return request<ListProductsResult>(path, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  return requestWithAuth<ListProductsResult>(path);
+}
+
+export async function requestProduct(shopId: string, productId: string) {
+  return requestWithAuth<{ product: Product }>(`/api/v1/shops/${shopId}/products/${productId}`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -212,7 +318,6 @@ export interface CurrentFiltersForColumnValues {
 
 export async function getColumnValues(
   shopId: string,
-  token: string,
   column: string,
   limit: number = 100,
   search?: string,
@@ -238,11 +343,8 @@ export async function getColumnValues(
     }
   }
 
-  return request<GetColumnValuesResult>(
-    `/api/v1/shops/${shopId}/products/column-values?${params.toString()}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
+  return requestWithAuth<GetColumnValuesResult>(
+    `/api/v1/shops/${shopId}/products/column-values?${params.toString()}`
   );
 }
 
@@ -279,45 +381,20 @@ export interface BulkUpdateResponse {
 
 export async function bulkUpdateProducts(
   shopId: string,
-  token: string,
   payload: BulkUpdateRequest
 ): Promise<BulkUpdateResponse> {
-  return request<BulkUpdateResponse>(
+  return requestWithAuth<BulkUpdateResponse>(
     `/api/v1/shops/${shopId}/products/bulk-update`,
     {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     }
   );
 }
 
-export async function createShop(payload: { storeUrl: string; shopName?: string; shopCurrency?: string }, token: string) {
-  return request<{ shop: Shop; authUrl: string }>('/api/v1/shops', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function requestProduct(shopId: string, productId: string, token: string) {
-  return request<{ product: Product }>(`/api/v1/shops/${shopId}/products/${productId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function triggerProductSync(shopId: string, token: string) {
-  return request<{ shopId: string; status: string }>(`/api/v1/shops/${shopId}/sync`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function latestFeed(shopId: string, token: string) {
-  return request<{ feedUrl: string; generatedAt: string; productCount: number }>(`/api/v1/shops/${shopId}/sync/feed/latest`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
+// ═══════════════════════════════════════════════════════════════════════════
+// FEED REFRESH (special handling for 409)
+// ═══════════════════════════════════════════════════════════════════════════
 
 export interface RefreshFeedResponse {
   shopId: string;
@@ -338,12 +415,14 @@ export interface RefreshFeedError {
  * Regenerates the FeedSnapshot with current product data
  * Returns 409 if sync is in progress
  */
-export async function refreshFeed(shopId: string, token: string, retryCount = 0): Promise<RefreshFeedResponse> {
+export async function refreshFeed(shopId: string, retryCount = 0): Promise<RefreshFeedResponse> {
+  const token = getAccessToken();
+
   const res = await fetch(`${API_URL}/api/v1/shops/${shopId}/sync/push`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
   });
@@ -351,16 +430,10 @@ export async function refreshFeed(shopId: string, token: string, retryCount = 0)
   // Handle 401 Unauthorized - try to refresh token
   if (res.status === 401 && retryCount === 0) {
     try {
-      const newAccessToken = await refreshAccessToken();
-      return refreshFeed(shopId, newAccessToken, retryCount + 1);
+      await refreshAccessToken();
+      return refreshFeed(shopId, retryCount + 1);
     } catch {
-      // Refresh failed - clear auth and redirect to login
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('productsynch.user');
-        localStorage.removeItem('productsynch.access');
-        localStorage.removeItem('productsynch.refresh');
-        window.location.href = '/login';
-      }
+      clearAuthAndRedirect();
       throw new Error('Session expired. Please log in again.');
     }
   }
@@ -382,47 +455,16 @@ export async function refreshFeed(shopId: string, token: string, retryCount = 0)
   return res.json();
 }
 
-export async function deleteShop(shopId: string, token: string) {
-  return request<{ shop: Shop; message: string }>(`/api/v1/shops/${shopId}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function toggleShopSync(shopId: string, syncEnabled: boolean, token: string) {
-  return request<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ syncEnabled }),
-  });
-}
-
-export async function updateShop(
-  shopId: string,
-  data: {
-    sellerPrivacyPolicy?: string | null;
-    sellerTos?: string | null;
-    returnPolicy?: string | null;
-    returnWindow?: number | null;
-  },
-  token: string
-) {
-  return request<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify(data),
-  });
-}
+// ═══════════════════════════════════════════════════════════════════════════
+// FIELD MAPPINGS
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Get field mappings for a shop
  */
-export async function getFieldMappings(shopId: string, token: string) {
-  return request<{ mappings: Record<string, string | null>; userMappings: Record<string, string | null> }>(
-    `/api/v1/shops/${shopId}/field-mappings`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
+export async function getFieldMappings(shopId: string) {
+  return requestWithAuth<{ mappings: Record<string, string | null>; userMappings: Record<string, string | null> }>(
+    `/api/v1/shops/${shopId}/field-mappings`
   );
 }
 
@@ -432,39 +474,79 @@ export async function getFieldMappings(shopId: string, token: string) {
 export async function updateFieldMappings(
   shopId: string,
   mappings: Record<string, string | null>,
-  propagationMode: 'apply_all' | 'preserve_overrides',
-  token: string
+  propagationMode: 'apply_all' | 'preserve_overrides'
 ) {
-  return request<{ success: boolean }>(
+  return requestWithAuth<{ success: boolean }>(
     `/api/v1/shops/${shopId}/field-mappings`,
     {
       method: 'PUT',
-      headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ mappings, propagationMode }),
     }
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT FIELD OVERRIDES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ProductOverridesResponse {
+  product: {
+    id: string;
+    wooTitle: string;
+    feedEnableSearch: boolean;
+    feedEnableCheckout: boolean;
+    isValid?: boolean;
+    validationErrors?: Record<string, string[]> | null;
+  };
+  shopMappings: Record<string, string | null>;
+  productOverrides: ProductFieldOverrides;
+  resolvedValues: Record<string, unknown>;
+}
+
+/**
+ * Get product-level field overrides
+ */
+export async function getProductOverrides(shopId: string, productId: string) {
+  return requestWithAuth<ProductOverridesResponse>(
+    `/api/v1/shops/${shopId}/products/${productId}/field-overrides`
+  );
+}
+
+/**
+ * Update product-level field overrides
+ */
+export async function updateProductOverrides(
+  shopId: string,
+  productId: string,
+  overrides: Record<string, unknown>
+) {
+  return requestWithAuth<ProductOverridesResponse>(
+    `/api/v1/shops/${shopId}/products/${productId}/field-overrides`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ overrides }),
+    }
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WOOCOMMERCE
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * Get WooCommerce fields available for mapping
  */
-export async function getWooFields(shopId: string, token: string) {
-  return request<{ fields: Array<{ value: string; label: string; category: string; description?: string }> }>(
-    `/api/v1/shops/${shopId}/woo-fields`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
+export async function getWooFields(shopId: string) {
+  return requestWithAuth<{ fields: Array<{ value: string; label: string; category: string; description?: string }> }>(
+    `/api/v1/shops/${shopId}/woo-fields`
   );
 }
 
 /**
  * Get WooCommerce data for a specific product (for preview)
  */
-export async function getProductWooData(shopId: string, productId: string, token: string) {
-  return request<{ wooData: Record<string, unknown>; shopData: Record<string, unknown> }>(
-    `/api/v1/shops/${shopId}/products/${productId}/woo-data`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
+export async function getProductWooData(shopId: string, productId: string) {
+  return requestWithAuth<{ wooData: Record<string, unknown>; shopData: Record<string, unknown> }>(
+    `/api/v1/shops/${shopId}/products/${productId}/woo-data`
   );
 }
