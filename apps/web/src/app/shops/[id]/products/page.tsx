@@ -59,13 +59,15 @@ function CatalogPageContent() {
     setFilters,
     setSort,
     hasActiveFilters,
-    hasColumnFilters,
     getColumnFilter,
     setColumnValueFilter,
     clearColumnFilter,
-    clearAllColumnFilters,
+    clearAllFilters,
   } = useCatalogFilters(params?.id);
   const selection = useCatalogSelection();
+
+  // Capture filters at modal open time to prevent stale filter issues
+  const [bulkEditFilters, setBulkEditFilters] = useState<{ search: string; columnFilters: typeof filters.columnFilters } | null>(null);
 
   // React Query hooks - these fix the original cache bug!
   // Products query with proper cache keying by shopId + filters
@@ -133,6 +135,20 @@ function CatalogPageContent() {
     };
   }, [searchInput, filters.search, setFilters]);
 
+  // Clear selection when filters change (prevents invisible selections from previous filter state)
+  const prevFiltersRef = useRef({ search: filters.search, columnFilters: filters.columnFilters });
+  useEffect(() => {
+    const prevFilters = prevFiltersRef.current;
+    const filtersChanged =
+      prevFilters.search !== filters.search ||
+      JSON.stringify(prevFilters.columnFilters) !== JSON.stringify(filters.columnFilters);
+
+    if (filtersChanged) {
+      selection.clearSelection();
+      prevFiltersRef.current = { search: filters.search, columnFilters: filters.columnFilters };
+    }
+  }, [filters.search, filters.columnFilters, selection]);
+
   // Build current filters for cascading filter support (passed to ColumnHeaderDropdown)
   const currentFiltersForColumnValues: CurrentFiltersForColumnValues | undefined =
     filters.search || Object.keys(filters.columnFilters).length > 0
@@ -197,13 +213,25 @@ function CatalogPageContent() {
     selection.setSelectAllMatching(true);
   };
 
+  // Open bulk edit modal and capture current filters
+  const handleOpenBulkEdit = useCallback(() => {
+    setBulkEditFilters({
+      search: filters.search,
+      columnFilters: filters.columnFilters,
+    });
+    setShowBulkEditModal(true);
+  }, [filters.search, filters.columnFilters]);
+
   // Bulk action handlers using mutation
+  // Uses captured bulkEditFilters to prevent stale filter issues
   const handleBulkUpdate = useCallback(
     async (update: BulkUpdateOperation): Promise<void> => {
+      // Use captured filters from when modal was opened
+      const filtersToUse = bulkEditFilters ?? { search: filters.search, columnFilters: filters.columnFilters };
       const apiFilters = {
-        search: filters.search || undefined,
-        columnFilters: Object.keys(filters.columnFilters).length > 0
-          ? filters.columnFilters
+        search: filtersToUse.search || undefined,
+        columnFilters: Object.keys(filtersToUse.columnFilters).length > 0
+          ? filtersToUse.columnFilters
           : undefined,
       };
 
@@ -219,6 +247,7 @@ function CatalogPageContent() {
             onSuccess: (result) => {
               selection.clearSelection();
               setShowBulkEditModal(false);
+              setBulkEditFilters(null);
               setToast({
                 message: `Updated ${result.processedProducts} products${result.failedProducts > 0 ? ` (${result.failedProducts} failed)` : ''}`,
                 type: result.failedProducts > 0 ? 'error' : 'success',
@@ -237,7 +266,7 @@ function CatalogPageContent() {
         );
       });
     },
-    [selection, filters.search, filters.columnFilters, bulkUpdateMutation]
+    [selection, filters.search, filters.columnFilters, bulkEditFilters, bulkUpdateMutation]
   );
 
   // Column visibility
@@ -421,7 +450,7 @@ function CatalogPageContent() {
         <div className="flex items-center gap-4 flex-wrap">
           <SearchFilter value={searchInput} onChange={setSearchInput} placeholder="Search products..." />
           <div className="flex-1" />
-          <ClearFiltersButton hasActiveFilters={hasColumnFilters} onClear={clearAllColumnFilters} />
+          <ClearFiltersButton hasActiveFilters={hasActiveFilters} onClear={clearAllFilters} />
           <button
             onClick={() => setShowEditColumnsModal(true)}
             className="px-3 py-1.5 text-sm text-white/60 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
@@ -441,7 +470,7 @@ function CatalogPageContent() {
             hasActiveFilters={hasActiveFilters}
             onSelectAllMatching={handleSelectAllMatching}
             onClearSelection={selection.clearSelection}
-            onBulkEdit={() => setShowBulkEditModal(true)}
+            onBulkEdit={handleOpenBulkEdit}
             isProcessing={bulkUpdateMutation.isPending}
           />
         )}
@@ -603,7 +632,10 @@ function CatalogPageContent() {
       {/* Modals */}
       <BulkEditModal
         isOpen={showBulkEditModal}
-        onClose={() => setShowBulkEditModal(false)}
+        onClose={() => {
+          setShowBulkEditModal(false);
+          setBulkEditFilters(null);
+        }}
         onSubmit={handleBulkUpdate}
         selectedCount={displayedSelectionCount}
         isProcessing={bulkUpdateMutation.isPending}
