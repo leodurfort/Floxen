@@ -2,7 +2,7 @@ import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { wrapNonRetryableError, classifyError } from '../lib/errors';
-import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories, fetchSingleProduct } from '../services/wooClient';
+import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { validateProduct, ProductFieldOverrides } from '@productsynch/shared';
@@ -11,9 +11,6 @@ import { Shop } from '@prisma/client';
 
 interface SyncJobData {
   shopId: string;
-  productId?: string;
-  parentId?: string;  // For variation webhooks: the parent product's WooCommerce ID
-  type?: 'FULL' | 'INCREMENTAL';
   triggeredBy?: string;
 }
 
@@ -26,7 +23,6 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
     select: {
       id: true,
       checksum: true,
-      status: true,
       feedEnableSearch: true,
       feedEnableCheckout: true,
       productFieldOverrides: true,
@@ -111,7 +107,6 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
     where: { shopId_wooProductId: { shopId, wooProductId: data.wooProductId } },
     create: {
       shopId,
-      status: existing?.status || 'PENDING_REVIEW',
       openaiAutoFilled: openaiAutoFilled as any,
       isValid: validation.isValid,
       validationErrors: validation.errors as any,
@@ -125,7 +120,6 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
       isValid: validation.isValid,
       validationErrors: validation.errors as any,
       ...data,
-      status: existing?.status || 'PENDING_REVIEW',
       // DON'T update flag fields on sync - preserve user's product-level settings
     },
   });
@@ -192,95 +186,6 @@ async function processSingleWooProduct(
 }
 
 /**
- * Incremental sync - fetch and process a single product
- *
- * For variations: WooCommerce variations live at /products/{parent}/variations/{id},
- * NOT at /products/{id}. So when syncing a variation, we detect this and sync the
- * parent product instead (which fetches all its variations).
- */
-async function runIncrementalSync(
-  shop: Shop,
-  shopId: string,
-  productId: string,
-  parentIdHint: string | undefined,
-  client: any
-) {
-  logger.info('product-sync: running incremental sync', { shopId, productId, parentIdHint });
-
-  const wooProductId = parseInt(productId, 10);
-  if (isNaN(wooProductId)) {
-    logger.error('product-sync: invalid productId for incremental sync', { shopId, productId });
-    return;
-  }
-
-  // Determine the actual product ID to fetch:
-  // 1. If parentIdHint is provided (from webhook), this is a variation - sync the parent
-  // 2. If the product exists in our DB with a wooParentId, it's a known variation - sync the parent
-  // 3. Otherwise, sync the product directly
-  let targetProductId = wooProductId;
-  let isVariationSync = false;
-
-  if (parentIdHint) {
-    // Webhook provided parent ID - this is a variation
-    const parentWooId = parseInt(parentIdHint, 10);
-    if (!isNaN(parentWooId)) {
-      logger.info('product-sync: variation detected via webhook parentId, syncing parent instead', {
-        shopId,
-        variationId: wooProductId,
-        parentId: parentWooId,
-      });
-      targetProductId = parentWooId;
-      isVariationSync = true;
-    }
-  } else {
-    // Check if this product exists in our DB as a variation
-    const existingProduct = await prisma.product.findUnique({
-      where: { shopId_wooProductId: { shopId, wooProductId } },
-      select: { wooParentId: true },
-    });
-
-    if (existingProduct?.wooParentId) {
-      logger.info('product-sync: variation detected via DB lookup, syncing parent instead', {
-        shopId,
-        variationId: wooProductId,
-        parentId: existingProduct.wooParentId,
-      });
-      targetProductId = existingProduct.wooParentId;
-      isVariationSync = true;
-    }
-  }
-
-  const wooProd = await fetchSingleProduct(client, targetProductId);
-  if (!wooProd) {
-    // If we were trying to sync a variation's parent and it failed,
-    // the parent product might have been deleted
-    if (isVariationSync) {
-      logger.warn('product-sync: parent product not found in WooCommerce (variation orphaned?)', {
-        shopId,
-        originalProductId: wooProductId,
-        parentProductId: targetProductId,
-      });
-    } else {
-      logger.warn('product-sync: product not found in WooCommerce', { shopId, productId: String(targetProductId) });
-    }
-    return;
-  }
-
-  // Fetch categories for enrichment
-  const categoryMap = await fetchAllCategories(client);
-  const autoFillService = await AutoFillService.create(shop);
-
-  await processSingleWooProduct(wooProd, shop, shopId, autoFillService, client, categoryMap);
-
-  logger.info('product-sync: incremental sync completed', {
-    shopId,
-    productId: String(targetProductId),
-    wasVariationSync: isVariationSync,
-    originalVariationId: isVariationSync ? String(wooProductId) : undefined,
-  });
-}
-
-/**
  * Full sync - fetch and process all products
  */
 async function runFullSync(
@@ -324,17 +229,9 @@ async function runFullSync(
 }
 
 export async function productSyncProcessor(job: Job) {
-  const { shopId, productId, parentId, type, triggeredBy } = job.data as SyncJobData;
-  const isIncremental = productId && type === 'INCREMENTAL';
+  const { shopId, triggeredBy } = job.data as SyncJobData;
 
-  logger.info(`product-sync job received`, {
-    shopId,
-    productId,
-    parentId,
-    type: type || 'FULL',
-    triggeredBy,
-    isIncremental,
-  });
+  logger.info(`product-sync job received`, { shopId, triggeredBy });
 
   if (!shopId) return;
 
@@ -357,64 +254,57 @@ export async function productSyncProcessor(job: Job) {
       consumerSecret: shop.wooConsumerSecret,
     });
 
-    // Only refresh shop settings on full sync (not needed for single product updates)
-    if (!isIncremental) {
-      logger.info('product-sync: refreshing shop settings from WooCommerce', { shopId });
-      const settings = await fetchStoreSettings(client, shop.wooStoreUrl);
+    // Refresh shop settings from WooCommerce
+    logger.info('product-sync: refreshing shop settings from WooCommerce', { shopId });
+    const settings = await fetchStoreSettings(client, shop.wooStoreUrl);
 
-      if (settings) {
-        const settingsChanged =
-          shop.shopCurrency !== settings.shopCurrency ||
-          shop.dimensionUnit !== settings.dimensionUnit ||
-          shop.weightUnit !== settings.weightUnit;
+    if (settings) {
+      const settingsChanged =
+        shop.shopCurrency !== settings.shopCurrency ||
+        shop.dimensionUnit !== settings.dimensionUnit ||
+        shop.weightUnit !== settings.weightUnit;
 
-        const updateData: any = {
-          shopCurrency: settings.shopCurrency,
-          dimensionUnit: settings.dimensionUnit,
-          weightUnit: settings.weightUnit,
-          sellerUrl: shop.sellerUrl || shop.wooStoreUrl,
-        };
+      const updateData: any = {
+        shopCurrency: settings.shopCurrency,
+        dimensionUnit: settings.dimensionUnit,
+        weightUnit: settings.weightUnit,
+        sellerUrl: shop.sellerUrl || shop.wooStoreUrl,
+      };
 
-        if (settingsChanged) {
-          updateData.shopSettingsUpdatedAt = new Date();
-          logger.info('product-sync: shop settings changed, will reprocess products', {
-            shopId,
-            oldCurrency: shop.shopCurrency,
-            newCurrency: settings.shopCurrency,
+      if (settingsChanged) {
+        updateData.shopSettingsUpdatedAt = new Date();
+        logger.info('product-sync: shop settings changed, will reprocess products', {
+          shopId,
+          oldCurrency: shop.shopCurrency,
+          newCurrency: settings.shopCurrency,
+        });
+      }
+
+      await prisma.shop.update({ where: { id: shopId }, data: updateData });
+
+      // Update local shop object
+      if (settingsChanged) shop.shopSettingsUpdatedAt = updateData.shopSettingsUpdatedAt;
+      shop.shopCurrency = settings.shopCurrency || null;
+      shop.dimensionUnit = settings.dimensionUnit || null;
+      shop.weightUnit = settings.weightUnit || null;
+      if (!shop.sellerUrl) shop.sellerUrl = shop.wooStoreUrl;
+    } else {
+      logger.warn('product-sync: failed to fetch shop settings, using existing values', { shopId });
+
+      if (!shop.shopCurrency) {
+        const currency = await fetchStoreCurrency(client);
+        if (currency) {
+          await prisma.shop.update({
+            where: { id: shopId },
+            data: { shopCurrency: currency, shopSettingsUpdatedAt: new Date() },
           });
-        }
-
-        await prisma.shop.update({ where: { id: shopId }, data: updateData });
-
-        // Update local shop object
-        if (settingsChanged) shop.shopSettingsUpdatedAt = updateData.shopSettingsUpdatedAt;
-        shop.shopCurrency = settings.shopCurrency || null;
-        shop.dimensionUnit = settings.dimensionUnit || null;
-        shop.weightUnit = settings.weightUnit || null;
-        if (!shop.sellerUrl) shop.sellerUrl = shop.wooStoreUrl;
-      } else {
-        logger.warn('product-sync: failed to fetch shop settings, using existing values', { shopId });
-
-        if (!shop.shopCurrency) {
-          const currency = await fetchStoreCurrency(client);
-          if (currency) {
-            await prisma.shop.update({
-              where: { id: shopId },
-              data: { shopCurrency: currency, shopSettingsUpdatedAt: new Date() },
-            });
-            shop.shopCurrency = currency;
-            shop.shopSettingsUpdatedAt = new Date();
-          }
+          shop.shopCurrency = currency;
+          shop.shopSettingsUpdatedAt = new Date();
         }
       }
     }
 
-    // Run incremental or full sync
-    if (isIncremental) {
-      await runIncrementalSync(shop, shopId, productId, parentId, client);
-    } else {
-      await runFullSync(shop, shopId, client);
-    }
+    await runFullSync(shop, shopId, client);
 
     await prisma.shop.update({
       where: { id: shopId },
@@ -425,8 +315,6 @@ export async function productSyncProcessor(job: Job) {
 
     logger.error(`product-sync failed for shop ${shopId}`, {
       error: err instanceof Error ? err : new Error(String(err)),
-      isIncremental,
-      productId,
       errorClassification: classification,
       attemptsMade: job.attemptsMade,
       maxAttempts: job.opts.attempts,

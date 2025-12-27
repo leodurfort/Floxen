@@ -527,12 +527,12 @@ export async function updateProductOverrides(
 }
 
 /**
- * Update product properties (feedEnableSearch, status, etc.)
+ * Update product properties (feedEnableSearch, etc.)
  */
 export async function updateProduct(
   shopId: string,
   productId: string,
-  data: { feedEnableSearch?: boolean; status?: string }
+  data: { feedEnableSearch?: boolean }
 ) {
   return requestWithAuth<{ product: unknown }>(
     `/api/v1/shops/${shopId}/products/${productId}`,

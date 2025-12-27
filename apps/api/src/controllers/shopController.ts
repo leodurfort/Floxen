@@ -200,7 +200,7 @@ export async function oauthCallback(req: Request, res: Response) {
 
   try {
     const shop = await setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret));
-    syncQueue?.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, {
+    syncQueue?.add('product-sync', { shopId: shop.id, triggeredBy: 'oauth' }, {
       ...DEFAULT_JOB_OPTIONS,
       priority: JOB_PRIORITIES.MANUAL,
     });

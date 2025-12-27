@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { ProductStatus, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   ProductFieldOverrides,
   LOCKED_FIELD_SET,
@@ -16,7 +16,6 @@ import { reprocessProduct } from '../services/productReprocessService';
 import { getUserId } from '../utils/request';
 
 const updateProductSchema = z.object({
-  status: z.nativeEnum(ProductStatus).optional(),
   manualTitle: z.string().optional(),
   manualDescription: z.string().optional(),
   feedEnableSearch: z.boolean().optional(),
@@ -155,7 +154,6 @@ export async function getProduct(req: Request, res: Response) {
     logger.info('Product retrieved successfully', {
       shopId: id,
       productId: pid,
-      status: product.status
     });
     return res.json({ product });
   } catch (err: any) {

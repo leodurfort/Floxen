@@ -1,6 +1,5 @@
 export type SubscriptionTier = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
 
-export type ProductStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'SYNCED' | 'EXCLUDED' | 'ERROR';
 export type SyncStatus = 'PENDING' | 'SYNCING' | 'COMPLETED' | 'FAILED' | 'PAUSED';
 
 export interface User {
@@ -60,8 +59,7 @@ export interface Product {
   // Product-level field mapping overrides
   productFieldOverrides?: ProductFieldOverrides | null;
 
-  // Status fields
-  status: ProductStatus;
+  // Sync fields
   lastSyncedAt?: string | null;
   feedEnableSearch?: boolean;
   feedEnableCheckout?: boolean;

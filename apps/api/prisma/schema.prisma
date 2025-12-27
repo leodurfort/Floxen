@@ -14,15 +14,6 @@ enum SubscriptionTier {
   ENTERPRISE
 }
 
-enum ProductStatus {
-  DRAFT
-  PENDING_REVIEW
-  APPROVED
-  SYNCED
-  EXCLUDED
-  ERROR
-}
-
 enum SyncStatus {
   PENDING
   SYNCING
@@ -33,8 +24,6 @@ enum SyncStatus {
 
 enum SyncType {
   FULL
-  INCREMENTAL
-  SINGLE_PRODUCT
   MANUAL
 }
 
@@ -55,8 +44,6 @@ model User {
 model UserSettings {
   id        String   @id @default(cuid())
   userId    String   @unique @map("user_id")
-  timezone  String? 
-  locale    String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -141,8 +128,7 @@ model Product {
   // Format: { "fieldAttribute": { type: "mapping" | "static", value: "..." } }
   productFieldOverrides Json?       @default("{}") @map("product_field_overrides")
 
-  // Status & Validation
-  status              ProductStatus @default(DRAFT)
+  // Validation
   lastSyncedAt        DateTime?     @map("last_synced_at")
   syncError           String?       @map("sync_error")
   checksum            String?
@@ -158,7 +144,6 @@ model Product {
 
   @@unique([shopId, wooProductId])
   @@index([shopId])
-  @@index([shopId, status])
 }
 
 model ProductVariant {
