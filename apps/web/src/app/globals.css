@@ -9,7 +9,6 @@
 
 body {
   margin: 0;
-  font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
   background: radial-gradient(circle at 12% 20%, rgba(93, 240, 192, 0.14), transparent 20%),
     radial-gradient(circle at 88% 18%, rgba(242, 201, 76, 0.2), transparent 24%),
     radial-gradient(circle at 70% 80%, rgba(114, 172, 255, 0.12), transparent 26%),
