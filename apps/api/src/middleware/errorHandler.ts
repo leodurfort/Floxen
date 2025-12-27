@@ -9,11 +9,13 @@ interface ErrorResponse {
   message?: string;
   details?: unknown;
   stack?: string;
+  requestId?: string;
 }
 
 export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction) {
   // Extract request context for logging
   const requestContext = {
+    requestId: req.requestId,
     method: req.method,
     path: req.path,
     params: req.params,
@@ -97,6 +99,9 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
   if (process.env.NODE_ENV === 'development' && err.stack) {
     errorResponse.stack = err.stack;
   }
+
+  // Include request ID so users can reference it when reporting issues
+  errorResponse.requestId = req.requestId;
 
   res.status(statusCode).json(errorResponse);
 }
