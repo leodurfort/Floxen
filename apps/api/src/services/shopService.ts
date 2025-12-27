@@ -85,12 +85,17 @@ export async function deleteShop(shopId: string) {
 }
 
 export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string) {
-  const baseCallback = env.wooRedirectUri || 'https://api-production-6a74.up.railway.app/api/v1/shops/:id/oauth/callback';
-  const callback = baseCallback.replace(':id', shopId);
+  // callback_url: where WooCommerce POSTs credentials (API endpoint)
+  if (!env.wooRedirectUri) {
+    throw new Error('WOO_REDIRECT_URI environment variable is required for OAuth');
+  }
+  const callback = env.wooRedirectUri.replace(':id', shopId);
 
   // return_url: where to redirect user after approval (frontend)
-  // callback_url: where to POST credentials (API)
-  const returnUrl = `https://web-production-3178a.up.railway.app/shops?shop=${shopId}&connected=true`;
+  if (!env.webBaseUrl) {
+    throw new Error('WEB_BASE_URL environment variable is required for OAuth');
+  }
+  const returnUrl = `${env.webBaseUrl}/shops?shop=${shopId}&connected=true`;
 
   const url = new URL('/wc-auth/v1/authorize', storeUrl);
   url.searchParams.set('app_name', 'ProductSynch');

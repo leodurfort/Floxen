@@ -129,6 +129,7 @@ export const env = {
   resendApiKey: process.env.RESEND_API_KEY || '',
   resendFrom: process.env.RESEND_FROM || '',
   wooRedirectUri: process.env.WOO_REDIRECT_URI || '',
+  webBaseUrl: process.env.WEB_BASE_URL || '',
   s3: {
     bucket: process.env.S3_BUCKET || '',
     region: process.env.S3_REGION || '',
