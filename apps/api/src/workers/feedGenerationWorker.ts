@@ -61,12 +61,21 @@ export async function feedGenerationProcessor(job: Job) {
     logger.info(`Generated feed payload for shop ${shopId} (items: ${payload.items.length})`, { url });
     return { url };
   } catch (err) {
-    logger.error(`feed-generation failed for shop ${shopId}`, { error: err instanceof Error ? err : new Error(String(err)) });
-    // Mark feed as failed so the status reflects the feed generation failure
-    await prisma.shop.update({
-      where: { id: shopId },
-      data: { feedStatus: 'FAILED' },
+    logger.error(`feed-generation failed for shop ${shopId}`, {
+      error: err instanceof Error ? err : new Error(String(err)),
+      attemptsMade: job.attemptsMade,
+      maxAttempts: job.opts.attempts,
     });
+
+    // Only mark FAILED on last attempt
+    const isLastAttempt = job.attemptsMade + 1 >= (job.opts.attempts || 1);
+    if (isLastAttempt) {
+      await prisma.shop.update({
+        where: { id: shopId },
+        data: { feedStatus: 'FAILED' },
+      });
+    }
+
     throw err;
   }
 }
