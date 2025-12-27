@@ -11,7 +11,7 @@ import {
   ProductFieldOverrides,
 } from '@productsynch/shared';
 import { ProductFieldMappingRow } from '@/components/setup/ProductFieldMappingRow';
-import { useProductOverridesQuery, useUpdateProductOverridesMutation } from '@/hooks/useFieldMappingsQuery';
+import { useProductOverridesQuery, useUpdateProductOverridesMutation, useUpdateFeedEnableSearchMutation } from '@/hooks/useFieldMappingsQuery';
 import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
 
 export default function ProductMappingPage() {
@@ -48,7 +48,11 @@ export default function ProductMappingPage() {
 
   // Mutation for updating product overrides
   const updateOverridesMutation = useUpdateProductOverridesMutation(params?.id, params?.pid);
-  const saving = updateOverridesMutation.isPending;
+
+  // Mutation for updating feedEnableSearch (enable_search uses column, not overrides)
+  const updateEnableSearchMutation = useUpdateFeedEnableSearchMutation(params?.id, params?.pid);
+
+  const saving = updateOverridesMutation.isPending || updateEnableSearchMutation.isPending;
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -93,6 +97,25 @@ export default function ProductMappingPage() {
       });
     },
     [productOverrides, updateOverridesMutation]
+  );
+
+  // Handle enable_search change - uses feedEnableSearch column, not overrides
+  const handleEnableSearchChange = useCallback(
+    (enableSearch: boolean) => {
+      setSaveError(null);
+
+      updateEnableSearchMutation.mutate(enableSearch, {
+        onError: (err) => {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to update enable_search';
+          setSaveError(errorMessage);
+          if (saveErrorTimeoutRef.current) {
+            clearTimeout(saveErrorTimeoutRef.current);
+          }
+          saveErrorTimeoutRef.current = setTimeout(() => setSaveError(null), 5000);
+        },
+      });
+    },
+    [updateEnableSearchMutation]
   );
 
   // Filter specs based on search
@@ -258,6 +281,8 @@ export default function ProductMappingPage() {
                       wooFields={wooFields}
                       wooFieldsLoading={wooFieldsLoading}
                       serverValidationErrors={product?.validationErrors?.[spec.attribute] || null}
+                      feedEnableSearch={product?.feedEnableSearch}
+                      onEnableSearchChange={handleEnableSearchChange}
                     />
                   ))}
                 </div>
