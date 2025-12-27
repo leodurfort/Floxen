@@ -132,15 +132,7 @@ model Product {
   // All 70 OpenAI attributes stored as JSON for flexibility
   openaiAutoFilled    Json          @default("{}") @map("openai_auto_filled")  // Auto-filled from WooCommerce
 
-  // Legacy Feed Fields (kept for backward compatibility)
-  feedId              String?       @map("feed_id")
-  feedTitle           String?       @map("feed_title")
-  feedDescription     String?       @map("feed_description")
-  feedPrice           String?       @map("feed_price")
-  feedAvailability    String?       @map("feed_availability")
-  feedCategory        String?       @map("feed_category")
-  feedBrand           String?       @map("feed_brand")
-  feedImageLink       String?       @map("feed_image_link")
+  // Feed Settings
   feedEnableSearch    Boolean       @default(true) @map("feed_enable_search")
   feedEnableCheckout  Boolean       @default(false) @map("feed_enable_checkout")
   feedDataJson        Json?         @map("feed_data_json")

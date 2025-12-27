@@ -838,7 +838,7 @@ function formatValueLabel(value: string, column: string): string {
   return value;
 }
 
-export function transformWooProduct(woo: any, shopCurrency: string) {
+export function transformWooProduct(woo: any) {
   return {
     wooProductId: woo.id,
     wooParentId: woo.parent_id || null,
@@ -855,8 +855,6 @@ export function transformWooProduct(woo: any, shopCurrency: string) {
     wooPermalink: woo.permalink,
     wooDateModified: woo.date_modified ? new Date(woo.date_modified) : null,
     wooRawJson: woo,
-    feedPrice: woo.price ? `${woo.price} ${shopCurrency}` : null,
-    feedAvailability: woo.stock_status === 'instock' ? 'in_stock' : woo.stock_status,
     checksum: checksum(woo),
     updatedAt: new Date(),
   };
@@ -880,7 +878,7 @@ export function transformWooProduct(woo: any, shopCurrency: string) {
  * This ensures that variations never have missing data - any null field
  * automatically falls back to the parent product's value.
  */
-export function mergeParentAndVariation(parent: any, variation: any, shopCurrency: string) {
+export function mergeParentAndVariation(parent: any, variation: any) {
   // Get variation attributes as key-value pairs
   const varAttrs = variation.attributes?.reduce((acc: any, attr: any) => {
     acc[attr.name.toLowerCase()] = attr.option;
@@ -1065,5 +1063,5 @@ export function mergeParentAndVariation(parent: any, variation: any, shopCurrenc
     merged.name = `${parent.name} - ${variation.name}`;
   }
 
-  return transformWooProduct(merged, shopCurrency);
+  return transformWooProduct(merged);
 }
