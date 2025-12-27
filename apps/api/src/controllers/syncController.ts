@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { SyncStatus } from '@prisma/client';
-import { syncQueue, isQueueAvailable } from '../lib/redis';
+import { syncQueue, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 import { logger } from '../lib/logger';
 
 export async function triggerSync(req: Request, res: Response) {
@@ -19,7 +19,10 @@ export async function triggerSync(req: Request, res: Response) {
       where: { id: req.params.id },
       data: { syncStatus: SyncStatus.SYNCING },
     });
-    syncQueue!.add('product-sync', { shopId: shop.id }, { removeOnComplete: true, priority: 2 });
+    syncQueue!.add('product-sync', { shopId: shop.id }, {
+      ...DEFAULT_JOB_OPTIONS,
+      priority: JOB_PRIORITIES.MANUAL,
+    });
     logger.info('sync:trigger', { shopId: shop.id });
     return res.json({ shopId: shop.id, status: 'QUEUED' });
   } catch (err: any) {
@@ -101,7 +104,10 @@ export async function pushFeed(req: Request, res: Response) {
       });
     }
 
-    syncQueue!.add('feed-generation', { shopId: shop.id }, { removeOnComplete: true });
+    syncQueue!.add('feed-generation', { shopId: shop.id }, {
+      ...DEFAULT_JOB_OPTIONS,
+      priority: JOB_PRIORITIES.MANUAL,
+    });
     logger.info('feed:push', { shopId: shop.id, lastSyncAt: shop.lastSyncAt });
     return res.json({
       shopId: shop.id,

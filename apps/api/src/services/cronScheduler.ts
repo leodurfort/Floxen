@@ -12,7 +12,7 @@
 import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { syncQueue, syncFlowProducer, isQueueAvailable } from '../lib/redis';
+import { syncQueue, syncFlowProducer, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 
 // If a sync is stuck in SYNCING for longer than this, reset it to FAILED
 const STUCK_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -78,8 +78,8 @@ export class CronScheduler {
               queueName: 'sync',
               data: { shopId: shop.id, triggeredBy: 'cron' },
               opts: {
-                priority: 3,
-                removeOnComplete: true,
+                ...DEFAULT_JOB_OPTIONS,
+                priority: JOB_PRIORITIES.CRON,
               },
               children: [
                 {
@@ -87,8 +87,8 @@ export class CronScheduler {
                   queueName: 'sync',
                   data: { shopId: shop.id, triggeredBy: 'cron' },
                   opts: {
-                    priority: 3,
-                    removeOnComplete: true,
+                    ...DEFAULT_JOB_OPTIONS,
+                    priority: JOB_PRIORITIES.CRON,
                   },
                 },
               ],

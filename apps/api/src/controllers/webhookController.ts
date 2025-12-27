@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
-import { syncQueue } from '../lib/redis';
+import { syncQueue, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 
 // Skip webhook sync if a full sync completed within this window
 const DEBOUNCE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -102,7 +102,10 @@ export async function handleWooWebhook(req: Request, res: Response) {
           type: 'INCREMENTAL',
           triggeredBy: 'webhook',
         },
-        { removeOnComplete: true }
+        {
+          ...DEFAULT_JOB_OPTIONS,
+          priority: JOB_PRIORITIES.WEBHOOK,
+        }
       );
 
       logger.info('Webhook processed and sync queued', {

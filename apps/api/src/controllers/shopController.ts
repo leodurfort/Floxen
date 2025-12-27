@@ -12,7 +12,7 @@ import {
 } from '../services/shopService';
 import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET } from '@productsynch/shared';
 import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
-import { syncQueue } from '../lib/redis';
+import { syncQueue, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
@@ -134,6 +134,9 @@ export async function updateShop(req: Request, res: Response) {
       await syncQueue!.add('product-reprocess', {
         shopId: shop.id,
         reason: 'shop_settings_updated',
+      }, {
+        ...DEFAULT_JOB_OPTIONS,
+        priority: JOB_PRIORITIES.REPROCESS,
       });
       logger.info('shops:update:queued-reprocess', {
         shopId: shop.id,
@@ -197,7 +200,10 @@ export async function oauthCallback(req: Request, res: Response) {
 
   try {
     const shop = await setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret));
-    syncQueue?.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
+    syncQueue?.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, {
+      ...DEFAULT_JOB_OPTIONS,
+      priority: JOB_PRIORITIES.MANUAL,
+    });
     logger.info('shops:oauth callback SUCCESS - stored creds', { shopId: shop.id });
     return res.json({ shop, message: 'Connection verified, sync queued' });
   } catch (err: any) {
@@ -543,6 +549,9 @@ export async function updateFieldMappings(req: Request, res: Response) {
         await syncQueue!.add('product-reprocess', {
           shopId: id,
           reason: 'field_mappings_updated',
+        }, {
+          ...DEFAULT_JOB_OPTIONS,
+          priority: JOB_PRIORITIES.REPROCESS,
         });
         logger.info('shops:field-mappings:queued-reprocess', { shopId: id });
       }

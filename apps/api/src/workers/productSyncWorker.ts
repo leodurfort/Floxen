@@ -1,6 +1,7 @@
 import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
+import { wrapNonRetryableError, classifyError } from '../lib/errors';
 import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories, fetchSingleProduct } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
@@ -420,14 +421,27 @@ export async function productSyncProcessor(job: Job) {
       data: { syncStatus: 'COMPLETED', lastSyncAt: new Date() },
     });
   } catch (err) {
+    const classification = classifyError(err);
+
     logger.error(`product-sync failed for shop ${shopId}`, {
       error: err instanceof Error ? err : new Error(String(err)),
       isIncremental,
       productId,
+      errorClassification: classification,
+      attemptsMade: job.attemptsMade,
+      maxAttempts: job.opts.attempts,
     });
-    await prisma.shop.update({
-      where: { id: shopId },
-      data: { syncStatus: 'FAILED' },
-    });
+
+    // Only mark FAILED on last attempt or non-retryable error
+    const isLastAttempt = job.attemptsMade + 1 >= (job.opts.attempts || 1);
+    if (isLastAttempt || !classification.isRetryable) {
+      await prisma.shop.update({
+        where: { id: shopId },
+        data: { syncStatus: 'FAILED' },
+      });
+    }
+
+    // Wrap error appropriately for BullMQ retry decision
+    throw wrapNonRetryableError(err);
   }
 }
