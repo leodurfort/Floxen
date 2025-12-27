@@ -107,11 +107,11 @@ export class AutoFillService {
     },
     productOverrides?: ProductFieldOverrides
   ): any {
-    // Check for product-level override FIRST for toggle fields
+    // Check for product-level override FIRST for flag fields
     // This allows product-level overrides to take priority over productFlags
     const override = productOverrides?.[spec.attribute];
 
-    // Handle toggle fields (enable_search, enable_checkout)
+    // Handle flag fields (enable_search, enable_checkout)
     if (spec.attribute === 'enable_checkout') {
       // enable_checkout is always false (feature not yet available)
       return 'false';

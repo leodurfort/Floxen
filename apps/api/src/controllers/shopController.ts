@@ -18,7 +18,7 @@ import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { clearOverridesForField } from '../services/productReprocessService';
 
-const TOGGLE_FIELDS = new Set(['enable_search', 'enable_checkout']);
+const FLAG_FIELDS = new Set(['enable_search', 'enable_checkout']);
 const ALLOWED_MAPPING_ATTRIBUTES = new Set(Object.keys(DEFAULT_FIELD_MAPPINGS));
 const LOCKED_ATTRIBUTES = Array.from(LOCKED_FIELD_SET);
 
@@ -296,7 +296,7 @@ export async function getFieldMappings(req: Request, res: Response) {
       mappings[attribute] = value;
     }
 
-    // Add shop-level toggle defaults (these are NOT field mappings, they're shop settings)
+    // Add shop-level flag defaults (these are NOT field mappings, they're shop settings)
     mappings['enable_search'] = shop.defaultEnableSearch ? 'ENABLED' : 'DISABLED';
     // enable_checkout is always DISABLED (feature not yet available)
     mappings['enable_checkout'] = 'DISABLED';
@@ -380,39 +380,39 @@ export async function updateFieldMappings(req: Request, res: Response) {
       delete sanitizedMappings[attribute];
     });
 
-    // Extract toggle fields - these are shop-level settings, NOT field mappings
+    // Extract flag fields - these are shop-level settings, NOT field mappings
     const enableSearch = sanitizedMappings['enable_search'];
     // enable_checkout is ignored - it's always false (feature not yet available)
     delete sanitizedMappings['enable_search'];
     delete sanitizedMappings['enable_checkout'];
 
-    // Validate toggle values early (only enable_search, enable_checkout is always false)
-    const invalidToggle =
+    // Validate flag values early (only enable_search, enable_checkout is always false)
+    const invalidFlagValue =
       enableSearch !== undefined &&
       enableSearch !== 'ENABLED' &&
       enableSearch !== 'DISABLED';
 
-    if (invalidToggle) {
-      return res.status(400).json({ error: 'Invalid toggle value' });
+    if (invalidFlagValue) {
+      return res.status(400).json({ error: 'Invalid flag value' });
     }
 
-    // Update shop defaults for toggle fields (only enable_search, enable_checkout is always false)
-    const toggleUpdates: Record<string, boolean> = {};
+    // Update shop defaults for flag fields (only enable_search, enable_checkout is always false)
+    const flagUpdates: Record<string, boolean> = {};
     if (enableSearch !== undefined) {
-      toggleUpdates.defaultEnableSearch = enableSearch === 'ENABLED';
+      flagUpdates.defaultEnableSearch = enableSearch === 'ENABLED';
     }
 
-    if (Object.keys(toggleUpdates).length) {
+    if (Object.keys(flagUpdates).length) {
       await prisma.shop.update({
         where: { id },
         data: {
-          ...toggleUpdates,
+          ...flagUpdates,
           fieldMappingsUpdatedAt: new Date(),
         },
       });
-      logger.info('shops:field-mappings:update toggle', {
+      logger.info('shops:field-mappings:update flags', {
         shopId: id,
-        ...toggleUpdates,
+        ...flagUpdates,
       });
     }
 
@@ -432,7 +432,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
     const results = { created: 0, updated: 0, deleted: 0, errors: 0 };
     const actuallyChangedAttributes: string[] = []; // Track fields that actually changed
     const mappingEntries = Object.entries(sanitizedMappings).filter(
-      ([attribute]) => !TOGGLE_FIELDS.has(attribute)
+      ([attribute]) => !FLAG_FIELDS.has(attribute)
     );
 
     if (!mappingEntries.length) {
