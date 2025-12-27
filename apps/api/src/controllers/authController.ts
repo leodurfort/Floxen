@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { env } from '../config/env';
 import { JwtUser } from '../middleware/auth';
+import { getUser } from '../utils/request';
 import { createUser, findUserByEmail, validateUser } from '../services/userService';
 import { logger } from '../lib/logger';
 
@@ -109,11 +110,8 @@ export async function refresh(req: Request, res: Response) {
 }
 
 export async function me(req: Request, res: Response) {
-  const userPayload = (req as Request & { user?: JwtUser }).user;
-  if (!userPayload) {
-    logger.warn('me: no user on request');
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const userPayload = getUser(req)!;
+
   try {
     const user = await findUserByEmail(userPayload.email);
     if (!user) {
