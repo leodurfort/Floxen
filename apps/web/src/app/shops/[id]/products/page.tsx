@@ -7,7 +7,7 @@ import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
 import { useProductsQuery, useRefreshFeedMutation, useBulkUpdateMutation } from '@/hooks/useProductsQuery';
-import { Product } from '@productsynch/shared';
+import { CatalogProduct } from '@productsynch/shared';
 import { SearchFilter } from '@/components/catalog/FilterDropdown';
 import { BulkActionToolbar } from '@/components/catalog/BulkActionToolbar';
 import { BulkEditModal } from '@/components/catalog/BulkEditModal';
@@ -294,7 +294,7 @@ function CatalogPageContent() {
   const totalPages = Math.ceil(totalProducts / filters.limit) || 1;
 
   // Render cell value based on column definition
-  const renderCellValue = (column: ColumnDefinition, product: Product) => {
+  const renderCellValue = (column: ColumnDefinition, product: CatalogProduct) => {
     const productData = product as unknown as ProductData;
 
     // Special rendering for certain columns

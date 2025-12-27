@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Product } from '@productsynch/shared';
+import { CatalogProduct } from '@productsynch/shared';
 
 interface Props {
-  products: Product[];
+  products: CatalogProduct[];
   value: string | null;  // Selected product ID
   onChange: (productId: string) => void;
 }
@@ -14,12 +14,9 @@ export function ProductSelector({ products, value, onChange }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Use OpenAI title with fallback to wooTitle for backwards compatibility
-  // Cast through unknown to access openaiAutoFilled which exists on API response but not in shared Product type
-  const getProductName = (product: Product): string => {
-    const productWithOpenai = product as unknown as { openaiAutoFilled?: Record<string, unknown> };
-    const openaiTitle = productWithOpenai.openaiAutoFilled?.title as string | undefined;
-    return openaiTitle || product.wooTitle;
+  const getProductName = (product: CatalogProduct): string => {
+    const openaiTitle = product.openaiAutoFilled?.title as string | undefined;
+    return openaiTitle || `Product ${product.id}`;
   };
 
   const filteredProducts = searchQuery
@@ -43,7 +40,7 @@ export function ProductSelector({ products, value, onChange }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  function handleSelect(product: Product) {
+  function handleSelect(product: CatalogProduct) {
     onChange(product.id);
     setIsOpen(false);
     setSearchQuery('');
@@ -93,7 +90,6 @@ export function ProductSelector({ products, value, onChange }: Props) {
                   }`}
                 >
                   <div className="text-sm text-white font-medium truncate">{getProductName(product)}</div>
-                  <div className="text-xs text-white/40 mt-0.5">ID: {product.wooProductId}</div>
                 </button>
               ))
             )}

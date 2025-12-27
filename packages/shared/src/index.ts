@@ -72,6 +72,17 @@ export interface Product {
   validationErrors?: Record<string, string[]> | null;
 }
 
+// Minimal product type for catalog listing (matches what API returns)
+export interface CatalogProduct {
+  id: string;
+  isValid: boolean;
+  validationErrors: string[] | null;
+  updatedAt: string;
+  feedEnableSearch: boolean;
+  openaiAutoFilled: Record<string, unknown> | null;
+  productFieldOverrides: ProductFieldOverrides | null;
+}
+
 export interface ApiResponse<T> {
   data: T;
   error?: string;

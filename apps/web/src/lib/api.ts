@@ -1,4 +1,4 @@
-import { Product, Shop, User, ProductFieldOverrides } from '@productsynch/shared';
+import { Shop, User, ProductFieldOverrides, CatalogProduct } from '@productsynch/shared';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app';
 
@@ -250,7 +250,7 @@ export interface ListProductsParams {
 }
 
 export interface ListProductsResult {
-  products: Product[];
+  products: CatalogProduct[];
   pagination: {
     page: number;
     limit: number;
@@ -290,10 +290,6 @@ export async function listProducts(
   const path = `/api/v1/shops/${shopId}/products${queryString ? `?${queryString}` : ''}`;
 
   return requestWithAuth<ListProductsResult>(path);
-}
-
-export async function requestProduct(shopId: string, productId: string) {
-  return requestWithAuth<{ product: Product }>(`/api/v1/shops/${shopId}/products/${productId}`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
