@@ -144,11 +144,6 @@ export function ColumnHeaderDropdown({
     setPendingValues(uniqueValues.map((v) => v.value));
   }, [uniqueValues]);
 
-  // Deselect all in pending
-  const deselectAllPending = useCallback(() => {
-    setPendingValues([]);
-  }, []);
-
   // Apply pending filter and close dropdown
   // If ALL values are selected, treat it as clearing the filter (no filter = show all)
   const applyFilter = useCallback(() => {
@@ -162,10 +157,12 @@ export function ColumnHeaderDropdown({
     setIsOpen(false);
   }, [pendingValues, uniqueValues, onValueFilter, onClearFilter]);
 
-  // Clear all filters for this column
-  const handleClear = useCallback(() => {
+  // Clear all filters for this column AND reset pending selections
+  const handleClearFilter = useCallback(() => {
     setSearchInput('');
+    setPendingValues([]);
     onClearFilter();
+    setIsOpen(false);
   }, [onClearFilter]);
 
   // Filter unique values by search input
@@ -247,14 +244,6 @@ export function ColumnHeaderDropdown({
                 >
                   Sort Z→A
                 </button>
-                {(isSorted || hasActiveFilter) && (
-                  <button
-                    onClick={handleClear}
-                    className="px-2 py-1.5 text-xs font-medium rounded bg-white/5 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
               </div>
             </div>
           )}
@@ -311,20 +300,13 @@ export function ColumnHeaderDropdown({
                   <div className="p-4 text-center text-white/40 text-sm">No values found</div>
                 ) : (
                   <>
-                    {/* Select All / Deselect All */}
-                    <div className="px-2 py-1.5 border-b border-white/10 flex gap-2">
+                    {/* Select All */}
+                    <div className="px-2 py-1.5 border-b border-white/10">
                       <button
                         onClick={selectAllPending}
                         className="text-xs text-[#5df0c0] hover:text-[#5df0c0]/80"
                       >
                         Select All
-                      </button>
-                      <span className="text-white/20">|</span>
-                      <button
-                        onClick={deselectAllPending}
-                        className="text-xs text-white/60 hover:text-white"
-                      >
-                        Clear
                       </button>
                     </div>
 
@@ -350,14 +332,22 @@ export function ColumnHeaderDropdown({
                 )}
               </div>
 
-              {/* Apply Filter Button */}
+              {/* Action Buttons */}
               {filteredValues.length > 0 && (
-                <div className="p-2 border-t border-white/10">
+                <div className="p-2 border-t border-white/10 flex gap-2">
+                  {hasActiveFilter && (
+                    <button
+                      onClick={handleClearFilter}
+                      className="px-3 py-2 text-sm font-medium rounded transition-colors bg-white/5 text-white/70 hover:bg-red-500/20 hover:text-red-400"
+                    >
+                      Clear Filter
+                    </button>
+                  )}
                   <button
                     onClick={applyFilter}
                     disabled={!hasPendingChanges && pendingValues.length === 0}
                     className={`
-                      w-full px-3 py-2 text-sm font-medium rounded transition-colors
+                      flex-1 px-3 py-2 text-sm font-medium rounded transition-colors
                       ${hasPendingChanges || pendingValues.length > 0
                         ? 'bg-[#5df0c0] text-black hover:bg-[#4de0b0]'
                         : 'bg-white/10 text-white/40 cursor-not-allowed'
