@@ -2,7 +2,6 @@
 
 import { LOCKED_FIELD_MAPPINGS, OpenAIFieldSpec } from '@productsynch/shared';
 import { WooCommerceFieldSelector } from './WooCommerceFieldSelector';
-import { ToggleSwitch } from './ToggleSwitch';
 import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } from '@/lib/wooCommerceFields';
 
 interface Props {
@@ -24,22 +23,16 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     Conditional: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   };
 
-  // Check if this is a toggle field (enable_checkout only - enable_search is now locked at shop level)
+  // Check for special boolean fields (both are now read-only at shop level)
   const isEnableSearchField = spec.attribute === 'enable_search';
-  const isToggleField = spec.attribute === 'enable_checkout';  // enable_search is no longer a toggle
+  const isEnableCheckoutField = spec.attribute === 'enable_checkout';
   const isDimensionOrWeightField = ['dimensions', 'length', 'width', 'height', 'weight'].includes(spec.attribute);
   const lockedMappingValue = LOCKED_FIELD_MAPPINGS[spec.attribute];
   const isLockedField = Boolean(lockedMappingValue);
 
   // Use spec properties for non-editable field detection (consistent with ProductFieldMappingRow)
-  // enable_search is now locked at shop level - customizable per product only
-  const isNonEditableField = spec.isAutoPopulated || spec.isShopManaged || isLockedField || isEnableSearchField;
-
-  // For toggle fields, mapping value is "ENABLED" or "DISABLED"
-  // Default enable_search to ENABLED
-  const isEnabled = isToggleField
-    ? (currentMapping === 'ENABLED' || (spec.attribute === 'enable_search' && !currentMapping))
-    : false;
+  // enable_search and enable_checkout are now locked at shop level
+  const isNonEditableField = spec.isAutoPopulated || spec.isShopManaged || isLockedField || isEnableSearchField || isEnableCheckoutField;
 
   const defaultMapping = spec.wooCommerceMapping?.field || null;
   const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping || (spec.isAutoPopulated ? defaultMapping : null)) || null;
@@ -51,7 +44,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   // 3. This is a non-editable field like dimensions or shop-managed fields, OR
   // 4. There's an effective mapping (including spec defaults)
   const shouldShowPreview = isUserSelected || isLockedField || isNonEditableField || Boolean(effectiveMapping);
-  const previewValue = shouldShowPreview && effectiveMapping && !isToggleField
+  const previewValue = shouldShowPreview && effectiveMapping && !isEnableSearchField && !isEnableCheckoutField
     ? extractTransformedPreviewValue(spec, effectiveMapping, previewProductJson, previewShopData || undefined)
     : null;
   const formattedValue = formatFieldValue(previewValue);
@@ -64,9 +57,10 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     // enable_search is always "true" at shop level (locked as Enabled)
     previewDisplay = 'true';
     previewStyle = 'text-[#5df0c0]';
-  } else if (isToggleField) {
-    previewDisplay = isEnabled ? 'true' : 'false';
-    previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
+  } else if (isEnableCheckoutField) {
+    // enable_checkout is always "false" at shop level (feature coming soon)
+    previewDisplay = 'false';
+    previewStyle = 'text-white/40';
   } else if (!effectiveMapping) {
     previewDisplay = '';
     previewStyle = 'text-white/40';
@@ -130,6 +124,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
               <div className="flex flex-col">
                 <span className="text-white text-sm font-medium">
                   {isEnableSearchField ? 'Enabled' :
+                   isEnableCheckoutField ? 'Disabled' :
                    spec.isAutoPopulated ? 'Auto-populated' :
                    isLockedField ? effectiveMapping :
                    'Managed in Shops page'}
@@ -142,6 +137,11 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
                     <div>
                       <div className="font-semibold text-white mb-1">Customize per product</div>
                       <div>All products are searchable by default. You can disable search for specific products in the Products page.</div>
+                    </div>
+                  ) : isEnableCheckoutField ? (
+                    <div>
+                      <div className="font-semibold text-white mb-1">Feature coming soon</div>
+                      <div>Direct checkout inside ChatGPT will be available in a future update.</div>
                     </div>
                   ) : spec.isAutoPopulated ? (
                     <div>
@@ -163,21 +163,6 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
                 </div>
               </div>
             </div>
-          </div>
-        ) : isToggleField ? (
-          <div className="w-full">
-            <ToggleSwitch
-              enabled={isEnabled}
-              onChange={(enabled) => onMappingChange(spec.attribute, enabled ? 'ENABLED' : 'DISABLED')}
-              disabled={spec.isFeatureDisabled}
-              label={isEnabled ? 'Enabled' : 'Disabled'}
-            />
-            {spec.isFeatureDisabled && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-white/50">
-                <span title="This feature will be available soon">ℹ️</span>
-                <span>Feature coming soon</span>
-              </div>
-            )}
           </div>
         ) : (
           <WooCommerceFieldSelector
