@@ -3,16 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { login } from '@/lib/api';
 import { useAuth } from '@/store/auth';
+import { useLoginMutation } from '@/hooks/useAuthMutations';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setSession, hydrate, user, hydrated } = useAuth();
+  const { hydrate, user, hydrated } = useAuth();
   const [email, setEmail] = useState('demo@productsynch.com');
   const [password, setPassword] = useState('password123');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const loginMutation = useLoginMutation();
 
   useEffect(() => {
     hydrate();
@@ -24,19 +24,9 @@ export default function LoginPage() {
     }
   }, [hydrated, user, router]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await login({ email, password });
-      setSession(result.user, result.tokens.accessToken, result.tokens.refreshToken);
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    loginMutation.mutate({ email, password });
   }
 
   return (
@@ -56,9 +46,11 @@ export default function LoginPage() {
             <span className="subtle text-sm">Password</span>
             <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
           </label>
-          {error && <div className="text-sm text-red-300">{error}</div>}
-          <button className="btn btn--primary w-full" type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+          {loginMutation.error && (
+            <div className="text-sm text-red-300">{loginMutation.error.message}</div>
+          )}
+          <button className="btn btn--primary w-full" type="submit" disabled={loginMutation.isPending}>
+            {loginMutation.isPending ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
         <p className="text-sm subtle">

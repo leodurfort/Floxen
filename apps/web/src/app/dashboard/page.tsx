@@ -3,26 +3,20 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
-import { useShops } from '@/store/shops';
 import { useRouter } from 'next/navigation';
+import { useShopsQuery } from '@/hooks/useShopsQuery';
 
 export default function DashboardPage() {
   const router = useRouter();
   // Note: hydrate() is called by AppLayout, no need to call it here
-  const { user, accessToken, hydrated } = useAuth();
-  const { shops, loading, loadShops } = useShops();
+  const { user, hydrated } = useAuth();
+  const { data: shops = [], isLoading: loading } = useShopsQuery();
 
   useEffect(() => {
-    if (hydrated && !accessToken) {
+    if (hydrated && !user) {
       router.push('/login');
     }
-  }, [hydrated, accessToken, router]);
-
-  useEffect(() => {
-    if (accessToken) {
-      loadShops(accessToken);
-    }
-  }, [accessToken, loadShops]);
+  }, [hydrated, user, router]);
 
   if (!hydrated) {
     return (
@@ -32,7 +26,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!accessToken || !user) return null;
+  if (!user) return null;
 
   const connectedShops = shops.filter((s) => s.isConnected);
   const totalProducts = 0; // TODO: Fetch total products count from API

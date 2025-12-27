@@ -3,37 +3,35 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createShop } from '@/lib/api';
 import { useAuth } from '@/store/auth';
+import { useCreateShopMutation } from '@/hooks/useShopsQuery';
 
 export default function NewShopPage() {
   // Note: hydrate() is called by AppLayout, no need to call it here
-  const { accessToken, hydrated } = useAuth();
+  const { user, hydrated } = useAuth();
   const router = useRouter();
   const [storeUrl, setStoreUrl] = useState('');
   const [authUrl, setAuthUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const createShopMutation = useCreateShopMutation();
 
   useEffect(() => {
-    if (hydrated && !accessToken) {
+    if (hydrated && !user) {
       router.push('/login');
     }
-  }, [hydrated, accessToken, router]);
+  }, [hydrated, user, router]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!accessToken) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await createShop({ storeUrl }, accessToken);
-      setAuthUrl(result.authUrl);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    if (!user) return;
+    createShopMutation.mutate(
+      { storeUrl },
+      {
+        onSuccess: (result) => {
+          setAuthUrl(result.authUrl);
+        },
+      }
+    );
   }
 
   return (
@@ -47,9 +45,11 @@ export default function NewShopPage() {
             <span className="subtle text-sm">Store URL</span>
             <input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="https://mystore.com" required />
           </label>
-          {error && <div className="text-sm text-red-300">{error}</div>}
-          <button className="btn btn--primary" type="submit" disabled={loading || !accessToken}>
-            {loading ? 'Generating...' : 'Generate auth URL'}
+          {createShopMutation.error && (
+            <div className="text-sm text-red-300">{createShopMutation.error.message}</div>
+          )}
+          <button className="btn btn--primary" type="submit" disabled={createShopMutation.isPending || !user}>
+            {createShopMutation.isPending ? 'Generating...' : 'Generate auth URL'}
           </button>
         </form>
         {authUrl && (

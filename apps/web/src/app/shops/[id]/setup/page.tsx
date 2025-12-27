@@ -3,47 +3,62 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, Product, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
 import { ProductSelector } from '@/components/setup/ProductSelector';
-import { WooCommerceField } from '@/lib/wooCommerceFields';
-import { getFieldMappings, getWooFields, updateFieldMappings, listProducts, API_URL } from '@/lib/api';
+import { useFieldMappingsQuery, useUpdateFieldMappingsMutation } from '@/hooks/useFieldMappingsQuery';
+import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
+import { useProductsQuery } from '@/hooks/useProductsQuery';
 
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   // Note: hydrate() is called by AppLayout, no need to call it here
-  const { accessToken, hydrated } = useAuth();
+  const { user, hydrated } = useAuth();
 
-  const [mappings, setMappings] = useState<Record<string, string | null>>({});
-  const [userMappings, setUserMappings] = useState<Record<string, string | null>>({});
-
-  // Refs to track current state - prevents stale closure issues in async operations
-  const mappingsRef = useRef<Record<string, string | null>>({});
-  const userMappingsRef = useRef<Record<string, string | null>>({});
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productsLoading, setProductsLoading] = useState(true);
-  const [productsError, setProductsError] = useState<string | null>(null);
+  // Local UI state
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [previewProductJson, setPreviewProductJson] = useState<Record<string, unknown> | null>(null);
-  const [previewShopData, setPreviewShopData] = useState<Record<string, unknown> | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [wooFields, setWooFields] = useState<WooCommerceField[]>([]);
-  const [wooFieldsLoading, setWooFieldsLoading] = useState(true);
-
-  // Refs for cleanup
-  const abortControllerRef = useRef<AbortController | null>(null);
   const saveErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Propagation modal state
   const [showPropagationModal, setShowPropagationModal] = useState(false);
   const [skipPropagationModal, setSkipPropagationModal] = useState(false);
   const [pendingChange, setPendingChange] = useState<{ attribute: string; newValue: string | null } | null>(null);
+
+  // React Query hooks - these replace all manual data fetching
+  const {
+    data: mappingsData,
+    isLoading: loading,
+    error: loadError,
+  } = useFieldMappingsQuery(params?.id);
+
+  const mappings = mappingsData?.mappings ?? {};
+  const userMappings = mappingsData?.userMappings ?? {};
+
+  const {
+    data: productsData,
+    isLoading: productsLoading,
+    error: productsQueryError,
+  } = useProductsQuery(params?.id, { limit: 100 });
+
+  const products = productsData?.products ?? [];
+  const productsError = productsQueryError?.message ?? null;
+
+  const { data: wooFields = [], isLoading: wooFieldsLoading } = useWooFieldsQuery(params?.id);
+
+  const {
+    data: previewData,
+    isLoading: loadingPreview,
+  } = useWooProductDataQuery(params?.id, selectedProductId);
+
+  const previewProductJson = previewData?.wooData ?? null;
+  const previewShopData = previewData?.shopData ?? null;
+
+  // Mutation for updating field mappings
+  const updateMappingsMutation = useUpdateFieldMappingsMutation(params?.id);
+  const saving = updateMappingsMutation.isPending;
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -54,202 +69,59 @@ export default function SetupPage() {
     };
   }, []);
 
-  // Keep refs in sync with state to avoid stale closures
-  useEffect(() => {
-    mappingsRef.current = mappings;
-  }, [mappings]);
-
-  useEffect(() => {
-    userMappingsRef.current = userMappings;
-  }, [userMappings]);
-
   // Redirect if not logged in
   useEffect(() => {
-    if (hydrated && !accessToken) {
+    if (hydrated && !user) {
       router.push('/login');
     }
-  }, [hydrated, accessToken, router]);
+  }, [hydrated, user, router]);
 
-  // Load mappings, products, and woo fields on mount
-  // Wait for hydration to complete to ensure accessToken is properly loaded from localStorage
+  // Auto-select first product when products load
   useEffect(() => {
-    if (!hydrated || !accessToken || !params.id) return;
-    loadMappings();
-    loadProducts();
-    loadWooFields();
-  }, [hydrated, accessToken, params.id]);
-
-  async function loadMappings() {
-    if (!accessToken || !params.id) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const data = await getFieldMappings(params.id, accessToken);
-
-      // Initialize enable_search to ENABLED by default if not set
-      const loadedMappings = { ...(data.mappings || {}) };
-      Object.entries(LOCKED_FIELD_MAPPINGS).forEach(([attribute, lockedValue]) => {
-        loadedMappings[attribute] = lockedValue;
-      });
-      if (!loadedMappings.enable_search) {
-        loadedMappings.enable_search = 'ENABLED';
-      }
-
-      // Update both state and refs
-      mappingsRef.current = loadedMappings;
-      userMappingsRef.current = data.userMappings || {};
-      setMappings(loadedMappings);
-      setUserMappings(data.userMappings || {});
-    } catch {
-      setLoadError('Failed to load field mappings. Please refresh the page.');
-    } finally {
-      setLoading(false);
+    if (products.length > 0 && !selectedProductId) {
+      setSelectedProductId(products[0].id);
     }
-  }
+  }, [products, selectedProductId]);
 
-  async function loadProducts() {
-    if (!accessToken || !params.id) return;
-    setProductsLoading(true);
-    setProductsError(null);
-    try {
-      const data = await listProducts(params.id, accessToken);
-      setProducts(data.products || []);
-      // Auto-select first product if available
-      if (data.products && data.products.length > 0) {
-        setSelectedProductId(data.products[0].id);
-      }
-    } catch {
-      setProductsError('Failed to load products for preview.');
-    } finally {
-      setProductsLoading(false);
-    }
-  }
-
-  async function loadWooFields() {
-    if (!accessToken || !params.id) return;
-    setWooFieldsLoading(true);
-    try {
-      const data = await getWooFields(params.id, accessToken);
-      setWooFields(data.fields || []);
-    } catch (error) {
-      console.error('Failed to load WooCommerce fields:', error);
-    } finally {
-      setWooFieldsLoading(false);
-    }
-  }
-
-  // Load WooCommerce data when selected product changes
-  useEffect(() => {
-    if (!selectedProductId || !accessToken) {
-      setPreviewProductJson(null);
-      setPreviewShopData(null);
-      return;
-    }
-
-    // Cancel any in-flight request
-    abortControllerRef.current?.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    async function fetchPreview() {
-      setLoadingPreview(true);
-      const url = `${API_URL}/api/v1/shops/${params.id}/products/${selectedProductId}/woo-data`;
-
-      try {
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          signal: controller.signal,
-        });
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`Failed to load product WooCommerce data: ${res.status} ${errorText}`);
-        }
-
-        const data = await res.json();
-        setPreviewProductJson(data.wooData);
-        setPreviewShopData(data.shopData);
-      } catch (err) {
-        // Don't update state if request was aborted
-        if (err instanceof Error && err.name === 'AbortError') return;
-        setPreviewProductJson(null);
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoadingPreview(false);
-        }
-      }
-    }
-
-    fetchPreview();
-
-    return () => {
-      controller.abort();
-    };
-  }, [selectedProductId, accessToken, params.id]);
-
-  // Save mapping with propagation mode
-  async function saveMappingChange(
+  // Save mapping with propagation mode using mutation
+  function saveMappingChange(
     attribute: string,
     wooField: string | null,
     propagationMode: 'apply_all' | 'preserve_overrides'
   ) {
-    // Use refs to get current state (avoids stale closure issues)
-    const currentMappings = mappingsRef.current;
-    const currentUserMappings = userMappingsRef.current;
-
-    // Save old values for rollback
-    const oldValue = currentMappings[attribute] ?? null;
-    const oldUserValue = currentUserMappings[attribute] ?? null;
-
     // Clear any previous errors
     setSaveError(null);
 
     // Build new mappings with the update
-    const newMappings = { ...currentMappings, [attribute]: wooField };
-    const newUserMappings = { ...currentUserMappings, [attribute]: wooField };
+    const newMappings = { ...mappings, [attribute]: wooField };
 
-    // Optimistic update - also update refs immediately for any concurrent operations
-    mappingsRef.current = newMappings;
-    userMappingsRef.current = newUserMappings;
-    setMappings(newMappings);
-    setUserMappings(newUserMappings);
+    // Use mutation (includes optimistic update and rollback)
+    updateMappingsMutation.mutate(
+      { mappings: newMappings, propagationMode },
+      {
+        onError: (err) => {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to save field mapping';
+          setSaveError(errorMessage);
 
-    // Auto-save to API (uses request helper with automatic token refresh)
-    setSaving(true);
-    try {
-      if (!params.id) throw new Error('Shop ID is required');
-      await updateFieldMappings(params.id, newMappings, propagationMode, accessToken!);
-    } catch (err) {
-      // Revert optimistic update using functional form for safety
-      setMappings(prev => ({ ...prev, [attribute]: oldValue }));
-      setUserMappings(prev => ({ ...prev, [attribute]: oldUserValue }));
-      // Also revert refs
-      mappingsRef.current = { ...mappingsRef.current, [attribute]: oldValue };
-      userMappingsRef.current = { ...userMappingsRef.current, [attribute]: oldUserValue };
-
-      // Show error message
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save field mapping';
-      setSaveError(errorMessage);
-
-      // Auto-clear error after 5 seconds (with cleanup)
-      if (saveErrorTimeoutRef.current) {
-        clearTimeout(saveErrorTimeoutRef.current);
+          // Auto-clear error after 5 seconds
+          if (saveErrorTimeoutRef.current) {
+            clearTimeout(saveErrorTimeoutRef.current);
+          }
+          saveErrorTimeoutRef.current = setTimeout(() => setSaveError(null), 5000);
+        },
       }
-      saveErrorTimeoutRef.current = setTimeout(() => setSaveError(null), 5000);
-    } finally {
-      setSaving(false);
-    }
+    );
   }
 
   // Handle mapping change - show propagation modal or save directly
-  async function handleMappingChange(attribute: string, wooField: string | null) {
+  function handleMappingChange(attribute: string, wooField: string | null) {
     if (LOCKED_FIELD_MAPPINGS[attribute]) {
       return;
     }
 
     // If user chose to skip the modal, save with preserve_overrides
     if (skipPropagationModal) {
-      await saveMappingChange(attribute, wooField, 'preserve_overrides');
+      saveMappingChange(attribute, wooField, 'preserve_overrides');
       return;
     }
 
@@ -259,14 +131,14 @@ export default function SetupPage() {
   }
 
   // Handle propagation modal choice
-  async function handlePropagationChoice(mode: 'apply_all' | 'preserve_overrides', dontAskAgain: boolean) {
+  function handlePropagationChoice(mode: 'apply_all' | 'preserve_overrides', dontAskAgain: boolean) {
     if (dontAskAgain) {
       setSkipPropagationModal(true);
     }
     setShowPropagationModal(false);
 
     if (pendingChange) {
-      await saveMappingChange(pendingChange.attribute, pendingChange.newValue, mode);
+      saveMappingChange(pendingChange.attribute, pendingChange.newValue, mode);
       setPendingChange(null);
     }
   }
@@ -316,7 +188,7 @@ export default function SetupPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="text-red-400 mb-4">{loadError}</div>
+          <div className="text-red-400 mb-4">{loadError.message || 'Failed to load field mappings. Please refresh the page.'}</div>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-[#5df0c0]/10 text-[#5df0c0] rounded-lg border border-[#5df0c0]/30 hover:bg-[#5df0c0]/20"

@@ -1,25 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { useShops } from '@/store/shops';
+import { useShopsQuery } from '@/hooks/useShopsQuery';
 import { Shop } from '@productsynch/shared';
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, accessToken, clear } = useAuth();
-  const { shops, selectedShop, setSelectedShop, loadShops } = useShops();
+  const { user, clear } = useAuth();
+
+  // React Query for shops data (replaces loadShops from Zustand)
+  const { data: shops = [] } = useShopsQuery();
+
+  // Keep selection state in Zustand for coordination with other components
+  const { selectedShop, setSelectedShop } = useShops();
+
   const [showShopDropdown, setShowShopDropdown] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-
-  useEffect(() => {
-    if (accessToken) {
-      loadShops(accessToken);
-    }
-  }, [accessToken, loadShops]);
 
   function handleShopChange(shop: Shop) {
     setSelectedShop(shop);

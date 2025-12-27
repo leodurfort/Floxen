@@ -11,40 +11,44 @@ import {
   ProductFieldOverrides,
 } from '@productsynch/shared';
 import { ProductFieldMappingRow } from '@/components/setup/ProductFieldMappingRow';
-import { WooCommerceField } from '@/lib/wooCommerceFields';
-import { API_URL } from '@/lib/api';
-
-interface ProductInfo {
-  id: string;
-  wooTitle: string;
-  feedEnableSearch: boolean;
-  feedEnableCheckout: boolean;
-  isValid?: boolean;
-  validationErrors?: Record<string, string[]> | null;
-}
+import { useProductOverridesQuery, useUpdateProductOverridesMutation } from '@/hooks/useFieldMappingsQuery';
+import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
 
 export default function ProductMappingPage() {
   const params = useParams<{ id: string; pid: string }>();
   const router = useRouter();
   // Note: hydrate() is called by AppLayout, no need to call it here
-  const { accessToken, hydrated } = useAuth();
+  const { user, hydrated } = useAuth();
 
-  const [product, setProduct] = useState<ProductInfo | null>(null);
-  const [shopMappings, setShopMappings] = useState<Record<string, string | null>>({});
-  const [productOverrides, setProductOverrides] = useState<ProductFieldOverrides>({});
-  const [resolvedValues, setResolvedValues] = useState<Record<string, any>>({});
-  const [previewProductJson, setPreviewProductJson] = useState<any | null>(null);
-  const [previewShopData, setPreviewShopData] = useState<any | null>(null);
-  const [wooFields, setWooFields] = useState<WooCommerceField[]>([]);
-  const [wooFieldsLoading, setWooFieldsLoading] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // Local UI state
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Ref for cleanup
+  const [saveError, setSaveError] = useState<string | null>(null);
   const saveErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // React Query hooks
+  const {
+    data: overridesData,
+    isLoading: loading,
+    error: loadError,
+  } = useProductOverridesQuery(params?.id, params?.pid);
+
+  const product = overridesData?.product ?? null;
+  const shopMappings = overridesData?.shopMappings ?? {};
+  const productOverrides: ProductFieldOverrides = overridesData?.productOverrides ?? {};
+  const resolvedValues = overridesData?.resolvedValues ?? {};
+
+  const {
+    data: previewData,
+  } = useWooProductDataQuery(params?.id, params?.pid);
+
+  const previewProductJson = previewData?.wooData ?? null;
+  const previewShopData = previewData?.shopData ?? null;
+
+  const { data: wooFields = [], isLoading: wooFieldsLoading } = useWooFieldsQuery(params?.id);
+
+  // Mutation for updating product overrides
+  const updateOverridesMutation = useUpdateProductOverridesMutation(params?.id, params?.pid);
+  const saving = updateOverridesMutation.isPending;
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -57,145 +61,38 @@ export default function ProductMappingPage() {
 
   // Redirect if not logged in
   useEffect(() => {
-    if (hydrated && !accessToken) {
+    if (hydrated && !user) {
       router.push('/login');
     }
-  }, [hydrated, accessToken, router]);
+  }, [hydrated, user, router]);
 
-  // Load all data on mount
-  // Wait for hydration to complete to ensure accessToken is properly loaded from localStorage
-  useEffect(() => {
-    if (!hydrated || !accessToken || !params.id || !params.pid) return;
-    loadProductOverrides();
-    loadProductWooData();
-    loadWooFields();
-  }, [hydrated, accessToken, params.id, params.pid]);
-
-  async function loadProductOverrides() {
-    if (!accessToken) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const res = await fetch(
-        `${API_URL}/api/v1/shops/${params.id}/products/${params.pid}/field-overrides`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      if (!res.ok) throw new Error('Failed to load product overrides');
-      const data = await res.json();
-
-      setProduct({
-        id: data.productId,
-        wooTitle: data.productTitle,
-        feedEnableSearch: data.feedEnableSearch,
-        feedEnableCheckout: data.feedEnableCheckout,
-        isValid: data.isValid,
-        validationErrors: data.validationErrors,
-      });
-      setShopMappings(data.shopMappings || {});
-      setProductOverrides(data.overrides || {});
-      setResolvedValues(data.resolvedValues || {});
-    } catch {
-      setLoadError('Failed to load product data. Please refresh the page.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadProductWooData() {
-    if (!accessToken) return;
-    try {
-      const res = await fetch(
-        `${API_URL}/api/v1/shops/${params.id}/products/${params.pid}/woo-data`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      if (!res.ok) throw new Error('Failed to load WooCommerce data');
-      const data = await res.json();
-      setPreviewProductJson(data.wooData);
-      setPreviewShopData(data.shopData);
-    } catch {
-      // WooCommerce data load failed silently
-    }
-  }
-
-  async function loadWooFields() {
-    if (!accessToken) return;
-    setWooFieldsLoading(true);
-    try {
-      const res = await fetch(
-        `${API_URL}/api/v1/shops/${params.id}/woo-fields`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      if (!res.ok) throw new Error('Failed to load WooCommerce fields');
-      const data = await res.json();
-      setWooFields(data.fields || []);
-    } catch {
-      // WooCommerce fields load failed silently
-    } finally {
-      setWooFieldsLoading(false);
-    }
-  }
-
-  // Debounced save function
+  // Handle override change using mutation
   const handleOverrideChange = useCallback(
-    async (attribute: string, override: ProductFieldOverride | null) => {
+    (attribute: string, override: ProductFieldOverride | null) => {
       setSaveError(null);
 
-      // Optimistic update
+      // Build new overrides
       const newOverrides = { ...productOverrides };
       if (override) {
         newOverrides[attribute] = override;
       } else {
         delete newOverrides[attribute];
       }
-      setProductOverrides(newOverrides);
 
-      // Save to API
-      setSaving(true);
-      try {
-        const res = await fetch(
-          `${API_URL}/api/v1/shops/${params.id}/products/${params.pid}/field-overrides`,
-          {
-            method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ overrides: newOverrides }),
+      // Use mutation (includes optimistic update and rollback)
+      updateOverridesMutation.mutate(newOverrides, {
+        onError: (err) => {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to save override';
+          setSaveError(errorMessage);
+          // Auto-clear error after 5 seconds
+          if (saveErrorTimeoutRef.current) {
+            clearTimeout(saveErrorTimeoutRef.current);
           }
-        );
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || 'Failed to save override');
-        }
-
-        const data = await res.json();
-        // Update with server response
-        setProductOverrides(data.overrides || {});
-        setResolvedValues(data.resolvedValues || {});
-        // Update validation status
-        if (product) {
-          setProduct({
-            ...product,
-            isValid: data.isValid,
-            validationErrors: data.validationErrors,
-          });
-        }
-      } catch (err) {
-        // Revert optimistic update
-        setProductOverrides(productOverrides);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to save override';
-        setSaveError(errorMessage);
-        // Auto-clear error after 5 seconds (with cleanup)
-        if (saveErrorTimeoutRef.current) {
-          clearTimeout(saveErrorTimeoutRef.current);
-        }
-        saveErrorTimeoutRef.current = setTimeout(() => setSaveError(null), 5000);
-      } finally {
-        setSaving(false);
-      }
+          saveErrorTimeoutRef.current = setTimeout(() => setSaveError(null), 5000);
+        },
+      });
     },
-    [accessToken, params.id, params.pid, productOverrides]
+    [productOverrides, updateOverridesMutation]
   );
 
   // Filter specs based on search
@@ -233,7 +130,7 @@ export default function ProductMappingPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="text-red-400 mb-4">{loadError}</div>
+          <div className="text-red-400 mb-4">{loadError.message || 'Failed to load product data. Please refresh the page.'}</div>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-[#5df0c0]/10 text-[#5df0c0] rounded-lg border border-[#5df0c0]/30 hover:bg-[#5df0c0]/20"

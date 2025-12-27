@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useColumnValuesQuery } from '@/hooks/useProductsQuery';
+import type { CurrentFiltersForColumnValues } from '@/lib/api';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -22,8 +24,13 @@ export interface ColumnHeaderDropdownProps {
   currentSort: { column: string; order: 'asc' | 'desc' } | null;
   currentValueFilter: string[];
 
-  // Unique values for checkbox list
-  uniqueValues: ColumnValue[];
+  // React Query mode: provide shopId and currentFilters to fetch values automatically
+  // This fixes the cache bug - values are properly keyed by shopId + columnId + filters
+  shopId?: string;
+  currentFilters?: CurrentFiltersForColumnValues;
+
+  // Legacy mode: provide uniqueValues directly (for backwards compatibility)
+  uniqueValues?: ColumnValue[];
   loadingValues?: boolean;
   onLoadValues?: () => void;
 
@@ -44,8 +51,10 @@ export function ColumnHeaderDropdown({
   filterable = true,
   currentSort,
   currentValueFilter,
-  uniqueValues,
-  loadingValues = false,
+  shopId,
+  currentFilters,
+  uniqueValues: legacyUniqueValues,
+  loadingValues: legacyLoadingValues = false,
   onLoadValues,
   onSort,
   onValueFilter,
@@ -56,6 +65,19 @@ export function ColumnHeaderDropdown({
   const [pendingValues, setPendingValues] = useState<string[]>([]); // Pending checkbox selections
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Use React Query when shopId is provided (fixes the cache bug!)
+  const useReactQuery = !!shopId;
+  const { data: queryValues, isLoading: queryLoading } = useColumnValuesQuery(
+    shopId,
+    columnId,
+    currentFilters,
+    { enabled: useReactQuery && isOpen && filterable }
+  );
+
+  // Determine which values and loading state to use
+  const uniqueValues: ColumnValue[] = useReactQuery ? (queryValues ?? []) : (legacyUniqueValues ?? []);
+  const loadingValues = useReactQuery ? queryLoading : legacyLoadingValues;
 
   // Check if this column is sorted
   const isSorted = currentSort?.column === columnId;
@@ -78,12 +100,12 @@ export function ColumnHeaderDropdown({
     }
   }, [isOpen, currentValueFilter]);
 
-  // Load values when dropdown opens
+  // Load values when dropdown opens (legacy mode only)
   useEffect(() => {
-    if (isOpen && filterable && onLoadValues && uniqueValues.length === 0 && !loadingValues) {
+    if (!useReactQuery && isOpen && filterable && onLoadValues && uniqueValues.length === 0 && !loadingValues) {
       onLoadValues();
     }
-  }, [isOpen, filterable, onLoadValues, uniqueValues.length, loadingValues]);
+  }, [useReactQuery, isOpen, filterable, onLoadValues, uniqueValues.length, loadingValues]);
 
   // Close on click outside (discards pending changes)
   useEffect(() => {

@@ -2,18 +2,18 @@
 
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { API_URL, listProducts, refreshFeed, RefreshFeedResponse, BulkUpdateOperation, getColumnValues, CurrentFiltersForColumnValues } from '@/lib/api';
+import { API_URL, BulkUpdateOperation, CurrentFiltersForColumnValues } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
-import { useBulkUpdate } from '@/hooks/useBulkUpdate';
+import { useProductsQuery, useRefreshFeedMutation, useBulkUpdateMutation } from '@/hooks/useProductsQuery';
 import { Product } from '@productsynch/shared';
 import { SearchFilter } from '@/components/catalog/FilterDropdown';
 import { BulkActionToolbar } from '@/components/catalog/BulkActionToolbar';
 import { BulkEditModal } from '@/components/catalog/BulkEditModal';
 import { EditColumnsModal, getStoredColumns, saveStoredColumns } from '@/components/catalog/EditColumnsModal';
 import { Toast } from '@/components/catalog/Toast';
-import { ColumnHeaderDropdown, type ColumnValue } from '@/components/catalog/ColumnHeaderDropdown';
+import { ColumnHeaderDropdown } from '@/components/catalog/ColumnHeaderDropdown';
 import { ClearFiltersButton } from '@/components/catalog/ClearFiltersButton';
 import {
   COLUMN_MAP,
@@ -37,17 +37,7 @@ function CatalogPageContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   // Note: hydrate() is called by AppLayout, no need to call it here
-  const { accessToken, hydrated } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [feedRefreshing, setFeedRefreshing] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  // Column values cache for filter dropdowns
-  const [columnValuesCache, setColumnValuesCache] = useState<Record<string, ColumnValue[]>>({});
-  const [loadingColumnValues, setLoadingColumnValues] = useState<Record<string, boolean>>({});
+  const { user, hydrated } = useAuth();
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -76,13 +66,39 @@ function CatalogPageContent() {
     clearAllColumnFilters,
   } = useCatalogFilters(params?.id);
   const selection = useCatalogSelection();
-  const { progress: bulkProgress, executeBulkUpdate } = useBulkUpdate(params?.id || '');
+
+  // React Query hooks - these fix the original cache bug!
+  // Products query with proper cache keying by shopId + filters
+  const {
+    data: productsData,
+    isLoading: loading,
+    error: productsError,
+  } = useProductsQuery(params?.id, {
+    page: filters.page,
+    limit: filters.limit,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
+    search: filters.search || undefined,
+    columnFilters: Object.keys(filters.columnFilters).length > 0
+      ? filters.columnFilters
+      : undefined,
+  });
+
+  const products = productsData?.products ?? [];
+  const totalProducts = productsData?.pagination.total ?? 0;
+  const error = productsError?.message ?? null;
+
+  // Feed refresh mutation
+  const refreshFeedMutation = useRefreshFeedMutation(params?.id);
+
+  // Bulk update mutation
+  const bulkUpdateMutation = useBulkUpdateMutation(params?.id);
 
   useEffect(() => {
-    if (hydrated && !accessToken) {
+    if (hydrated && !user) {
       router.push('/login');
     }
-  }, [hydrated, accessToken, router]);
+  }, [hydrated, user, router]);
 
   // Initialize shop selection and column visibility
   useEffect(() => {
@@ -117,38 +133,7 @@ function CatalogPageContent() {
     };
   }, [searchInput, filters.search, setFilters]);
 
-  // Fetch products when filters change or refreshKey changes
-  useEffect(() => {
-    if (!accessToken || !params?.id) return;
-
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const productsRes = await listProducts(params.id, accessToken, {
-          page: filters.page,
-          limit: filters.limit,
-          sortBy: filters.sortBy,
-          sortOrder: filters.sortOrder,
-          search: filters.search || undefined,
-          columnFilters: Object.keys(filters.columnFilters).length > 0
-            ? filters.columnFilters
-            : undefined,
-        });
-        setProducts(productsRes.products);
-        setTotalProducts(productsRes.pagination.total);
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load products';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [accessToken, params?.id, filters, refreshKey]);
-
-  // Build current filters for cascading filter support
+  // Build current filters for cascading filter support (passed to ColumnHeaderDropdown)
   const currentFiltersForColumnValues: CurrentFiltersForColumnValues | undefined =
     filters.search || Object.keys(filters.columnFilters).length > 0
       ? {
@@ -156,49 +141,6 @@ function CatalogPageContent() {
           columnFilters: Object.keys(filters.columnFilters).length > 0 ? filters.columnFilters : undefined,
         }
       : undefined;
-
-  // Invalidate column values cache when filters change (cascading filters)
-  const filtersSignature = JSON.stringify({
-    search: filters.search,
-    columnFilters: filters.columnFilters,
-  });
-  const prevFiltersSignatureRef = useRef(filtersSignature);
-
-  useEffect(() => {
-    if (prevFiltersSignatureRef.current !== filtersSignature) {
-      // Filters changed - clear the column values cache so new values are fetched
-      setColumnValuesCache({});
-      prevFiltersSignatureRef.current = filtersSignature;
-    }
-  }, [filtersSignature]);
-
-  // Load column values for filter dropdown (with cascading filter support)
-  const loadColumnValues = useCallback(async (columnId: string) => {
-    if (!accessToken || !params?.id) return;
-    if (columnValuesCache[columnId]) return;
-    if (loadingColumnValues[columnId]) return;
-
-    setLoadingColumnValues((prev) => ({ ...prev, [columnId]: true }));
-
-    try {
-      const result = await getColumnValues(
-        params.id,
-        accessToken,
-        columnId,
-        100,
-        undefined, // search within values (not used here)
-        currentFiltersForColumnValues
-      );
-      setColumnValuesCache((prev) => ({
-        ...prev,
-        [columnId]: result.values,
-      }));
-    } catch (err) {
-      console.error(`Failed to load values for column ${columnId}:`, err);
-    } finally {
-      setLoadingColumnValues((prev) => ({ ...prev, [columnId]: false }));
-    }
-  }, [accessToken, params?.id, columnValuesCache, loadingColumnValues, currentFiltersForColumnValues]);
 
   // Navigate to product mapping page
   const handleRowClick = (productId: string) => {
@@ -221,26 +163,23 @@ function CatalogPageContent() {
     return `${diffDays}d ago`;
   };
 
-  // Refresh OpenAI feed
-  const handleRefreshFeed = async () => {
-    if (!accessToken || !params?.id) return;
-    setFeedRefreshing(true);
-    setError(null);
-    try {
-      const result: RefreshFeedResponse = await refreshFeed(params.id, accessToken);
-      const lastSyncText = formatLastSync(result.lastSyncAt);
-      setToast({ message: `Feed refreshed! (last sync: ${lastSyncText})`, type: 'success' });
-    } catch (err: unknown) {
-      const error = err as Error & { syncInProgress?: boolean; lastSyncAt?: string | null };
-      if (error.syncInProgress) {
-        const lastSyncText = formatLastSync(error.lastSyncAt || null);
-        setError(`Sync in progress. Please wait. (last sync: ${lastSyncText})`);
-      } else {
-        setError(error.message || 'Failed to refresh feed');
-      }
-    } finally {
-      setFeedRefreshing(false);
-    }
+  // Refresh OpenAI feed using mutation
+  const handleRefreshFeed = () => {
+    refreshFeedMutation.mutate(undefined, {
+      onSuccess: (result) => {
+        const lastSyncText = formatLastSync(result.lastSyncAt);
+        setToast({ message: `Feed refreshed! (last sync: ${lastSyncText})`, type: 'success' });
+      },
+      onError: (err) => {
+        const error = err as Error & { syncInProgress?: boolean; lastSyncAt?: string | null };
+        if (error.syncInProgress) {
+          const lastSyncText = formatLastSync(error.lastSyncAt || null);
+          setToast({ message: `Sync in progress. Please wait. (last sync: ${lastSyncText})`, type: 'error' });
+        } else {
+          setToast({ message: error.message || 'Failed to refresh feed', type: 'error' });
+        }
+      },
+    });
   };
 
   // Selection handlers
@@ -258,34 +197,47 @@ function CatalogPageContent() {
     selection.setSelectAllMatching(true);
   };
 
-  // Bulk action handlers
+  // Bulk action handlers using mutation
   const handleBulkUpdate = useCallback(
-    async (update: BulkUpdateOperation) => {
+    async (update: BulkUpdateOperation): Promise<void> => {
       const apiFilters = {
         search: filters.search || undefined,
         columnFilters: Object.keys(filters.columnFilters).length > 0
           ? filters.columnFilters
           : undefined,
       };
-      const result = await executeBulkUpdate(
-        selection.selectAllMatching ? 'filtered' : 'selected',
-        selection.selectAllMatching ? undefined : selection.getSelectedIds(),
-        selection.selectAllMatching ? apiFilters : undefined,
-        update
-      );
 
-      if (result) {
-        selection.clearSelection();
-        setShowBulkEditModal(false);
-        setToast({
-          message: `Updated ${result.processedProducts} products${result.failedProducts > 0 ? ` (${result.failedProducts} failed)` : ''}`,
-          type: result.failedProducts > 0 ? 'error' : 'success',
-        });
-        // Refresh the product list by incrementing refreshKey
-        setRefreshKey((k) => k + 1);
-      }
+      return new Promise((resolve) => {
+        bulkUpdateMutation.mutate(
+          {
+            selectionMode: selection.selectAllMatching ? 'filtered' : 'selected',
+            productIds: selection.selectAllMatching ? undefined : selection.getSelectedIds(),
+            filters: selection.selectAllMatching ? apiFilters : undefined,
+            update,
+          },
+          {
+            onSuccess: (result) => {
+              selection.clearSelection();
+              setShowBulkEditModal(false);
+              setToast({
+                message: `Updated ${result.processedProducts} products${result.failedProducts > 0 ? ` (${result.failedProducts} failed)` : ''}`,
+                type: result.failedProducts > 0 ? 'error' : 'success',
+              });
+              // React Query automatically invalidates the products cache
+              resolve();
+            },
+            onError: (err) => {
+              setToast({
+                message: err.message || 'Bulk update failed',
+                type: 'error',
+              });
+              resolve(); // Resolve even on error to close the modal
+            },
+          }
+        );
+      });
     },
-    [selection, filters.search, filters.columnFilters, executeBulkUpdate]
+    [selection, filters.search, filters.columnFilters, bulkUpdateMutation]
   );
 
   // Column visibility
@@ -432,7 +384,7 @@ function CatalogPageContent() {
   if (!hydrated) {
     return <main className="shell"><div className="subtle">Loading session...</div></main>;
   }
-  if (!accessToken) return null;
+  if (!user) return null;
 
   return (
     <main className="shell space-y-4">
@@ -449,10 +401,10 @@ function CatalogPageContent() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleRefreshFeed}
-              disabled={feedRefreshing}
+              disabled={refreshFeedMutation.isPending}
               className="px-4 py-2 bg-[#5df0c0] text-black font-medium rounded-lg hover:bg-[#5df0c0]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
             >
-              {feedRefreshing ? 'Refreshing...' : 'Refresh Feed'}
+              {refreshFeedMutation.isPending ? 'Refreshing...' : 'Refresh Feed'}
             </button>
             <a
               href={`${API_URL}/api/v1/feed/${params.id}/view`}
@@ -490,7 +442,7 @@ function CatalogPageContent() {
             onSelectAllMatching={handleSelectAllMatching}
             onClearSelection={selection.clearSelection}
             onBulkEdit={() => setShowBulkEditModal(true)}
-            isProcessing={bulkProgress.isProcessing}
+            isProcessing={bulkUpdateMutation.isPending}
           />
         )}
 
@@ -543,9 +495,8 @@ function CatalogPageContent() {
                           filterable={column.filterable}
                           currentSort={currentSort}
                           currentValueFilter={columnFilter.values}
-                          uniqueValues={columnValuesCache[column.id] || []}
-                          loadingValues={loadingColumnValues[column.id] || false}
-                          onLoadValues={() => loadColumnValues(column.id)}
+                          shopId={params?.id}
+                          currentFilters={currentFiltersForColumnValues}
                           onSort={(order) => setSort(column.id, order)}
                           onValueFilter={(values) => setColumnValueFilter(column.id, values)}
                           onClearFilter={() => clearColumnFilter(column.id)}
@@ -655,9 +606,8 @@ function CatalogPageContent() {
         onClose={() => setShowBulkEditModal(false)}
         onSubmit={handleBulkUpdate}
         selectedCount={displayedSelectionCount}
-        isProcessing={bulkProgress.isProcessing}
+        isProcessing={bulkUpdateMutation.isPending}
         shopId={params?.id || ''}
-        accessToken={accessToken}
       />
 
       <EditColumnsModal
