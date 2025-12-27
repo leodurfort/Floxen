@@ -496,7 +496,6 @@ export interface ProductOverridesResponse {
   productId: string;
   productTitle: string;
   overrides: ProductFieldOverrides;
-  shopMappings: Record<string, string | null>;
   resolvedValues: Record<string, unknown>;
   feedEnableSearch: boolean;
   feedEnableCheckout: boolean;

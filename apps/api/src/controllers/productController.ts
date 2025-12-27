@@ -695,20 +695,6 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
       select: { defaultEnableSearch: true },
     });
 
-    // Get shop-level mappings for reference
-    const fieldMappings = await prisma.fieldMapping.findMany({
-      where: { shopId },
-      include: {
-        openaiField: true,
-        wooField: true,
-      },
-    });
-
-    const shopMappings: Record<string, string | null> = {};
-    for (const mapping of fieldMappings) {
-      shopMappings[mapping.openaiField.attribute] = mapping.wooField?.value || null;
-    }
-
     const productOverrides = (product.productFieldOverrides as unknown as ProductFieldOverrides) || {};
 
     logger.info('Product field overrides retrieved', {
@@ -725,7 +711,6 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
       productId: product.id,
       productTitle,
       overrides: productOverrides,
-      shopMappings,
       resolvedValues: product.openaiAutoFilled || {},
       feedEnableSearch: product.feedEnableSearch,
       feedEnableCheckout: product.feedEnableCheckout,

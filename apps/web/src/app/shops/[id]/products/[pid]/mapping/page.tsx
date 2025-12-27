@@ -11,7 +11,7 @@ import {
   ProductFieldOverrides,
 } from '@productsynch/shared';
 import { ProductFieldMappingRow } from '@/components/setup/ProductFieldMappingRow';
-import { useProductOverridesQuery, useUpdateProductOverridesMutation, useUpdateFeedEnableSearchMutation } from '@/hooks/useFieldMappingsQuery';
+import { useFieldMappingsQuery, useProductOverridesQuery, useUpdateProductOverridesMutation, useUpdateFeedEnableSearchMutation } from '@/hooks/useFieldMappingsQuery';
 import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
 
 export default function ProductMappingPage() {
@@ -32,8 +32,13 @@ export default function ProductMappingPage() {
     error: loadError,
   } = useProductOverridesQuery(params?.id, params?.pid);
 
-  // API returns flat structure: { productId, productTitle, overrides, shopMappings, resolvedValues, feedEnableSearch, ... }
-  const shopMappings = overridesData?.shopMappings ?? {};
+  // Shop-level field mappings (single source of truth, auto-invalidates when shop mappings change)
+  const {
+    data: shopMappingsData,
+    isLoading: shopMappingsLoading,
+  } = useFieldMappingsQuery(params?.id);
+
+  const shopMappings = shopMappingsData?.userMappings ?? {};
   const productOverrides: ProductFieldOverrides = overridesData?.overrides ?? {};
   const resolvedValues = overridesData?.resolvedValues ?? {};
 
@@ -141,7 +146,7 @@ export default function ProductMappingPage() {
   // Count overrides
   const overrideCount = Object.keys(productOverrides).length;
 
-  if (loading) {
+  if (loading || shopMappingsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-white">Loading product mappings...</div>
