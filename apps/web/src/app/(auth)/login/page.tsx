@@ -9,8 +9,8 @@ import { useLoginMutation } from '@/hooks/useAuthMutations';
 export default function LoginPage() {
   const router = useRouter();
   const { hydrate, user, hydrated } = useAuth();
-  const [email, setEmail] = useState('demo@productsynch.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const loginMutation = useLoginMutation();
 
@@ -35,7 +35,7 @@ export default function LoginPage() {
         <div>
           <p className="uppercase tracking-[0.15em] text-xs text-white/60">ProductSynch</p>
           <h1 className="section-title">Sign in</h1>
-          <p className="subtle">Use the demo credentials or your account.</p>
+          <p className="subtle">Sign in to manage your WooCommerce products.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
           <label className="flex flex-col gap-2">
