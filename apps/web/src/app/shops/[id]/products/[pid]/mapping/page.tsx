@@ -32,9 +32,9 @@ export default function ProductMappingPage() {
     error: loadError,
   } = useProductOverridesQuery(params?.id, params?.pid);
 
-  const product = overridesData?.product ?? null;
+  // API returns flat structure: { productId, productTitle, overrides, shopMappings, resolvedValues, feedEnableSearch, ... }
   const shopMappings = overridesData?.shopMappings ?? {};
-  const productOverrides: ProductFieldOverrides = overridesData?.productOverrides ?? {};
+  const productOverrides: ProductFieldOverrides = overridesData?.overrides ?? {};
   const resolvedValues = overridesData?.resolvedValues ?? {};
 
   const {
@@ -191,9 +191,9 @@ export default function ProductMappingPage() {
                   {overrideCount} custom override{overrideCount !== 1 ? 's' : ''}
                 </span>
               )}
-              {product?.isValid === false && (
+              {overridesData?.isValid === false && (
                 <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                  ⚠️ {product.validationErrors ? Object.keys(product.validationErrors).length : 0} validation issue{product.validationErrors && Object.keys(product.validationErrors).length !== 1 ? 's' : ''}
+                  ⚠️ {overridesData.validationErrors ? Object.keys(overridesData.validationErrors).length : 0} validation issue{overridesData.validationErrors && Object.keys(overridesData.validationErrors).length !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
@@ -202,7 +202,7 @@ export default function ProductMappingPage() {
             </p>
 
             {/* Validation Errors Banner */}
-            {product?.isValid === false && product?.validationErrors && Object.keys(product.validationErrors).length > 0 && (
+            {overridesData?.isValid === false && overridesData?.validationErrors && Object.keys(overridesData.validationErrors).length > 0 && (
               <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                 <div className="flex items-start gap-3">
                   <span className="text-amber-400 text-lg">⚠️</span>
@@ -211,7 +211,7 @@ export default function ProductMappingPage() {
                       Validation Issues Detected
                     </div>
                     <ul className="space-y-1 text-xs text-amber-400/80">
-                      {Object.entries(product.validationErrors).map(([field, errors]) => (
+                      {Object.entries(overridesData.validationErrors).map(([field, errors]) => (
                         <li key={field}>
                           <span className="font-medium text-amber-400">{field}:</span>{' '}
                           {Array.isArray(errors) ? errors.join(', ') : String(errors)}
@@ -280,8 +280,8 @@ export default function ProductMappingPage() {
                       previewValue={resolvedValues[spec.attribute]}
                       wooFields={wooFields}
                       wooFieldsLoading={wooFieldsLoading}
-                      serverValidationErrors={product?.validationErrors?.[spec.attribute] || null}
-                      feedEnableSearch={product?.feedEnableSearch}
+                      serverValidationErrors={overridesData?.validationErrors?.[spec.attribute] || null}
+                      feedEnableSearch={overridesData?.feedEnableSearch}
                       onEnableSearchChange={handleEnableSearchChange}
                     />
                   ))}

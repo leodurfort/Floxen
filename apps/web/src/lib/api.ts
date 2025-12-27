@@ -493,17 +493,15 @@ export async function updateFieldMappings(
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface ProductOverridesResponse {
-  product: {
-    id: string;
-    wooTitle: string;
-    feedEnableSearch: boolean;
-    feedEnableCheckout: boolean;
-    isValid?: boolean;
-    validationErrors?: Record<string, string[]> | null;
-  };
+  productId: string;
+  productTitle: string;
+  overrides: ProductFieldOverrides;
   shopMappings: Record<string, string | null>;
-  productOverrides: ProductFieldOverrides;
   resolvedValues: Record<string, unknown>;
+  feedEnableSearch: boolean;
+  feedEnableCheckout: boolean;
+  isValid?: boolean;
+  validationErrors?: Record<string, string[]> | null;
 }
 
 /**
