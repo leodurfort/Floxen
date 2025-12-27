@@ -635,7 +635,7 @@ async function getComputedColumnValues(
         label: value === '0' ? 'No overrides' : `${value} override${value === '1' ? '' : 's'}`,
         count,
       }))
-      .sort((a, b) => Number(a.value) - Number(b.value));
+      .sort((a, b) => a.label.localeCompare(b.label));
 
     if (search?.trim()) {
       const searchLower = search.toLowerCase();
@@ -714,14 +714,14 @@ async function getDatabaseColumnValues(
     }
   }
 
-  // Convert to array and sort by count
+  // Convert to array and sort alphabetically by label
   let values = Array.from(valueCounts.entries())
     .map(([value, count]) => ({
       value,
       label: formatValueLabel(value, column),
       count,
     }))
-    .sort((a, b) => b.count - a.count);
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   // Filter by search if provided
   if (search && search.trim()) {
@@ -801,14 +801,14 @@ async function getOpenAIColumnValues(
     valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
   }
 
-  // Convert to array and sort by count
+  // Convert to array and sort alphabetically by label
   let values = Array.from(valueCounts.entries())
     .map(([value, count]) => ({
       value,
       label: formatValueLabel(value, column),
       count,
     }))
-    .sort((a, b) => b.count - a.count);
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   // Filter by search if provided
   if (search && search.trim()) {

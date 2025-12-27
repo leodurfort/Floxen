@@ -279,7 +279,8 @@ export async function listProducts(
           searchParams.set(`cf_${columnId}_t`, filter.text);
         }
         if (filter.values && filter.values.length > 0) {
-          searchParams.set(`cf_${columnId}_v`, filter.values.join(','));
+          // URL-encode each value before joining to handle commas and special characters
+          searchParams.set(`cf_${columnId}_v`, filter.values.map(v => encodeURIComponent(v)).join(','));
         }
       }
     }
