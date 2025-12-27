@@ -4,7 +4,7 @@ import { SyncStatus } from '@prisma/client';
 import { syncQueue, isQueueAvailable } from '../lib/redis';
 import { logger } from '../lib/logger';
 
-export function triggerSync(req: Request, res: Response) {
+export async function triggerSync(req: Request, res: Response) {
   // Check Redis availability FIRST before modifying shop status
   if (!isQueueAvailable()) {
     logger.error('sync:trigger failed - Redis unavailable', { shopId: req.params.id });
@@ -14,20 +14,18 @@ export function triggerSync(req: Request, res: Response) {
     });
   }
 
-  prisma.shop
-    .update({
+  try {
+    const shop = await prisma.shop.update({
       where: { id: req.params.id },
       data: { syncStatus: SyncStatus.SYNCING },
-    })
-    .then((shop) => {
-      syncQueue!.add('product-sync', { shopId: shop.id }, { removeOnComplete: true, priority: 2 });
-      logger.info('sync:trigger', { shopId: shop.id });
-      return res.json({ shopId: shop.id, status: 'QUEUED' });
-    })
-    .catch((err) => {
-      logger.error('sync:trigger error', err);
-      return res.status(404).json({ error: 'Shop not found' });
     });
+    syncQueue!.add('product-sync', { shopId: shop.id }, { removeOnComplete: true, priority: 2 });
+    logger.info('sync:trigger', { shopId: shop.id });
+    return res.json({ shopId: shop.id, status: 'QUEUED' });
+  } catch (err: any) {
+    logger.error('sync:trigger error', err);
+    return res.status(404).json({ error: 'Shop not found' });
+  }
 }
 
 export async function getSyncStatus(req: Request, res: Response) {
@@ -78,7 +76,7 @@ export async function getSyncHistory(req: Request, res: Response) {
   }
 }
 
-export function pushFeed(req: Request, res: Response) {
+export async function pushFeed(req: Request, res: Response) {
   // Check Redis availability FIRST
   if (!isQueueAvailable()) {
     logger.error('feed:push failed - Redis unavailable', { shopId: req.params.id });
@@ -88,87 +86,83 @@ export function pushFeed(req: Request, res: Response) {
     });
   }
 
-  prisma.shop
-    .findUnique({ where: { id: req.params.id } })
-    .then((shop) => {
-      if (!shop) return res.status(404).json({ error: 'Shop not found' });
+  try {
+    const shop = await prisma.shop.findUnique({ where: { id: req.params.id } });
+    if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
-      // Block feed generation if sync is in progress to prevent inconsistent data
-      if (shop.syncStatus === 'SYNCING') {
-        logger.warn('feed:push blocked - sync in progress', { shopId: shop.id });
-        return res.status(409).json({
-          error: 'Sync in progress',
-          details: 'Cannot generate feed while product sync is running. Please wait for sync to complete.',
-          syncStatus: shop.syncStatus,
-          lastSyncAt: shop.lastSyncAt,
-        });
-      }
-
-      syncQueue!.add('feed-generation', { shopId: shop.id }, { removeOnComplete: true });
-      logger.info('feed:push', { shopId: shop.id, lastSyncAt: shop.lastSyncAt });
-      return res.json({
-        shopId: shop.id,
-        pushed: true,
+    // Block feed generation if sync is in progress to prevent inconsistent data
+    if (shop.syncStatus === 'SYNCING') {
+      logger.warn('feed:push blocked - sync in progress', { shopId: shop.id });
+      return res.status(409).json({
+        error: 'Sync in progress',
+        details: 'Cannot generate feed while product sync is running. Please wait for sync to complete.',
         syncStatus: shop.syncStatus,
         lastSyncAt: shop.lastSyncAt,
       });
-    })
-    .catch((err) => {
-      logger.error('feed:push error', err);
-      return res.status(500).json({ error: err.message });
+    }
+
+    syncQueue!.add('feed-generation', { shopId: shop.id }, { removeOnComplete: true });
+    logger.info('feed:push', { shopId: shop.id, lastSyncAt: shop.lastSyncAt });
+    return res.json({
+      shopId: shop.id,
+      pushed: true,
+      syncStatus: shop.syncStatus,
+      lastSyncAt: shop.lastSyncAt,
     });
+  } catch (err: any) {
+    logger.error('feed:push error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
-export function previewFeed(req: Request, res: Response) {
-  prisma.product
-    .findMany({ where: { shopId: req.params.id }, take: 50, orderBy: { updatedAt: 'desc' } })
-    .then((products) =>
-      res.json({
-        shopId: req.params.id,
-        products: products.map((p) => ({
-          id: p.id,
-          title: p.wooTitle,
-          price: p.wooPrice,
-        })),
-      }),
-    )
-    .catch((err) => {
-      return res.status(500).json({ error: err.message });
+export async function previewFeed(req: Request, res: Response) {
+  try {
+    const products = await prisma.product.findMany({
+      where: { shopId: req.params.id },
+      take: 50,
+      orderBy: { updatedAt: 'desc' },
     });
+    return res.json({
+      shopId: req.params.id,
+      products: products.map((p) => ({
+        id: p.id,
+        title: p.wooTitle,
+        price: p.wooPrice,
+      })),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 }
 
-export function downloadFeed(req: Request, res: Response) {
-  prisma.product
-    .findMany({ where: { shopId: req.params.id } })
-    .then((products) =>
-      res.json({
-        generatedAt: new Date().toISOString(),
-        count: products.length,
-        items: products,
-      }),
-    )
-    .catch((err) => {
-      return res.status(500).json({ error: err.message });
+export async function downloadFeed(req: Request, res: Response) {
+  try {
+    const products = await prisma.product.findMany({ where: { shopId: req.params.id } });
+    return res.json({
+      generatedAt: new Date().toISOString(),
+      count: products.length,
+      items: products,
     });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 }
 
-export function latestFeed(req: Request, res: Response) {
-  prisma.feedSnapshot
-    .findFirst({
+export async function latestFeed(req: Request, res: Response) {
+  try {
+    const snapshot = await prisma.feedSnapshot.findFirst({
       where: { shopId: req.params.id, feedFileUrl: { not: null } },
       orderBy: { generatedAt: 'desc' },
-    })
-    .then((snapshot) => {
-      if (!snapshot) return res.status(404).json({ error: 'No feed found' });
-      logger.info('feed:latest', { shopId: snapshot.shopId, feedUrl: snapshot.feedFileUrl });
-      return res.json({
-        feedUrl: snapshot.feedFileUrl,
-        generatedAt: snapshot.generatedAt,
-        productCount: snapshot.productCount,
-      });
-    })
-    .catch((err) => {
-      logger.error('feed:latest error', err);
-      return res.status(500).json({ error: err.message });
     });
+    if (!snapshot) return res.status(404).json({ error: 'No feed found' });
+    logger.info('feed:latest', { shopId: snapshot.shopId, feedUrl: snapshot.feedFileUrl });
+    return res.json({
+      feedUrl: snapshot.feedFileUrl,
+      generatedAt: snapshot.generatedAt,
+      productCount: snapshot.productCount,
+    });
+  } catch (err: any) {
+    logger.error('feed:latest error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }

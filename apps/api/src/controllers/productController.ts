@@ -107,7 +107,7 @@ function parseColumnFilters(query: Record<string, unknown>): Record<string, { te
   return Object.keys(columnFilters).length > 0 ? columnFilters : undefined;
 }
 
-export function listProducts(req: Request, res: Response) {
+export async function listProducts(req: Request, res: Response) {
   const { id } = req.params;
 
   // Parse column filters from query params (cf_columnId_t, cf_columnId_v)
@@ -123,56 +123,55 @@ export function listProducts(req: Request, res: Response) {
     columnFilters,
   };
 
-  listProductsForShop(id, options)
-    .then((result) => {
-      logger.info('Products list retrieved successfully', {
-        shopId: id,
-        page: options.page,
-        limit: options.limit,
-        count: result.products.length,
-        total: result.pagination.total,
-        filters: {
-          search: options.search,
-          columnFilters: options.columnFilters,
-        },
-      });
-      res.json(result);
-    })
-    .catch((err) => {
-      logger.error('Failed to list products', {
-        error: err,
-        shopId: id,
-        options,
-        userId: userIdFromReq(req),
-      });
-      return res.status(500).json({ error: err.message });
+  try {
+    const result = await listProductsForShop(id, options);
+    logger.info('Products list retrieved successfully', {
+      shopId: id,
+      page: options.page,
+      limit: options.limit,
+      count: result.products.length,
+      total: result.pagination.total,
+      filters: {
+        search: options.search,
+        columnFilters: options.columnFilters,
+      },
     });
+    return res.json(result);
+  } catch (err: any) {
+    logger.error('Failed to list products', {
+      error: err,
+      shopId: id,
+      options,
+      userId: userIdFromReq(req),
+    });
+    return res.status(500).json({ error: err.message });
+  }
 }
 
-export function getProduct(req: Request, res: Response) {
+export async function getProduct(req: Request, res: Response) {
   const { id, pid } = req.params;
-  getProductRecord(id, pid)
-    .then((product) => {
-      if (!product) {
-        logger.warn('Product not found', { shopId: id, productId: pid });
-        return res.status(404).json({ error: 'Product not found' });
-      }
-      logger.info('Product retrieved successfully', {
-        shopId: id,
-        productId: pid,
-        status: product.status
-      });
-      return res.json({ product });
-    })
-    .catch((err) => {
-      logger.error('Failed to get product', {
-        error: err,
-        shopId: id,
-        productId: pid,
-        userId: userIdFromReq(req),
-      });
-      return res.status(500).json({ error: err.message });
+
+  try {
+    const product = await getProductRecord(id, pid);
+    if (!product) {
+      logger.warn('Product not found', { shopId: id, productId: pid });
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    logger.info('Product retrieved successfully', {
+      shopId: id,
+      productId: pid,
+      status: product.status
     });
+    return res.json({ product });
+  } catch (err: any) {
+    logger.error('Failed to get product', {
+      error: err,
+      shopId: id,
+      productId: pid,
+      userId: userIdFromReq(req),
+    });
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 export async function updateProduct(req: Request, res: Response) {

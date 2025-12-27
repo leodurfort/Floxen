@@ -37,28 +37,27 @@ export async function getOverview(req: Request, res: Response) {
   }
 }
 
-export function getProductAnalytics(req: Request, res: Response) {
+export async function getProductAnalytics(req: Request, res: Response) {
   const shopId = req.params.id;
-  prisma.product
-    .findMany({ where: { shopId }, take: 50 })
-    .then((products) => {
-      // TODO: Implement real product-level analytics
-      // Should fetch actual impression/click data from analytics service
-      const top = products.map((p) => ({
-        productId: p.id,
-        title: p.wooTitle,
-        chatgptImpressions: 0,
-        chatgptClicks: 0,
-      }));
-      return res.json({ products: top });
-    })
-    .catch((err) => {
-      logger.error('Failed to get product analytics', {
-        error: err,
-        shopId,
-      });
-      res.status(500).json({ error: err.message });
+
+  try {
+    const products = await prisma.product.findMany({ where: { shopId }, take: 50 });
+    // TODO: Implement real product-level analytics
+    // Should fetch actual impression/click data from analytics service
+    const top = products.map((p) => ({
+      productId: p.id,
+      title: p.wooTitle,
+      chatgptImpressions: 0,
+      chatgptClicks: 0,
+    }));
+    return res.json({ products: top });
+  } catch (err: any) {
+    logger.error('Failed to get product analytics', {
+      error: err,
+      shopId,
     });
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 export function getTimeline(_req: Request, res: Response) {
