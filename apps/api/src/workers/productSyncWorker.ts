@@ -125,7 +125,7 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
       validationErrors: validation.errors as any,
       ...data,
       status: existing?.status || 'PENDING_REVIEW',
-      // DON'T update toggle fields on sync - preserve user's product-level settings
+      // DON'T update flag fields on sync - preserve user's product-level settings
     },
   });
 

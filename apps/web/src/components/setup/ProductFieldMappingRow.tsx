@@ -106,7 +106,7 @@ export function ProductFieldMappingRow({
   const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute);
 
   // Use spec properties for editability instead of hardcoded field names
-  // isReadOnly = true when field is NOT product-editable (per spec) AND not enable_search (which has special toggle UI)
+  // isReadOnly = true when field is NOT product-editable (per spec) AND not enable_search (which has special dropdown UI)
   const isReadOnly = !isEnableSearchField && !isProductEditable(spec);
 
   // Get the currently active mapping value
