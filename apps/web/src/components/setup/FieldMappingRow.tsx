@@ -24,14 +24,16 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     Conditional: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   };
 
-  // Check if this is a toggle field (enable_search, enable_checkout)
-  const isToggleField = spec.attribute === 'enable_search' || spec.attribute === 'enable_checkout';
+  // Check if this is a toggle field (enable_checkout only - enable_search is now locked at shop level)
+  const isEnableSearchField = spec.attribute === 'enable_search';
+  const isToggleField = spec.attribute === 'enable_checkout';  // enable_search is no longer a toggle
   const isDimensionOrWeightField = ['dimensions', 'length', 'width', 'height', 'weight'].includes(spec.attribute);
   const lockedMappingValue = LOCKED_FIELD_MAPPINGS[spec.attribute];
   const isLockedField = Boolean(lockedMappingValue);
 
   // Use spec properties for non-editable field detection (consistent with ProductFieldMappingRow)
-  const isNonEditableField = spec.isAutoPopulated || spec.isShopManaged || isLockedField;
+  // enable_search is now locked at shop level - customizable per product only
+  const isNonEditableField = spec.isAutoPopulated || spec.isShopManaged || isLockedField || isEnableSearchField;
 
   // For toggle fields, mapping value is "ENABLED" or "DISABLED"
   // Default enable_search to ENABLED
@@ -58,7 +60,11 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   let previewDisplay = formattedValue;
   let previewStyle = 'text-white/80';
 
-  if (isToggleField) {
+  if (isEnableSearchField) {
+    // enable_search is always "true" at shop level (locked as Enabled)
+    previewDisplay = 'true';
+    previewStyle = 'text-[#5df0c0]';
+  } else if (isToggleField) {
     previewDisplay = isEnabled ? 'true' : 'false';
     previewStyle = isEnabled ? 'text-[#5df0c0]' : 'text-white/40';
   } else if (!effectiveMapping) {
@@ -123,13 +129,21 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
             <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
               <div className="flex flex-col">
                 <span className="text-white text-sm font-medium">
-                  {spec.isAutoPopulated ? 'Auto-populated' : isLockedField ? effectiveMapping : 'Managed in Shops page'}
+                  {isEnableSearchField ? 'Enabled' :
+                   spec.isAutoPopulated ? 'Auto-populated' :
+                   isLockedField ? effectiveMapping :
+                   'Managed in Shops page'}
                 </span>
               </div>
               <div className="relative group mt-[2px]">
                 <span className="text-white/60 cursor-help text-sm">ℹ️</span>
                 <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-72 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
-                  {spec.isAutoPopulated ? (
+                  {isEnableSearchField ? (
+                    <div>
+                      <div className="font-semibold text-white mb-1">Customize per product</div>
+                      <div>All products are searchable by default. You can disable search for specific products in the Products page.</div>
+                    </div>
+                  ) : spec.isAutoPopulated ? (
                     <div>
                       <div className="font-semibold text-white mb-1">Auto-populated field</div>
                       <div>This value is computed automatically from other product data.</div>
