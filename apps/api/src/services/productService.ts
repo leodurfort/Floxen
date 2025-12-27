@@ -171,9 +171,6 @@ function requiresRawSqlFiltering(options: ListProductsOptions): boolean {
 
     // OpenAI JSON columns require raw SQL
     if (OPENAI_COLUMNS.has(columnId)) return true;
-
-    // availability maps to wooStockStatus but uses different values - needs mapping
-    if (columnId === 'availability') return true;
   }
 
   return false;
@@ -216,7 +213,7 @@ function buildWhereClause(
             andConditions.push({ [dbColumn]: boolValue });
           }
         }
-        // Note: availability, overrides, and OpenAI JSON column filters
+        // Note: overrides and OpenAI JSON column filters (including availability)
         // are handled in raw SQL path (requiresRawSqlFiltering returns true for these)
       }
     }
@@ -298,18 +295,6 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
       whereConditions.push(`"feed_enable_search" = ${boolValue}`);
     }
 
-    // availability column -> maps to wooStockStatus
-    if (cf.availability?.values?.length) {
-      const stockMap: Record<string, string> = {
-        'in_stock': 'instock',
-        'out_of_stock': 'outofstock',
-        'preorder': 'onbackorder',
-      };
-      const mappedValues = cf.availability.values.map(v => stockMap[v] || v);
-      const statuses = mappedValues.map(s => `'${escapeSqlString(s)}'`).join(',');
-      whereConditions.push(`"woo_stock_status" IN (${statuses})`);
-    }
-
     // overrides column - filter by exact override count
     if (cf.overrides?.values?.length) {
       const counts = cf.overrides.values.map(v => `'${escapeSqlString(v)}'`).join(',');
@@ -325,7 +310,7 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
     // Handle OpenAI JSON column filters (text and value filters)
     for (const [columnId, filter] of Object.entries(cf)) {
       // Skip already handled columns
-      if (['isValid', 'enable_search', 'availability', 'overrides'].includes(columnId)) {
+      if (['isValid', 'enable_search', 'overrides'].includes(columnId)) {
         continue;
       }
 
