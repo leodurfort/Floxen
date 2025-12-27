@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
+import { Toast } from '@/components/catalog/Toast';
 import {
   useShopsQuery,
   useShopsSyncPolling,
@@ -25,26 +26,63 @@ export default function ShopsPage() {
   // React Query hooks
   const { data: shops = [], isLoading: loading } = useShopsQuery();
 
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Track previous sync statuses to detect completion
+  const prevSyncStatusesRef = useRef<Record<string, string>>({});
+
   // Handle OAuth redirect: /shops?shop=abc123&connected=true
-  // Redirect to the newly connected shop's products page
+  // Just clean up the URL params, don't redirect
   const shopIdFromUrl = searchParams.get('shop');
   const isOAuthRedirect = searchParams.get('connected') === 'true';
 
   useEffect(() => {
-    if (isOAuthRedirect && shopIdFromUrl && shops.length > 0) {
-      // Verify the shop exists and redirect to its products page
-      const shop = shops.find((s) => s.id === shopIdFromUrl);
-      if (shop) {
-        router.replace(`/shops/${shopIdFromUrl}/products`);
-      }
+    if (isOAuthRedirect && shopIdFromUrl) {
+      // Clean up URL params without redirecting
+      router.replace('/shops', { scroll: false });
+      // Show success toast
+      setToast({ message: 'Shop connected successfully! Syncing products...', type: 'success' });
     }
-  }, [isOAuthRedirect, shopIdFromUrl, shops, router]);
+  }, [isOAuthRedirect, shopIdFromUrl, router]);
 
   // Determine if we need polling
   const hasSyncingShops = shops.some(
     (shop) => shop.syncStatus === 'PENDING' || shop.syncStatus === 'SYNCING'
   );
   useShopsSyncPolling(hasSyncingShops);
+
+  // Detect sync completion and show toast
+  useEffect(() => {
+    if (shops.length === 0) return;
+
+    const prevStatuses = prevSyncStatusesRef.current;
+    let syncCompleted = false;
+
+    for (const shop of shops) {
+      const prevStatus = prevStatuses[shop.id];
+      // If shop was syncing and is now completed
+      if (
+        (prevStatus === 'PENDING' || prevStatus === 'SYNCING') &&
+        shop.syncStatus === 'COMPLETED'
+      ) {
+        syncCompleted = true;
+        break;
+      }
+    }
+
+    // Update stored statuses
+    const newStatuses: Record<string, string> = {};
+    for (const shop of shops) {
+      newStatuses[shop.id] = shop.syncStatus;
+    }
+    prevSyncStatusesRef.current = newStatuses;
+
+    // Show toast if sync completed
+    if (syncCompleted) {
+      setToast({ message: 'Sync completed successfully!', type: 'success' });
+    }
+  }, [shops]);
 
   // Mutations
   const createShopMutation = useCreateShopMutation();
@@ -536,6 +574,9 @@ export default function ShopsPage() {
           )}
         </div>
       </div>
+
+      {/* Toast */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 }
