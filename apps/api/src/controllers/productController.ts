@@ -13,12 +13,7 @@ import { getProduct as getProductRecord, listProducts as listProductsForShop, up
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
-import { JwtUser } from '../middleware/auth';
-
-function userIdFromReq(req: Request): string {
-  const user = (req as Request & { user?: JwtUser }).user;
-  return user?.sub || '';
-}
+import { getUserId } from '../utils/request';
 
 const updateProductSchema = z.object({
   status: z.nativeEnum(ProductStatus).optional(),
@@ -142,7 +137,7 @@ export async function listProducts(req: Request, res: Response) {
       error: err,
       shopId: id,
       options,
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
     return res.status(500).json({ error: err.message });
   }
@@ -168,7 +163,7 @@ export async function getProduct(req: Request, res: Response) {
       error: err,
       shopId: id,
       productId: pid,
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
     return res.status(500).json({ error: err.message });
   }
@@ -233,7 +228,7 @@ export async function updateProduct(req: Request, res: Response) {
       shopId: id,
       productId: pid,
       updatedFields: Object.keys(parse.data),
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
 
     // Fetch updated product to return fresh data (including reprocessed openaiAutoFilled)
@@ -248,7 +243,7 @@ export async function updateProduct(req: Request, res: Response) {
       shopId: id,
       productId: pid,
       updateData: parse.data,
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
     return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' });
   }
@@ -477,7 +472,7 @@ export async function bulkUpdate(req: Request, res: Response) {
       selectionMode,
       totalProducts: productIdsToUpdate.length,
       updateType: update.type,
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
 
     // Process in chunks
@@ -519,7 +514,7 @@ export async function bulkUpdate(req: Request, res: Response) {
       processedProducts: processedCount,
       failedProducts: errors.length,
       updateType: update.type,
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
 
     res.json({
@@ -536,7 +531,7 @@ export async function bulkUpdate(req: Request, res: Response) {
       shopId,
       selectionMode,
       updateType: update.type,
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
     res.status(500).json({
       error: err instanceof Error ? err.message : 'Bulk update failed',
@@ -587,7 +582,7 @@ export async function getColumnValues(req: Request, res: Response) {
       error: err instanceof Error ? err : new Error(String(err)),
       shopId,
       column,
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
     res.status(500).json({ error: 'Failed to fetch column values' });
   }
@@ -643,7 +638,7 @@ export async function getProductWooData(req: Request, res: Response) {
       error: err instanceof Error ? err : new Error(String(err)),
       shopId,
       productId,
-      userId: userIdFromReq(req),
+      userId: getUserId(req),
     });
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to fetch product data' });
   }

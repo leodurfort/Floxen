@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { JwtUser } from '../middleware/auth';
+import { getUserId } from '../utils/request';
 import {
   buildWooAuthUrl,
   createShop as createShopRecord,
   deleteShop as deleteShopRecord,
-  disconnectShop as disconnect,
   getShop as getShopRecord,
   listShopsByUser,
   setWooCredentials,
@@ -43,14 +42,8 @@ const openAiConfigSchema = z.object({
   openaiMerchantId: z.string().optional(),
 });
 
-function userIdFromReq(req: Request): string {
-  const user = (req as Request & { user?: JwtUser }).user;
-  return user?.sub || '';
-}
-
 export async function listShops(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = getUserId(req);
 
   try {
     const shops = await listShopsByUser(userId);
@@ -68,8 +61,7 @@ export async function createShop(req: Request, res: Response) {
     return res.status(400).json({ error: parse.error.flatten() });
   }
 
-  const userId = userIdFromReq(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = getUserId(req);
 
   try {
     const shop = await createShopRecord({
@@ -86,8 +78,7 @@ export async function createShop(req: Request, res: Response) {
 }
 
 export async function getShop(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = getUserId(req);
 
   try {
     const shop = await getShopRecord(req.params.id);
@@ -113,8 +104,7 @@ const AUTOFILL_AFFECTING_FIELDS = new Set([
 ]);
 
 export async function updateShop(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = getUserId(req);
 
   const parse = updateShopSchema.safeParse(req.body);
   if (!parse.success) {
@@ -160,8 +150,7 @@ export async function updateShop(req: Request, res: Response) {
 }
 
 export async function disconnectShop(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = getUserId(req);
 
   try {
     // Verify ownership before deleting
@@ -218,8 +207,7 @@ export async function oauthCallback(req: Request, res: Response) {
 }
 
 export async function verifyConnection(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = getUserId(req);
 
   try {
     const shop = await getShopRecord(req.params.id);
@@ -235,8 +223,7 @@ export async function verifyConnection(req: Request, res: Response) {
 }
 
 export async function configureOpenAI(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const userId = getUserId(req);
 
   const parse = openAiConfigSchema.safeParse(req.body);
   if (!parse.success) {
@@ -264,7 +251,7 @@ export async function configureOpenAI(req: Request, res: Response) {
 }
 
 export async function getFieldMappings(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
+  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
@@ -342,7 +329,7 @@ export async function getFieldMappings(req: Request, res: Response) {
 }
 
 export async function updateFieldMappings(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
+  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
@@ -593,7 +580,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
  * POST /api/v1/shops/:id/discover-fields
  */
 export async function discoverWooFields(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
+  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
@@ -641,7 +628,7 @@ export async function discoverWooFields(req: Request, res: Response) {
  * GET /api/v1/shops/:id/woo-fields
  */
 export async function getWooFields(req: Request, res: Response) {
-  const userId = userIdFromReq(req);
+  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
@@ -675,8 +662,7 @@ export async function getWooFields(req: Request, res: Response) {
 export async function testWooSettings(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const userId = userIdFromReq(req);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = getUserId(req);
 
     const shop = await prisma.shop.findFirst({
       where: { id, userId },
