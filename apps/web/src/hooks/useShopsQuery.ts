@@ -25,15 +25,19 @@ export function useShopsQuery() {
 /**
  * Conditional polling hook for sync status
  * Only polls when enabled (when shops are syncing)
+ * Updates the main shops cache when new data arrives
  * @param enabled - Whether polling should be active
  */
 export function useShopsSyncPolling(enabled: boolean) {
   const { user, hydrated } = useAuth();
+  const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: [...queryKeys.shops.all, 'polling'],
     queryFn: async () => {
       const result = await api.listShops();
+      // Update the main shops cache with fresh data
+      queryClient.setQueryData(queryKeys.shops.all, result.shops);
       return result.shops;
     },
     enabled: hydrated && !!user && enabled,
