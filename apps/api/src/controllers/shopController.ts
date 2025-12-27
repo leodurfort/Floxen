@@ -48,21 +48,21 @@ function userIdFromReq(req: Request): string {
   return user?.sub || '';
 }
 
-export function listShops(req: Request, res: Response) {
+export async function listShops(req: Request, res: Response) {
   const userId = userIdFromReq(req);
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-  listShopsByUser(userId)
-    .then((shops) => {
-      logger.info('shops:list', { userId, count: shops.length });
-      return res.json({ shops });
-    })
-    .catch((err) => {
-      logger.error('shops:list error', err);
-      return res.status(500).json({ error: err.message });
-    });
+
+  try {
+    const shops = await listShopsByUser(userId);
+    logger.info('shops:list', { userId, count: shops.length });
+    return res.json({ shops });
+  } catch (err: any) {
+    logger.error('shops:list error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
-export function createShop(req: Request, res: Response) {
+export async function createShop(req: Request, res: Response) {
   const parse = createShopSchema.safeParse(req.body);
   if (!parse.success) {
     return res.status(400).json({ error: parse.error.flatten() });
@@ -70,19 +70,19 @@ export function createShop(req: Request, res: Response) {
 
   const userId = userIdFromReq(req);
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-  createShopRecord({
-    userId,
-    storeUrl: parse.data.storeUrl,
-  })
-    .then((shop) => {
-      const authUrl = buildWooAuthUrl(parse.data.storeUrl, userId, shop.id);
-      logger.info('shops:create', { userId, shopId: shop.id, storeUrl: parse.data.storeUrl });
-      res.status(201).json({ shop, authUrl });
-    })
-    .catch((err) => {
-      logger.error('shops:create error', err);
-      res.status(500).json({ error: err.message });
+
+  try {
+    const shop = await createShopRecord({
+      userId,
+      storeUrl: parse.data.storeUrl,
     });
+    const authUrl = buildWooAuthUrl(parse.data.storeUrl, userId, shop.id);
+    logger.info('shops:create', { userId, shopId: shop.id, storeUrl: parse.data.storeUrl });
+    return res.status(201).json({ shop, authUrl });
+  } catch (err: any) {
+    logger.error('shops:create error', err);
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 export async function getShop(req: Request, res: Response) {
@@ -178,7 +178,7 @@ export async function disconnectShop(req: Request, res: Response) {
   }
 }
 
-export function oauthCallback(req: Request, res: Response) {
+export async function oauthCallback(req: Request, res: Response) {
   logger.info('shops:oauth callback START', {
     shopId: req.params.id,
     query: req.query,
@@ -206,16 +206,15 @@ export function oauthCallback(req: Request, res: Response) {
     consumerKeyLength: String(consumer_key).length
   });
 
-  setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret))
-    .then((shop) => {
-      syncQueue?.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
-      logger.info('shops:oauth callback SUCCESS - stored creds', { shopId: shop.id });
-      return res.json({ shop, message: 'Connection verified, sync queued' });
-    })
-    .catch((err) => {
-      logger.error('shops:oauth callback ERROR', { shopId: req.params.id, error: err.message, stack: err.stack });
-      res.status(500).json({ error: err.message });
-    });
+  try {
+    const shop = await setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret));
+    syncQueue?.add('product-sync', { shopId: shop.id, type: 'FULL', triggeredBy: 'oauth' }, { removeOnComplete: true });
+    logger.info('shops:oauth callback SUCCESS - stored creds', { shopId: shop.id });
+    return res.json({ shop, message: 'Connection verified, sync queued' });
+  } catch (err: any) {
+    logger.error('shops:oauth callback ERROR', { shopId: req.params.id, error: err.message, stack: err.stack });
+    return res.status(500).json({ error: err.message });
+  }
 }
 
 export async function verifyConnection(req: Request, res: Response) {
