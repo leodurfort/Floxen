@@ -101,7 +101,11 @@ function parseColumnFiltersFromParams(searchParams: URLSearchParams): Record<str
       if (!columnFilters[columnId]) {
         columnFilters[columnId] = { values: [] };
       }
-      columnFilters[columnId].values = value.split(',').filter(Boolean);
+      // Decode each URL-encoded value to handle commas and special characters
+      columnFilters[columnId].values = value
+        .split(',')
+        .filter(Boolean)
+        .map(v => decodeURIComponent(v));
     }
   });
 
@@ -114,7 +118,11 @@ function encodeColumnFiltersToParams(
 ): void {
   for (const [columnId, filter] of Object.entries(columnFilters)) {
     if (filter.values.length > 0) {
-      params.set(`${CF_PREFIX}${columnId}${CF_VALUES_SUFFIX}`, filter.values.join(','));
+      // URL-encode each value before joining to handle commas and special characters
+      params.set(
+        `${CF_PREFIX}${columnId}${CF_VALUES_SUFFIX}`,
+        filter.values.map(v => encodeURIComponent(v)).join(',')
+      );
     }
   }
 }
@@ -241,9 +249,14 @@ export function useCatalogFilters(shopId?: string) {
     setFilters({ columnFilters: newColumnFilters });
   }, [filters.columnFilters, setFilters]);
 
-  // Clear all column filters
+  // Clear all column filters (keeps search)
   const clearAllColumnFilters = useCallback(() => {
     setFilters({ columnFilters: {} });
+  }, [setFilters]);
+
+  // Clear ALL filters (search + column filters) - matches hasActiveFilters
+  const clearAllFilters = useCallback(() => {
+    setFilters({ search: '', columnFilters: {} });
   }, [setFilters]);
 
   // Get filter for a specific column
@@ -281,6 +294,7 @@ export function useCatalogFilters(shopId?: string) {
     setColumnValueFilter,
     clearColumnFilter,
     clearAllColumnFilters,
+    clearAllFilters,
     getColumnFilter,
     hasColumnFilter,
 
