@@ -24,7 +24,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.666.0",
     "@prisma/client": "^5.16.2",
-    "@qdrant/js-client-rest": "^1.9.1",
     "@woocommerce/woocommerce-rest-api": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.7.6",
