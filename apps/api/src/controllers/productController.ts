@@ -175,7 +175,7 @@ export function getProduct(req: Request, res: Response) {
     });
 }
 
-export function updateProduct(req: Request, res: Response) {
+export async function updateProduct(req: Request, res: Response) {
   const { id, pid } = req.params;
   const parse = updateProductSchema.safeParse(req.body);
   if (!parse.success) {
@@ -187,30 +187,42 @@ export function updateProduct(req: Request, res: Response) {
     });
     return res.status(400).json({ error: parse.error.flatten() });
   }
-  updateProductRecord(id, pid, parse.data)
-    .then((product) => {
-      if (!product) {
-        logger.warn('Product not found for update', { shopId: id, productId: pid });
-        return res.status(404).json({ error: 'Product not found' });
-      }
-      logger.info('Product updated successfully', {
-        shopId: id,
-        productId: pid,
-        updatedFields: Object.keys(parse.data),
-        userId: userIdFromReq(req),
-      });
-      return res.json({ product });
-    })
-    .catch((err) => {
-      logger.error('Failed to update product', {
-        error: err,
-        shopId: id,
-        productId: pid,
-        updateData: parse.data,
-        userId: userIdFromReq(req),
-      });
-      return res.status(500).json({ error: err.message });
+
+  try {
+    const product = await updateProductRecord(id, pid, parse.data);
+    if (!product) {
+      logger.warn('Product not found for update', { shopId: id, productId: pid });
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // If feedEnableSearch was updated, reprocess to update openaiAutoFilled
+    if (parse.data.feedEnableSearch !== undefined) {
+      await reprocessProduct(pid);
+    }
+
+    logger.info('Product updated successfully', {
+      shopId: id,
+      productId: pid,
+      updatedFields: Object.keys(parse.data),
+      userId: userIdFromReq(req),
     });
+
+    // Fetch updated product to return fresh data (including reprocessed openaiAutoFilled)
+    const updatedProduct = await prisma.product.findUnique({
+      where: { id: pid },
+    });
+
+    return res.json({ product: updatedProduct });
+  } catch (err) {
+    logger.error('Failed to update product', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      shopId: id,
+      productId: pid,
+      updateData: parse.data,
+      userId: userIdFromReq(req),
+    });
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -695,17 +707,21 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
     const validationErrors: Record<string, string> = {};
 
     for (const [attribute, override] of Object.entries(overrides)) {
-      // Check if field is editable at product level (skip for enable_search which has special handling)
-      if (attribute !== 'enable_search') {
-        const spec = OPENAI_FEED_SPEC.find(s => s.attribute === attribute);
-        if (spec && !isProductEditable(spec)) {
-          const reason = spec.isFeatureDisabled ? 'feature not yet available'
-            : spec.isAutoPopulated ? 'auto-populated from other fields'
-            : spec.isShopManaged ? 'managed at shop level'
-            : 'not editable at product level';
-          validationErrors[attribute] = `Cannot edit: ${reason}`;
-          continue;
-        }
+      // enable_search cannot be stored in overrides - it uses the feedEnableSearch column only
+      if (attribute === 'enable_search') {
+        validationErrors[attribute] = 'enable_search must be updated via the product endpoint, not overrides';
+        continue;
+      }
+
+      // Check if field is editable at product level
+      const spec = OPENAI_FEED_SPEC.find(s => s.attribute === attribute);
+      if (spec && !isProductEditable(spec)) {
+        const reason = spec.isFeatureDisabled ? 'feature not yet available'
+          : spec.isAutoPopulated ? 'auto-populated from other fields'
+          : spec.isShopManaged ? 'managed at shop level'
+          : 'not editable at product level';
+        validationErrors[attribute] = `Cannot edit: ${reason}`;
+        continue;
       }
 
       const isLockedField = LOCKED_FIELD_SET.has(attribute);

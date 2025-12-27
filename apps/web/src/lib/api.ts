@@ -337,7 +337,8 @@ export async function getColumnValues(
   if (currentFilters?.columnFilters) {
     for (const [columnId, filter] of Object.entries(currentFilters.columnFilters)) {
       if (filter.values && filter.values.length > 0) {
-        params.set(`cf_${columnId}_v`, filter.values.join(','));
+        // URL-encode each value before joining to handle commas and special characters
+        params.set(`cf_${columnId}_v`, filter.values.map(v => encodeURIComponent(v)).join(','));
       }
       if (filter.text) {
         params.set(`cf_${columnId}_t`, filter.text);
@@ -527,6 +528,23 @@ export async function updateProductOverrides(
     {
       method: 'PUT',
       body: JSON.stringify({ overrides }),
+    }
+  );
+}
+
+/**
+ * Update product properties (feedEnableSearch, status, etc.)
+ */
+export async function updateProduct(
+  shopId: string,
+  productId: string,
+  data: { feedEnableSearch?: boolean; status?: string }
+) {
+  return requestWithAuth<{ product: unknown }>(
+    `/api/v1/shops/${shopId}/products/${productId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     }
   );
 }

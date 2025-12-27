@@ -159,3 +159,37 @@ export function useUpdateProductOverridesMutation(shopId: string | undefined, pr
     },
   });
 }
+
+/**
+ * Mutation hook for updating product's feedEnableSearch
+ * This is the proper way to update enable_search - via the column, not overrides
+ * Invalidates both product overrides cache and products list cache
+ */
+export function useUpdateFeedEnableSearchMutation(shopId: string | undefined, productId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (enableSearch: boolean) => {
+      if (!shopId || !productId) throw new Error('No shop or product selected');
+      return api.updateProduct(shopId, productId, { feedEnableSearch: enableSearch });
+    },
+    onSuccess: () => {
+      if (shopId && productId) {
+        // Invalidate product overrides to refresh the resolved values
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.fieldMappings.productOverrides(shopId, productId),
+        });
+        // Invalidate products list so catalog shows updated value
+        queryClient.invalidateQueries({
+          queryKey: ['products', shopId],
+          exact: false,
+        });
+        // Invalidate column values as filter counts may have changed
+        queryClient.invalidateQueries({
+          queryKey: ['columnValues', shopId],
+          exact: false,
+        });
+      }
+    },
+  });
+}

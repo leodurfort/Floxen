@@ -118,11 +118,8 @@ export class AutoFillService {
     }
 
     if (spec.attribute === 'enable_search') {
-      // Product override takes priority
-      if (override?.type === 'static') {
-        return override.value;
-      }
-      // Fall back to productFlags (from feedEnableSearch column)
+      // enable_search uses ONLY the feedEnableSearch column - no override support
+      // This ensures a single source of truth for this field
       return productFlags?.enableSearch !== undefined
         ? (productFlags.enableSearch ? 'true' : 'false')
         : null;

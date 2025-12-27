@@ -209,9 +209,12 @@ function buildWhereClause(
       // Handle value filters (checkbox selections)
       if (filter.values?.length) {
         if ((columnId === 'isValid' || columnId === 'feedEnableSearch' || columnId === 'enable_search') && dbColumn) {
-          // Boolean columns - convert string 'true'/'false' to boolean
-          const boolValue = filter.values.includes('true');
-          andConditions.push({ [dbColumn]: boolValue });
+          // Boolean columns - only filter if exactly one value selected
+          // (selecting both 'true' and 'false' means show all, so no filter needed)
+          if (filter.values.length === 1) {
+            const boolValue = filter.values[0] === 'true';
+            andConditions.push({ [dbColumn]: boolValue });
+          }
         }
         // Note: availability, overrides, and OpenAI JSON column filters
         // are handled in raw SQL path (requiresRawSqlFiltering returns true for these)
@@ -282,15 +285,16 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
   // Process column filters
   const cf = options.columnFilters;
   if (cf) {
-    // isValid column
-    if (cf.isValid?.values?.length) {
-      const boolValue = cf.isValid.values.includes('true');
+    // isValid column - only filter if exactly one value selected
+    // (selecting both 'true' and 'false' means show all, so no filter needed)
+    if (cf.isValid?.values?.length === 1) {
+      const boolValue = cf.isValid.values[0] === 'true';
       whereConditions.push(`"is_valid" = ${boolValue}`);
     }
 
-    // enable_search / feedEnableSearch column
-    if (cf.enable_search?.values?.length) {
-      const boolValue = cf.enable_search.values.includes('true');
+    // enable_search / feedEnableSearch column - only filter if exactly one value selected
+    if (cf.enable_search?.values?.length === 1) {
+      const boolValue = cf.enable_search.values[0] === 'true';
       whereConditions.push(`"feed_enable_search" = ${boolValue}`);
     }
 
