@@ -150,10 +150,17 @@ export function ColumnHeaderDropdown({
   }, []);
 
   // Apply pending filter and close dropdown
+  // If ALL values are selected, treat it as clearing the filter (no filter = show all)
   const applyFilter = useCallback(() => {
-    onValueFilter(pendingValues);
+    const allSelected = uniqueValues.length > 0 && pendingValues.length === uniqueValues.length;
+    if (allSelected || pendingValues.length === 0) {
+      // Selecting all values or no values = clear filter
+      onClearFilter();
+    } else {
+      onValueFilter(pendingValues);
+    }
     setIsOpen(false);
-  }, [pendingValues, onValueFilter]);
+  }, [pendingValues, uniqueValues, onValueFilter, onClearFilter]);
 
   // Clear all filters for this column
   const handleClear = useCallback(() => {
