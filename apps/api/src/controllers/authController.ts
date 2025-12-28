@@ -8,11 +8,11 @@ import { getUser } from '../utils/request';
 import {
   createUserWithVerification,
   findUserByEmail,
-  validateUser,
   verifyUserEmail,
   updateUserProfile,
   completeOnboarding,
   findUserById,
+  verifyPassword,
 } from '../services/userService';
 import {
   createVerificationToken,
@@ -91,11 +91,20 @@ export async function login(req: Request, res: Response) {
 
   const { email, password } = parse.data;
   try {
-    const user = await validateUser(email, password);
+    // Check if user exists
+    const user = await findUserByEmail(email);
     if (!user) {
-      logger.warn('login: invalid credentials', { email });
-      return res.status(401).json({ error: 'Invalid credentials' });
+      logger.warn('login: user not found', { email });
+      return res.status(401).json({ error: 'No account found with this email' });
     }
+
+    // Verify password
+    const isValidPassword = await verifyPassword(user.id, password);
+    if (!isValidPassword) {
+      logger.warn('login: incorrect password', { email });
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+
     const tokens = signTokens(user);
     logger.info('login: success', { userId: user.id, email: user.email });
     return res.json({ user, tokens });
