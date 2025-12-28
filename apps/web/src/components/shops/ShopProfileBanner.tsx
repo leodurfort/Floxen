@@ -33,7 +33,7 @@ export function ShopProfileBanner({ shop, currentPath }: ShopProfileBannerProps)
       {showButton && shop.id && (
         <Link
           href={`/shops?openProfile=${shop.id}`}
-          className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          className="px-4 py-1.5 bg-[#FA7315] hover:bg-[#E5650F] text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
         >
           Complete Setup
         </Link>

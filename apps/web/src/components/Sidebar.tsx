@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
@@ -17,6 +17,26 @@ export function Sidebar() {
 
   const [showShopDropdown, setShowShopDropdown] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+
+  const shopDropdownRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+
+      if (showShopDropdown && shopDropdownRef.current && !shopDropdownRef.current.contains(target)) {
+        setShowShopDropdown(false);
+      }
+      if (showAccountMenu && accountMenuRef.current && !accountMenuRef.current.contains(target)) {
+        setShowAccountMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showShopDropdown, showAccountMenu]);
 
   function handleShopChange(shop: Shop) {
     // Just navigate - the URL becomes the source of truth
@@ -49,7 +69,7 @@ export function Sidebar() {
       {/* Shop Selector */}
       {shops.length > 0 && (
         <div className="px-4 mb-4">
-          <div className="relative">
+          <div className="relative" ref={shopDropdownRef}>
             <button
               onClick={() => setShowShopDropdown(!showShopDropdown)}
               className="w-full bg-[#A84E28] hover:bg-white/10 rounded-lg p-3 text-left transition-colors"
@@ -122,7 +142,7 @@ export function Sidebar() {
 
       {/* User Account Section */}
       <div className="border-t border-white/20 p-4">
-        <div className="relative">
+        <div className="relative" ref={accountMenuRef}>
           <button
             onClick={() => setShowAccountMenu(!showAccountMenu)}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#A84E28] transition-colors"

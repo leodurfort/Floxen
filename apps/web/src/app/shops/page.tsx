@@ -491,29 +491,29 @@ export default function ShopsPage() {
                         {/* Fields - stacked vertically */}
                         <div className="space-y-3">
                           <div>
-                            <div className="text-sm text-gray-700 font-medium">Store name</div>
-                            <div className={shop.sellerName ? 'text-gray-900' : 'text-gray-400'}>
+                            <div className="text-xs text-gray-500">Store name</div>
+                            <div className={shop.sellerName ? 'text-sm font-medium text-gray-900' : 'text-sm text-gray-400'}>
                               {shop.sellerName || 'Not set'}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-700 font-medium">Return policy</div>
+                            <div className="text-xs text-gray-500">Return policy</div>
                             {shop.returnPolicy ? (
                               <a
                                 href={shop.returnPolicy}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[#FA7315] hover:text-[#E5650F] underline break-all"
+                                className="text-sm font-medium text-gray-900 hover:text-gray-700 underline break-all"
                               >
                                 {shop.returnPolicy}
                               </a>
                             ) : (
-                              <div className="text-gray-400">Not set</div>
+                              <div className="text-sm text-gray-400">Not set</div>
                             )}
                           </div>
                           <div>
-                            <div className="text-sm text-gray-700 font-medium">Return window</div>
-                            <div className={shop.returnWindow ? 'text-gray-900' : 'text-gray-400'}>
+                            <div className="text-xs text-gray-500">Return window</div>
+                            <div className={shop.returnWindow ? 'text-sm font-medium text-gray-900' : 'text-sm text-gray-400'}>
                               {shop.returnWindow ? `${shop.returnWindow} days` : 'Not set'}
                             </div>
                           </div>
