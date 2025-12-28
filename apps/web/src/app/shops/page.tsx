@@ -304,8 +304,7 @@ export default function ShopsPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">SHOPS</p>
-              <h1 className="text-3xl font-bold text-gray-900">Connections</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Your Shops</h1>
             </div>
             <button
               onClick={() => setShowConnectForm(!showConnectForm)}
