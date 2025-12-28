@@ -389,7 +389,16 @@ export default function ShopsPage() {
             <div className="space-y-4">
               {shops.map((shop) => {
                 const profileComplete = isProfileComplete(shop);
+                const hasValidProducts = (shop.validProductCount ?? 0) > 0;
                 const isAdvancedExpanded = expandedAdvanced[shop.id] ?? false;
+
+                // Determine button states based on progress
+                // State 1: Profile incomplete - Mapping is gray, Sync is gray
+                // State 2: Profile complete, no valid products - Mapping is orange, Sync is gray (disabled)
+                // State 3: Profile complete, valid products exist - Mapping is gray ("Check Field Mapping"), Sync is gray (enabled)
+                const mappingButtonOrange = profileComplete && !hasValidProducts;
+                const mappingButtonText = profileComplete && hasValidProducts ? 'Check Field Mapping' : 'Complete Mapping Setup';
+                const syncDisabled = triggerSyncMutation.isPending || (profileComplete && !hasValidProducts);
 
                 return (
                   <div key={shop.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -414,13 +423,17 @@ export default function ShopsPage() {
                           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                             <Link
                               href={`/shops/${shop.id}/setup`}
-                              className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                                mappingButtonOrange
+                                  ? 'bg-[#FA7315] hover:bg-[#E5650F] text-white'
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
+                              }`}
                             >
-                              Complete Mapping Setup
+                              {mappingButtonText}
                             </Link>
                             <button
                               onClick={() => handleSync(shop.id)}
-                              disabled={triggerSyncMutation.isPending}
+                              disabled={syncDisabled}
                               className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               Sync

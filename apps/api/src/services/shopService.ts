@@ -5,7 +5,26 @@ import { fetchStoreSettings } from './wooClient';
 import { logger } from '../lib/logger';
 
 export async function listShopsByUser(userId: string) {
-  return prisma.shop.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
+  const shops = await prisma.shop.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: {
+        select: {
+          products: {
+            where: { isValid: true },
+          },
+        },
+      },
+    },
+  });
+
+  // Transform to include validProductCount
+  return shops.map((shop) => ({
+    ...shop,
+    validProductCount: shop._count.products,
+    _count: undefined,
+  }));
 }
 
 export async function createShop(params: {

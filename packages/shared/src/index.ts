@@ -39,6 +39,7 @@ export interface Shop {
   sellerTos?: string | null;
   returnPolicy?: string | null;
   returnWindow?: number | null;
+  validProductCount?: number;
   createdAt: string;
   updatedAt: string;
 }
