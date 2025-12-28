@@ -284,6 +284,13 @@ export async function deleteAccount() {
   }>('/api/v1/users/me/delete', { method: 'DELETE' });
 }
 
+export async function completeOnboarding() {
+  return requestWithAuth<{
+    success: boolean;
+    user: User;
+  }>('/api/v1/users/me/complete-onboarding', { method: 'POST' });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SHOPS
 // ═══════════════════════════════════════════════════════════════════════════

@@ -94,6 +94,41 @@ export async function updateProfile(req: Request, res: Response) {
 }
 
 /**
+ * Mark onboarding as complete (called from welcome page)
+ */
+export async function completeOnboardingHandler(req: Request, res: Response) {
+  try {
+    const userId = getUserId(req);
+    const user = await findUserById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Import completeOnboarding from userService
+    const { completeOnboarding } = await import('../services/userService');
+    const updatedUser = await completeOnboarding(userId);
+
+    logger.info('completeOnboarding: success', { userId });
+    return res.json({
+      success: true,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        surname: updatedUser.surname,
+        emailVerified: updatedUser.emailVerified,
+        onboardingComplete: updatedUser.onboardingComplete,
+        subscriptionTier: updatedUser.subscriptionTier,
+      },
+    });
+  } catch (err) {
+    logger.error('completeOnboarding: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    return res.status(500).json({ error: 'Failed to complete onboarding' });
+  }
+}
+
+/**
  * Initiate email change - sends verification code to new email
  */
 export async function changeEmail(req: Request, res: Response) {

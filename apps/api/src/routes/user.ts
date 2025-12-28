@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth';
 import {
   getProfile,
   updateProfile,
+  completeOnboardingHandler,
   changeEmail,
   changeEmailVerify,
   changePassword,
@@ -17,6 +18,9 @@ router.use(requireAuth);
 // Profile
 router.get('/me', getProfile);
 router.patch('/me/profile', updateProfile);
+
+// Onboarding
+router.post('/me/complete-onboarding', completeOnboardingHandler);
 
 // Email change
 router.post('/me/change-email', changeEmail);

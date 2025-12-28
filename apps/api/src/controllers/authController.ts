@@ -340,11 +340,8 @@ export async function registerComplete(req: Request, res: Response) {
       return res.status(400).json({ error: 'Please verify your email first.' });
     }
 
-    // Update profile
+    // Update profile (onboarding completes after welcome page)
     const updatedUser = await updateUserProfile(user.id, { firstName, surname });
-
-    // Mark onboarding as complete
-    await completeOnboarding(user.id);
 
     // Generate fresh tokens with updated user data
     const tokens = signTokens(updatedUser);
@@ -359,7 +356,7 @@ export async function registerComplete(req: Request, res: Response) {
         surname: updatedUser.surname,
         name: updatedUser.name,
         emailVerified: true,
-        onboardingComplete: true,
+        onboardingComplete: false, // Still false until welcome page
         subscriptionTier: updatedUser.subscriptionTier,
       },
       tokens,

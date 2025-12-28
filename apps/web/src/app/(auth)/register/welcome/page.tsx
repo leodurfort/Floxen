@@ -7,10 +7,11 @@ import * as api from '@/lib/api';
 
 export default function RegisterWelcomePage() {
   const router = useRouter();
-  const { user, hydrate, hydrated } = useAuth();
+  const { user, hydrate, hydrated, setUser } = useAuth();
   const [storeUrl, setStoreUrl] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
 
   useEffect(() => {
     hydrate();
@@ -34,6 +35,10 @@ export default function RegisterWelcomePage() {
     setIsLoading(true);
 
     try {
+      // Complete onboarding before connecting store
+      const onboardingResult = await api.completeOnboarding();
+      setUser(onboardingResult.user);
+
       const result = await api.createShop({ storeUrl: storeUrl.trim() });
       // Redirect to WooCommerce OAuth
       if (result.authUrl) {
@@ -48,8 +53,16 @@ export default function RegisterWelcomePage() {
     }
   }
 
-  function handleSkip() {
-    router.push('/dashboard');
+  async function handleSkip() {
+    setIsSkipping(true);
+    try {
+      const result = await api.completeOnboarding();
+      setUser(result.user);
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete setup');
+      setIsSkipping(false);
+    }
   }
 
   if (!hydrated || !user) {
@@ -124,9 +137,10 @@ export default function RegisterWelcomePage() {
             <div className="mt-6 pt-6 border-t border-gray-200">
               <button
                 onClick={handleSkip}
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                disabled={isSkipping || isLoading}
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
               >
-                Skip for now - I&apos;ll connect later
+                {isSkipping ? 'Setting up...' : "Skip for now - I'll connect later"}
               </button>
             </div>
           </div>
