@@ -44,15 +44,16 @@ function ProgressBar() {
   );
 }
 
-// WooCommerce Logo Component (Purple)
-function WooCommerceLogo({ className = "w-8 h-8" }: { className?: string }) {
+// WooCommerce Logo Component (links to woocommerce.com)
+function WooCommerceLogo({ className = "h-8" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 256 153" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M23.759 0H232.24C245.375 0 256 10.625 256 23.759V129.24C256 142.375 245.375 153 232.24 153H23.759C10.625 153 0 142.375 0 129.24V23.759C0 10.625 10.625 0 23.759 0Z" fill="#7F54B3"/>
-      <path d="M14.578 21.75C16.156 19.594 18.469 18.5 21.516 18.5C27.453 18.5 30.625 22.406 31.031 30.219C32.266 54.25 33.688 74.125 35.297 89.844L56.906 50.469C58.531 47.484 60.594 45.906 63.094 45.766C66.844 45.531 69.109 47.906 69.891 52.875C71.797 65.656 74.188 76.625 77.063 85.781C79.75 60.906 83.906 42.406 89.531 30.281C91.063 27.063 93.391 25.438 96.516 25.391C99.047 25.359 101.234 26.281 103.078 28.156C104.922 30.031 105.875 32.266 105.938 34.859C105.969 36.75 105.563 38.438 104.719 39.922C100.844 46.797 97.641 57.375 95.109 71.656C92.641 85.563 91.547 96.422 91.828 104.234C91.953 107.766 91.406 110.719 90.188 113.094C88.781 115.813 86.75 117.203 84.094 117.266C81.063 117.328 78.156 115.641 75.375 112.203C64.266 98.609 55.531 80.406 49.172 57.594L39.125 77.781C35.188 85.656 31.875 91.109 29.188 94.141C25.25 98.734 21.188 101.063 17 101.125C14 101.172 11.484 99.703 9.453 96.719C7.016 93.078 5.625 88.297 5.281 82.375C4.781 73.875 5.047 63.609 6.078 51.578C7.109 39.547 8.797 29.703 11.141 22.047C11.859 19.656 13.016 17.906 14.578 16.797V21.75Z" fill="white"/>
-      <path d="M140.578 21.75C142.156 19.594 144.469 18.5 147.516 18.5C153.453 18.5 156.625 22.406 157.031 30.219C158.266 54.25 159.688 74.125 161.297 89.844L182.906 50.469C184.531 47.484 186.594 45.906 189.094 45.766C192.844 45.531 195.109 47.906 195.891 52.875C197.797 65.656 200.188 76.625 203.063 85.781C205.75 60.906 209.906 42.406 215.531 30.281C217.063 27.063 219.391 25.438 222.516 25.391C225.047 25.359 227.234 26.281 229.078 28.156C230.922 30.031 231.875 32.266 231.938 34.859C231.969 36.75 231.563 38.438 230.719 39.922C226.844 46.797 223.641 57.375 221.109 71.656C218.641 85.563 217.547 96.422 217.828 104.234C217.953 107.766 217.406 110.719 216.188 113.094C214.781 115.813 212.75 117.203 210.094 117.266C207.063 117.328 204.156 115.641 201.375 112.203C190.266 98.609 181.531 80.406 175.172 57.594L165.125 77.781C161.188 85.656 157.875 91.109 155.188 94.141C151.25 98.734 147.188 101.063 143 101.125C140 101.172 137.484 99.703 135.453 96.719C133.016 93.078 131.625 88.297 131.281 82.375C130.781 73.875 131.047 63.609 132.078 51.578C133.109 39.547 134.797 29.703 137.141 22.047C137.859 19.656 139.016 17.906 140.578 16.797V21.75Z" fill="white"/>
-      <path d="M112.078 45.797C114.875 41.016 118.656 38.328 123.422 37.734C130.75 36.828 135.906 40.797 138.891 49.641C140.078 52.984 140.828 56.859 141.141 61.266C141.922 72.75 139.844 82.422 134.906 90.281C130.625 97.031 125.297 100.719 118.922 101.344C114.734 101.75 111.156 100.578 108.188 97.828C104.063 93.984 101.688 88.016 101.063 79.922C100.531 73.047 100.938 66.047 102.281 58.922C104.063 49.438 107.297 42.547 112.078 38.25V45.797ZM119.859 81.422C122.063 76.953 123.25 71.266 123.422 64.359C123.484 61.141 123.156 58.188 122.438 55.5C121.281 51.109 119.344 48.797 116.625 48.563C113.781 48.313 111.469 50.188 109.688 54.188C108.25 57.422 107.359 61.172 107.016 65.438C106.516 71.641 107.031 77.172 108.563 82.031C110.313 87.656 112.797 90.391 116.016 90.234C117.797 90.141 119.266 88.531 120.422 85.375C121.172 83.313 121.578 81.625 121.641 80.313L119.859 81.422Z" fill="white"/>
-    </svg>
+    <a href="https://woocommerce.com" target="_blank" rel="noopener noreferrer">
+      <img
+        src="/logos/woocommerce.png"
+        alt="WooCommerce"
+        className={className}
+      />
+    </a>
   );
 }
 
@@ -108,7 +109,7 @@ function ConnectionModal({
 
         {/* Modal Header */}
         <div className="flex items-center gap-3 mb-6">
-          <WooCommerceLogo className="w-10 h-10" />
+          <WooCommerceLogo className="h-10" />
           <h3 className="text-lg font-semibold text-gray-900">
             Connect your store
           </h3>
@@ -138,7 +139,7 @@ function ConnectionModal({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             }
-            text="Takes ~30 seconds"
+            text="Takes ~10 seconds"
           />
         </div>
 
@@ -253,49 +254,48 @@ export default function RegisterWelcomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F9FAFB] py-6 lg:py-10 px-4">
-      <div className="max-w-6xl mx-auto">
+    <main className="min-h-screen bg-[#F9FAFB] py-6 lg:py-8 px-2 lg:px-4">
+      <div className="max-w-7xl mx-auto">
         {/* Progress Bar */}
-        <div className="mb-8 lg:mb-12">
+        <div className="mb-6 lg:mb-10">
           <ProgressBar />
         </div>
 
-        {/* Main Content - 60/40 Split */}
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-          {/* Left Column (60%) */}
-          <div className="w-full lg:w-[60%]">
+        {/* Main Content - 60/40 Split with equal height boxes */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-stretch">
+          {/* Left Column (60%) - Connection Box */}
+          <div className="w-full lg:w-[58%] bg-white rounded-xl border border-gray-200 shadow-sm p-5 lg:p-8 flex flex-col">
             {/* Headline */}
-            <h1 className="text-2xl lg:text-3xl xl:text-4xl font-display font-bold text-gray-900 mb-3">
+            <h1 className="text-2xl lg:text-3xl font-display font-bold text-gray-900 mb-3">
               Your products are ready to appear in ChatGPT
             </h1>
 
             {/* Subheadline */}
-            <p className="text-base lg:text-lg text-gray-600 mb-6 lg:mb-8">
+            <p className="text-base lg:text-lg text-gray-600 mb-6">
               Connect your WooCommerce store to showcase your first products in ChatGPT.
             </p>
 
-            {/* Connection Card - Step 1 */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 lg:p-6 shadow-sm">
-              {/* WooCommerce Header */}
-              <div className="flex items-center gap-4 mb-5">
-                <WooCommerceLogo className="w-12 h-12" />
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Securely connect your WooCommerce store
-                  </h2>
-                </div>
+            {/* WooCommerce Header */}
+            <div className="flex items-center gap-4 mb-5">
+              <WooCommerceLogo className="h-10" />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Securely connect your WooCommerce store
+                </h2>
               </div>
+            </div>
 
-              {/* Primary CTA */}
-              <button
-                onClick={openModal}
-                className="w-full bg-[#FA7315] hover:bg-[#E5650F] text-white font-medium py-3 px-4 rounded-lg transition-colors"
-              >
-                Connect & preview my products
-              </button>
+            {/* Primary CTA */}
+            <button
+              onClick={openModal}
+              className="w-full bg-[#FA7315] hover:bg-[#E5650F] text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              Connect & preview my products
+            </button>
 
-              {/* Free Plan Callout */}
-              <div className="mt-5 p-4 bg-orange-50 rounded-lg border border-orange-100">
+            {/* Free Plan Callout - pushed to bottom with flex-grow */}
+            <div className="mt-auto pt-5">
+              <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#FA7315]/20 flex items-center justify-center mt-0.5">
                     <svg className="w-3.5 h-3.5 text-[#FA7315]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,7 +306,7 @@ export default function RegisterWelcomePage() {
                     <p className="text-sm font-medium text-gray-900 mb-1">Free plan:</p>
                     <ul className="text-sm text-gray-600 space-y-0.5">
                       <li>• Publish up to <strong>5</strong> products</li>
-                      <li>• Full visibility in AI shopping results</li>
+                      <li>• Full visibility in ChatGPT results</li>
                       <li>• Upgrade <strong>anytime</strong> to sync more products</li>
                     </ul>
                   </div>
@@ -315,14 +315,14 @@ export default function RegisterWelcomePage() {
             </div>
           </div>
 
-          {/* Right Column (40%) */}
-          <div className="w-full lg:w-[40%]">
+          {/* Right Column (40%) - Preview Box */}
+          <div className="w-full lg:w-[42%] bg-white rounded-xl border border-gray-200 shadow-sm p-5 lg:p-6 flex flex-col">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               How buyers discover your products via AI
             </h2>
 
             {/* Visual Mockup Container */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 lg:p-5">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 flex-grow">
               {/* User Intent */}
               <div className="flex items-start gap-3 mb-4">
                 <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
