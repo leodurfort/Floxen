@@ -257,23 +257,66 @@ export async function deleteAccount(req: Request, res: Response) {
     // Import prisma for deletion
     const { prisma } = await import('../lib/prisma');
 
-    // Delete related records that don't have cascade delete set up
-    // 1. Delete AccountDeletion records
+    // Delete all related records in correct order (respecting FK constraints)
+    // Get user's shops first
+    const shops = await prisma.shop.findMany({
+      where: { userId },
+      select: { id: true },
+    });
+    const shopIds = shops.map((s) => s.id);
+
+    if (shopIds.length > 0) {
+      // Get all products for these shops
+      const products = await prisma.product.findMany({
+        where: { shopId: { in: shopIds } },
+        select: { id: true },
+      });
+      const productIds = products.map((p) => p.id);
+
+      if (productIds.length > 0) {
+        // 1. Delete ProductVariant (depends on Product)
+        await prisma.productVariant.deleteMany({
+          where: { productId: { in: productIds } },
+        });
+
+        // 2. Delete ProductAnalytics (depends on Product)
+        await prisma.productAnalytics.deleteMany({
+          where: { productId: { in: productIds } },
+        });
+
+        // 3. Delete Products
+        await prisma.product.deleteMany({
+          where: { shopId: { in: shopIds } },
+        });
+      }
+
+      // 4. Delete ShopAnalytics (depends on Shop)
+      await prisma.shopAnalytics.deleteMany({
+        where: { shopId: { in: shopIds } },
+      });
+
+      // 5. Delete SyncBatch (depends on Shop)
+      await prisma.syncBatch.deleteMany({
+        where: { shopId: { in: shopIds } },
+      });
+
+      // 6. Delete Shops (FeedSnapshot & FieldMapping cascade automatically)
+      await prisma.shop.deleteMany({
+        where: { userId },
+      });
+    }
+
+    // 7. Delete AccountDeletion records
     await prisma.accountDeletion.deleteMany({
       where: { userId },
     });
 
-    // 2. Delete VerificationToken records
+    // 8. Delete VerificationToken records
     await prisma.verificationToken.deleteMany({
       where: { userId },
     });
 
-    // 3. Delete Shops (this will cascade to products, field mappings, feed snapshots, etc.)
-    await prisma.shop.deleteMany({
-      where: { userId },
-    });
-
-    // 4. Finally delete the user
+    // 9. Finally delete the user
     await prisma.user.delete({
       where: { id: userId },
     });
