@@ -7,6 +7,7 @@ import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
 import { useProductsQuery, useRefreshFeedMutation, useBulkUpdateMutation } from '@/hooks/useProductsQuery';
+import { useCurrentShop } from '@/hooks/useCurrentShop';
 import { CatalogProduct } from '@productsynch/shared';
 import { SearchFilter } from '@/components/catalog/FilterDropdown';
 import { BulkActionToolbar } from '@/components/catalog/BulkActionToolbar';
@@ -15,6 +16,7 @@ import { EditColumnsModal, getStoredColumns, saveStoredColumns } from '@/compone
 import { Toast } from '@/components/catalog/Toast';
 import { ColumnHeaderDropdown } from '@/components/catalog/ColumnHeaderDropdown';
 import { ClearFiltersButton } from '@/components/catalog/ClearFiltersButton';
+import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import {
   COLUMN_MAP,
   formatColumnValue,
@@ -38,6 +40,9 @@ function CatalogPageContent() {
   const router = useRouter();
   // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
+
+  // Get current shop for banner
+  const { currentShop } = useCurrentShop();
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -419,6 +424,11 @@ function CatalogPageContent() {
     <main className="p-4 space-y-4">
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Shop Profile Banner */}
+      {currentShop && (
+        <ShopProfileBanner shop={currentShop} currentPath="products" />
+      )}
 
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
         {/* Header */}

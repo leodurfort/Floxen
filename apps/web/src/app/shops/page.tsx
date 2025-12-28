@@ -6,6 +6,9 @@ import { useAuth } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { Toast } from '@/components/catalog/Toast';
+import { CompleteShopSetupModal } from '@/components/shops/CompleteShopSetupModal';
+import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
+import type { Shop } from '@productsynch/shared';
 import {
   useShopsQuery,
   useShopsSyncPolling,
@@ -16,11 +19,26 @@ import {
   useUpdateShopMutation,
 } from '@/hooks/useShopsQuery';
 
+// Helper to check if shop profile is complete
+function isProfileComplete(shop: Shop): boolean {
+  return Boolean(shop.sellerName && shop.returnPolicy && shop.returnWindow);
+}
+
+// Validate URL
+function isValidUrl(value: string): boolean {
+  if (!value.trim()) return true;
+  try {
+    new URL(value.trim());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export default function ShopsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
 
   // React Query hooks
@@ -29,19 +47,22 @@ export default function ShopsPage() {
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  // Modal state
+  const [modalShop, setModalShop] = useState<Shop | null>(null);
+
+  // Advanced settings expansion state (per shop)
+  const [expandedAdvanced, setExpandedAdvanced] = useState<Record<string, boolean>>({});
+
   // Track previous sync statuses to detect completion
   const prevSyncStatusesRef = useRef<Record<string, string>>({});
 
   // Handle OAuth redirect: /shops?shop=abc123&connected=true
-  // Just clean up the URL params, don't redirect
   const shopIdFromUrl = searchParams.get('shop');
   const isOAuthRedirect = searchParams.get('connected') === 'true';
 
   useEffect(() => {
     if (isOAuthRedirect && shopIdFromUrl) {
-      // Clean up URL params without redirecting
       router.replace('/shops', { scroll: false });
-      // Show success toast
       setToast({ message: 'Shop connected successfully! Syncing products...', type: 'success' });
     }
   }, [isOAuthRedirect, shopIdFromUrl, router]);
@@ -61,7 +82,6 @@ export default function ShopsPage() {
 
     for (const shop of shops) {
       const prevStatus = prevStatuses[shop.id];
-      // If shop was syncing and is now completed
       if (
         (prevStatus === 'PENDING' || prevStatus === 'SYNCING') &&
         shop.syncStatus === 'COMPLETED'
@@ -71,14 +91,12 @@ export default function ShopsPage() {
       }
     }
 
-    // Update stored statuses
     const newStatuses: Record<string, string> = {};
     for (const shop of shops) {
       newStatuses[shop.id] = shop.syncStatus;
     }
     prevSyncStatusesRef.current = newStatuses;
 
-    // Show toast if sync completed
     if (syncCompleted) {
       setToast({ message: 'Sync completed successfully!', type: 'success' });
     }
@@ -95,12 +113,21 @@ export default function ShopsPage() {
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [storeUrl, setStoreUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [savingShopId, setSavingShopId] = useState<string | null>(null);
-  const saveTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // For advanced settings inline editing (debounced)
+  const [savingAdvanced, setSavingAdvanced] = useState<string | null>(null);
+  const advancedSaveTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
     if (hydrated && !user) router.push('/login');
   }, [hydrated, user, router]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(advancedSaveTimeouts.current).forEach(timeout => clearTimeout(timeout));
+    };
+  }, []);
 
   function handleConnectShop() {
     if (!user || !storeUrl.trim()) return;
@@ -119,7 +146,7 @@ export default function ShopsPage() {
   }
 
   function handleDeleteShop(shopId: string) {
-    if (!user || !confirm('Are you sure you want to delete this shop?')) return;
+    if (!user || !confirm('Are you sure you want to delete this shop? This action cannot be undone.')) return;
     deleteShopMutation.mutate(shopId, {
       onError: (err) => {
         setError(err.message);
@@ -132,7 +159,7 @@ export default function ShopsPage() {
     triggerSyncMutation.mutate(shopId, {
       onSuccess: () => {
         setError(null);
-        alert('Sync triggered successfully');
+        setToast({ message: 'Sync triggered successfully', type: 'success' });
       },
       onError: (err) => {
         setError(err.message);
@@ -155,128 +182,86 @@ export default function ShopsPage() {
     );
   }
 
-  // Validate URL
-  function isValidUrl(value: string): boolean {
-    if (!value.trim()) return true; // Empty is valid (will be cleared)
-    try {
-      new URL(value.trim());
-      return true;
-    } catch {
-      return false;
-    }
+  // Modal save handler
+  async function handleModalSave(data: { sellerName: string | null; returnPolicy: string | null; returnWindow: number | null }) {
+    if (!modalShop) return;
+
+    return new Promise<void>((resolve, reject) => {
+      updateShopMutation.mutate(
+        { shopId: modalShop.id, data },
+        {
+          onSuccess: () => {
+            setModalShop(null);
+            setToast({ message: 'Shop profile saved successfully!', type: 'success' });
+            resolve();
+          },
+          onError: (err) => {
+            setError(err.message);
+            reject(err);
+          },
+        }
+      );
+    });
   }
 
-  // Validate integer
-  function isValidInteger(value: string): boolean {
-    if (!value.trim()) return true; // Empty is valid (will be cleared)
-    const num = parseInt(value.trim(), 10);
-    return !isNaN(num) && num > 0 && Number.isInteger(num);
-  }
-
-  // Auto-save function with debouncing
-  const handleFieldChange = useCallback((
+  // Advanced settings field change handler (debounced)
+  const handleAdvancedFieldChange = useCallback((
     shopId: string,
-    field: 'sellerName' | 'sellerPrivacyPolicy' | 'sellerTos' | 'returnPolicy' | 'returnWindow',
+    field: 'sellerPrivacyPolicy' | 'sellerTos',
     value: string
   ) => {
     if (!user) return;
 
-    // Clear existing timeout for this shop
-    if (saveTimeouts.current[shopId]) {
-      clearTimeout(saveTimeouts.current[shopId]);
+    // Clear existing timeout
+    if (advancedSaveTimeouts.current[shopId]) {
+      clearTimeout(advancedSaveTimeouts.current[shopId]);
     }
 
-    // Optimistic update in the cache for better UX
-    queryClient.setQueryData(queryKeys.shops.all, (oldShops: typeof shops | undefined) =>
+    // Optimistic update
+    queryClient.setQueryData(queryKeys.shops.all, (oldShops: Shop[] | undefined) =>
       oldShops?.map((shop) => {
         if (shop.id !== shopId) return shop;
-        if (field === 'returnWindow') {
-          const numValue = value.trim() ? parseInt(value.trim(), 10) : null;
-          return { ...shop, [field]: isNaN(numValue as number) ? null : numValue };
-        }
         return { ...shop, [field]: value };
       }) ?? []
     );
 
-    // Debounce the save
-    saveTimeouts.current[shopId] = setTimeout(() => {
-      // Validate before saving
-      if (field === 'returnWindow') {
-        if (value.trim() && !isValidInteger(value)) {
-          return; // Don't save invalid integer
-        }
-      } else if (field !== 'sellerName') {
-        // URL fields - must be valid URL if not empty
-        if (value.trim() && !isValidUrl(value)) {
-          return; // Don't save invalid URL
-        }
+    // Debounced save
+    advancedSaveTimeouts.current[shopId] = setTimeout(() => {
+      // Validate URL
+      if (value.trim() && !isValidUrl(value)) {
+        return;
       }
 
-      setSavingShopId(shopId);
+      setSavingAdvanced(shopId);
       setError(null);
 
-      const updateData: {
-        sellerName?: string | null;
-        sellerPrivacyPolicy?: string | null;
-        sellerTos?: string | null;
-        returnPolicy?: string | null;
-        returnWindow?: number | null;
-      } = {};
-
-      if (field === 'returnWindow') {
-        if (value.trim()) {
-          const returnWindow = parseInt(value.trim(), 10);
-          if (!isNaN(returnWindow) && returnWindow > 0 && Number.isInteger(returnWindow)) {
-            updateData.returnWindow = returnWindow;
-          } else {
-            updateData.returnWindow = null;
-          }
-        } else {
-          updateData.returnWindow = null;
-        }
-      } else if (field === 'sellerName') {
-        // Plain string field - save trimmed value or null
-        updateData.sellerName = value.trim() || null;
-      } else {
-        // URL fields - only save if valid URL or empty
-        if (value.trim()) {
-          if (isValidUrl(value)) {
-            updateData[field] = value.trim();
-          } else {
-            setSavingShopId(null);
-            return;
-          }
-        } else {
-          updateData[field] = null;
-        }
-      }
+      const updateData: { sellerPrivacyPolicy?: string | null; sellerTos?: string | null } = {};
+      updateData[field] = value.trim() || null;
 
       updateShopMutation.mutate(
         { shopId, data: updateData },
         {
           onSuccess: () => {
-            setError(null);
-            setSavingShopId(null);
+            setSavingAdvanced(null);
           },
           onError: (err) => {
             setError(err.message);
-            setSavingShopId(null);
-            // Invalidate to refetch and revert optimistic update
+            setSavingAdvanced(null);
             queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
           },
         }
       );
-    }, 1000); // 1 second debounce
+    }, 1000);
   }, [user, queryClient, updateShopMutation]);
 
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(saveTimeouts.current).forEach(timeout => clearTimeout(timeout));
-    };
-  }, []);
+  function toggleAdvanced(shopId: string) {
+    setExpandedAdvanced(prev => ({ ...prev, [shopId]: !prev[shopId] }));
+  }
 
   if (!hydrated || !user) return null;
+
+  // Find first shop with incomplete profile for banner
+  const incompleteShop = shops.find(shop => shop.isConnected && !isProfileComplete(shop));
 
   return (
     <div className="p-4">
@@ -296,9 +281,14 @@ export default function ShopsPage() {
             </button>
           </div>
           <p className="text-gray-600 text-sm">
-            Manage your WooCommerce shop connections and sync products
+            Manage your WooCommerce shop connections
           </p>
         </div>
+
+        {/* Banner for incomplete profile */}
+        {incompleteShop && (
+          <ShopProfileBanner shop={incompleteShop} currentPath="shops" />
+        )}
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -368,16 +358,19 @@ export default function ShopsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {shops.map((shop) => (
-                <div key={shop.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{shop.shopName}</h3>
-                      <p className="text-sm text-gray-500 mb-2">{shop.wooStoreUrl}</p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-600">Currency: {shop.shopCurrency}</span>
+              {shops.map((shop) => {
+                const profileComplete = isProfileComplete(shop);
+                const isAdvancedExpanded = expandedAdvanced[shop.id] ?? false;
+
+                return (
+                  <div key={shop.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                    {/* Header Section */}
+                    <div className="mb-4">
+                      <p className="text-lg font-semibold text-gray-900 mb-1">{shop.wooStoreUrl}</p>
+                      <div className="flex items-center flex-wrap gap-3 text-sm">
+                        <span className="text-gray-600">Currency: {shop.shopCurrency || 'N/A'}</span>
                         <span
-                          className={`px-2 py-1 rounded text-xs ${
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${
                             shop.isConnected
                               ? 'bg-green-50 text-green-700'
                               : 'bg-yellow-50 text-yellow-700'
@@ -399,180 +392,212 @@ export default function ShopsPage() {
                         }`}>
                           Feed: {shop.feedStatus?.toLowerCase() || 'pending'}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600">Auto-sync:</span>
-                          <button
-                            onClick={() => handleToggleSync(shop.id, shop.syncEnabled)}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                              shop.syncEnabled ? 'bg-green-500' : 'bg-gray-300'
-                            }`}
-                            title={shop.syncEnabled ? 'Auto-sync enabled (every 15 min)' : 'Auto-sync disabled'}
-                          >
-                            <span
-                              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                                shop.syncEnabled ? 'translate-x-5' : 'translate-x-1'
-                              }`}
-                            />
-                          </button>
-                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-2 space-y-1">
-                        {shop.lastSyncAt && (
-                          <p>
-                            Last synced: {new Date(shop.lastSyncAt).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
-                          </p>
-                        )}
-                        {shop.lastFeedGeneratedAt && (
-                          <p>
-                            Last feed: {new Date(shop.lastFeedGeneratedAt).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
-                          </p>
-                        )}
-                      </div>
-                      {shop.isConnected && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div className="space-y-3">
-                              <div>
-                                <span className="text-gray-600">sellerName:</span>
-                                <input
-                                  type="text"
-                                  value={shop.sellerName || ''}
-                                  onChange={(e) => handleFieldChange(shop.id, 'sellerName', e.target.value)}
-                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
-                                  placeholder="Your store name"
-                                />
-                              </div>
-                              <div>
-                                <span className="text-gray-600">sellerUrl:</span>
-                                {shop.sellerUrl ? (
-                                  <a href={shop.sellerUrl} target="_blank" rel="noopener noreferrer" className="text-[#FA7315] hover:text-[#E5650F] ml-2 underline">
-                                    {shop.sellerUrl}
-                                  </a>
-                                ) : (
-                                  <span className="text-gray-400 ml-2">N/A</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              <div>
-                                <span className="text-gray-600">returnPolicy:</span>
-                                <input
-                                  type="url"
-                                  value={shop.returnPolicy || ''}
-                                  onChange={(e) => handleFieldChange(shop.id, 'returnPolicy', e.target.value)}
-                                  onBlur={(e) => {
-                                    if (e.target.value.trim() && !isValidUrl(e.target.value)) {
-                                      setError('returnPolicy must be a valid URL');
-                                    }
-                                  }}
-                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
-                                  placeholder="https://..."
-                                />
-                              </div>
-                              <div>
-                                <span className="text-gray-600">returnWindow:</span>
-                                <input
-                                  type="number"
-                                  value={shop.returnWindow?.toString() || ''}
-                                  onChange={(e) => handleFieldChange(shop.id, 'returnWindow', e.target.value)}
-                                  onBlur={(e) => {
-                                    if (e.target.value.trim() && !isValidInteger(e.target.value)) {
-                                      setError('returnWindow must be a positive integer');
-                                    }
-                                  }}
-                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
-                                  placeholder="Days"
-                                  min="1"
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              <div>
-                                <span className="text-gray-600">sellerPrivacyPolicy:</span>
-                                <input
-                                  type="url"
-                                  value={shop.sellerPrivacyPolicy || ''}
-                                  onChange={(e) => handleFieldChange(shop.id, 'sellerPrivacyPolicy', e.target.value)}
-                                  onBlur={(e) => {
-                                    if (e.target.value.trim() && !isValidUrl(e.target.value)) {
-                                      setError('sellerPrivacyPolicy must be a valid URL');
-                                    }
-                                  }}
-                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
-                                  placeholder="https://..."
-                                />
-                              </div>
-                              <div>
-                                <span className="text-gray-600">sellerTos:</span>
-                                <input
-                                  type="url"
-                                  value={shop.sellerTos || ''}
-                                  onChange={(e) => handleFieldChange(shop.id, 'sellerTos', e.target.value)}
-                                  onBlur={(e) => {
-                                    if (e.target.value.trim() && !isValidUrl(e.target.value)) {
-                                      setError('sellerTos must be a valid URL');
-                                    }
-                                  }}
-                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
-                                  placeholder="https://..."
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          {savingShopId === shop.id && (
-                            <div className="mt-2 text-xs text-gray-500 italic">
-                              Saving...
-                            </div>
-                          )}
-                        </div>
+                      {shop.lastSyncAt && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Last synced: {new Date(shop.lastSyncAt).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                        </p>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => router.push(`/shops/${shop.id}/products`)}
-                        className="btn btn--sm"
-                      >
-                        View Products
-                      </button>
-                      <button
-                        onClick={() => handleSync(shop.id)}
-                        disabled={!shop.isConnected || triggerSyncMutation.isPending}
-                        className="btn btn--sm btn--primary"
-                        title="Sync all products from WooCommerce"
-                      >
-                        Sync
-                      </button>
-                      <button
-                        onClick={() => handleDeleteShop(shop.id)}
-                        disabled={deleteShopMutation.isPending}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        title="Delete shop"
-                      >
-                        🗑️
-                      </button>
-                    </div>
+                    {/* Shop Profile Section */}
+                    {shop.isConnected && (
+                      <div className="border-t border-gray-200 pt-4 mb-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-gray-700">Shop Profile</h3>
+                          <button
+                            onClick={() => setModalShop(shop)}
+                            className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                              profileComplete
+                                ? 'text-gray-600 hover:text-gray-900 border border-gray-300 hover:bg-gray-50'
+                                : 'bg-[#FA7315] text-white hover:bg-[#E5650F]'
+                            }`}
+                          >
+                            {profileComplete ? 'Edit' : 'Complete Shop Setup'}
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Store name:</span>{' '}
+                            <span className={shop.sellerName ? 'text-gray-900' : 'text-gray-400'}>
+                              {shop.sellerName || 'Not set'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Return policy:</span>{' '}
+                            {shop.returnPolicy ? (
+                              <a
+                                href={shop.returnPolicy}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#FA7315] hover:text-[#E5650F] underline"
+                              >
+                                View
+                              </a>
+                            ) : (
+                              <span className="text-gray-400">Not set</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Return window:</span>{' '}
+                            <span className={shop.returnWindow ? 'text-gray-900' : 'text-gray-400'}>
+                              {shop.returnWindow ? `${shop.returnWindow} days` : 'Not set'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions Section */}
+                    {shop.isConnected && (
+                      <div className="border-t border-gray-200 pt-4 mb-4">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {profileComplete && (
+                            <button
+                              onClick={() => router.push(`/shops/${shop.id}/setup`)}
+                              className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                              Check Field Mapping
+                            </button>
+                          )}
+                          <button
+                            onClick={() => router.push(`/shops/${shop.id}/products`)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            View Products
+                          </button>
+                          <button
+                            onClick={() => handleSync(shop.id)}
+                            disabled={!shop.isConnected || triggerSyncMutation.isPending}
+                            className="px-4 py-2 text-sm font-medium bg-[#FA7315] text-white rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Sync
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Advanced Settings (Collapsible) */}
+                    {shop.isConnected && (
+                      <div className="border-t border-gray-200 pt-4">
+                        <button
+                          onClick={() => toggleAdvanced(shop.id)}
+                          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                          <svg
+                            className={`w-4 h-4 transition-transform ${isAdvancedExpanded ? 'rotate-180' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                          Advanced settings
+                        </button>
+
+                        {isAdvancedExpanded && (
+                          <div className="mt-4 space-y-4">
+                            {/* Privacy Policy */}
+                            <div>
+                              <label className="block text-sm text-gray-600 mb-1">Privacy Policy URL</label>
+                              <input
+                                type="url"
+                                value={shop.sellerPrivacyPolicy || ''}
+                                onChange={(e) => handleAdvancedFieldChange(shop.id, 'sellerPrivacyPolicy', e.target.value)}
+                                placeholder="https://..."
+                                className="w-full max-w-md px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
+                              />
+                            </div>
+
+                            {/* Terms of Service */}
+                            <div>
+                              <label className="block text-sm text-gray-600 mb-1">Terms of Service URL</label>
+                              <input
+                                type="url"
+                                value={shop.sellerTos || ''}
+                                onChange={(e) => handleAdvancedFieldChange(shop.id, 'sellerTos', e.target.value)}
+                                placeholder="https://..."
+                                className="w-full max-w-md px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
+                              />
+                            </div>
+
+                            {/* Auto-sync toggle */}
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-gray-600">Auto-sync:</span>
+                              <button
+                                onClick={() => handleToggleSync(shop.id, shop.syncEnabled)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                  shop.syncEnabled ? 'bg-green-500' : 'bg-gray-300'
+                                }`}
+                                title={shop.syncEnabled ? 'Auto-sync enabled (every 15 min)' : 'Auto-sync disabled'}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    shop.syncEnabled ? 'translate-x-6' : 'translate-x-1'
+                                  }`}
+                                />
+                              </button>
+                              <span className="text-xs text-gray-500">
+                                {shop.syncEnabled ? 'Enabled (every 15 min)' : 'Disabled'}
+                              </span>
+                            </div>
+
+                            {savingAdvanced === shop.id && (
+                              <p className="text-xs text-gray-500 italic">Saving...</p>
+                            )}
+
+                            {/* Delete button */}
+                            <div className="pt-4 border-t border-gray-200">
+                              <button
+                                onClick={() => handleDeleteShop(shop.id)}
+                                disabled={deleteShopMutation.isPending}
+                                className="text-sm text-red-500 hover:text-red-700 transition-colors"
+                              >
+                                Delete Shop
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* For non-connected shops, show delete option */}
+                    {!shop.isConnected && (
+                      <div className="border-t border-gray-200 pt-4">
+                        <button
+                          onClick={() => handleDeleteShop(shop.id)}
+                          disabled={deleteShopMutation.isPending}
+                          className="text-sm text-red-500 hover:text-red-700 transition-colors"
+                        >
+                          Delete Shop
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal */}
+      {modalShop && (
+        <CompleteShopSetupModal
+          isOpen={true}
+          onClose={() => setModalShop(null)}
+          shop={modalShop}
+          onSave={handleModalSave}
+          isSaving={updateShopMutation.isPending}
+        />
+      )}
 
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

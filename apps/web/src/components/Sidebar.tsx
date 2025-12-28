@@ -31,8 +31,8 @@ export function Sidebar() {
 
   // Build nav items based on current shop from URL
   const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/shops', label: 'Shops', icon: '🏪' },
+    { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     ...(currentShop?.isConnected ? [
       { href: `/shops/${currentShop.id}/setup`, label: 'Setup', icon: '⚙️' },
       { href: `/shops/${currentShop.id}/products`, label: 'Products', icon: '📦' },
@@ -91,7 +91,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 overflow-y-auto">
-        {navItems.map((item, index) => {
+        {navItems.map((item) => {
           // More precise active state matching
           let isActive = false;
           if (item.label === 'Setup') {
@@ -105,9 +105,6 @@ export function Sidebar() {
           }
           return (
             <div key={item.href}>
-              {index > 0 && (
-                <div className="mx-2 border-t border-white/20" />
-              )}
               <Link
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${

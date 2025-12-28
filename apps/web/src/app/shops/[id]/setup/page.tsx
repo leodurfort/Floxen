@@ -6,15 +6,20 @@ import { useAuth } from '@/store/auth';
 import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
 import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
 import { ProductSelector } from '@/components/setup/ProductSelector';
+import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import { useFieldMappingsQuery, useUpdateFieldMappingsMutation } from '@/hooks/useFieldMappingsQuery';
 import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
 import { useProductsQuery } from '@/hooks/useProductsQuery';
+import { useCurrentShop } from '@/hooks/useCurrentShop';
 
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
+
+  // Get current shop for banner
+  const { currentShop } = useCurrentShop();
 
   // Local UI state
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -253,6 +258,11 @@ export default function SetupPage() {
               )}
             </div>
           </div>
+
+          {/* Shop Profile Banner */}
+          {currentShop && (
+            <ShopProfileBanner shop={currentShop} currentPath="setup" />
+          )}
 
           {/* Search Bar */}
           <div className="mb-6">
