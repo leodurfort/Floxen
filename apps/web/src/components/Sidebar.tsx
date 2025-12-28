@@ -40,7 +40,7 @@ export function Sidebar() {
   ];
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-64 bg-[#C05A30] border-r border-white/20 flex flex-col">
+    <div className="fixed left-0 top-0 h-screen w-52 bg-[#C05A30] border-r border-white/20 flex flex-col">
       {/* Logo */}
       <div className="p-6">
         <h1 className="text-xl font-bold text-white">ProductSynch</h1>

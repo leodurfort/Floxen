@@ -88,7 +88,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
       <Sidebar />
-      <div className="ml-64">
+      <div className="ml-52">
         <main className="min-h-screen">{children}</main>
       </div>
     </div>
