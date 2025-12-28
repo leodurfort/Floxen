@@ -58,7 +58,7 @@ export function Sidebar() {
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-white/70 mb-1">Current Shop</div>
                   <div className="text-sm text-white font-medium truncate">
-                    {currentShop?.shopName || 'Select a shop'}
+                    {currentShop?.sellerUrl?.replace(/^https?:\/\//, '') || 'Select a shop'}
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,9 +77,8 @@ export function Sidebar() {
                       currentShop?.id === shop.id ? 'bg-white/10' : ''
                     }`}
                   >
-                    <div className="text-sm text-white font-medium">{shop.shopName}</div>
-                    <div className="text-xs text-white/70 mt-0.5">
-                      {shop.isConnected ? '✓ Connected' : '○ Not connected'}
+                    <div className="text-sm text-white font-medium truncate">
+                      {shop.sellerUrl?.replace(/^https?:\/\//, '') || shop.shopName}
                     </div>
                   </button>
                 ))}

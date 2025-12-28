@@ -33,8 +33,8 @@ export interface CatalogFilters {
 
 const DEFAULT_FILTERS: CatalogFilters = {
   search: '',
-  sortBy: 'updatedAt',
-  sortOrder: 'desc',
+  sortBy: 'id',
+  sortOrder: 'asc',
   page: 1,
   limit: 50,
   columnFilters: {},
@@ -155,8 +155,8 @@ export function useCatalogFilters(shopId?: string) {
       hasRestoredFromStorage.current = true;
       return {
         search: searchParams.get('search') || '',
-        sortBy: searchParams.get('sortBy') || 'updatedAt',
-        sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc',
+        sortBy: searchParams.get('sortBy') || 'id',
+        sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'asc',
         page: parseInt(searchParams.get('page') || '1', 10),
         limit: parseInt(searchParams.get('limit') || '50', 10),
         columnFilters: parseColumnFiltersFromParams(searchParams),
@@ -171,8 +171,8 @@ export function useCatalogFilters(shopId?: string) {
         hasRestoredFromStorage.current = true;
         return {
           search: stored.search ?? '',
-          sortBy: stored.sortBy ?? 'updatedAt',
-          sortOrder: stored.sortOrder ?? 'desc',
+          sortBy: stored.sortBy ?? 'id',
+          sortOrder: stored.sortOrder ?? 'asc',
           page: 1, // Always reset page when restoring
           limit: stored.limit ?? 50,
           columnFilters: stored.columnFilters ?? {},
@@ -204,8 +204,8 @@ export function useCatalogFilters(shopId?: string) {
 
     // Only add non-default values to URL
     if (newFilters.search) params.set('search', newFilters.search);
-    if (newFilters.sortBy !== 'updatedAt') params.set('sortBy', newFilters.sortBy);
-    if (newFilters.sortOrder !== 'desc') params.set('sortOrder', newFilters.sortOrder);
+    if (newFilters.sortBy !== 'id') params.set('sortBy', newFilters.sortBy);
+    if (newFilters.sortOrder !== 'asc') params.set('sortOrder', newFilters.sortOrder);
     if (newFilters.page > 1) params.set('page', String(newFilters.page));
     if (newFilters.limit !== 50) params.set('limit', String(newFilters.limit));
 
@@ -219,7 +219,7 @@ export function useCatalogFilters(shopId?: string) {
   // Set sort directly
   const setSort = useCallback((column: string, order: 'asc' | 'desc' | null) => {
     if (order === null) {
-      setFilters({ sortBy: 'updatedAt', sortOrder: 'desc' });
+      setFilters({ sortBy: 'id', sortOrder: 'asc' });
     } else {
       setFilters({ sortBy: column, sortOrder: order });
     }

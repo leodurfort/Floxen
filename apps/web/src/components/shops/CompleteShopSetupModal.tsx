@@ -95,7 +95,7 @@ export function CompleteShopSetupModal({
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Complete your shop profile</h2>
               <p className="text-sm text-gray-600 mt-2">
-                This information will appear in ChatGPT when your products are shown to shoppers.
+                This information is mandatory in order to share your product feed with ChatGPT.
               </p>
             </div>
             <button
