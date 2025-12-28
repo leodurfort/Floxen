@@ -86,7 +86,7 @@ export default function RegisterProfilePage() {
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               type="text"
-              placeholder="John"
+              placeholder="Charles"
               required
               autoFocus
               className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
@@ -99,7 +99,7 @@ export default function RegisterProfilePage() {
               value={surname}
               onChange={(e) => setSurname(e.target.value)}
               type="text"
-              placeholder="Doe"
+              placeholder="Leclerc"
               required
               className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
             />
