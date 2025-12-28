@@ -31,20 +31,20 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0d0f1a] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-[#F9FAFB] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <p className="uppercase tracking-[0.15em] text-xs text-white/60 mb-2">ProductSynch</p>
-          <h1 className="text-2xl font-bold text-white mb-2">Reset your password</h1>
-          <p className="text-white/60 text-sm">
+          <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">ProductSynch</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset your password</h1>
+          <p className="text-gray-600 text-sm">
             Enter your email address and we&apos;ll send you a verification code
           </p>
         </div>
 
-        <div className="panel p-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="flex flex-col gap-2">
-              <span className="text-sm text-white/70">Email</span>
+              <span className="text-sm text-gray-600">Email</span>
               <input
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
@@ -52,12 +52,12 @@ export default function ForgotPasswordPage() {
                 placeholder="you@company.com"
                 required
                 autoFocus
-                className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+                className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
               />
             </label>
 
             {error && (
-              <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
                 {error}
               </div>
             )}
@@ -72,9 +72,9 @@ export default function ForgotPasswordPage() {
           </form>
         </div>
 
-        <p className="text-center text-sm text-white/60 mt-6">
+        <p className="text-center text-sm text-gray-600 mt-6">
           Remember your password?{' '}
-          <Link className="text-white hover:text-[#4c5fd5] transition-colors" href="/login">
+          <Link className="text-gray-900 hover:text-[#FA7315] transition-colors" href="/login">
             Sign in
           </Link>
         </p>

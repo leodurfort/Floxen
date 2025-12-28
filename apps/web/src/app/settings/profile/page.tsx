@@ -41,48 +41,48 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="panel p-6 max-w-xl">
-      <h2 className="text-xl font-bold text-white mb-6">Profile Information</h2>
+    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm max-w-xl">
+      <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Information</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-white/70">First name</span>
+          <span className="text-sm text-gray-600">First name</span>
           <input
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             type="text"
             placeholder="Enter your first name"
-            className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+            className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
           />
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-white/70">Surname</span>
+          <span className="text-sm text-gray-600">Surname</span>
           <input
             value={surname}
             onChange={(e) => setSurname(e.target.value)}
             type="text"
             placeholder="Enter your surname"
-            className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+            className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
           />
         </label>
 
         <div className="pt-2">
-          <p className="text-sm text-white/50 mb-1">Email</p>
-          <p className="text-white">{user?.email}</p>
-          <p className="text-xs text-white/40 mt-1">
+          <p className="text-sm text-gray-500 mb-1">Email</p>
+          <p className="text-gray-900">{user?.email}</p>
+          <p className="text-xs text-gray-400 mt-1">
             To change your email, go to Security settings
           </p>
         </div>
 
         {error && (
-          <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-lg px-4 py-3">
+          <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
             {success}
           </div>
         )}

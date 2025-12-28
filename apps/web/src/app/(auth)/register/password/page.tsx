@@ -55,19 +55,19 @@ export default function RegisterPasswordPage() {
   }
 
   return (
-    <main className="shell flex min-h-screen items-center justify-center">
-      <div className="panel w-full max-w-md space-y-6">
+    <main className="min-h-screen bg-[#F9FAFB] flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 w-full max-w-md space-y-6">
         <div className="text-center">
-          <p className="uppercase tracking-[0.15em] text-xs text-white/60 mb-2">ProductSynch</p>
-          <h1 className="section-title">Create a password</h1>
-          <p className="subtle mt-2">
+          <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">ProductSynch</p>
+          <h1 className="text-2xl font-bold text-gray-900">Create a password</h1>
+          <p className="text-gray-600 mt-2">
             Choose a secure password for your account
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="flex flex-col gap-2">
-            <span className="subtle text-sm">Password</span>
+            <span className="text-gray-600 text-sm">Password</span>
             <div className="relative">
               <input
                 value={password}
@@ -77,12 +77,12 @@ export default function RegisterPasswordPage() {
                 required
                 minLength={8}
                 autoFocus
-                className="w-full bg-[#252936] border border-white/10 rounded-lg px-4 py-3 pr-12 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+                className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,7 +110,7 @@ export default function RegisterPasswordPage() {
                             : passwordStrength === 3
                               ? 'bg-blue-400'
                               : 'bg-green-400'
-                        : 'bg-white/10'
+                        : 'bg-gray-200'
                     }`}
                   />
                 ))}
@@ -119,7 +119,7 @@ export default function RegisterPasswordPage() {
           </label>
 
           {error && (
-            <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
               {error}
             </div>
           )}

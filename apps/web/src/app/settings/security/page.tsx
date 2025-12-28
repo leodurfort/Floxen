@@ -102,28 +102,28 @@ export default function SecuritySettingsPage() {
   return (
     <div className="space-y-8 max-w-xl">
       {/* Change Email Section */}
-      <div className="panel p-6">
-        <h2 className="text-xl font-bold text-white mb-2">Email Address</h2>
-        <p className="text-sm text-white/60 mb-6">
-          Current email: <span className="text-white">{user?.email}</span>
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Email Address</h2>
+        <p className="text-sm text-gray-600 mb-6">
+          Current email: <span className="text-gray-900">{user?.email}</span>
         </p>
 
         {emailStep === 'idle' ? (
           <form onSubmit={handleEmailChange} className="space-y-4">
             <label className="flex flex-col gap-2">
-              <span className="text-sm text-white/70">New email address</span>
+              <span className="text-sm text-gray-600">New email address</span>
               <input
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 type="email"
                 placeholder="Enter new email"
                 required
-                className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+                className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
               />
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="text-sm text-white/70">Current password</span>
+              <span className="text-sm text-gray-600">Current password</span>
               <input
                 value={emailPassword}
                 onChange={(e) => setEmailPassword(e.target.value)}
@@ -131,18 +131,18 @@ export default function SecuritySettingsPage() {
                 placeholder="Enter your password to confirm"
                 required
                 autoComplete="new-password"
-                className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+                className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
               />
             </label>
 
             {emailError && (
-              <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
                 {emailError}
               </div>
             )}
 
             {emailSuccess && (
-              <div className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-lg px-4 py-3">
+              <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
                 {emailSuccess}
               </div>
             )}
@@ -157,12 +157,12 @@ export default function SecuritySettingsPage() {
           </form>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-white/70">
-              We sent a verification code to <span className="text-white font-medium">{newEmail}</span>
+            <p className="text-sm text-gray-600">
+              We sent a verification code to <span className="text-gray-900 font-medium">{newEmail}</span>
             </p>
 
             <div>
-              <label className="block text-sm text-white/70 mb-3">
+              <label className="block text-sm text-gray-600 mb-3">
                 Enter the 6-digit code
               </label>
               <CodeInput
@@ -174,13 +174,13 @@ export default function SecuritySettingsPage() {
             </div>
 
             {emailError && (
-              <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
                 {emailError}
               </div>
             )}
 
             {emailLoading && (
-              <div className="text-center text-white/60 text-sm">
+              <div className="text-center text-gray-500 text-sm">
                 Verifying...
               </div>
             )}
@@ -191,7 +191,7 @@ export default function SecuritySettingsPage() {
                 setEmailCode('');
                 setEmailError('');
               }}
-              className="text-sm text-white/60 hover:text-white transition-colors"
+              className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
             >
               Cancel
             </button>
@@ -200,12 +200,12 @@ export default function SecuritySettingsPage() {
       </div>
 
       {/* Change Password Section */}
-      <div className="panel p-6">
-        <h2 className="text-xl font-bold text-white mb-6">Change Password</h2>
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Change Password</h2>
 
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <label className="flex flex-col gap-2">
-            <span className="text-sm text-white/70">Current password</span>
+            <span className="text-sm text-gray-600">Current password</span>
             <input
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -213,12 +213,12 @@ export default function SecuritySettingsPage() {
               placeholder="Enter current password"
               required
               autoComplete="current-password"
-              className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+              className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
             />
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="text-sm text-white/70">New password</span>
+            <span className="text-sm text-gray-600">New password</span>
             <input
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -227,12 +227,12 @@ export default function SecuritySettingsPage() {
               required
               minLength={8}
               autoComplete="new-password"
-              className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+              className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
             />
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="text-sm text-white/70">Confirm new password</span>
+            <span className="text-sm text-gray-600">Confirm new password</span>
             <input
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -241,21 +241,21 @@ export default function SecuritySettingsPage() {
               required
               minLength={8}
               autoComplete="new-password"
-              className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+              className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
             />
             {confirmPassword && newPassword !== confirmPassword && (
-              <p className="text-xs text-red-400">Passwords do not match</p>
+              <p className="text-xs text-red-600">Passwords do not match</p>
             )}
           </label>
 
           {passwordError && (
-            <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
               {passwordError}
             </div>
           )}
 
           {passwordSuccess && (
-            <div className="text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-lg px-4 py-3">
+            <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
               {passwordSuccess}
             </div>
           )}

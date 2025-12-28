@@ -117,10 +117,10 @@ export function CodeInput({
           disabled={disabled}
           className={`
             w-12 h-14 text-center text-2xl font-bold
-            bg-[#252936] border-2 rounded-lg
-            text-white placeholder-white/30
+            bg-white border-2 rounded-lg
+            text-gray-900 placeholder-gray-400
             focus:outline-none transition-colors
-            ${focusedIndex === index ? 'border-[#4c5fd5]' : 'border-white/10'}
+            ${focusedIndex === index ? 'border-[#FA7315]' : 'border-gray-300'}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
           aria-label={`Digit ${index + 1}`}

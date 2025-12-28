@@ -51,27 +51,27 @@ export function ProductSelector({ products, value, onChange }: Props) {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border border-white/10 transition-colors flex items-center justify-between"
+        className="w-full px-4 py-2 text-left bg-white hover:bg-gray-50 rounded-lg border border-gray-300 transition-colors flex items-center justify-between"
       >
-        <span className="text-sm text-white truncate">
+        <span className="text-sm text-gray-900 truncate">
           {selectedProduct ? getProductName(selectedProduct) : 'Select product for preview...'}
         </span>
-        <svg className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[320px] overflow-hidden flex flex-col">
+        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-lg border border-gray-200 shadow-xl max-h-[320px] overflow-hidden flex flex-col">
           {/* Search Bar */}
-          <div className="p-3 border-b border-white/10">
+          <div className="p-3 border-b border-gray-100">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products..."
-              className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+              className="w-full px-3 py-2 bg-gray-50 text-gray-900 text-sm rounded border border-gray-200 focus:outline-none focus:border-[#FA7315]"
               autoFocus
             />
           </div>
@@ -79,17 +79,17 @@ export function ProductSelector({ products, value, onChange }: Props) {
           {/* Product List */}
           <div className="overflow-y-auto">
             {filteredProducts.length === 0 ? (
-              <div className="p-4 text-center text-white/40 text-sm">No products found</div>
+              <div className="p-4 text-center text-gray-500 text-sm">No products found</div>
             ) : (
               filteredProducts.map((product) => (
                 <button
                   key={product.id}
                   onClick={() => handleSelect(product)}
-                  className={`w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/5 last:border-0 ${
-                    value === product.id ? 'bg-[#2d3142]' : ''
+                  className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                    value === product.id ? 'bg-gray-50' : ''
                   }`}
                 >
-                  <div className="text-sm text-white font-medium truncate">{getProductName(product)}</div>
+                  <div className="text-sm text-gray-900 font-medium truncate">{getProductName(product)}</div>
                 </button>
               ))
             )}

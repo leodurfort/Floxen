@@ -69,27 +69,27 @@ export default function ForgotPasswordResetPage() {
 
   if (!email || !code || !verified) {
     return (
-      <div className="min-h-screen bg-[#0d0f1a] flex items-center justify-center">
-        <div className="animate-pulse text-white/40">Loading...</div>
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#0d0f1a] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-[#F9FAFB] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <p className="uppercase tracking-[0.15em] text-xs text-white/60 mb-2">ProductSynch</p>
-          <h1 className="text-2xl font-bold text-white mb-2">Create new password</h1>
-          <p className="text-white/60 text-sm">
+          <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">ProductSynch</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Create new password</h1>
+          <p className="text-gray-600 text-sm">
             Choose a strong password for your account
           </p>
         </div>
 
-        <div className="panel p-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="flex flex-col gap-2">
-              <span className="text-sm text-white/70">New password</span>
+              <span className="text-sm text-gray-600">New password</span>
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -98,7 +98,7 @@ export default function ForgotPasswordResetPage() {
                 required
                 minLength={8}
                 autoFocus
-                className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+                className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
               />
               {password && (
                 <div className="space-y-2">
@@ -107,20 +107,20 @@ export default function ForgotPasswordResetPage() {
                       <div
                         key={level}
                         className={`h-1 flex-1 rounded-full transition-colors ${
-                          level <= strength.score ? strength.color : 'bg-white/10'
+                          level <= strength.score ? strength.color : 'bg-gray-200'
                         }`}
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-white/50">
-                    Password strength: <span className="text-white/70">{strength.label}</span>
+                  <p className="text-xs text-gray-500">
+                    Password strength: <span className="text-gray-700">{strength.label}</span>
                   </p>
                 </div>
               )}
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="text-sm text-white/70">Confirm password</span>
+              <span className="text-sm text-gray-600">Confirm password</span>
               <input
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -128,15 +128,15 @@ export default function ForgotPasswordResetPage() {
                 placeholder="Re-enter your password"
                 required
                 minLength={8}
-                className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+                className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
               />
               {confirmPassword && password !== confirmPassword && (
-                <p className="text-xs text-red-400">Passwords do not match</p>
+                <p className="text-xs text-red-500">Passwords do not match</p>
               )}
             </label>
 
             {error && (
-              <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
                 {error}
               </div>
             )}

@@ -73,8 +73,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen bg-[#0d0f1a] flex items-center justify-center">
-        <div className="text-white/60">Loading...</div>
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
       </div>
     );
   }
@@ -86,7 +86,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Show with sidebar for authenticated users
   return (
-    <div className="min-h-screen bg-[#0d0f1a]">
+    <div className="min-h-screen bg-[#F9FAFB]">
       <Sidebar />
       <div className="ml-64">
         <main className="min-h-screen">{children}</main>

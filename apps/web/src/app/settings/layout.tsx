@@ -26,8 +26,8 @@ export default function SettingsRootLayout({
 
   if (!hydrated || !user) {
     return (
-      <div className="min-h-screen bg-[#0d0f1a] flex items-center justify-center">
-        <div className="animate-pulse text-white/40">Loading...</div>
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+        <div className="animate-pulse text-gray-500">Loading...</div>
       </div>
     );
   }

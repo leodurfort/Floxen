@@ -22,15 +22,15 @@ export function Toast({ message, type, duration = 3000, onClose }: ToastProps) {
   }, [duration, onClose]);
 
   const bgColor = {
-    success: 'bg-[#5df0c0]/20 border-[#5df0c0]/50',
-    error: 'bg-red-500/20 border-red-500/50',
-    info: 'bg-blue-500/20 border-blue-500/50',
+    success: 'bg-green-50 border-green-200',
+    error: 'bg-red-50 border-red-200',
+    info: 'bg-blue-50 border-blue-200',
   }[type];
 
   const textColor = {
-    success: 'text-[#5df0c0]',
-    error: 'text-red-400',
-    info: 'text-blue-400',
+    success: 'text-green-700',
+    error: 'text-red-700',
+    info: 'text-blue-700',
   }[type];
 
   const icon = {
@@ -54,7 +54,7 @@ export function Toast({ message, type, duration = 3000, onClose }: ToastProps) {
   return (
     <div
       className={`
-        fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border
+        fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg
         ${bgColor} ${textColor}
         transition-all duration-300
         ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}

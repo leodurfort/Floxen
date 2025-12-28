@@ -168,19 +168,19 @@ export function EditColumnsModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-[#1a1d29] rounded-2xl border border-white/10 w-[600px] max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl border border-gray-200 w-[600px] max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Edit Columns</h2>
-            <p className="text-sm text-white/50 mt-1">
+            <h2 className="text-xl font-semibold text-gray-900">Edit Columns</h2>
+            <p className="text-sm text-gray-500 mt-1">
               {selectedCount} of {totalCount} columns selected
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-white/40 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -194,10 +194,10 @@ export function EditColumnsModal({
         </div>
 
         {/* Search */}
-        <div className="px-6 py-3 border-b border-white/10">
+        <div className="px-6 py-3 border-b border-gray-100">
           <div className="relative">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -214,12 +214,12 @@ export function EditColumnsModal({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search columns..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-[#5df0c0]/50"
+              className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#FA7315]"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -237,15 +237,15 @@ export function EditColumnsModal({
         {/* Body - Scrollable Categories */}
         <div className="flex-1 overflow-y-auto">
           {Array.from(filteredColumnsByCategory.entries()).map(([category, columns]) => (
-            <div key={category} className="border-b border-white/5 last:border-b-0">
+            <div key={category} className="border-b border-gray-100 last:border-b-0">
               {/* Category Header */}
               <button
                 onClick={() => toggleCategory(category)}
-                className="w-full px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-colors"
+                className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <svg
-                    className={`w-4 h-4 text-white/60 transition-transform ${
+                    className={`w-4 h-4 text-gray-500 transition-transform ${
                       expandedCategories.has(category) ? 'rotate-90' : ''
                     }`}
                     fill="none"
@@ -259,17 +259,17 @@ export function EditColumnsModal({
                       d="M9 5l7 7-7 7"
                     />
                   </svg>
-                  <span className="font-medium text-white">{category}</span>
-                  <span className="text-xs text-white/40">
+                  <span className="font-medium text-gray-900">{category}</span>
+                  <span className="text-xs text-gray-500">
                     ({columns.filter((c) => selectedColumns.has(c.id)).length}/{columns.length})
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   {isCategoryPartiallySelected(category) && (
-                    <span className="w-2 h-2 bg-[#5df0c0]/50 rounded-full" />
+                    <span className="w-2 h-2 bg-[#FA7315]/50 rounded-full" />
                   )}
                   {isCategoryFullySelected(category) && (
-                    <span className="w-2 h-2 bg-[#5df0c0] rounded-full" />
+                    <span className="w-2 h-2 bg-[#FA7315] rounded-full" />
                   )}
                 </div>
               </button>
@@ -281,14 +281,14 @@ export function EditColumnsModal({
                   <div className="flex gap-3 mb-2 ml-7">
                     <button
                       onClick={() => selectAllInCategory(category)}
-                      className="text-xs text-[#5df0c0] hover:text-[#5df0c0]/80"
+                      className="text-xs text-[#FA7315] hover:text-[#E5650F]"
                     >
                       Select All
                     </button>
-                    <span className="text-white/20">|</span>
+                    <span className="text-gray-300">|</span>
                     <button
                       onClick={() => deselectAllInCategory(category)}
-                      className="text-xs text-white/60 hover:text-white"
+                      className="text-xs text-gray-500 hover:text-gray-700"
                     >
                       Deselect All
                     </button>
@@ -306,7 +306,7 @@ export function EditColumnsModal({
                           key={column.id}
                           className={`
                             flex items-center gap-2 px-3 py-1.5 rounded cursor-pointer
-                            ${isAlwaysVisible ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/5'}
+                            ${isAlwaysVisible ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}
                           `}
                         >
                           <input
@@ -314,11 +314,11 @@ export function EditColumnsModal({
                             checked={isSelected || isAlwaysVisible}
                             onChange={() => toggleColumn(column.id)}
                             disabled={isAlwaysVisible}
-                            className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50 disabled:opacity-50"
+                            className="w-4 h-4 rounded border-gray-300 bg-white text-[#FA7315] focus:ring-[#FA7315]/50 disabled:opacity-50"
                           />
-                          <span className="text-sm text-white/80 truncate">{column.label}</span>
+                          <span className="text-sm text-gray-700 truncate">{column.label}</span>
                           {isAlwaysVisible && (
-                            <span className="text-xs text-white/40">(always)</span>
+                            <span className="text-xs text-gray-400">(always)</span>
                           )}
                         </label>
                       );
@@ -330,28 +330,28 @@ export function EditColumnsModal({
           ))}
 
           {filteredColumnsByCategory.size === 0 && (
-            <div className="p-8 text-center text-white/40">No columns match your search</div>
+            <div className="p-8 text-center text-gray-500">No columns match your search</div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-white/10 flex justify-between">
+        <div className="p-6 border-t border-gray-200 flex justify-between">
           <button
             onClick={handleReset}
-            className="px-4 py-2 text-white/60 hover:text-white transition-colors"
+            className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             Reset to Default
           </button>
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-white/60 hover:text-white transition-colors"
+              className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-6 py-2 bg-[#5df0c0] text-black font-medium rounded-lg hover:bg-[#5df0c0]/90 transition-colors"
+              className="px-6 py-2 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] transition-colors"
             >
               Apply
             </button>

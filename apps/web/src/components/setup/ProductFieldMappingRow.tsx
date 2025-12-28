@@ -92,10 +92,10 @@ export function ProductFieldMappingRow({
   shopDefaultEnableSearch,
 }: Props) {
   const requirementColors = {
-    Required: 'bg-red-500/20 text-red-300 border-red-500/30',
-    Recommended: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    Optional: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-    Conditional: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    Required: 'bg-red-50 text-red-600 border-red-200',
+    Recommended: 'bg-amber-50 text-amber-600 border-amber-200',
+    Optional: 'bg-blue-50 text-blue-600 border-blue-200',
+    Conditional: 'bg-purple-50 text-purple-600 border-purple-200',
   };
 
   // Determine field characteristics using spec properties
@@ -294,28 +294,28 @@ export function ProductFieldMappingRow({
 
   // Preview display
   let previewDisplay = formattedValue || '';
-  let previewStyle = 'text-white/80';
+  let previewStyle = 'text-gray-700';
 
   if (isEnableSearchField) {
     // For enable_search, show the current value from feedEnableSearch column
     previewDisplay = feedEnableSearch ? 'true' : 'false';
-    previewStyle = feedEnableSearch ? 'text-[#5df0c0]' : 'text-white/40';
+    previewStyle = feedEnableSearch ? 'text-[#FA7315]' : 'text-gray-400';
   } else if (spec.isFeatureDisabled) {
     // Feature disabled fields always show false
     previewDisplay = 'false';
-    previewStyle = 'text-white/40';
+    previewStyle = 'text-gray-400';
   } else if (isNoMappingOverride) {
     // "No mapping" override - show empty
     previewDisplay = '';
-    previewStyle = 'text-white/40';
+    previewStyle = 'text-gray-400';
   } else if (!previewValue && !isStaticMode) {
     // "No value" when mapped but no data, empty when not mapped
     previewDisplay = effectiveMapping ? 'No value' : '';
-    previewStyle = 'text-white/40';
+    previewStyle = 'text-gray-400';
   } else if (isStaticMode && !productOverride) {
     // Static mode but no saved value yet
     previewDisplay = 'Enter value and click ✓';
-    previewStyle = 'text-white/40 italic';
+    previewStyle = 'text-gray-400 italic';
   }
 
   // Find label for current selection
@@ -328,18 +328,18 @@ export function ProductFieldMappingRow({
   };
 
   return (
-    <div className={`grid grid-cols-[1fr_280px_1fr] gap-6 py-4 border-b border-white/5 items-start transition-colors ${
-      hasOverride ? 'bg-[#5df0c0]/5 hover:bg-[#5df0c0]/10' : 'hover:bg-white/[0.02]'
+    <div className={`grid grid-cols-[1fr_280px_1fr] gap-6 py-4 border-b border-gray-100 items-start transition-colors ${
+      hasOverride ? 'bg-[#FA7315]/5 hover:bg-[#FA7315]/10' : 'hover:bg-gray-50/50'
     }`}>
       {/* Column 1: OpenAI Field Info */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <span className="text-white font-medium">{spec.attribute}</span>
+          <span className="text-gray-900 font-medium">{spec.attribute}</span>
           {isDimensionOrWeightField && (
             <div className="relative group">
-              <span className="text-white/60 cursor-help text-sm">ℹ️</span>
-              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
-                <div className="font-semibold text-white mb-1">Unit from WooCommerce</div>
+              <span className="text-gray-500 cursor-help text-sm">ℹ️</span>
+              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-xs text-gray-700">
+                <div className="font-semibold text-gray-900 mb-1">Unit from WooCommerce</div>
                 <div>The unit is automatically derived from your WooCommerce store settings.</div>
               </div>
             </div>
@@ -350,32 +350,32 @@ export function ProductFieldMappingRow({
           {/* Info Icon with Tooltip for Conditional Fields */}
           {spec.requirement === 'Conditional' && (
             <div className="relative group">
-              <span className="text-yellow-400 cursor-help text-sm">ℹ️</span>
-              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 p-3 bg-gray-900 border border-yellow-400/30 rounded-lg shadow-lg text-xs text-white/80">
-                <div className="font-semibold text-yellow-300 mb-1">Conditional Field</div>
+              <span className="text-amber-500 cursor-help text-sm">ℹ️</span>
+              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 p-3 bg-white border border-amber-200 rounded-lg shadow-lg text-xs text-gray-700">
+                <div className="font-semibold text-amber-600 mb-1">Conditional Field</div>
                 {spec.dependencies ? (
                   <div>
-                    <span className="text-white/60">Required when: </span>
-                    <span className="text-white/70">{spec.dependencies}</span>
+                    <span className="text-gray-500">Required when: </span>
+                    <span className="text-gray-700">{spec.dependencies}</span>
                   </div>
                 ) : (
-                  <span className="text-white/60">This field is conditionally required based on other fields.</span>
+                  <span className="text-gray-500">This field is conditionally required based on other fields.</span>
                 )}
               </div>
             </div>
           )}
           {hasOverride && (
-            <span className="text-xs px-2 py-0.5 rounded bg-[#5df0c0]/20 text-[#5df0c0] border border-[#5df0c0]/30">
+            <span className="text-xs px-2 py-0.5 rounded bg-[#FA7315]/10 text-[#FA7315] border border-[#FA7315]/30">
               Custom
             </span>
           )}
         </div>
-        <p className="text-sm text-white/60">{spec.description}</p>
-        <div className="text-xs text-white/40">
+        <p className="text-sm text-gray-600">{spec.description}</p>
+        <div className="text-xs text-gray-400">
           {spec.supportedValues ? (
-            <>Values: <span className="text-white/60">{spec.supportedValues}</span></>
+            <>Values: <span className="text-gray-500">{spec.supportedValues}</span></>
           ) : (
-            <>Example: <span className="text-white/60">{spec.example}</span></>
+            <>Example: <span className="text-gray-500">{spec.example}</span></>
           )}
         </div>
       </div>
@@ -390,7 +390,7 @@ export function ProductFieldMappingRow({
               onChange={(e) => {
                 onEnableSearchChange?.(e.target.value === 'true');
               }}
-              className="w-full px-3 py-2 bg-[#1a1d29] rounded-lg border border-white/10 text-white text-sm focus:border-[#5df0c0]/50 focus:outline-none"
+              className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 text-gray-900 text-sm focus:border-[#FA7315] focus:outline-none"
             >
               <option value="true">Enabled (true)</option>
               <option value="false">Disabled (false)</option>
@@ -399,7 +399,7 @@ export function ProductFieldMappingRow({
             {shopDefaultEnableSearch !== undefined && feedEnableSearch !== shopDefaultEnableSearch && (
               <button
                 onClick={() => onEnableSearchChange?.(shopDefaultEnableSearch)}
-                className="text-xs text-white/50 hover:text-white/80 underline text-left"
+                className="text-xs text-gray-500 hover:text-gray-700 underline text-left"
               >
                 Reset to Shop Default ({shopDefaultEnableSearch ? 'Enabled' : 'Disabled'})
               </button>
@@ -407,35 +407,35 @@ export function ProductFieldMappingRow({
           </>
         ) : isReadOnly ? (
           // Read-only field display - use spec properties for display text
-          <div className="w-full px-4 py-3 bg-[#1a1d29] rounded-lg border border-white/10 flex items-start gap-2">
-            <span className="text-white text-sm font-medium">
+          <div className="w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-200 flex items-start gap-2">
+            <span className="text-gray-900 text-sm font-medium">
               {spec.isFeatureDisabled ? 'Feature coming soon' :
                spec.isAutoPopulated ? 'Auto-populated' :
                spec.isShopManaged ? 'Managed in Shops page' :
                lockedMappingValue || 'Locked'}
             </span>
             <div className="relative group mt-[2px]">
-              <span className="text-white/60 cursor-help text-sm">ℹ️</span>
-              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-72 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-lg text-xs text-white/80">
+              <span className="text-gray-500 cursor-help text-sm">ℹ️</span>
+              <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-72 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-xs text-gray-700">
                 {spec.isFeatureDisabled ? (
                   <div>
-                    <div className="font-semibold text-white mb-1">Coming Soon</div>
+                    <div className="font-semibold text-gray-900 mb-1">Coming Soon</div>
                     <div>This functionality will be available in a future update.</div>
                   </div>
                 ) : spec.isAutoPopulated ? (
                   <div>
-                    <div className="font-semibold text-white mb-1">Auto-populated field</div>
+                    <div className="font-semibold text-gray-900 mb-1">Auto-populated field</div>
                     <div>This value is computed automatically from other product data.</div>
                   </div>
                 ) : spec.isShopManaged ? (
                   <div>
-                    <div className="font-semibold text-white mb-1">Update in Shops page</div>
+                    <div className="font-semibold text-gray-900 mb-1">Update in Shops page</div>
                     <div className="mb-2">Edit this value from the Shops page to change the feed output.</div>
-                    <Link href="/shops" className="text-[#5df0c0] underline">Go to Shops</Link>
+                    <Link href="/shops" className="text-[#FA7315] underline">Go to Shops</Link>
                   </div>
                 ) : (
                   <div>
-                    <div className="font-semibold text-white mb-1">Managed automatically</div>
+                    <div className="font-semibold text-gray-900 mb-1">Managed automatically</div>
                     <div>This mapping is predefined and cannot be edited.</div>
                   </div>
                 )}
@@ -450,33 +450,33 @@ export function ProductFieldMappingRow({
               <button
                 onClick={() => !wooFieldsLoading && setIsDropdownOpen(!isDropdownOpen)}
                 disabled={wooFieldsLoading}
-                className={`w-full h-[40px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border transition-colors flex items-center justify-between border-white/10 ${
+                className={`w-full h-[40px] px-4 py-2.5 text-left bg-white hover:bg-gray-50 rounded-lg border border-gray-300 transition-colors flex items-center justify-between ${
                   wooFieldsLoading ? 'cursor-not-allowed opacity-60' : ''
                 }`}
               >
                 <span className={`text-sm truncate ${
-                  isStaticMode ? 'text-[#5df0c0]' :
-                  selectedValue === NO_MAPPING_OPTION ? 'text-amber-400' :
-                  selectedValue ? 'text-white' : 'text-white/60'
+                  isStaticMode ? 'text-[#FA7315]' :
+                  selectedValue === NO_MAPPING_OPTION ? 'text-amber-600' :
+                  selectedValue ? 'text-gray-900' : 'text-gray-500'
                 }`}>
                   {wooFieldsLoading ? 'Loading fields...' : getSelectionLabel(isStaticMode ? STATIC_VALUE_OPTION : selectedValue)}
                 </span>
-                <svg className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
               {/* Dropdown Panel */}
               {isDropdownOpen && !wooFieldsLoading && (
-                <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[320px] overflow-hidden flex flex-col">
+                <div className="absolute z-50 top-full left-0 w-full mt-2 bg-white rounded-lg border border-gray-200 shadow-xl max-h-[320px] overflow-hidden flex flex-col">
                   {/* Search Bar */}
-                  <div className="p-3 border-b border-white/10">
+                  <div className="p-3 border-b border-gray-100">
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search fields..."
-                      className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+                      className="w-full px-3 py-2 bg-gray-50 text-gray-900 text-sm rounded border border-gray-200 focus:outline-none focus:border-[#FA7315]"
                       autoFocus
                     />
                   </div>
@@ -487,12 +487,12 @@ export function ProductFieldMappingRow({
                     {!searchQuery && (shopMapping || spec.wooCommerceMapping?.field) && (
                       <button
                         onClick={() => handleDropdownChange(NO_MAPPING_OPTION)}
-                        className={`w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10 ${
-                          selectedValue === NO_MAPPING_OPTION ? 'bg-[#2d3142]' : ''
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
+                          selectedValue === NO_MAPPING_OPTION ? 'bg-gray-50' : ''
                         }`}
                       >
-                        <div className="text-sm text-amber-400 font-medium">No mapping (exclude field)</div>
-                        <div className="text-xs text-white/40 mt-0.5">This field will be empty for this product</div>
+                        <div className="text-sm text-amber-600 font-medium">No mapping (exclude field)</div>
+                        <div className="text-xs text-gray-500 mt-0.5">This field will be empty for this product</div>
                       </button>
                     )}
 
@@ -500,12 +500,12 @@ export function ProductFieldMappingRow({
                     {!searchQuery && (allowsStaticOverride || !isLockedField) && (
                       <button
                         onClick={() => handleDropdownChange(STATIC_VALUE_OPTION)}
-                        className={`w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10 ${
-                          isStaticMode ? 'bg-[#2d3142]' : ''
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
+                          isStaticMode ? 'bg-gray-50' : ''
                         }`}
                       >
-                        <div className="text-sm text-[#5df0c0] font-medium">+ Set Static Value</div>
-                        <div className="text-xs text-white/40 mt-0.5">Enter a custom value for this product</div>
+                        <div className="text-sm text-[#FA7315] font-medium">+ Set Static Value</div>
+                        <div className="text-xs text-gray-500 mt-0.5">Enter a custom value for this product</div>
                       </button>
                     )}
 
@@ -515,19 +515,19 @@ export function ProductFieldMappingRow({
                         <button
                           key={field.value}
                           onClick={() => handleDropdownChange(field.value)}
-                          className={`w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/5 last:border-0 ${
-                            selectedValue === field.value && !isStaticMode ? 'bg-[#2d3142]' : ''
+                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
+                            selectedValue === field.value && !isStaticMode ? 'bg-gray-50' : ''
                           }`}
                         >
-                          <div className="text-sm text-white font-medium">{field.label}</div>
-                          <div className="text-xs text-white/40 mt-0.5">{field.value}</div>
+                          <div className="text-sm text-gray-900 font-medium">{field.label}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{field.value}</div>
                           {field.description && (
-                            <div className="text-xs text-white/30 mt-1">{field.description}</div>
+                            <div className="text-xs text-gray-400 mt-1">{field.description}</div>
                           )}
                         </button>
                       ))
                     ) : !isLockedField && searchQuery ? (
-                      <div className="p-4 text-center text-white/40 text-sm">No fields found</div>
+                      <div className="p-4 text-center text-gray-500 text-sm">No fields found</div>
                     ) : null}
                   </div>
                 </div>
@@ -543,10 +543,10 @@ export function ProductFieldMappingRow({
                     value={draftStaticValue}
                     onChange={(e) => handleStaticInputChange(e.target.value)}
                     placeholder={`Enter ${spec.attribute} value...`}
-                    className={`flex-1 px-3 py-2 bg-[#1a1d29] rounded-lg border text-white text-sm focus:outline-none ${
+                    className={`flex-1 px-3 py-2 bg-white rounded-lg border text-gray-900 text-sm focus:outline-none ${
                       validationError
-                        ? 'border-red-500/50 focus:border-red-500'
-                        : 'border-white/10 focus:border-[#5df0c0]/50'
+                        ? 'border-red-300 focus:border-red-500'
+                        : 'border-gray-300 focus:border-[#FA7315]'
                     }`}
                   />
                   <button
@@ -554,8 +554,8 @@ export function ProductFieldMappingRow({
                     disabled={!isDraftValid}
                     className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
                       isDraftValid
-                        ? 'bg-[#5df0c0]/20 border-[#5df0c0]/50 text-[#5df0c0] hover:bg-[#5df0c0]/30 cursor-pointer'
-                        : 'bg-white/5 border-white/10 text-white/30 cursor-not-allowed'
+                        ? 'bg-[#FA7315]/10 border-[#FA7315]/50 text-[#FA7315] hover:bg-[#FA7315]/20 cursor-pointer'
+                        : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                     title={isDraftValid ? 'Save static value' : 'Enter a valid value first'}
                   >
@@ -564,10 +564,10 @@ export function ProductFieldMappingRow({
                 </div>
                 {/* Format hint - always visible in static mode */}
                 {getFormatHint(spec) && (
-                  <span className="text-xs text-white/50">{getFormatHint(spec)}</span>
+                  <span className="text-xs text-gray-500">{getFormatHint(spec)}</span>
                 )}
                 {validationError && (
-                  <span className="text-xs text-red-400">{validationError}</span>
+                  <span className="text-xs text-red-600">{validationError}</span>
                 )}
               </div>
             )}
@@ -576,7 +576,7 @@ export function ProductFieldMappingRow({
             {hasOverride && (
               <button
                 onClick={handleReset}
-                className="text-xs text-white/50 hover:text-white/80 underline text-left"
+                className="text-xs text-gray-500 hover:text-gray-700 underline text-left"
               >
                 Reset to Shop Default
               </button>
@@ -588,16 +588,16 @@ export function ProductFieldMappingRow({
       {/* Column 3: Preview */}
       <div className="flex flex-col gap-1">
         <div
-          className={`w-full !h-[40px] px-4 bg-[#1a1d29] rounded-lg border flex items-center overflow-hidden cursor-default ${
+          className={`w-full !h-[40px] px-4 bg-gray-50 rounded-lg border flex items-center overflow-hidden cursor-default ${
             !resolvedValueValidation.isValid
-              ? 'border-amber-500/50'
-              : 'border-white/10'
+              ? 'border-amber-300'
+              : 'border-gray-200'
           }`}
           title={previewDisplay}
           style={{ height: '40px', minHeight: '40px', maxHeight: '40px' }}
         >
           {!resolvedValueValidation.isValid && (
-            <span className="text-amber-400 mr-2 flex-shrink-0" title={resolvedValueValidation.error}>
+            <span className="text-amber-500 mr-2 flex-shrink-0" title={resolvedValueValidation.error}>
               ⚠️
             </span>
           )}
@@ -606,7 +606,7 @@ export function ProductFieldMappingRow({
           </span>
         </div>
         {!resolvedValueValidation.isValid && (
-          <span className="text-xs text-amber-400">
+          <span className="text-xs text-amber-600">
             {resolvedValueValidation.error}
           </span>
         )}

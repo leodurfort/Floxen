@@ -24,9 +24,9 @@ export function BulkActionToolbar({
   const displayCount = selectAllMatching ? totalMatchingCount : selectedCount;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-[#5df0c0]/10 border border-[#5df0c0]/30 rounded-lg mb-4">
+    <div className="flex items-center justify-between px-4 py-3 bg-[#FA7315]/10 border border-[#FA7315]/30 rounded-lg mb-4">
       <div className="flex items-center gap-4">
-        <span className="text-[#5df0c0] font-medium">
+        <span className="text-[#FA7315] font-medium">
           {displayCount.toLocaleString()} product{displayCount !== 1 ? 's' : ''} selected
         </span>
 
@@ -34,14 +34,14 @@ export function BulkActionToolbar({
         {!selectAllMatching && hasActiveFilters && selectedCount > 0 && selectedCount < totalMatchingCount && (
           <button
             onClick={onSelectAllMatching}
-            className="text-sm text-white/60 hover:text-white underline"
+            className="text-sm text-gray-600 hover:text-gray-900 underline"
           >
             Select all {totalMatchingCount.toLocaleString()} matching products
           </button>
         )}
 
         {selectAllMatching && hasActiveFilters && (
-          <span className="text-sm text-white/60">
+          <span className="text-sm text-gray-600">
             All products matching current filters are selected
           </span>
         )}
@@ -51,7 +51,7 @@ export function BulkActionToolbar({
         <button
           onClick={onBulkEdit}
           disabled={isProcessing}
-          className="px-3 py-1.5 text-sm bg-[#5df0c0] text-black font-medium rounded-lg hover:bg-[#5df0c0]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="px-3 py-1.5 text-sm bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isProcessing ? (
             <>
@@ -74,7 +74,7 @@ export function BulkActionToolbar({
         <button
           onClick={onClearSelection}
           disabled={isProcessing}
-          className="px-3 py-1.5 text-sm text-white/60 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Clear
         </button>

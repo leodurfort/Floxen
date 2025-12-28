@@ -180,23 +180,23 @@ export function ColumnHeaderDropdown({
         onClick={() => setIsOpen(!isOpen)}
         className={`
           flex items-center gap-1 px-2 py-1 text-left text-sm font-medium
-          text-white/70 hover:text-white transition-colors rounded
-          ${isOpen ? 'bg-white/10' : 'hover:bg-white/5'}
-          ${hasActiveFilter ? 'text-[#5df0c0]' : ''}
+          text-gray-600 hover:text-gray-900 transition-colors rounded
+          ${isOpen ? 'bg-gray-100' : 'hover:bg-gray-50'}
+          ${hasActiveFilter ? 'text-[#FA7315]' : ''}
         `}
       >
         <span className="truncate">{label}</span>
 
         {/* Sort indicator */}
         {isSorted && (
-          <span className="text-[#5df0c0] ml-1">
+          <span className="text-[#FA7315] ml-1">
             {sortOrder === 'asc' ? '↑' : '↓'}
           </span>
         )}
 
         {/* Filter indicator */}
         {hasActiveFilter && (
-          <span className="w-1.5 h-1.5 bg-[#5df0c0] rounded-full ml-1" />
+          <span className="w-1.5 h-1.5 bg-[#FA7315] rounded-full ml-1" />
         )}
 
         {/* Dropdown arrow */}
@@ -214,19 +214,19 @@ export function ColumnHeaderDropdown({
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 mt-1 z-50 w-64 bg-[#1a1d29] border border-white/10 rounded-lg shadow-xl overflow-hidden"
+          className="absolute top-full left-0 mt-1 z-50 w-64 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
         >
           {/* Sort Section */}
           {sortable && (
-            <div className="p-2 border-b border-white/10">
+            <div className="p-2 border-b border-gray-100">
               <div className="flex gap-1">
                 <button
                   onClick={() => onSort('asc')}
                   className={`
                     flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors
                     ${sortOrder === 'asc'
-                      ? 'bg-[#5df0c0] text-black'
-                      : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                      ? 'bg-[#FA7315] text-white'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }
                   `}
                 >
@@ -237,8 +237,8 @@ export function ColumnHeaderDropdown({
                   className={`
                     flex-1 px-2 py-1.5 text-xs font-medium rounded transition-colors
                     ${sortOrder === 'desc'
-                      ? 'bg-[#5df0c0] text-black'
-                      : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                      ? 'bg-[#FA7315] text-white'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }
                   `}
                 >
@@ -252,10 +252,10 @@ export function ColumnHeaderDropdown({
           {filterable && (
             <>
               {/* Search Input */}
-              <div className="p-2 border-b border-white/10">
+              <div className="p-2 border-b border-gray-100">
                 <div className="relative">
                   <svg
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -272,12 +272,12 @@ export function ColumnHeaderDropdown({
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     placeholder="Search..."
-                    className="w-full pl-8 pr-3 py-1.5 text-sm bg-white/5 border border-white/10 rounded text-white placeholder-white/40 focus:outline-none focus:border-[#5df0c0]/50"
+                    className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#FA7315]"
                   />
                   {searchInput && (
                     <button
                       onClick={() => setSearchInput('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path
@@ -295,16 +295,16 @@ export function ColumnHeaderDropdown({
               {/* Checkbox List */}
               <div className="max-h-48 overflow-y-auto">
                 {loadingValues ? (
-                  <div className="p-4 text-center text-white/40 text-sm">Loading...</div>
+                  <div className="p-4 text-center text-gray-500 text-sm">Loading...</div>
                 ) : filteredValues.length === 0 ? (
-                  <div className="p-4 text-center text-white/40 text-sm">No values found</div>
+                  <div className="p-4 text-center text-gray-500 text-sm">No values found</div>
                 ) : (
                   <>
                     {/* Select All */}
-                    <div className="px-2 py-1.5 border-b border-white/10">
+                    <div className="px-2 py-1.5 border-b border-gray-100">
                       <button
                         onClick={selectAllPending}
-                        className="text-xs text-[#5df0c0] hover:text-[#5df0c0]/80"
+                        className="text-xs text-[#FA7315] hover:text-[#E5650F]"
                       >
                         Select All
                       </button>
@@ -314,17 +314,17 @@ export function ColumnHeaderDropdown({
                     {filteredValues.map((item) => (
                       <label
                         key={item.value}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-white/5 cursor-pointer"
+                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 cursor-pointer"
                       >
                         <input
                           type="checkbox"
                           checked={pendingValues.includes(item.value)}
                           onChange={() => toggleValue(item.value)}
-                          className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50"
+                          className="w-4 h-4 rounded border-gray-300 bg-white text-[#FA7315] focus:ring-[#FA7315]/50"
                         />
-                        <span className="flex-1 text-sm text-white/80 truncate">{item.label}</span>
+                        <span className="flex-1 text-sm text-gray-700 truncate">{item.label}</span>
                         {item.count !== undefined && (
-                          <span className="text-xs text-white/40">({item.count})</span>
+                          <span className="text-xs text-gray-400">({item.count})</span>
                         )}
                       </label>
                     ))}
@@ -334,11 +334,11 @@ export function ColumnHeaderDropdown({
 
               {/* Action Buttons */}
               {filteredValues.length > 0 && (
-                <div className="p-2 border-t border-white/10 flex gap-2">
+                <div className="p-2 border-t border-gray-100 flex gap-2">
                   {hasActiveFilter && (
                     <button
                       onClick={handleClearFilter}
-                      className="px-3 py-2 text-sm font-medium rounded transition-colors bg-white/5 text-white/70 hover:bg-red-500/20 hover:text-red-400"
+                      className="px-3 py-2 text-sm font-medium rounded transition-colors bg-gray-50 text-gray-600 hover:bg-red-50 hover:text-red-600"
                     >
                       Clear Filter
                     </button>
@@ -349,8 +349,8 @@ export function ColumnHeaderDropdown({
                     className={`
                       flex-1 px-3 py-2 text-sm font-medium rounded transition-colors
                       ${hasPendingChanges || pendingValues.length > 0
-                        ? 'bg-[#5df0c0] text-black hover:bg-[#4de0b0]'
-                        : 'bg-white/10 text-white/40 cursor-not-allowed'
+                        ? 'bg-[#FA7315] text-white hover:bg-[#E5650F]'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       }
                     `}
                   >

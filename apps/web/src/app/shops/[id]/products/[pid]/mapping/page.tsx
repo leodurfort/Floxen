@@ -148,20 +148,20 @@ export default function ProductMappingPage() {
 
   if (loading || shopMappingsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-white">Loading product mappings...</div>
+      <div className="flex items-center justify-center h-screen bg-[#F9FAFB]">
+        <div className="text-gray-500">Loading product mappings...</div>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-[#F9FAFB]">
         <div className="text-center">
-          <div className="text-red-400 mb-4">{loadError.message || 'Failed to load product data. Please refresh the page.'}</div>
+          <div className="text-red-600 mb-4">{loadError.message || 'Failed to load product data. Please refresh the page.'}</div>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-[#5df0c0]/10 text-[#5df0c0] rounded-lg border border-[#5df0c0]/30 hover:bg-[#5df0c0]/20"
+            className="px-4 py-2 bg-[#FA7315] text-white rounded-lg hover:bg-[#E5650F]"
           >
             Refresh Page
           </button>
@@ -171,14 +171,14 @@ export default function ProductMappingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b1021] pl-64">
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#F9FAFB]">
+      <div className="p-4">
+        <div className="w-full">
           {/* Breadcrumb */}
           <div className="mb-4">
             <Link
               href={`/shops/${params.id}/products`}
-              className="text-white/60 hover:text-white text-sm flex items-center gap-2"
+              className="text-gray-500 hover:text-gray-900 text-sm flex items-center gap-2"
             >
               <span>&larr;</span>
               <span>Back to Products</span>
@@ -188,37 +188,37 @@ export default function ProductMappingPage() {
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className="text-3xl font-bold text-gray-900">
                 {(typeof resolvedValues['title'] === 'string' && resolvedValues['title']) || 'Untitled Product'}
               </h1>
               {overrideCount > 0 && (
-                <span className="text-xs px-2 py-1 rounded bg-[#5df0c0]/20 text-[#5df0c0] border border-[#5df0c0]/30">
+                <span className="text-xs px-2 py-1 rounded bg-[#FA7315]/10 text-[#FA7315] border border-[#FA7315]/30">
                   {overrideCount} custom override{overrideCount !== 1 ? 's' : ''}
                 </span>
               )}
               {overridesData?.isValid === false && (
-                <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <span className="text-xs px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200">
                   ⚠️ {overridesData.validationErrors ? Object.keys(overridesData.validationErrors).length : 0} validation issue{overridesData.validationErrors && Object.keys(overridesData.validationErrors).length !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
-            <p className="text-white/60">
+            <p className="text-gray-600">
               Customize field mappings for this specific product. Overrides take priority over shop-level mappings.
             </p>
 
             {/* Validation Errors Banner */}
             {overridesData?.isValid === false && overridesData?.validationErrors && Object.keys(overridesData.validationErrors).length > 0 && (
-              <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <span className="text-amber-400 text-lg">⚠️</span>
+                  <span className="text-amber-600 text-lg">⚠️</span>
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-amber-400 mb-2">
+                    <div className="text-sm font-medium text-amber-700 mb-2">
                       Validation Issues Detected
                     </div>
-                    <ul className="space-y-1 text-xs text-amber-400/80">
+                    <ul className="space-y-1 text-xs text-amber-600">
                       {Object.entries(overridesData.validationErrors).map(([field, errors]) => (
                         <li key={field}>
-                          <span className="font-medium text-amber-400">{field}:</span>{' '}
+                          <span className="font-medium text-amber-700">{field}:</span>{' '}
                           {Array.isArray(errors) ? errors.join(', ') : String(errors)}
                         </li>
                       ))}
@@ -228,15 +228,15 @@ export default function ProductMappingPage() {
               </div>
             )}
             {saving && (
-              <div className="mt-2 text-sm text-[#5df0c0]">Saving changes...</div>
+              <div className="mt-2 text-sm text-[#FA7315]">Saving changes...</div>
             )}
             {saveError && (
-              <div className="mt-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <div className="mt-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <span className="text-red-400 text-lg">!</span>
+                  <span className="text-red-600 text-lg">!</span>
                   <div>
-                    <div className="text-sm font-medium text-red-400">Failed to save</div>
-                    <div className="text-xs text-red-400/80 mt-0.5">{saveError}</div>
+                    <div className="text-sm font-medium text-red-700">Failed to save</div>
+                    <div className="text-xs text-red-600 mt-0.5">{saveError}</div>
                   </div>
                 </div>
               </div>
@@ -250,15 +250,15 @@ export default function ProductMappingPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search fields by name or description..."
-              className="w-full px-4 py-3 bg-[#1a1d29] text-white rounded-lg border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+              className="w-full px-4 py-3 bg-white text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10"
             />
           </div>
 
           {/* Column Headers */}
-          <div className="grid grid-cols-[1fr_280px_1fr] gap-6 mb-6 pb-4 border-b border-white/20">
-            <div className="text-sm font-semibold text-white/80">OpenAI Attribute</div>
-            <div className="text-sm font-semibold text-white/80">Mapping Source</div>
-            <div className="text-sm font-semibold text-white/80">Resolved Value</div>
+          <div className="grid grid-cols-[1fr_280px_1fr] gap-6 mb-6 pb-4 border-b border-gray-200">
+            <div className="text-sm font-semibold text-gray-700">OpenAI Attribute</div>
+            <div className="text-sm font-semibold text-gray-700">Mapping Source</div>
+            <div className="text-sm font-semibold text-gray-700">Resolved Value</div>
           </div>
 
           {/* Field Mappings */}
@@ -267,8 +267,8 @@ export default function ProductMappingPage() {
               <div key={category.id} className="mb-8">
                 {/* Category Header */}
                 <div className="mb-4">
-                  <h2 className="text-xl font-semibold text-white">{category.label}</h2>
-                  <p className="text-sm text-white/40 mt-1">{category.fields.length} fields</p>
+                  <h2 className="text-xl font-semibold text-gray-900">{category.label}</h2>
+                  <p className="text-sm text-gray-500 mt-1">{category.fields.length} fields</p>
                 </div>
 
                 {/* Field Rows */}
@@ -297,7 +297,7 @@ export default function ProductMappingPage() {
           </div>
 
           {filteredSpecs.length === 0 && (
-            <div className="text-center py-12 text-white/40">
+            <div className="text-center py-12 text-gray-500">
               No fields match your search.
             </div>
           )}

@@ -279,14 +279,14 @@ export default function ShopsPage() {
   if (!hydrated || !user) return null;
 
   return (
-    <div className="p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="p-4">
+      <div className="w-full">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-xs uppercase tracking-wider text-white/40 mb-1">SHOPS</p>
-              <h1 className="text-3xl font-bold text-white">Connections</h1>
+              <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">SHOPS</p>
+              <h1 className="text-3xl font-bold text-gray-900">Connections</h1>
             </div>
             <button
               onClick={() => setShowConnectForm(!showConnectForm)}
@@ -295,19 +295,19 @@ export default function ShopsPage() {
               {showConnectForm ? 'Cancel' : 'Connect shop'}
             </button>
           </div>
-          <p className="text-white/60 text-sm">
+          <p className="text-gray-600 text-sm">
             Manage your WooCommerce shop connections and sync products
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {error}
           </div>
         )}
 
         {hasSyncingShops && (
-          <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-sm flex items-center gap-2">
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm flex items-center gap-2">
             <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -318,17 +318,17 @@ export default function ShopsPage() {
 
         {/* Connect Form */}
         {showConnectForm && (
-          <div className="panel mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Connect WooCommerce Store</h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Connect WooCommerce Store</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-white/60 mb-2">Store URL *</label>
+                <label className="block text-sm text-gray-600 mb-2">Store URL *</label>
                 <input
                   type="url"
                   placeholder="https://your-store.com"
                   value={storeUrl}
                   onChange={(e) => setStoreUrl(e.target.value)}
-                  className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white placeholder-white/30 focus:border-white/30 focus:outline-none"
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
                 />
               </div>
               <button
@@ -345,19 +345,19 @@ export default function ShopsPage() {
         {/* Shops List */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-gray-900">
               {shops.length} {shops.length === 1 ? 'connection' : 'connections'}
             </h2>
           </div>
 
           {loading && shops.length === 0 ? (
-            <div className="panel">
-              <div className="text-center text-white/40">Loading shops...</div>
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <div className="text-center text-gray-500">Loading shops...</div>
             </div>
           ) : shops.length === 0 ? (
-            <div className="panel">
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="text-center">
-                <p className="text-white/60 mb-4">No shops yet. Connect one to start syncing.</p>
+                <p className="text-gray-600 mb-4">No shops yet. Connect one to start syncing.</p>
                 <button
                   onClick={() => setShowConnectForm(true)}
                   className="btn btn--primary"
@@ -369,42 +369,42 @@ export default function ShopsPage() {
           ) : (
             <div className="space-y-4">
               {shops.map((shop) => (
-                <div key={shop.id} className="panel">
+                <div key={shop.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-white mb-1">{shop.shopName}</h3>
-                      <p className="text-sm text-white/40 mb-2">{shop.wooStoreUrl}</p>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{shop.shopName}</h3>
+                      <p className="text-sm text-gray-500 mb-2">{shop.wooStoreUrl}</p>
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-white/60">Currency: {shop.shopCurrency}</span>
+                        <span className="text-gray-600">Currency: {shop.shopCurrency}</span>
                         <span
                           className={`px-2 py-1 rounded text-xs ${
                             shop.isConnected
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-yellow-500/20 text-yellow-400'
+                              ? 'bg-green-50 text-green-700'
+                              : 'bg-yellow-50 text-yellow-700'
                           }`}
                         >
                           {shop.isConnected ? 'Connected' : 'Pending'}
                         </span>
                         <span className={`text-xs ${
-                          shop.syncStatus === 'COMPLETED' ? 'text-green-400' :
-                          shop.syncStatus === 'FAILED' ? 'text-red-400' :
-                          'text-yellow-400'
+                          shop.syncStatus === 'COMPLETED' ? 'text-green-600' :
+                          shop.syncStatus === 'FAILED' ? 'text-red-600' :
+                          'text-yellow-600'
                         }`}>
                           Sync: {shop.syncStatus.toLowerCase()}
                         </span>
                         <span className={`text-xs ${
-                          shop.feedStatus === 'COMPLETED' ? 'text-blue-400' :
-                          shop.feedStatus === 'FAILED' ? 'text-red-400' :
-                          'text-yellow-400'
+                          shop.feedStatus === 'COMPLETED' ? 'text-blue-600' :
+                          shop.feedStatus === 'FAILED' ? 'text-red-600' :
+                          'text-yellow-600'
                         }`}>
                           Feed: {shop.feedStatus?.toLowerCase() || 'pending'}
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-white/60">Auto-sync:</span>
+                          <span className="text-xs text-gray-600">Auto-sync:</span>
                           <button
                             onClick={() => handleToggleSync(shop.id, shop.syncEnabled)}
                             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                              shop.syncEnabled ? 'bg-green-500' : 'bg-gray-600'
+                              shop.syncEnabled ? 'bg-green-500' : 'bg-gray-300'
                             }`}
                             title={shop.syncEnabled ? 'Auto-sync enabled (every 15 min)' : 'Auto-sync disabled'}
                           >
@@ -416,7 +416,7 @@ export default function ShopsPage() {
                           </button>
                         </div>
                       </div>
-                      <div className="text-xs text-white/40 mt-2 space-y-1">
+                      <div className="text-xs text-gray-500 mt-2 space-y-1">
                         {shop.lastSyncAt && (
                           <p>
                             Last synced: {new Date(shop.lastSyncAt).toLocaleString('en-US', {
@@ -443,33 +443,33 @@ export default function ShopsPage() {
                         )}
                       </div>
                       {shop.isConnected && (
-                        <div className="mt-4 pt-4 border-t border-white/10">
+                        <div className="mt-4 pt-4 border-t border-gray-200">
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                             <div className="space-y-3">
                               <div>
-                                <span className="text-white/60">sellerName:</span>
+                                <span className="text-gray-600">sellerName:</span>
                                 <input
                                   type="text"
                                   value={shop.sellerName || ''}
                                   onChange={(e) => handleFieldChange(shop.id, 'sellerName', e.target.value)}
-                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
                                   placeholder="Your store name"
                                 />
                               </div>
                               <div>
-                                <span className="text-white/60">sellerUrl:</span>
+                                <span className="text-gray-600">sellerUrl:</span>
                                 {shop.sellerUrl ? (
-                                  <a href={shop.sellerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 ml-2 underline">
+                                  <a href={shop.sellerUrl} target="_blank" rel="noopener noreferrer" className="text-[#FA7315] hover:text-[#E5650F] ml-2 underline">
                                     {shop.sellerUrl}
                                   </a>
                                 ) : (
-                                  <span className="text-white/40 ml-2">N/A</span>
+                                  <span className="text-gray-400 ml-2">N/A</span>
                                 )}
                               </div>
                             </div>
                             <div className="space-y-3">
                               <div>
-                                <span className="text-white/60">returnPolicy:</span>
+                                <span className="text-gray-600">returnPolicy:</span>
                                 <input
                                   type="url"
                                   value={shop.returnPolicy || ''}
@@ -479,12 +479,12 @@ export default function ShopsPage() {
                                       setError('returnPolicy must be a valid URL');
                                     }
                                   }}
-                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
                                   placeholder="https://..."
                                 />
                               </div>
                               <div>
-                                <span className="text-white/60">returnWindow:</span>
+                                <span className="text-gray-600">returnWindow:</span>
                                 <input
                                   type="number"
                                   value={shop.returnWindow?.toString() || ''}
@@ -494,7 +494,7 @@ export default function ShopsPage() {
                                       setError('returnWindow must be a positive integer');
                                     }
                                   }}
-                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
                                   placeholder="Days"
                                   min="1"
                                 />
@@ -502,7 +502,7 @@ export default function ShopsPage() {
                             </div>
                             <div className="space-y-3">
                               <div>
-                                <span className="text-white/60">sellerPrivacyPolicy:</span>
+                                <span className="text-gray-600">sellerPrivacyPolicy:</span>
                                 <input
                                   type="url"
                                   value={shop.sellerPrivacyPolicy || ''}
@@ -512,12 +512,12 @@ export default function ShopsPage() {
                                       setError('sellerPrivacyPolicy must be a valid URL');
                                     }
                                   }}
-                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
                                   placeholder="https://..."
                                 />
                               </div>
                               <div>
-                                <span className="text-white/60">sellerTos:</span>
+                                <span className="text-gray-600">sellerTos:</span>
                                 <input
                                   type="url"
                                   value={shop.sellerTos || ''}
@@ -527,14 +527,14 @@ export default function ShopsPage() {
                                       setError('sellerTos must be a valid URL');
                                     }
                                   }}
-                                  className="ml-2 px-2 py-1 bg-black/30 border border-white/10 rounded text-white text-sm w-full max-w-xs focus:border-white/30 focus:outline-none"
+                                  className="ml-2 px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 text-sm w-full max-w-xs focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
                                   placeholder="https://..."
                                 />
                               </div>
                             </div>
                           </div>
                           {savingShopId === shop.id && (
-                            <div className="mt-2 text-xs text-white/40 italic">
+                            <div className="mt-2 text-xs text-gray-500 italic">
                               Saving...
                             </div>
                           )}
@@ -560,7 +560,7 @@ export default function ShopsPage() {
                       <button
                         onClick={() => handleDeleteShop(shop.id)}
                         disabled={deleteShopMutation.isPending}
-                        className="text-white/40 hover:text-red-400 transition-colors"
+                        className="text-gray-400 hover:text-red-500 transition-colors"
                         title="Delete shop"
                       >
                         🗑️

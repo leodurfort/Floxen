@@ -309,7 +309,7 @@ function CatalogPageContent() {
               e.stopPropagation();
               handleRowClick(product.id);
             }}
-            className="text-[#5df0c0] hover:text-[#5df0c0]/80 text-sm font-medium"
+            className="text-[#FA7315] hover:text-[#E5650F] text-sm font-medium"
           >
             Edit
           </button>
@@ -321,11 +321,11 @@ function CatalogPageContent() {
         if (imageUrl) {
           return <img src={imageUrl} alt={title || 'Product'} className="w-10 h-10 object-cover rounded" />;
         }
-        return <div className="w-10 h-10 bg-white/10 rounded flex items-center justify-center text-white/30 text-xs">—</div>;
+        return <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">—</div>;
       }
 
       case 'title':
-        return <span className="text-sm text-white/80">{truncate(formatColumnValue(productData, 'title'), 60)}</span>;
+        return <span className="text-sm text-gray-700">{truncate(formatColumnValue(productData, 'title'), 60)}</span>;
 
       case 'link': {
         const url = getColumnValue(productData, 'link') as string | null;
@@ -336,22 +336,22 @@ function CatalogPageContent() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-[#5df0c0] hover:text-[#5df0c0]/80 truncate block text-sm"
+              className="text-[#FA7315] hover:text-[#E5650F] truncate block text-sm"
               title={url}
             >
               {truncate(url, 30)}
             </a>
           );
         }
-        return <span className="text-white/40">—</span>;
+        return <span className="text-gray-400">—</span>;
       }
 
       case 'overrides': {
         const count = getColumnValue(productData, 'overrides') as number;
         return count > 0 ? (
-          <span className="text-[#5df0c0]">{count}</span>
+          <span className="text-[#FA7315]">{count}</span>
         ) : (
-          <span className="text-white/40">—</span>
+          <span className="text-gray-400">—</span>
         );
       }
 
@@ -360,16 +360,16 @@ function CatalogPageContent() {
         if (product.isValid === false) {
           return (
             <div className="relative group">
-              <span className="text-amber-400 cursor-help">⚠️ {validationCount}</span>
-              <div className="absolute left-0 top-6 hidden group-hover:block z-20 w-80 p-3 bg-gray-900 border border-amber-500/30 rounded-lg shadow-xl text-xs">
-                <div className="font-semibold text-amber-400 mb-2">
+              <span className="text-amber-600 cursor-help">⚠️ {validationCount}</span>
+              <div className="absolute left-0 top-6 hidden group-hover:block z-20 w-80 p-3 bg-white border border-amber-200 rounded-lg shadow-xl text-xs">
+                <div className="font-semibold text-amber-700 mb-2">
                   {validationCount} validation issue{validationCount !== 1 ? 's' : ''}
                 </div>
                 {product.validationErrors && (
                   <ul className="space-y-1.5 max-h-48 overflow-y-auto">
                     {Object.entries(product.validationErrors as object).map(([field, errors]) => (
-                      <li key={field} className="text-white/80">
-                        <span className="text-white font-medium">{field}:</span>{' '}
+                      <li key={field} className="text-gray-700">
+                        <span className="text-gray-900 font-medium">{field}:</span>{' '}
                         {Array.isArray(errors) ? errors.join(', ') : String(errors)}
                       </li>
                     ))}
@@ -379,12 +379,12 @@ function CatalogPageContent() {
             </div>
           );
         }
-        return <span className="text-[#5df0c0]">✓</span>;
+        return <span className="text-green-600">✓</span>;
       }
 
       case 'updatedAt':
         return (
-          <span className="text-sm text-white/60 whitespace-nowrap">
+          <span className="text-sm text-gray-500 whitespace-nowrap">
             {product.updatedAt
               ? new Date(product.updatedAt).toLocaleString('en-US', {
                   month: 'short',
@@ -397,41 +397,41 @@ function CatalogPageContent() {
 
       case 'enable_search':
         return product.feedEnableSearch ? (
-          <span className="text-[#5df0c0]">Enabled</span>
+          <span className="text-green-600">Enabled</span>
         ) : (
-          <span className="text-white/40">Disabled</span>
+          <span className="text-gray-400">Disabled</span>
         );
 
       default: {
         // Default rendering for other columns
         const value = formatColumnValue(productData, column.id);
-        return <span className="text-sm text-white/70">{truncate(value, 50)}</span>;
+        return <span className="text-sm text-gray-600">{truncate(value, 50)}</span>;
       }
     }
   };
 
   if (!hydrated) {
-    return <main className="shell"><div className="subtle">Loading session...</div></main>;
+    return <main className="p-4"><div className="text-gray-500">Loading session...</div></main>;
   }
   if (!user) return null;
 
   return (
-    <main className="shell space-y-4">
+    <main className="p-4 space-y-4">
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="panel space-y-4">
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="uppercase tracking-[0.18em] text-xs text-white/60">Products</p>
-            <h1 className="section-title">Catalog</h1>
+            <p className="uppercase tracking-[0.18em] text-xs text-gray-500">Products</p>
+            <h1 className="text-2xl font-bold text-gray-900">Catalog</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={handleRefreshFeed}
               disabled={refreshFeedMutation.isPending}
-              className="px-4 py-2 bg-[#5df0c0] text-black font-medium rounded-lg hover:bg-[#5df0c0]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+              className="px-4 py-2 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
             >
               {refreshFeedMutation.isPending ? 'Refreshing...' : 'Refresh Feed'}
             </button>
@@ -439,7 +439,7 @@ function CatalogPageContent() {
               href={`${API_URL}/api/v1/feed/${params.id}/view`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 border border-white/20 text-white/80 font-medium rounded-lg hover:bg-white/5 transition-all text-sm"
+              className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all text-sm"
             >
               View Feed
             </a>
@@ -453,13 +453,13 @@ function CatalogPageContent() {
           <ClearFiltersButton hasActiveFilters={hasActiveFilters} onClear={clearAllFilters} />
           <button
             onClick={() => setShowEditColumnsModal(true)}
-            className="px-3 py-1.5 text-sm text-white/60 hover:text-white border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
+            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Edit Columns
           </button>
         </div>
 
-        {error && <div className="text-sm text-red-300 px-4 py-2 bg-red-500/10 rounded-lg">{error}</div>}
+        {error && <div className="text-sm text-red-700 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">{error}</div>}
 
         {/* Bulk Action Toolbar */}
         {hasSelection && (
@@ -476,10 +476,10 @@ function CatalogPageContent() {
         )}
 
         {/* Table with Horizontal Scroll */}
-        {loading && <div className="subtle">Loading products...</div>}
-        {!loading && !products.length && <div className="subtle">No products found.</div>}
+        {loading && <div className="text-gray-500">Loading products...</div>}
+        {!loading && !products.length && <div className="text-gray-500">No products found.</div>}
         {!loading && products.length > 0 && (
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
+          <div className="overflow-x-auto rounded-xl border border-gray-200">
             <table className="table min-w-max">
               <thead>
                 <tr>
@@ -487,7 +487,7 @@ function CatalogPageContent() {
                     // Checkbox column - sticky left
                     if (column.id === 'checkbox') {
                       return (
-                        <th key={column.id} className="w-12 sticky left-0 z-10 bg-[#1a1d29]">
+                        <th key={column.id} className="w-12 sticky left-0 z-10 bg-gray-50">
                           <input
                             type="checkbox"
                             checked={allOnPageSelected}
@@ -495,7 +495,7 @@ function CatalogPageContent() {
                               if (el) el.indeterminate = someOnPageSelected;
                             }}
                             onChange={handleToggleAll}
-                            className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50"
+                            className="w-4 h-4 rounded border-gray-300 bg-white text-[#FA7315] focus:ring-[#FA7315]/50"
                           />
                         </th>
                       );
@@ -542,18 +542,18 @@ function CatalogPageContent() {
                   return (
                     <tr
                       key={p.id}
-                      className={`cursor-pointer hover:bg-white/5 transition-colors ${isSelected ? 'bg-[#5df0c0]/5' : ''}`}
+                      className={`cursor-pointer hover:bg-gray-50 transition-colors ${isSelected ? 'bg-[#FA7315]/5' : ''}`}
                     >
                       {visibleColumnDefs.map((column) => {
                         // Checkbox column - sticky left
                         if (column.id === 'checkbox') {
                           return (
-                            <td key={column.id} className="sticky left-0 z-10 bg-[#1a1d29]" onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className="sticky left-0 z-10 bg-white" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => selection.toggleProduct(p.id)}
-                                className="w-4 h-4 rounded border-white/20 bg-transparent text-[#5df0c0] focus:ring-[#5df0c0]/50"
+                                className="w-4 h-4 rounded border-gray-300 bg-white text-[#FA7315] focus:ring-[#FA7315]/50"
                               />
                             </td>
                           );
@@ -586,17 +586,17 @@ function CatalogPageContent() {
         {/* Pagination */}
         {totalProducts > 0 && (
           <div className="flex items-center justify-between pt-4">
-            <div className="text-sm text-white/60">
+            <div className="text-sm text-gray-600">
               Showing {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of{' '}
               {totalProducts.toLocaleString()} products
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-white/60">Per page:</span>
+                <span className="text-sm text-gray-600">Per page:</span>
                 <select
                   value={filters.limit}
                   onChange={(e) => setFilters({ limit: Number(e.target.value), page: 1 })}
-                  className="px-2 py-1 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]/50"
+                  className="px-2 py-1 bg-white text-gray-900 text-sm rounded border border-gray-300 focus:outline-none focus:border-[#FA7315]"
                 >
                   {PAGE_SIZE_OPTIONS.map((size) => (
                     <option key={size} value={size}>
@@ -609,17 +609,17 @@ function CatalogPageContent() {
                 <button
                   onClick={() => setFilters({ page: filters.page - 1 })}
                   disabled={filters.page <= 1}
-                  className="px-3 py-1 text-sm text-white/60 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   ← Prev
                 </button>
-                <span className="px-3 py-1 text-sm text-white/80">
+                <span className="px-3 py-1 text-sm text-gray-700">
                   {filters.page} / {totalPages}
                 </span>
                 <button
                   onClick={() => setFilters({ page: filters.page + 1 })}
                   disabled={filters.page >= totalPages}
-                  className="px-3 py-1 text-sm text-white/60 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next →
                 </button>
@@ -655,7 +655,7 @@ function CatalogPageContent() {
 
 export default function ShopProductsPage() {
   return (
-    <Suspense fallback={<main className="shell"><div className="subtle">Loading...</div></main>}>
+    <Suspense fallback={<main className="p-4"><div className="text-gray-500">Loading...</div></main>}>
       <CatalogPageContent />
     </Suspense>
   );

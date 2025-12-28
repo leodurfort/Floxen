@@ -178,20 +178,20 @@ export default function SetupPage() {
 
   if (loading || wooFieldsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-white">Loading field mappings...</div>
+      <div className="flex items-center justify-center h-screen bg-[#F9FAFB]">
+        <div className="text-gray-500">Loading field mappings...</div>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-[#F9FAFB]">
         <div className="text-center">
-          <div className="text-red-400 mb-4">{loadError.message || 'Failed to load field mappings. Please refresh the page.'}</div>
+          <div className="text-red-600 mb-4">{loadError.message || 'Failed to load field mappings. Please refresh the page.'}</div>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-[#5df0c0]/10 text-[#5df0c0] rounded-lg border border-[#5df0c0]/30 hover:bg-[#5df0c0]/20"
+            className="px-4 py-2 bg-[#FA7315] text-white rounded-lg hover:bg-[#E5650F]"
           >
             Refresh Page
           </button>
@@ -201,27 +201,27 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b1021] pl-64">
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#F9FAFB]">
+      <div className="p-4">
+        <div className="w-full">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Field Mapping Setup</h1>
-            <p className="text-white/60">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Field Mapping Setup</h1>
+            <p className="text-gray-600">
               Map OpenAI feed attributes to your WooCommerce product fields. Changes save automatically.
             </p>
             {saving && (
-              <div className="mt-2 text-sm text-[#5df0c0]">
+              <div className="mt-2 text-sm text-[#FA7315]">
                 Saving changes...
               </div>
             )}
             {saveError && (
-              <div className="mt-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <div className="mt-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <span className="text-red-400 text-lg">⚠️</span>
+                  <span className="text-red-600 text-lg">⚠️</span>
                   <div>
-                    <div className="text-sm font-medium text-red-400">Failed to save changes</div>
-                    <div className="text-xs text-red-400/80 mt-0.5">{saveError}</div>
+                    <div className="text-sm font-medium text-red-700">Failed to save changes</div>
+                    <div className="text-xs text-red-600 mt-0.5">{saveError}</div>
                   </div>
                 </div>
               </div>
@@ -231,24 +231,24 @@ export default function SetupPage() {
               <div
                 className={`px-3 py-1.5 rounded-lg border ${
                   allRequiredFieldsMapped
-                    ? 'bg-[#5df0c0]/10 border-[#5df0c0]/30'
-                    : 'bg-amber-500/10 border-amber-500/30'
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-amber-50 border-amber-200'
                 }`}
               >
-                <span className={allRequiredFieldsMapped ? 'text-[#5df0c0]/80' : 'text-amber-400'}>
+                <span className={allRequiredFieldsMapped ? 'text-green-700' : 'text-amber-700'}>
                   {allRequiredFieldsMapped ? '✓' : '⚠️'} Required Fields: {' '}
                   <span className="font-medium">{requiredFieldsMapped}</span>
                   <span className="opacity-60"> / {totalRequiredFields}</span>
                 </span>
                 {!allRequiredFieldsMapped && (
-                  <span className="ml-2 text-xs text-amber-400/80">
+                  <span className="ml-2 text-xs text-amber-600">
                     ({totalRequiredFields - requiredFieldsMapped} missing)
                   </span>
                 )}
               </div>
               {previewProductJson && (
-                <div className="px-3 py-1.5 bg-[#5df0c0]/10 rounded-lg border border-[#5df0c0]/30">
-                  <span className="text-[#5df0c0]/80">✓ Preview data loaded</span>
+                <div className="px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
+                  <span className="text-green-700">✓ Preview data loaded</span>
                 </div>
               )}
             </div>
@@ -261,32 +261,32 @@ export default function SetupPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search fields by name or description..."
-              className="w-full px-4 py-3 bg-[#1a1d29] text-white rounded-lg border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+              className="w-full px-4 py-3 bg-white text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10"
             />
           </div>
 
           {/* Column Headers */}
-          <div className="grid grid-cols-[1fr_280px_1fr] gap-6 mb-6 pb-4 border-b border-white/20">
-            <div className="text-sm font-semibold text-white/80">
+          <div className="grid grid-cols-[1fr_280px_1fr] gap-6 mb-6 pb-4 border-b border-gray-200">
+            <div className="text-sm font-semibold text-gray-700">
               OpenAI Attribute
             </div>
-            <div className="text-sm font-semibold text-white/80">
+            <div className="text-sm font-semibold text-gray-700">
               WooCommerce Field
             </div>
-            <div className="text-sm font-semibold text-white/80">
+            <div className="text-sm font-semibold text-gray-700">
               <div className="mb-2 flex items-center gap-2">
                 Preview Data
-                <span className="text-xs font-normal text-white/50">(Excludes custom product matching)</span>
+                <span className="text-xs font-normal text-gray-500">(Excludes custom product matching)</span>
                 {loadingPreview && (
-                  <span className="text-xs text-[#5df0c0]">Loading...</span>
+                  <span className="text-xs text-[#FA7315]">Loading...</span>
                 )}
               </div>
               {productsError ? (
-                <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+                <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                   {productsError}
                 </div>
               ) : productsLoading ? (
-                <div className="px-4 py-2 bg-[#252936] rounded-lg border border-white/10 text-sm text-white/50">
+                <div className="px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
                   Loading products...
                 </div>
               ) : (
@@ -305,8 +305,8 @@ export default function SetupPage() {
               <div key={category.id} className="mb-8">
                 {/* Category Header */}
                 <div className="mb-4">
-                  <h2 className="text-xl font-semibold text-white">{category.label}</h2>
-                  <p className="text-sm text-white/40 mt-1">{category.fields.length} fields</p>
+                  <h2 className="text-xl font-semibold text-gray-900">{category.label}</h2>
+                  <p className="text-sm text-gray-500 mt-1">{category.fields.length} fields</p>
                 </div>
 
                 {/* Field Rows */}
@@ -330,7 +330,7 @@ export default function SetupPage() {
           </div>
 
           {filteredSpecs.length === 0 && (
-            <div className="text-center py-12 text-white/40">
+            <div className="text-center py-12 text-gray-500">
               No fields match your search.
             </div>
           )}
@@ -362,33 +362,33 @@ function PropagationModal({
   const [dontAskAgain, setDontAskAgain] = useState(false);
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-[#1a1d29] rounded-xl border border-white/10 p-6 max-w-md w-full mx-4 shadow-2xl">
-        <h3 className="text-xl font-semibold text-white mb-2">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-md w-full mx-4 shadow-xl">
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">
           Apply Mapping Change
         </h3>
-        <p className="text-white/60 text-sm mb-6">
-          You're changing the mapping for <span className="text-[#5df0c0] font-medium">{attribute}</span>.
+        <p className="text-gray-600 text-sm mb-6">
+          You're changing the mapping for <span className="text-[#FA7315] font-medium">{attribute}</span>.
           Some products may have custom overrides for this field.
         </p>
 
         <div className="space-y-3 mb-6">
           <button
             onClick={() => onChoice('apply_all', dontAskAgain)}
-            className="w-full px-4 py-3 bg-[#5df0c0]/10 hover:bg-[#5df0c0]/20 border border-[#5df0c0]/30 rounded-lg text-left transition-colors"
+            className="w-full px-4 py-3 bg-[#FA7315]/10 hover:bg-[#FA7315]/20 border border-[#FA7315]/30 rounded-lg text-left transition-colors"
           >
-            <div className="text-[#5df0c0] font-medium">Apply to All Products</div>
-            <div className="text-white/50 text-sm mt-1">
+            <div className="text-[#FA7315] font-medium">Apply to All Products</div>
+            <div className="text-gray-500 text-sm mt-1">
               Reset any custom overrides and use this new mapping for all products.
             </div>
           </button>
 
           <button
             onClick={() => onChoice('preserve_overrides', dontAskAgain)}
-            className="w-full px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-left transition-colors"
+            className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-left transition-colors"
           >
-            <div className="text-white font-medium">Preserve Custom Overrides</div>
-            <div className="text-white/50 text-sm mt-1">
+            <div className="text-gray-900 font-medium">Preserve Custom Overrides</div>
+            <div className="text-gray-500 text-sm mt-1">
               Keep existing product-level overrides. Only update products using shop defaults.
             </div>
           </button>
@@ -400,14 +400,14 @@ function PropagationModal({
               type="checkbox"
               checked={dontAskAgain}
               onChange={(e) => setDontAskAgain(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#5df0c0] focus:ring-[#5df0c0]/50"
+              className="w-4 h-4 rounded border-gray-300 bg-white text-[#FA7315] focus:ring-[#FA7315]/50"
             />
-            <span className="text-white/60 text-sm">Don't ask again this session</span>
+            <span className="text-gray-600 text-sm">Don't ask again this session</span>
           </label>
 
           <button
             onClick={onCancel}
-            className="text-white/50 hover:text-white text-sm"
+            className="text-gray-500 hover:text-gray-900 text-sm"
           >
             Cancel
           </button>

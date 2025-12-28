@@ -169,20 +169,20 @@ export function BulkEditModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-[#1a1d29] rounded-2xl border border-white/10 w-[600px] max-h-[80vh] overflow-hidden flex flex-col shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl border border-gray-200 w-[600px] max-h-[80vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Bulk Edit Fields</h2>
-            <p className="text-sm text-white/60 mt-1">
+            <h2 className="text-xl font-semibold text-gray-900">Bulk Edit Fields</h2>
+            <p className="text-sm text-gray-600 mt-1">
               Apply changes to {selectedCount.toLocaleString()} selected product{selectedCount !== 1 ? 's' : ''}
             </p>
           </div>
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="text-white/40 hover:text-white transition-colors disabled:opacity-50"
+            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -195,7 +195,7 @@ export function BulkEditModal({
           <div className="space-y-6">
             {/* Field Selection */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Field to Update
               </label>
               <select
@@ -210,7 +210,7 @@ export function BulkEditModal({
                     setOverrideType('static');
                   }
                 }}
-                className="w-full px-4 py-3 bg-[#252936] text-white rounded-lg border border-white/10 focus:outline-none focus:border-[#5df0c0]/50"
+                className="w-full px-4 py-3 bg-white text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10"
               >
                 <option value="">Choose a field...</option>
                 {categories.map(cat => (
@@ -228,14 +228,14 @@ export function BulkEditModal({
 
             {/* Field Info */}
             {selectedSpec && (
-              <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-                <p className="text-sm text-white/80">{selectedSpec.description}</p>
-                <p className="text-xs text-white/40 mt-2">
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-700">{selectedSpec.description}</p>
+                <p className="text-xs text-gray-500 mt-2">
                   Type: {selectedSpec.dataType}
                   {selectedSpec.supportedValues && ` | Values: ${selectedSpec.supportedValues}`}
                 </p>
                 {selectedSpec.example && (
-                  <p className="text-xs text-white/40 mt-1">Example: {selectedSpec.example}</p>
+                  <p className="text-xs text-gray-500 mt-1">Example: {selectedSpec.example}</p>
                 )}
               </div>
             )}
@@ -243,18 +243,18 @@ export function BulkEditModal({
             {/* enable_search - Special dropdown UI */}
             {isEnableSearchField && (
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Search Visibility
                 </label>
                 <select
                   value={enableSearchValue}
                   onChange={(e) => setEnableSearchValue(e.target.value as 'true' | 'false')}
-                  className="w-full px-4 py-3 bg-[#252936] text-white rounded-lg border border-white/10 focus:outline-none focus:border-[#5df0c0]/50"
+                  className="w-full px-4 py-3 bg-white text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10"
                 >
                   <option value="true">Enabled (true) - Products appear in ChatGPT search</option>
                   <option value="false">Disabled (false) - Products hidden from search</option>
                 </select>
-                <p className="mt-2 text-xs text-white/40">
+                <p className="mt-2 text-xs text-gray-500">
                   This controls whether products can be surfaced in ChatGPT search results.
                 </p>
               </div>
@@ -263,7 +263,7 @@ export function BulkEditModal({
             {/* Override Type - for non-enable_search fields */}
             {selectedAttribute && !isEnableSearchField && (
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Update Type
                 </label>
                 <div className="flex gap-2">
@@ -272,8 +272,8 @@ export function BulkEditModal({
                     className={`
                       px-4 py-2 rounded-lg border text-sm font-medium transition-colors
                       ${overrideType === 'static'
-                        ? 'bg-[#5df0c0]/20 border-[#5df0c0]/50 text-[#5df0c0]'
-                        : 'bg-[#252936] border-white/10 text-white/60 hover:text-white'}
+                        ? 'bg-[#FA7315]/10 border-[#FA7315]/50 text-[#FA7315]'
+                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900'}
                     `}
                   >
                     Set Static Value
@@ -287,8 +287,8 @@ export function BulkEditModal({
                       className={`
                         px-4 py-2 rounded-lg border text-sm font-medium transition-colors
                         ${overrideType === 'mapping'
-                          ? 'bg-[#5df0c0]/20 border-[#5df0c0]/50 text-[#5df0c0]'
-                          : 'bg-[#252936] border-white/10 text-white/60 hover:text-white'}
+                          ? 'bg-[#FA7315]/10 border-[#FA7315]/50 text-[#FA7315]'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900'}
                       `}
                     >
                       Custom Mapping
@@ -299,8 +299,8 @@ export function BulkEditModal({
                     className={`
                       px-4 py-2 rounded-lg border text-sm font-medium transition-colors
                       ${overrideType === 'remove'
-                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
-                        : 'bg-[#252936] border-white/10 text-white/60 hover:text-white'}
+                        ? 'bg-amber-50 border-amber-300 text-amber-700'
+                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900'}
                     `}
                   >
                     Remove Override
@@ -312,7 +312,7 @@ export function BulkEditModal({
             {/* Static Value Input */}
             {selectedAttribute && overrideType === 'static' && (
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Static Value
                 </label>
                 <input
@@ -321,15 +321,15 @@ export function BulkEditModal({
                   onChange={(e) => setStaticValue(e.target.value)}
                   placeholder={selectedSpec?.example || 'Enter value...'}
                   className={`
-                    w-full px-4 py-3 bg-[#252936] text-white rounded-lg border
+                    w-full px-4 py-3 bg-white text-gray-900 rounded-lg border
                     focus:outline-none transition-colors
                     ${validationError
-                      ? 'border-red-500/50 focus:border-red-500'
-                      : 'border-white/10 focus:border-[#5df0c0]/50'}
+                      ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+                      : 'border-gray-300 focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10'}
                   `}
                 />
                 {validationError && (
-                  <p className="mt-2 text-sm text-red-400">{validationError}</p>
+                  <p className="mt-2 text-sm text-red-600">{validationError}</p>
                 )}
               </div>
             )}
@@ -337,7 +337,7 @@ export function BulkEditModal({
             {/* WooCommerce Field Selector */}
             {selectedAttribute && overrideType === 'mapping' && (
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   WooCommerce Field Mapping
                 </label>
 
@@ -347,32 +347,32 @@ export function BulkEditModal({
                     onClick={() => !wooFieldsLoading && setIsWooDropdownOpen(!isWooDropdownOpen)}
                     disabled={wooFieldsLoading}
                     className={`
-                      w-full h-[44px] px-4 py-2.5 text-left bg-[#252936] hover:bg-[#2d3142] rounded-lg border
-                      transition-colors flex items-center justify-between border-white/10
+                      w-full h-[44px] px-4 py-2.5 text-left bg-white hover:bg-gray-50 rounded-lg border border-gray-300
+                      transition-colors flex items-center justify-between
                       ${wooFieldsLoading ? 'cursor-not-allowed opacity-60' : ''}
                     `}
                   >
                     <span className={`text-sm truncate ${
-                      selectedWooField ? 'text-white' : 'text-white/60'
+                      selectedWooField ? 'text-gray-900' : 'text-gray-500'
                     }`}>
                       {wooFieldsLoading ? 'Loading fields...' : getSelectedWooFieldLabel()}
                     </span>
-                    <svg className="w-4 h-4 text-white/40 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
 
                   {/* Dropdown Panel */}
                   {isWooDropdownOpen && !wooFieldsLoading && (
-                    <div className="absolute z-50 top-full left-0 w-full mt-2 bg-[#252936] rounded-lg border border-white/10 shadow-2xl max-h-[280px] overflow-hidden flex flex-col">
+                    <div className="absolute z-50 top-full left-0 w-full mt-2 bg-white rounded-lg border border-gray-200 shadow-xl max-h-[280px] overflow-hidden flex flex-col">
                       {/* Search Bar */}
-                      <div className="p-3 border-b border-white/10">
+                      <div className="p-3 border-b border-gray-100">
                         <input
                           type="text"
                           value={wooFieldSearch}
                           onChange={(e) => setWooFieldSearch(e.target.value)}
                           placeholder="Search fields..."
-                          className="w-full px-3 py-2 bg-[#1a1d29] text-white text-sm rounded border border-white/10 focus:outline-none focus:border-[#5df0c0]"
+                          className="w-full px-3 py-2 bg-gray-50 text-gray-900 text-sm rounded border border-gray-200 focus:outline-none focus:border-[#FA7315]"
                           autoFocus
                         />
                       </div>
@@ -388,12 +388,12 @@ export function BulkEditModal({
                               setWooFieldSearch('');
                             }}
                             className={`
-                              w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/10
-                              ${selectedWooField === null ? 'bg-[#2d3142]' : ''}
+                              w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100
+                              ${selectedWooField === null ? 'bg-gray-50' : ''}
                             `}
                           >
-                            <div className="text-sm text-amber-400 font-medium">No mapping (exclude field)</div>
-                            <div className="text-xs text-white/40 mt-0.5">This field will be empty for selected products</div>
+                            <div className="text-sm text-amber-600 font-medium">No mapping (exclude field)</div>
+                            <div className="text-xs text-gray-500 mt-0.5">This field will be empty for selected products</div>
                           </button>
                         )}
 
@@ -408,19 +408,19 @@ export function BulkEditModal({
                                 setWooFieldSearch('');
                               }}
                               className={`
-                                w-full px-4 py-3 text-left hover:bg-[#2d3142] transition-colors border-b border-white/5 last:border-0
-                                ${selectedWooField === field.value ? 'bg-[#2d3142]' : ''}
+                                w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0
+                                ${selectedWooField === field.value ? 'bg-gray-50' : ''}
                               `}
                             >
-                              <div className="text-sm text-white font-medium">{field.label}</div>
-                              <div className="text-xs text-white/40 mt-0.5">{field.value}</div>
+                              <div className="text-sm text-gray-900 font-medium">{field.label}</div>
+                              <div className="text-xs text-gray-500 mt-0.5">{field.value}</div>
                               {field.description && (
-                                <div className="text-xs text-white/30 mt-1">{field.description}</div>
+                                <div className="text-xs text-gray-400 mt-1">{field.description}</div>
                               )}
                             </button>
                           ))
                         ) : wooFieldSearch ? (
-                          <div className="p-4 text-center text-white/40 text-sm">No fields found</div>
+                          <div className="p-4 text-center text-gray-500 text-sm">No fields found</div>
                         ) : null}
                       </div>
                     </div>
@@ -429,15 +429,15 @@ export function BulkEditModal({
 
                 {/* Info about the selected mapping */}
                 {selectedWooField === null && (
-                  <div className="mt-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
-                    <p className="text-sm text-amber-400">
+                  <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-sm text-amber-700">
                       This will exclude "{selectedAttribute}" from the feed for all selected products.
                     </p>
                   </div>
                 )}
                 {selectedWooField && (
-                  <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
-                    <p className="text-sm text-blue-400">
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-700">
                       This will map "{selectedAttribute}" to WooCommerce field "{selectedWooField}" for all selected products.
                     </p>
                   </div>
@@ -447,8 +447,8 @@ export function BulkEditModal({
 
             {/* Remove Override Warning */}
             {selectedAttribute && overrideType === 'remove' && (
-              <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
-                <p className="text-sm text-amber-400">
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm text-amber-700">
                   This will remove any existing override for "{selectedAttribute}" and revert to shop-level defaults.
                 </p>
               </div>
@@ -457,18 +457,18 @@ export function BulkEditModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-white/10 flex justify-end gap-3">
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="px-4 py-2 text-white/60 hover:text-white transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="px-6 py-2 bg-[#5df0c0] text-black font-medium rounded-lg hover:bg-[#5df0c0]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className="px-6 py-2 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             {isProcessing ? (
               <>

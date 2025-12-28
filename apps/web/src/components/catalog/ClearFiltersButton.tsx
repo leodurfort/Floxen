@@ -13,8 +13,8 @@ export function ClearFiltersButton({ hasActiveFilters, onClear }: ClearFiltersBu
       onClick={onClear}
       className="
         flex items-center gap-2 px-3 py-2 text-sm font-medium
-        bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30
-        text-white/70 hover:text-red-400
+        bg-gray-50 hover:bg-red-50 border border-gray-200 hover:border-red-200
+        text-gray-600 hover:text-red-600
         rounded-lg transition-colors
       "
     >

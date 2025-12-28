@@ -69,19 +69,19 @@ export default function RegisterProfilePage() {
   }
 
   return (
-    <main className="shell flex min-h-screen items-center justify-center">
-      <div className="panel w-full max-w-md space-y-6">
+    <main className="min-h-screen bg-[#F9FAFB] flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 w-full max-w-md space-y-6">
         <div className="text-center">
-          <p className="uppercase tracking-[0.15em] text-xs text-white/60 mb-2">ProductSynch</p>
-          <h1 className="section-title">Complete your profile</h1>
-          <p className="subtle mt-2">
+          <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">ProductSynch</p>
+          <h1 className="text-2xl font-bold text-gray-900">Complete your profile</h1>
+          <p className="text-gray-600 mt-2">
             Tell us a bit about yourself
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="flex flex-col gap-2">
-            <span className="subtle text-sm">First name</span>
+            <span className="text-gray-600 text-sm">First name</span>
             <input
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
@@ -89,24 +89,24 @@ export default function RegisterProfilePage() {
               placeholder="John"
               required
               autoFocus
-              className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+              className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
             />
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="subtle text-sm">Surname</span>
+            <span className="text-gray-600 text-sm">Surname</span>
             <input
               value={surname}
               onChange={(e) => setSurname(e.target.value)}
               type="text"
               placeholder="Doe"
               required
-              className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
+              className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
             />
           </label>
 
           {error && (
-            <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
               {error}
             </div>
           )}

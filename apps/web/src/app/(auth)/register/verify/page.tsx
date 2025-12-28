@@ -76,14 +76,14 @@ export default function RegisterVerifyPage() {
   }
 
   return (
-    <main className="shell flex min-h-screen items-center justify-center">
-      <div className="panel w-full max-w-md space-y-6">
+    <main className="min-h-screen bg-[#F9FAFB] flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 w-full max-w-md space-y-6">
         <div className="text-center">
-          <p className="uppercase tracking-[0.15em] text-xs text-white/60 mb-2">ProductSynch</p>
-          <h1 className="section-title">Check your inbox</h1>
-          <p className="subtle mt-2">
+          <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">ProductSynch</p>
+          <h1 className="text-2xl font-bold text-gray-900">Check your inbox</h1>
+          <p className="text-gray-600 mt-2">
             Enter the 6-digit code we sent to<br />
-            <span className="text-white font-medium">{email}</span>
+            <span className="text-gray-900 font-medium">{email}</span>
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function RegisterVerifyPage() {
           />
 
           {error && (
-            <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3 text-center">
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-center">
               {error}
             </div>
           )}
@@ -110,11 +110,11 @@ export default function RegisterVerifyPage() {
         </div>
 
         <div className="text-center">
-          <p className="text-sm subtle mb-2">Didn&apos;t receive the code?</p>
+          <p className="text-sm text-gray-600 mb-2">Didn&apos;t receive the code?</p>
           <button
             onClick={handleResend}
             disabled={isResending || resendCooldown > 0}
-            className="text-sm text-white underline disabled:opacity-50 disabled:no-underline"
+            className="text-sm text-gray-900 underline disabled:opacity-50 disabled:no-underline hover:text-[#FA7315]"
           >
             {isResending
               ? 'Sending...'
@@ -127,7 +127,7 @@ export default function RegisterVerifyPage() {
         <div className="text-center">
           <button
             onClick={() => router.push('/register')}
-            className="text-sm subtle hover:text-white transition-colors"
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
           >
             Use a different email
           </button>

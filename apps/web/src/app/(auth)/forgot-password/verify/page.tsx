@@ -65,27 +65,27 @@ export default function ForgotPasswordVerifyPage() {
 
   if (!email) {
     return (
-      <div className="min-h-screen bg-[#0d0f1a] flex items-center justify-center">
-        <div className="animate-pulse text-white/40">Loading...</div>
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#0d0f1a] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-[#F9FAFB] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <p className="uppercase tracking-[0.15em] text-xs text-white/60 mb-2">ProductSynch</p>
-          <h1 className="text-2xl font-bold text-white mb-2">Check your email</h1>
-          <p className="text-white/60 text-sm">
-            We sent a verification code to <span className="text-white font-medium">{email}</span>
+          <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">ProductSynch</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h1>
+          <p className="text-gray-600 text-sm">
+            We sent a verification code to <span className="text-gray-900 font-medium">{email}</span>
           </p>
         </div>
 
-        <div className="panel p-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           <div className="space-y-6">
             <div>
-              <label className="block text-sm text-white/70 mb-4 text-center">
+              <label className="block text-sm text-gray-600 mb-4 text-center">
                 Enter the 6-digit code
               </label>
               <CodeInput
@@ -97,13 +97,13 @@ export default function ForgotPasswordVerifyPage() {
             </div>
 
             {error && (
-              <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3 text-center">
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-center">
                 {error}
               </div>
             )}
 
             {isLoading && (
-              <div className="text-center text-white/60 text-sm">
+              <div className="text-center text-gray-500 text-sm">
                 Verifying...
               </div>
             )}
@@ -112,7 +112,7 @@ export default function ForgotPasswordVerifyPage() {
               <button
                 onClick={handleResend}
                 disabled={resendCooldown > 0}
-                className="text-sm text-[#4c5fd5] hover:text-[#5d6fe6] disabled:text-white/30 transition-colors"
+                className="text-sm text-[#FA7315] hover:text-[#E5650F] disabled:text-gray-400 transition-colors"
               >
                 {resendCooldown > 0
                   ? `Resend code in ${resendCooldown}s`
@@ -122,10 +122,10 @@ export default function ForgotPasswordVerifyPage() {
           </div>
         </div>
 
-        <p className="text-center text-sm text-white/60 mt-6">
+        <p className="text-center text-sm text-gray-600 mt-6">
           <Link
             href="/forgot-password"
-            className="text-white hover:text-[#4c5fd5] transition-colors"
+            className="text-gray-900 hover:text-[#FA7315] transition-colors"
           >
             Use a different email
           </Link>

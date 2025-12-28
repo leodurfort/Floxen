@@ -5,9 +5,34 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: '#0b1021',
-        panel: '#0e1327',
-        accent: '#5df0c0',
+        // Primary accent (orange)
+        accent: '#FA7315',
+        'accent-hover': '#E5650F',
+
+        // Sidebar colors (terracotta/rust orange)
+        sidebar: {
+          DEFAULT: '#C05A30',
+          hover: '#A84E28',
+        },
+
+        // Surface colors (light theme)
+        surface: {
+          bg: '#F9FAFB',
+          card: '#FFFFFF',
+        },
+
+        // Border colors
+        border: {
+          DEFAULT: '#E5E7EB',
+          light: '#F3F4F6',
+        },
+
+        // Text colors
+        'text-primary': '#111827',
+        'text-secondary': '#6B7280',
+        'text-muted': '#9CA3AF',
+
+        // Status colors
         amber: '#f2c94c',
       },
       fontFamily: {
