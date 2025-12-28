@@ -296,7 +296,7 @@ export default function ShopsPage() {
               onClick={() => setShowConnectForm(!showConnectForm)}
               className="btn btn--primary"
             >
-              {showConnectForm ? 'Cancel' : 'Connect shop'}
+              {showConnectForm ? 'Cancel' : 'Connect new shop'}
             </button>
           </div>
           <p className="text-gray-600 text-sm">
@@ -366,7 +366,7 @@ export default function ShopsPage() {
                   onClick={() => setShowConnectForm(true)}
                   className="btn btn--primary"
                 >
-                  Connect shop
+                  Connect new shop
                 </button>
               </div>
             </div>
@@ -401,7 +401,7 @@ export default function ShopsPage() {
                               href={`/shops/${shop.id}/setup`}
                               className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                             >
-                              Check Field Mapping
+                              Complete Mapping Setup
                             </Link>
                             <button
                               onClick={() => handleSync(shop.id)}
@@ -467,7 +467,7 @@ export default function ShopsPage() {
                                 onClick={() => setModalShop(shop)}
                                 className="bg-[#FA7315] hover:bg-[#E5650F] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                               >
-                                Complete Shop Setup
+                                Complete Shop Profile
                               </button>
                             )}
                           </div>
@@ -476,13 +476,13 @@ export default function ShopsPage() {
                         {/* Fields - stacked vertically */}
                         <div className="space-y-3">
                           <div>
-                            <div className="text-sm text-gray-500">Store name</div>
+                            <div className="text-sm text-gray-700 font-medium">Store name</div>
                             <div className={shop.sellerName ? 'text-gray-900' : 'text-gray-400'}>
                               {shop.sellerName || 'Not set'}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-500">Return policy</div>
+                            <div className="text-sm text-gray-700 font-medium">Return policy</div>
                             {shop.returnPolicy ? (
                               <a
                                 href={shop.returnPolicy}
@@ -497,7 +497,7 @@ export default function ShopsPage() {
                             )}
                           </div>
                           <div>
-                            <div className="text-sm text-gray-500">Return window</div>
+                            <div className="text-sm text-gray-700 font-medium">Return window</div>
                             <div className={shop.returnWindow ? 'text-gray-900' : 'text-gray-400'}>
                               {shop.returnWindow ? `${shop.returnWindow} days` : 'Not set'}
                             </div>

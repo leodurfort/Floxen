@@ -209,6 +209,11 @@ export default function SetupPage() {
     <div className="min-h-screen bg-[#F9FAFB]">
       <div className="p-4">
         <div className="w-full">
+          {/* Shop Profile Banner - at very top */}
+          {currentShop && (
+            <ShopProfileBanner shop={currentShop} currentPath="setup" />
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Field Mapping Setup</h1>
@@ -258,11 +263,6 @@ export default function SetupPage() {
               )}
             </div>
           </div>
-
-          {/* Shop Profile Banner */}
-          {currentShop && (
-            <ShopProfileBanner shop={currentShop} currentPath="setup" />
-          )}
 
           {/* Search Bar */}
           <div className="mb-6">
