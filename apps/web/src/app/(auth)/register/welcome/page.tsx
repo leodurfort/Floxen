@@ -271,25 +271,27 @@ export default function RegisterWelcomePage() {
             </h1>
 
             {/* Subheadline */}
-            <p className="text-base text-gray-600 mb-5">
+            <p className="text-base text-gray-600 mb-10">
               Connect your WooCommerce store to showcase your first products in ChatGPT.
             </p>
 
-            {/* WooCommerce Header */}
-            <div className="flex items-center gap-3 mb-4">
-              <WooCommerceLogo className="h-8" />
-              <h2 className="text-base font-semibold text-gray-900">
+            {/* WooCommerce Section - Centered */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <h2 className="text-base font-semibold text-gray-900 mb-3">
                 Securely connect your WooCommerce store
               </h2>
+              <WooCommerceLogo className="h-8" />
             </div>
 
-            {/* Primary CTA */}
-            <button
-              onClick={openModal}
-              className="w-full bg-[#FA7315] hover:bg-[#E5650F] text-white font-medium py-3 px-4 rounded-lg transition-colors mb-5"
-            >
-              Connect & preview my products
-            </button>
+            {/* Primary CTA - Centered, reduced width */}
+            <div className="flex justify-center mb-5">
+              <button
+                onClick={openModal}
+                className="bg-[#FA7315] hover:bg-[#E5650F] text-white font-medium py-3 px-12 rounded-lg transition-colors"
+              >
+                Connect & preview my products
+              </button>
+            </div>
 
             {/* Free Plan Callout */}
             <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
