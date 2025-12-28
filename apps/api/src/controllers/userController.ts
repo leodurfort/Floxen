@@ -257,7 +257,23 @@ export async function deleteAccount(req: Request, res: Response) {
     // Import prisma for deletion
     const { prisma } = await import('../lib/prisma');
 
-    // Delete user and all related data (Prisma cascade handles related records)
+    // Delete related records that don't have cascade delete set up
+    // 1. Delete AccountDeletion records
+    await prisma.accountDeletion.deleteMany({
+      where: { userId },
+    });
+
+    // 2. Delete VerificationToken records
+    await prisma.verificationToken.deleteMany({
+      where: { userId },
+    });
+
+    // 3. Delete Shops (this will cascade to products, field mappings, feed snapshots, etc.)
+    await prisma.shop.deleteMany({
+      where: { userId },
+    });
+
+    // 4. Finally delete the user
     await prisma.user.delete({
       where: { id: userId },
     });
