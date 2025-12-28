@@ -5,7 +5,6 @@
  * - Periodic sync (every 15 minutes)
  * - Feed generation (creates FeedSnapshot for OpenAI)
  * - Stuck sync recovery (every minute)
- * - Account deletion execution (daily at midnight)
  * - Token cleanup (hourly)
  * - Health checks
  * - Analytics aggregation
@@ -15,7 +14,6 @@ import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { syncFlowProducer, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
-import { executeScheduledDeletions } from './accountDeletionService';
 import { cleanupExpiredTokens } from './verificationService';
 
 // If a sync is stuck in SYNCING for longer than this, reset it to FAILED
@@ -170,31 +168,6 @@ export class CronScheduler {
   }
 
   /**
-   * Schedule account deletion execution daily at midnight
-   * Executes pending deletions past their 30-day grace period
-   */
-  scheduleAccountDeletionExecution() {
-    const job = cron.schedule('0 0 * * *', async () => {
-      logger.info('Cron: Account deletion execution triggered');
-      try {
-        const deletedCount = await executeScheduledDeletions();
-        if (deletedCount > 0) {
-          logger.info(`Cron: Deleted ${deletedCount} accounts past grace period`);
-        }
-      } catch (err) {
-        logger.error('Cron: Failed to execute account deletions', {
-          error: err instanceof Error ? err : new Error(String(err)),
-        });
-      }
-    }, {
-      scheduled: false,
-    });
-
-    this.jobs.set('account-deletion', job);
-    logger.info('Cron: Account deletion execution scheduled (daily at midnight)');
-  }
-
-  /**
    * Schedule expired token cleanup hourly
    * Removes expired and used verification tokens
    */
@@ -230,7 +203,6 @@ export class CronScheduler {
 
     this.schedulePeriodicSync();
     this.scheduleStuckSyncRecovery();
-    this.scheduleAccountDeletionExecution();
     this.scheduleTokenCleanup();
 
     // Start all jobs

@@ -241,63 +241,53 @@ export async function changePassword(req: Request, res: Response) {
 }
 
 /**
- * Get pending account deletion status
+ * Delete account immediately (hard delete)
  */
-export async function getDeletionStatus(req: Request, res: Response) {
+export async function deleteAccount(req: Request, res: Response) {
   try {
-    const { getPendingDeletion } = await import('../services/accountDeletionService');
-    const status = await getPendingDeletion(getUserId(req));
+    const userId = getUserId(req);
+    const user = await findUserById(userId);
 
-    return res.json(status);
-  } catch (err) {
-    logger.error('getDeletionStatus: error', { error: err instanceof Error ? err : new Error(String(err)) });
-    return res.status(500).json({ error: 'Failed to get deletion status' });
-  }
-}
-
-/**
- * Schedule account deletion
- */
-export async function scheduleDelete(req: Request, res: Response) {
-  try {
-    const { scheduleAccountDeletion } = await import('../services/accountDeletionService');
-    const result = await scheduleAccountDeletion(getUserId(req));
-
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    logger.info('scheduleDelete: success', { userId: getUserId(req), scheduledFor: result.scheduledFor });
-    return res.json({
-      success: true,
-      message: 'Account deletion scheduled',
-      scheduledFor: result.scheduledFor,
+    const userEmail = user.email;
+
+    // Import prisma for deletion
+    const { prisma } = await import('../lib/prisma');
+
+    // Delete user and all related data (Prisma cascade handles related records)
+    await prisma.user.delete({
+      where: { id: userId },
     });
-  } catch (err) {
-    logger.error('scheduleDelete: error', { error: err instanceof Error ? err : new Error(String(err)) });
-    return res.status(500).json({ error: 'Failed to schedule deletion' });
-  }
-}
 
-/**
- * Cancel scheduled account deletion
- */
-export async function cancelDelete(req: Request, res: Response) {
-  try {
-    const { cancelAccountDeletion } = await import('../services/accountDeletionService');
-    const result = await cancelAccountDeletion(getUserId(req));
+    logger.info('deleteAccount: success', { userId, email: userEmail });
 
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
+    // Send confirmation email (after successful deletion)
+    try {
+      const { sendEmail } = await import('../lib/mailer');
+      const { getAccountDeletedEmailHtml } = await import('../services/emailTemplates');
+
+      await sendEmail({
+        to: userEmail,
+        subject: 'Account Deleted - ProductSynch',
+        html: getAccountDeletedEmailHtml(),
+      });
+    } catch (emailErr) {
+      // Log but don't fail the response - deletion was successful
+      logger.error('deleteAccount: failed to send confirmation email', {
+        error: emailErr instanceof Error ? emailErr : new Error(String(emailErr)),
+        email: userEmail,
+      });
     }
 
-    logger.info('cancelDelete: success', { userId: getUserId(req) });
     return res.json({
       success: true,
-      message: 'Account deletion cancelled',
+      message: 'Account deleted successfully',
     });
   } catch (err) {
-    logger.error('cancelDelete: error', { error: err instanceof Error ? err : new Error(String(err)) });
-    return res.status(500).json({ error: 'Failed to cancel deletion' });
+    logger.error('deleteAccount: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    return res.status(500).json({ error: 'Failed to delete account' });
   }
 }

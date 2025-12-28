@@ -130,6 +130,7 @@ export default function SecuritySettingsPage() {
                 type="password"
                 placeholder="Enter your password to confirm"
                 required
+                autoComplete="new-password"
                 className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
               />
             </label>
@@ -211,6 +212,7 @@ export default function SecuritySettingsPage() {
               type="password"
               placeholder="Enter current password"
               required
+              autoComplete="current-password"
               className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
             />
           </label>
@@ -224,6 +226,7 @@ export default function SecuritySettingsPage() {
               placeholder="At least 8 characters"
               required
               minLength={8}
+              autoComplete="new-password"
               className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
             />
           </label>
@@ -237,6 +240,7 @@ export default function SecuritySettingsPage() {
               placeholder="Re-enter new password"
               required
               minLength={8}
+              autoComplete="new-password"
               className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
             />
             {confirmPassword && newPassword !== confirmPassword && (

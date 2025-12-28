@@ -6,9 +6,7 @@ import {
   changeEmail,
   changeEmailVerify,
   changePassword,
-  getDeletionStatus,
-  scheduleDelete,
-  cancelDelete,
+  deleteAccount,
 } from '../controllers/userController';
 
 const router = Router();
@@ -27,9 +25,7 @@ router.post('/me/change-email/verify', changeEmailVerify);
 // Password change
 router.post('/me/change-password', changePassword);
 
-// Account deletion
-router.get('/me/delete', getDeletionStatus);
-router.post('/me/delete', scheduleDelete);
-router.post('/me/delete/cancel', cancelDelete);
+// Account deletion (immediate hard delete)
+router.delete('/me/delete', deleteAccount);
 
 export default router;

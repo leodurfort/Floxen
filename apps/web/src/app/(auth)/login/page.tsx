@@ -17,6 +17,8 @@ export default function LoginPage() {
   useEffect(() => {
     if (searchParams.get('reset') === 'success') {
       setSuccessMessage('Password reset successfully. Please sign in with your new password.');
+    } else if (searchParams.get('deleted') === 'true') {
+      setSuccessMessage('Your account has been deleted. We\'re sorry to see you go.');
     }
   }, [searchParams]);
 

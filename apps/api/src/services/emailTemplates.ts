@@ -124,3 +124,17 @@ export function getWelcomeEmailHtml(firstName: string): string {
     </div>
   `);
 }
+
+/**
+ * Account deleted confirmation template
+ */
+export function getAccountDeletedEmailHtml(): string {
+  return wrapTemplate(`
+    <div class="content">
+      <h2 style="margin: 0 0 15px 0; color: #dc2626;">Account deleted</h2>
+      <p>Your ProductSynch account has been permanently deleted.</p>
+      <p>All your data including shops, products, and settings have been removed from our systems.</p>
+      <p style="margin-top: 20px;">We're sorry to see you go. If you ever want to return, you're always welcome to create a new account.</p>
+    </div>
+  `);
+}

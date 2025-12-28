@@ -131,6 +131,7 @@ model Shop {
   feedSnapshots     FeedSnapshot[]
   fieldMappingsV2   FieldMapping[]
 
+  @@unique([wooStoreUrl])
   @@index([userId])
 }
 

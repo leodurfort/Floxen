@@ -11,7 +11,6 @@ export default function RegisterPasswordPage() {
   const { email, verified, setStep } = useRegistration();
   const { setSession } = useAuth();
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -33,11 +32,6 @@ export default function RegisterPasswordPage() {
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
       return;
     }
 
@@ -122,18 +116,6 @@ export default function RegisterPasswordPage() {
                 ))}
               </div>
             )}
-          </label>
-
-          <label className="flex flex-col gap-2">
-            <span className="subtle text-sm">Confirm password</span>
-            <input
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Re-enter your password"
-              required
-              className="bg-[#252936] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:border-[#4c5fd5] focus:outline-none transition-colors"
-            />
           </label>
 
           {error && (

@@ -277,27 +277,11 @@ export async function changePassword(payload: { currentPassword: string; newPass
   });
 }
 
-export async function getDeletionStatus() {
-  return requestWithAuth<{
-    scheduled: boolean;
-    scheduledFor?: string;
-    requestedAt?: string;
-  }>('/api/v1/users/me/delete');
-}
-
-export async function scheduleAccountDeletion() {
+export async function deleteAccount() {
   return requestWithAuth<{
     success: boolean;
     message: string;
-    scheduledFor: string;
-  }>('/api/v1/users/me/delete', { method: 'POST' });
-}
-
-export async function cancelAccountDeletion() {
-  return requestWithAuth<{
-    success: boolean;
-    message: string;
-  }>('/api/v1/users/me/delete/cancel', { method: 'POST' });
+  }>('/api/v1/users/me/delete', { method: 'DELETE' });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

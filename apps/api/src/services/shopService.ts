@@ -15,6 +15,16 @@ export async function createShop(params: {
   consumerSecret?: string;
 }) {
   const { userId, storeUrl, consumerKey, consumerSecret } = params;
+
+  // Check if this store URL is already linked to any account
+  const existingShop = await prisma.shop.findUnique({
+    where: { wooStoreUrl: storeUrl },
+  });
+
+  if (existingShop) {
+    throw new Error('This WooCommerce store is already connected to another account');
+  }
+
   return prisma.shop.create({
     data: {
       userId,
