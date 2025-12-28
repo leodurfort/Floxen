@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { Toast } from '@/components/catalog/Toast';
 import { CompleteShopSetupModal } from '@/components/shops/CompleteShopSetupModal';
-import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import type { Shop } from '@productsynch/shared';
 import {
   useShopsQuery,
@@ -260,9 +260,6 @@ export default function ShopsPage() {
 
   if (!hydrated || !user) return null;
 
-  // Find first shop with incomplete profile for banner
-  const incompleteShop = shops.find(shop => shop.isConnected && !isProfileComplete(shop));
-
   return (
     <div className="p-4">
       <div className="w-full">
@@ -284,11 +281,6 @@ export default function ShopsPage() {
             Manage your WooCommerce shop connections
           </p>
         </div>
-
-        {/* Banner for incomplete profile */}
-        {incompleteShop && (
-          <ShopProfileBanner shop={incompleteShop} currentPath="shops" />
-        )}
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -363,12 +355,13 @@ export default function ShopsPage() {
                 const isAdvancedExpanded = expandedAdvanced[shop.id] ?? false;
 
                 return (
-                  <div key={shop.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <div key={shop.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                     {/* Header Section */}
-                    <div className="mb-4">
-                      <p className="text-lg font-semibold text-gray-900 mb-1">{shop.wooStoreUrl}</p>
-                      <div className="flex items-center flex-wrap gap-3 text-sm">
+                    <div className="p-5 border-b border-gray-200">
+                      <p className="text-lg font-semibold text-gray-900 mb-2">{shop.wooStoreUrl}</p>
+                      <div className="flex items-center flex-wrap gap-2 text-sm">
                         <span className="text-gray-600">Currency: {shop.shopCurrency || 'N/A'}</span>
+                        <span className="text-gray-300">•</span>
                         <span
                           className={`px-2 py-0.5 rounded text-xs font-medium ${
                             shop.isConnected
@@ -378,6 +371,7 @@ export default function ShopsPage() {
                         >
                           {shop.isConnected ? 'Connected' : 'Pending'}
                         </span>
+                        <span className="text-gray-300">•</span>
                         <span className={`text-xs ${
                           shop.syncStatus === 'COMPLETED' ? 'text-green-600' :
                           shop.syncStatus === 'FAILED' ? 'text-red-600' :
@@ -385,6 +379,7 @@ export default function ShopsPage() {
                         }`}>
                           Sync: {shop.syncStatus.toLowerCase()}
                         </span>
+                        <span className="text-gray-300">•</span>
                         <span className={`text-xs ${
                           shop.feedStatus === 'COMPLETED' ? 'text-blue-600' :
                           shop.feedStatus === 'FAILED' ? 'text-red-600' :
@@ -409,128 +404,143 @@ export default function ShopsPage() {
 
                     {/* Shop Profile Section */}
                     {shop.isConnected && (
-                      <div className="border-t border-gray-200 pt-4 mb-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-sm font-semibold text-gray-700">Shop Profile</h3>
-                          <button
-                            onClick={() => setModalShop(shop)}
-                            className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                              profileComplete
-                                ? 'text-gray-600 hover:text-gray-900 border border-gray-300 hover:bg-gray-50'
-                                : 'bg-[#FA7315] text-white hover:bg-[#E5650F]'
-                            }`}
-                          >
-                            {profileComplete ? 'Edit' : 'Complete Shop Setup'}
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Store name:</span>{' '}
-                            <span className={shop.sellerName ? 'text-gray-900' : 'text-gray-400'}>
-                              {shop.sellerName || 'Not set'}
-                            </span>
+                      <div className="p-4">
+                        <div className={`rounded-lg p-5 ${
+                          profileComplete
+                            ? 'bg-gray-50 border border-gray-200'
+                            : 'bg-amber-50 border border-amber-400'
+                        }`}>
+                          {/* Warning message - only when incomplete */}
+                          {!profileComplete && (
+                            <div className="flex items-center gap-2 mb-4 text-amber-800">
+                              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              <span className="font-medium">Complete your shop profile to publish to ChatGPT</span>
+                            </div>
+                          )}
+
+                          {/* Fields - stacked vertically */}
+                          <div className="space-y-4">
+                            <div>
+                              <div className="text-sm text-gray-500 mb-1">Store name</div>
+                              <div className={shop.sellerName ? 'text-gray-900' : 'text-gray-400'}>
+                                {shop.sellerName || 'Not set'}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-gray-500 mb-1">Return policy</div>
+                              {shop.returnPolicy ? (
+                                <a
+                                  href={shop.returnPolicy}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#FA7315] hover:text-[#E5650F] underline break-all"
+                                >
+                                  {shop.returnPolicy}
+                                </a>
+                              ) : (
+                                <div className="text-gray-400">Not set</div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="text-sm text-gray-500 mb-1">Return window</div>
+                              <div className={shop.returnWindow ? 'text-gray-900' : 'text-gray-400'}>
+                                {shop.returnWindow ? `${shop.returnWindow} days` : 'Not set'}
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-gray-500">Return policy:</span>{' '}
-                            {shop.returnPolicy ? (
-                              <a
-                                href={shop.returnPolicy}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#FA7315] hover:text-[#E5650F] underline"
+
+                          {/* Button */}
+                          {profileComplete ? (
+                            <div className="mt-4 flex justify-end">
+                              <button
+                                onClick={() => setModalShop(shop)}
+                                className="text-[#FA7315] hover:text-[#E5650F] font-medium text-sm"
                               >
-                                View
-                              </a>
-                            ) : (
-                              <span className="text-gray-400">Not set</span>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Return window:</span>{' '}
-                            <span className={shop.returnWindow ? 'text-gray-900' : 'text-gray-400'}>
-                              {shop.returnWindow ? `${shop.returnWindow} days` : 'Not set'}
-                            </span>
-                          </div>
+                                Edit
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="mt-6 flex justify-center">
+                              <button
+                                onClick={() => setModalShop(shop)}
+                                className="bg-[#FA7315] hover:bg-[#E5650F] text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
+                              >
+                                Complete Shop Setup
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
 
                     {/* Actions Section */}
                     {shop.isConnected && (
-                      <div className="border-t border-gray-200 pt-4 mb-4">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          {profileComplete && (
-                            <button
-                              onClick={() => router.push(`/shops/${shop.id}/setup`)}
-                              className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                              Check Field Mapping
-                            </button>
-                          )}
-                          <button
-                            onClick={() => router.push(`/shops/${shop.id}/products`)}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            View Products
-                          </button>
-                          <button
-                            onClick={() => handleSync(shop.id)}
-                            disabled={!shop.isConnected || triggerSyncMutation.isPending}
-                            className="px-4 py-2 text-sm font-medium bg-[#FA7315] text-white rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            Sync
-                          </button>
-                        </div>
+                      <div className="px-5 py-4 border-t border-gray-200 flex items-center gap-3">
+                        <Link
+                          href={`/shops/${shop.id}/setup`}
+                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                        >
+                          Check Field Mapping
+                        </Link>
+                        <button
+                          onClick={() => handleSync(shop.id)}
+                          disabled={triggerSyncMutation.isPending}
+                          className="px-4 py-2 text-sm font-medium bg-[#FA7315] text-white rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Sync
+                        </button>
                       </div>
                     )}
 
                     {/* Advanced Settings (Collapsible) */}
                     {shop.isConnected && (
-                      <div className="border-t border-gray-200 pt-4">
+                      <div className="border-t border-gray-200">
                         <button
                           onClick={() => toggleAdvanced(shop.id)}
-                          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                          className="w-full px-5 py-4 flex items-center justify-between text-gray-700 hover:bg-gray-50 transition-colors"
                         >
+                          <span className="font-medium text-sm">Advanced settings</span>
                           <svg
-                            className={`w-4 h-4 transition-transform ${isAdvancedExpanded ? 'rotate-180' : ''}`}
+                            className={`w-5 h-5 transition-transform ${isAdvancedExpanded ? 'rotate-180' : ''}`}
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
-                          Advanced settings
                         </button>
 
                         {isAdvancedExpanded && (
-                          <div className="mt-4 space-y-4">
+                          <div className="px-5 pb-5 space-y-4">
                             {/* Privacy Policy */}
                             <div>
-                              <label className="block text-sm text-gray-600 mb-1">Privacy Policy URL</label>
+                              <label className="block text-sm text-gray-500 mb-1">Privacy Policy URL</label>
                               <input
                                 type="url"
                                 value={shop.sellerPrivacyPolicy || ''}
                                 onChange={(e) => handleAdvancedFieldChange(shop.id, 'sellerPrivacyPolicy', e.target.value)}
                                 placeholder="https://..."
-                                className="w-full max-w-md px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
+                                className="w-full max-w-md px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:border-[#FA7315] focus:outline-none focus:ring-1 focus:ring-[#FA7315]/20"
                               />
                             </div>
 
                             {/* Terms of Service */}
                             <div>
-                              <label className="block text-sm text-gray-600 mb-1">Terms of Service URL</label>
+                              <label className="block text-sm text-gray-500 mb-1">Terms of Service URL</label>
                               <input
                                 type="url"
                                 value={shop.sellerTos || ''}
                                 onChange={(e) => handleAdvancedFieldChange(shop.id, 'sellerTos', e.target.value)}
                                 placeholder="https://..."
-                                className="w-full max-w-md px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
+                                className="w-full max-w-md px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:border-[#FA7315] focus:outline-none focus:ring-1 focus:ring-[#FA7315]/20"
                               />
                             </div>
 
                             {/* Auto-sync toggle */}
                             <div className="flex items-center gap-3">
-                              <span className="text-sm text-gray-600">Auto-sync:</span>
+                              <span className="text-sm text-gray-700">Auto-sync:</span>
                               <button
                                 onClick={() => handleToggleSync(shop.id, shop.syncEnabled)}
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -544,7 +554,7 @@ export default function ShopsPage() {
                                   }`}
                                 />
                               </button>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-sm text-gray-500">
                                 {shop.syncEnabled ? 'Enabled (every 15 min)' : 'Disabled'}
                               </span>
                             </div>
@@ -553,12 +563,12 @@ export default function ShopsPage() {
                               <p className="text-xs text-gray-500 italic">Saving...</p>
                             )}
 
-                            {/* Delete button */}
-                            <div className="pt-4 border-t border-gray-200">
+                            {/* Delete Shop */}
+                            <div className="pt-4 mt-4 border-t border-gray-200">
                               <button
                                 onClick={() => handleDeleteShop(shop.id)}
                                 disabled={deleteShopMutation.isPending}
-                                className="text-sm text-red-500 hover:text-red-700 transition-colors"
+                                className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors"
                               >
                                 Delete Shop
                               </button>
@@ -570,7 +580,7 @@ export default function ShopsPage() {
 
                     {/* For non-connected shops, show delete option */}
                     {!shop.isConnected && (
-                      <div className="border-t border-gray-200 pt-4">
+                      <div className="px-5 py-4 border-t border-gray-200">
                         <button
                           onClick={() => handleDeleteShop(shop.id)}
                           disabled={deleteShopMutation.isPending}
