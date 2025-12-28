@@ -47,7 +47,7 @@ function ProgressBar() {
 // WooCommerce Logo Component (links to woocommerce.com)
 function WooCommerceLogo({ className = "h-8" }: { className?: string }) {
   return (
-    <a href="https://woocommerce.com" target="_blank" rel="noopener noreferrer">
+    <a href="https://woocommerce.com" target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
       <img
         src="/logos/woocommerce.png"
         alt="WooCommerce"
@@ -254,75 +254,71 @@ export default function RegisterWelcomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F9FAFB] py-6 lg:py-8 px-2 lg:px-4">
-      <div className="max-w-7xl mx-auto">
+    <main className="min-h-screen bg-[#F9FAFB] py-4 lg:py-6 px-2">
+      <div className="max-w-[1400px] mx-auto">
         {/* Progress Bar */}
-        <div className="mb-6 lg:mb-10">
+        <div className="mb-5 lg:mb-8">
           <ProgressBar />
         </div>
 
         {/* Main Content - 60/40 Split with equal height boxes */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-stretch">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 lg:items-stretch">
           {/* Left Column (60%) - Connection Box */}
-          <div className="w-full lg:w-[58%] bg-white rounded-xl border border-gray-200 shadow-sm p-5 lg:p-8 flex flex-col">
+          <div className="w-full lg:w-[58%] bg-white rounded-xl border border-gray-200 shadow-sm p-5 lg:p-6">
             {/* Headline */}
-            <h1 className="text-2xl lg:text-3xl font-display font-bold text-gray-900 mb-3">
+            <h1 className="text-2xl lg:text-[28px] xl:text-3xl font-display font-bold text-gray-900 mb-2">
               Your products are ready to appear in ChatGPT
             </h1>
 
             {/* Subheadline */}
-            <p className="text-base lg:text-lg text-gray-600 mb-6">
+            <p className="text-base text-gray-600 mb-5">
               Connect your WooCommerce store to showcase your first products in ChatGPT.
             </p>
 
             {/* WooCommerce Header */}
-            <div className="flex items-center gap-4 mb-5">
-              <WooCommerceLogo className="h-10" />
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Securely connect your WooCommerce store
-                </h2>
-              </div>
+            <div className="flex items-center gap-3 mb-4">
+              <WooCommerceLogo className="h-8" />
+              <h2 className="text-base font-semibold text-gray-900">
+                Securely connect your WooCommerce store
+              </h2>
             </div>
 
             {/* Primary CTA */}
             <button
               onClick={openModal}
-              className="w-full bg-[#FA7315] hover:bg-[#E5650F] text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-[#FA7315] hover:bg-[#E5650F] text-white font-medium py-3 px-4 rounded-lg transition-colors mb-5"
             >
               Connect & preview my products
             </button>
 
-            {/* Free Plan Callout - pushed to bottom with flex-grow */}
-            <div className="mt-auto pt-5">
-              <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#FA7315]/20 flex items-center justify-center mt-0.5">
-                    <svg className="w-3.5 h-3.5 text-[#FA7315]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 mb-1">Free plan:</p>
-                    <ul className="text-sm text-gray-600 space-y-0.5">
-                      <li>• Publish up to <strong>5</strong> products</li>
-                      <li>• Full visibility in ChatGPT results</li>
-                      <li>• Upgrade <strong>anytime</strong> to sync more products</li>
-                    </ul>
-                  </div>
+            {/* Free Plan Callout */}
+            <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#FA7315]/20 flex items-center justify-center mt-0.5">
+                  <svg className="w-3.5 h-3.5 text-[#FA7315]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 mb-1">Free plan:</p>
+                  <ul className="text-sm text-gray-600 space-y-0.5">
+                    <li>• Publish up to <strong>5</strong> products</li>
+                    <li>• Full visibility in ChatGPT results</li>
+                    <li>• Upgrade <strong>anytime</strong> to sync more products</li>
+                  </ul>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Right Column (40%) - Preview Box */}
-          <div className="w-full lg:w-[42%] bg-white rounded-xl border border-gray-200 shadow-sm p-5 lg:p-6 flex flex-col">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <div className="w-full lg:w-[42%] bg-white rounded-xl border border-gray-200 shadow-sm p-5 lg:p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">
               How buyers discover your products via AI
             </h2>
 
             {/* Visual Mockup Container */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 flex-grow">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
               {/* User Intent */}
               <div className="flex items-start gap-3 mb-4">
                 <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
