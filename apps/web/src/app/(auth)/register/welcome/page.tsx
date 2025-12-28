@@ -215,16 +215,20 @@ export default function RegisterWelcomePage() {
     setIsLoading(true);
 
     try {
-      // Complete onboarding before connecting store
-      const onboardingResult = await api.completeOnboarding();
-      setUser(onboardingResult.user);
-
+      // First create the shop and get OAuth URL
       const result = await api.createShop({ storeUrl: storeUrl.trim() });
-      // Redirect to WooCommerce OAuth
+
       if (result.authUrl) {
+        // Complete onboarding on server but DON'T update local state
+        // This avoids a race condition where AppLayout redirects to /dashboard
+        // before window.location.href has a chance to execute
+        await api.completeOnboarding();
+        // Redirect to WooCommerce OAuth immediately
         window.location.href = result.authUrl;
       } else {
-        // If no authUrl, shop was created without OAuth (shouldn't happen normally)
+        // No authUrl - complete onboarding and go to dashboard
+        const onboardingResult = await api.completeOnboarding();
+        setUser(onboardingResult.user);
         router.push('/dashboard');
       }
     } catch (err) {

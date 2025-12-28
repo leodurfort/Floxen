@@ -32,11 +32,11 @@ export function Sidebar() {
   // Build nav items based on current shop from URL
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { href: '/shops', label: 'Shops', icon: '🏪' },
     ...(currentShop?.isConnected ? [
       { href: `/shops/${currentShop.id}/setup`, label: 'Setup', icon: '⚙️' },
       { href: `/shops/${currentShop.id}/products`, label: 'Products', icon: '📦' },
     ] : []),
-    { href: '/shops', label: 'Shops', icon: '🏪' },
   ];
 
   return (
@@ -90,8 +90,8 @@ export function Sidebar() {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+      <nav className="flex-1 px-4 overflow-y-auto">
+        {navItems.map((item, index) => {
           // More precise active state matching
           let isActive = false;
           if (item.label === 'Setup') {
@@ -104,18 +104,22 @@ export function Sidebar() {
             isActive = pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/');
           }
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-white/20 text-white'
-                  : 'text-white/80 hover:text-white hover:bg-[#A84E28]'
-              }`}
-            >
-              <span className="text-lg">{item.icon}</span>
-              <span className="text-sm font-medium">{item.label}</span>
-            </Link>
+            <div key={item.href}>
+              {index > 0 && (
+                <div className="mx-2 border-t border-white/20" />
+              )}
+              <Link
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'text-white/80 hover:text-white hover:bg-[#A84E28]'
+                }`}
+              >
+                <span className="text-lg">{item.icon}</span>
+                <span className="text-sm font-medium">{item.label}</span>
+              </Link>
+            </div>
           );
         })}
       </nav>
