@@ -28,15 +28,16 @@ export default function ForgotPasswordResetPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
 
   useEffect(() => {
-    // Redirect if not verified or no code
-    if (!email || !code || !verified) {
+    // Redirect if not verified or no code (but not if we just succeeded)
+    if (!isSuccess && (!email || !code || !verified)) {
       router.push('/forgot-password');
     }
-  }, [email, code, verified, router]);
+  }, [email, code, verified, router, isSuccess]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +57,7 @@ export default function ForgotPasswordResetPage() {
 
     try {
       await api.forgotPasswordReset({ email, code, password });
+      setIsSuccess(true); // Prevent redirect to /forgot-password
       reset(); // Clear forgot password state
       router.push('/login?reset=success');
     } catch (err) {
