@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 interface ShopProfileBannerProps {
   shop: {
+    id?: string;
     sellerName?: string | null;
     returnPolicy?: string | null;
     returnWindow?: number | null;
@@ -29,9 +30,9 @@ export function ShopProfileBanner({ shop, currentPath }: ShopProfileBannerProps)
           Complete your shop profile to publish products to ChatGPT
         </span>
       </div>
-      {showButton && (
+      {showButton && shop.id && (
         <Link
-          href="/shops"
+          href={`/shops?openProfile=${shop.id}`}
           className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
         >
           Complete Setup

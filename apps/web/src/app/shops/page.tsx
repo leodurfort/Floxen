@@ -74,12 +74,27 @@ export default function ShopsPage() {
   const shopIdFromUrl = searchParams.get('shop');
   const isOAuthRedirect = searchParams.get('connected') === 'true';
 
+  // Handle openProfile query param: /shops?openProfile=shopId
+  const openProfileId = searchParams.get('openProfile');
+
   useEffect(() => {
     if (isOAuthRedirect && shopIdFromUrl) {
       router.replace('/shops', { scroll: false });
       setToast({ message: 'Shop connected successfully! Syncing products...', type: 'success' });
     }
   }, [isOAuthRedirect, shopIdFromUrl, router]);
+
+  // Auto-open modal when openProfile param is present
+  useEffect(() => {
+    if (openProfileId && shops.length > 0 && !modalShop) {
+      const shopToOpen = shops.find(s => s.id === openProfileId);
+      if (shopToOpen) {
+        setModalShop(shopToOpen);
+        // Clean up URL
+        router.replace('/shops', { scroll: false });
+      }
+    }
+  }, [openProfileId, shops, modalShop, router]);
 
   // Determine if we need polling
   const hasSyncingShops = shops.some(
