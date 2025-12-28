@@ -26,6 +26,7 @@ export const useAuth = create<AuthState>((set) => ({
   /**
    * Set session after login/register
    * Writes tokens to localStorage (for api.ts) and user to state (for UI)
+   * Also sets hydrated: true since the auth state is now known
    */
   setSession: (user, accessToken, refreshToken) => {
     if (typeof window !== 'undefined') {
@@ -33,7 +34,7 @@ export const useAuth = create<AuthState>((set) => ({
       localStorage.setItem('productsynch.access', accessToken);
       localStorage.setItem('productsynch.refresh', refreshToken);
     }
-    set({ user });
+    set({ user, hydrated: true });
   },
 
   /**
@@ -44,7 +45,7 @@ export const useAuth = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem('productsynch.user', JSON.stringify(user));
     }
-    set({ user });
+    set({ user, hydrated: true });
   },
 
   /**
