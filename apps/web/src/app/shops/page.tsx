@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { Toast } from '@/components/catalog/Toast';
 import { CompleteShopSetupModal } from '@/components/shops/CompleteShopSetupModal';
+import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import type { Shop } from '@productsynch/shared';
 import {
   useShopsQuery,
@@ -33,6 +34,19 @@ function isValidUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+// Format timestamp
+function formatTimestamp(date: string | null | undefined): string {
+  if (!date) return 'Never';
+  return new Date(date).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
 }
 
 export default function ShopsPage() {
@@ -260,9 +274,17 @@ export default function ShopsPage() {
 
   if (!hydrated || !user) return null;
 
+  // Find first shop with incomplete profile for banner
+  const incompleteShop = shops.find(shop => shop.isConnected && !isProfileComplete(shop));
+
   return (
     <div className="p-4">
       <div className="w-full">
+        {/* Banner for incomplete profile - at very top */}
+        {incompleteShop && (
+          <ShopProfileBanner shop={incompleteShop} currentPath="shops" />
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
@@ -356,141 +378,144 @@ export default function ShopsPage() {
 
                 return (
                   <div key={shop.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                    {/* Header Section */}
-                    <div className="p-5 border-b border-gray-200">
-                      <p className="text-lg font-semibold text-gray-900 mb-2">{shop.wooStoreUrl}</p>
-                      <div className="flex items-center flex-wrap gap-2 text-sm">
-                        <span className="text-gray-600">Currency: {shop.shopCurrency || 'N/A'}</span>
-                        <span className="text-gray-300">•</span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            shop.isConnected
-                              ? 'bg-green-50 text-green-700'
-                              : 'bg-yellow-50 text-yellow-700'
-                          }`}
-                        >
-                          {shop.isConnected ? 'Connected' : 'Pending'}
-                        </span>
-                        <span className="text-gray-300">•</span>
-                        <span className={`text-xs ${
+                    {/* Main Card Header */}
+                    <div className="p-5">
+                      {/* Row 1: URL + Connected + Buttons */}
+                      <div className="flex justify-between items-start mb-3">
+                        {/* Left: URL and connected status */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-lg font-semibold text-gray-900">
+                            {shop.wooStoreUrl}
+                          </span>
+                          {shop.isConnected ? (
+                            <span className="text-green-600 font-medium">• Connected ✓</span>
+                          ) : (
+                            <span className="text-yellow-600 font-medium">• Pending</span>
+                          )}
+                        </div>
+
+                        {/* Right: Action buttons */}
+                        {shop.isConnected && (
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                            <Link
+                              href={`/shops/${shop.id}/setup`}
+                              className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                            >
+                              Check Field Mapping
+                            </Link>
+                            <button
+                              onClick={() => handleSync(shop.id)}
+                              disabled={triggerSyncMutation.isPending}
+                              className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Sync
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Row 2: Sync status */}
+                      <div className="text-sm text-gray-600 mb-1">
+                        Sync:{' '}
+                        <span className={`font-medium ${
                           shop.syncStatus === 'COMPLETED' ? 'text-green-600' :
                           shop.syncStatus === 'FAILED' ? 'text-red-600' :
-                          'text-yellow-600'
+                          shop.syncStatus === 'SYNCING' ? 'text-blue-600' :
+                          'text-amber-600'
                         }`}>
-                          Sync: {shop.syncStatus.toLowerCase()}
+                          {shop.syncStatus.toLowerCase()}
                         </span>
-                        <span className="text-gray-300">•</span>
-                        <span className={`text-xs ${
-                          shop.feedStatus === 'COMPLETED' ? 'text-blue-600' :
-                          shop.feedStatus === 'FAILED' ? 'text-red-600' :
-                          'text-yellow-600'
-                        }`}>
-                          Feed: {shop.feedStatus?.toLowerCase() || 'pending'}
-                        </span>
+                        {' '}• Last synced: {formatTimestamp(shop.lastSyncAt)}
                       </div>
-                      {shop.lastSyncAt && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Last synced: {new Date(shop.lastSyncAt).toLocaleString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true
-                          })}
-                        </p>
-                      )}
+
+                      {/* Row 3: Feed status */}
+                      <div className="text-sm text-gray-600">
+                        Feed:{' '}
+                        <span className={`font-medium ${
+                          shop.feedStatus === 'COMPLETED' ? 'text-green-600' :
+                          shop.feedStatus === 'FAILED' ? 'text-red-600' :
+                          shop.feedStatus === 'SYNCING' ? 'text-blue-600' :
+                          'text-amber-600'
+                        }`}>
+                          {shop.feedStatus?.toLowerCase() || 'pending'}
+                        </span>
+                        {' '}• Last published: {formatTimestamp(shop.lastFeedGeneratedAt)}
+                      </div>
                     </div>
 
                     {/* Shop Profile Section */}
                     {shop.isConnected && (
-                      <div className="p-4">
-                        <div className={`rounded-lg p-5 ${
-                          profileComplete
-                            ? 'bg-gray-50 border border-gray-200'
-                            : 'bg-amber-50 border border-amber-400'
-                        }`}>
-                          {/* Warning message - only when incomplete */}
-                          {!profileComplete && (
-                            <div className="flex items-center gap-2 mb-4 text-amber-800">
-                              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                              </svg>
-                              <span className="font-medium">Complete your shop profile to publish to ChatGPT</span>
-                            </div>
-                          )}
-
-                          {/* Fields - stacked vertically */}
-                          <div className="space-y-4">
-                            <div>
-                              <div className="text-sm text-gray-500 mb-1">Store name</div>
-                              <div className={shop.sellerName ? 'text-gray-900' : 'text-gray-400'}>
-                                {shop.sellerName || 'Not set'}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500 mb-1">Return policy</div>
-                              {shop.returnPolicy ? (
-                                <a
-                                  href={shop.returnPolicy}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[#FA7315] hover:text-[#E5650F] underline break-all"
-                                >
-                                  {shop.returnPolicy}
-                                </a>
-                              ) : (
-                                <div className="text-gray-400">Not set</div>
-                              )}
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500 mb-1">Return window</div>
-                              <div className={shop.returnWindow ? 'text-gray-900' : 'text-gray-400'}>
-                                {shop.returnWindow ? `${shop.returnWindow} days` : 'Not set'}
-                              </div>
-                            </div>
+                      <div className={`mx-5 mb-5 rounded-xl p-5 ${
+                        profileComplete
+                          ? 'bg-gray-50 border border-gray-200'
+                          : 'bg-amber-50 border border-amber-400'
+                      }`}>
+                        {/* Header row */}
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center gap-2">
+                            {!profileComplete && (
+                              <>
+                                <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span className="font-medium text-gray-900">
+                                  Complete your shop profile to publish to ChatGPT
+                                </span>
+                              </>
+                            )}
+                            {profileComplete && (
+                              <span className="font-medium text-gray-900">Shop Profile</span>
+                            )}
                           </div>
 
-                          {/* Button */}
+                          {/* Button/Edit link */}
                           {profileComplete ? (
-                            <div className="mt-4 flex justify-end">
-                              <button
-                                onClick={() => setModalShop(shop)}
-                                className="text-[#FA7315] hover:text-[#E5650F] font-medium text-sm"
-                              >
-                                Edit
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => setModalShop(shop)}
+                              className="text-[#FA7315] hover:underline font-medium text-sm"
+                            >
+                              Edit
+                            </button>
                           ) : (
-                            <div className="mt-6 flex justify-center">
-                              <button
-                                onClick={() => setModalShop(shop)}
-                                className="bg-[#FA7315] hover:bg-[#E5650F] text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
-                              >
-                                Complete Shop Setup
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => setModalShop(shop)}
+                              className="bg-[#FA7315] hover:bg-[#E5650F] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                            >
+                              Complete Shop Setup
+                            </button>
                           )}
                         </div>
-                      </div>
-                    )}
 
-                    {/* Actions Section */}
-                    {shop.isConnected && (
-                      <div className="px-5 py-4 border-t border-gray-200 flex items-center gap-3">
-                        <Link
-                          href={`/shops/${shop.id}/setup`}
-                          className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-                        >
-                          Check Field Mapping
-                        </Link>
-                        <button
-                          onClick={() => handleSync(shop.id)}
-                          disabled={triggerSyncMutation.isPending}
-                          className="px-4 py-2 text-sm font-medium bg-[#FA7315] text-white rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Sync
-                        </button>
+                        {/* Fields - stacked vertically */}
+                        <div className="space-y-3">
+                          <div>
+                            <div className="text-sm text-gray-500">Store name</div>
+                            <div className={shop.sellerName ? 'text-gray-900' : 'text-gray-400'}>
+                              {shop.sellerName || 'Not set'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-500">Return policy</div>
+                            {shop.returnPolicy ? (
+                              <a
+                                href={shop.returnPolicy}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#FA7315] hover:text-[#E5650F] underline break-all"
+                              >
+                                {shop.returnPolicy}
+                              </a>
+                            ) : (
+                              <div className="text-gray-400">Not set</div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-500">Return window</div>
+                            <div className={shop.returnWindow ? 'text-gray-900' : 'text-gray-400'}>
+                              {shop.returnWindow ? `${shop.returnWindow} days` : 'Not set'}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
 
