@@ -44,13 +44,13 @@ export function FieldMappingTable({
               <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[30%] min-w-[250px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 OpenAI Field
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[70px] min-w-[70px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[55px] min-w-[55px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 Status
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[180px] min-w-[180px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[145px] min-w-[145px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 WooCommerce Mapping
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[220px] min-w-[220px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[265px] min-w-[265px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 Preview Value
               </th>
             </tr>
@@ -110,9 +110,9 @@ export function FieldMappingTableSkeleton() {
         {/* Header skeleton */}
         <div className="h-12 bg-gray-50 border-b border-gray-200 flex items-center px-4 gap-4">
           <div className="h-3 bg-gray-200 rounded w-[30%]" />
-          <div className="h-3 bg-gray-200 rounded w-[70px]" />
-          <div className="h-3 bg-gray-200 rounded w-[180px]" />
-          <div className="h-3 bg-gray-200 rounded w-[220px]" />
+          <div className="h-3 bg-gray-200 rounded w-[55px]" />
+          <div className="h-3 bg-gray-200 rounded w-[145px]" />
+          <div className="h-3 bg-gray-200 rounded w-[265px]" />
         </div>
 
         {/* Section header skeleton */}
@@ -134,17 +134,17 @@ export function FieldMappingTableSkeleton() {
             </div>
 
             {/* Status column */}
-            <div className="w-[70px] min-w-[70px]">
-              <div className="h-6 bg-gray-200 rounded w-16" />
+            <div className="w-[55px] min-w-[55px]">
+              <div className="h-6 bg-gray-200 rounded w-14" />
             </div>
 
             {/* WooCommerce Mapping column */}
-            <div className="w-[180px] min-w-[180px]">
+            <div className="w-[145px] min-w-[145px]">
               <div className="h-10 bg-gray-200 rounded w-full" />
             </div>
 
             {/* Preview Value column */}
-            <div className="w-[220px] min-w-[220px]">
+            <div className="w-[265px] min-w-[265px]">
               <div className="h-4 bg-gray-200 rounded w-3/4" />
             </div>
           </div>

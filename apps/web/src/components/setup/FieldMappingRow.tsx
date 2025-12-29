@@ -196,7 +196,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
               <span className="text-gray-900 text-sm font-medium truncate">
                 {getLockedFieldDisplay()}
               </span>
-              <span className="text-[#FA7315] text-xs font-medium">i</span>
+              <span className="text-[#FA7315] text-sm font-medium">i</span>
             </div>
           </Tooltip>
         ) : (
@@ -212,7 +212,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
       </td>
 
       {/* Column 4: Preview Value - Fixed width */}
-      <td className="py-4 px-4 w-[220px] max-w-[220px]">
+      <td className="py-4 px-4 w-[265px] max-w-[265px]">
         <Tooltip
           content={previewDisplay !== '-' && previewDisplay.length > 25 ? previewDisplay : null}
           side="top"
