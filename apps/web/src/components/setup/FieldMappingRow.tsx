@@ -45,7 +45,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   // enable_search and enable_checkout are now locked at shop level
   const isNonEditableField = spec.isAutoPopulated || spec.isShopManaged || isLockedField || isEnableSearchField || isEnableCheckoutField;
 
-  const defaultMapping = spec.wooCommerceMapping?.field || null;
+  const defaultMapping = spec.wooCommerceMapping?.field || spec.wooCommerceMapping?.shopField || null;
   const effectiveMapping = (isLockedField ? lockedMappingValue : currentMapping || (spec.isAutoPopulated ? defaultMapping : null)) || null;
 
   // Extract and format preview value
