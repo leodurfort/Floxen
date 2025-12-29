@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, ReactNode } from 'react';
 import { OpenAIFieldSpec, CATEGORY_CONFIG, OpenAIFieldCategory } from '@productsynch/shared';
 import { FieldMappingRow } from './FieldMappingRow';
 import { WooCommerceField } from '@/lib/wooCommerceFields';
@@ -21,6 +21,9 @@ interface FieldMappingTableProps {
   previewShopData: any | null;
   wooFields: WooCommerceField[];
   wooFieldsLoading: boolean;
+  // Toolbar elements
+  searchElement?: ReactNode;
+  productSelectorElement?: ReactNode;
 }
 
 export function FieldMappingTable({
@@ -32,9 +35,27 @@ export function FieldMappingTable({
   previewShopData,
   wooFields,
   wooFieldsLoading,
+  searchElement,
+  productSelectorElement,
 }: FieldMappingTableProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {/* Toolbar Row - inside container for perfect alignment */}
+      {(searchElement || productSelectorElement) && (
+        <div
+          className="grid items-center py-3 border-b border-gray-200 bg-white"
+          style={{ gridTemplateColumns: 'minmax(250px, 30%) 55px 145px 265px' }}
+        >
+          {/* Column 1: Search bar */}
+          <div className="px-4">{searchElement}</div>
+          {/* Column 2: Empty (Status) */}
+          <div />
+          {/* Column 3: Empty (WooCommerce Mapping) */}
+          <div />
+          {/* Column 4: Product Selector */}
+          <div className="px-4">{productSelectorElement}</div>
+        </div>
+      )}
       {/* Scrollable table container - both horizontal and vertical */}
       <div className="overflow-auto max-h-[calc(100vh-280px)]">
         <table className="w-full field-mapping-table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>

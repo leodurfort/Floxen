@@ -303,59 +303,7 @@ export default function SetupPage() {
             </div>
           </div>
 
-          {/* Search and Product Selector Row - Grid matches table columns */}
-          <div
-            className="grid items-center mb-6"
-            style={{ gridTemplateColumns: 'minmax(250px, 30%) 55px 145px 265px' }}
-          >
-            {/* Column 1: Search bar */}
-            <div className="relative px-4">
-              <svg
-                className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search fields..."
-                className="w-64 pl-9 pr-4 py-2 bg-white text-gray-900 text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] placeholder-gray-400"
-              />
-            </div>
-            {/* Column 2: Empty (Status) */}
-            <div />
-            {/* Column 3: Empty (WooCommerce Mapping) */}
-            <div />
-            {/* Column 4: Preview Data dropdown (matches Preview Value) */}
-            <div className="px-4">
-              {productsError ? (
-                <div className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                  {productsError}
-                </div>
-              ) : productsLoading ? (
-                <div className="w-full px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
-                  Loading products...
-                </div>
-              ) : (
-                <ProductSelector
-                  products={products}
-                  value={selectedProductId}
-                  onChange={setSelectedProductId}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Field Mapping Table */}
+          {/* Field Mapping Table with integrated toolbar */}
           {categories.length > 0 ? (
             <FieldMappingTable
               categories={categories}
@@ -366,6 +314,47 @@ export default function SetupPage() {
               previewShopData={previewShopData}
               wooFields={wooFields}
               wooFieldsLoading={wooFieldsLoading}
+              searchElement={
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search fields..."
+                    className="w-64 pl-9 pr-4 py-2 bg-gray-50 text-gray-900 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-[#FA7315] placeholder-gray-400"
+                  />
+                </div>
+              }
+              productSelectorElement={
+                productsError ? (
+                  <div className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    {productsError}
+                  </div>
+                ) : productsLoading ? (
+                  <div className="w-full px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
+                    Loading products...
+                  </div>
+                ) : (
+                  <ProductSelector
+                    products={products}
+                    value={selectedProductId}
+                    onChange={setSelectedProductId}
+                  />
+                )
+              }
             />
           ) : (
             <div className="text-center py-12 text-gray-500 bg-white rounded-lg border border-gray-200">
