@@ -132,7 +132,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
   };
 
   return (
-    <tr className="border-b border-gray-200 hover:bg-gray-50 align-top">
+    <tr className="border-b border-gray-200 hover:bg-gray-50 align-middle">
       {/* Column 1: OpenAI Field Info */}
       <td className="py-4 px-4">
         <div className="flex flex-col gap-1">
