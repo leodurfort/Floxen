@@ -40,27 +40,25 @@ export function FieldMappingTable({
 }: FieldMappingTableProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      {/* Toolbar Row - inside container for perfect alignment */}
-      {(searchElement || productSelectorElement) && (
-        <div
-          className="grid items-center py-3 border-b border-gray-200 bg-white"
-          style={{ gridTemplateColumns: 'minmax(250px, 30%) 55px 145px 265px' }}
-        >
-          {/* Column 1: Search bar */}
-          <div className="px-4">{searchElement}</div>
-          {/* Column 2: Empty (Status) */}
-          <div />
-          {/* Column 3: Empty (WooCommerce Mapping) */}
-          <div />
-          {/* Column 4: Product Selector */}
-          <div className="px-4">{productSelectorElement}</div>
-        </div>
-      )}
       {/* Scrollable table container - both horizontal and vertical */}
       <div className="overflow-auto max-h-[calc(100vh-280px)]">
         <table className="w-full field-mapping-table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-          {/* Column Headers - Sticky */}
+          {/* Toolbar Row + Column Headers - both in thead for perfect alignment */}
           <thead>
+            {/* Toolbar Row - uses same column widths as table */}
+            {(searchElement || productSelectorElement) && (
+              <tr className="bg-white">
+                <th className="text-left py-3 px-4 w-[30%] min-w-[250px] border-b border-gray-200 font-normal">
+                  {searchElement}
+                </th>
+                <th className="py-3 px-4 w-[55px] min-w-[55px] border-b border-gray-200" />
+                <th className="py-3 px-4 w-[145px] min-w-[145px] border-b border-gray-200" />
+                <th className="text-left py-3 px-4 w-[265px] min-w-[265px] border-b border-gray-200 font-normal">
+                  {productSelectorElement}
+                </th>
+              </tr>
+            )}
+            {/* Column Headers */}
             <tr className="bg-gray-50">
               <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[30%] min-w-[250px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 OpenAI Field
