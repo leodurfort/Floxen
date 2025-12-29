@@ -304,10 +304,10 @@ export default function SetupPage() {
           </div>
 
           {/* Search and Product Selector Row */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
             <div className="relative">
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -327,16 +327,14 @@ export default function SetupPage() {
                 className="w-64 pl-9 pr-4 py-2 bg-white text-gray-900 text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] placeholder-gray-400"
               />
             </div>
-            <div className="sm:w-72">
-              <label className="block text-xs text-gray-500 mb-1">
-                Preview Data <span className="text-gray-400">(Excludes custom product matching)</span>
-              </label>
+            <div className="flex-1" />
+            <div className="w-[265px]">
               {productsError ? (
-                <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <div className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                   {productsError}
                 </div>
               ) : productsLoading ? (
-                <div className="px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
+                <div className="w-full px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
                   Loading products...
                 </div>
               ) : (
