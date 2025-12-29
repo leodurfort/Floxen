@@ -219,10 +219,12 @@ export default function RegisterWelcomePage() {
       const result = await api.createShop({ storeUrl: storeUrl.trim() });
 
       if (result.authUrl) {
-        // Complete onboarding on server but DON'T update local state
-        // This avoids a race condition where AppLayout redirects to /dashboard
-        // before window.location.href has a chance to execute
-        await api.completeOnboarding();
+        // Complete onboarding on server
+        const onboardingResult = await api.completeOnboarding();
+        // Update localStorage directly (not React state) to avoid race condition
+        // where AppLayout redirects to /dashboard before window.location.href executes.
+        // When user returns from OAuth, hydrate() will read the correct onboardingComplete: true
+        localStorage.setItem('productsynch.user', JSON.stringify(onboardingResult.user));
         // Redirect to WooCommerce OAuth immediately
         window.location.href = result.authUrl;
       } else {
