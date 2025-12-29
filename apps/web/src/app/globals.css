@@ -212,17 +212,27 @@ textarea::placeholder {
   border-spacing: 0;
 }
 
-.field-mapping-table thead th {
+/* Toolbar row - sticky at very top with highest z-index */
+.field-mapping-table .toolbar-row th {
   position: sticky;
   top: 0;
+  z-index: 30;
+  background: #FFFFFF;
+}
+
+/* Column headers row - sticky below toolbar */
+.field-mapping-table .column-headers th {
+  position: sticky;
+  top: 49px;
   z-index: 20;
   background: #F9FAFB;
   border-bottom: 1px solid #E5E7EB;
 }
 
+/* Section headers - sticky below both toolbar and column headers */
 .field-mapping-table .section-header td {
   position: sticky;
-  top: 48px; /* Height of column header row */
+  top: 90px;
   z-index: 10;
   background: #F3F4F6;
 }
