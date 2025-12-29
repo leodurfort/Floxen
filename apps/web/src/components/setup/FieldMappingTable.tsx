@@ -45,31 +45,31 @@ export function FieldMappingTable({
         <table className="w-full field-mapping-table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
           {/* Toolbar Row + Column Headers - both in thead for perfect alignment */}
           <thead>
-            {/* Toolbar Row - uses same column widths as table */}
+            {/* Toolbar Row - sticky at top */}
             {(searchElement || productSelectorElement) && (
-              <tr className="bg-white">
-                <th className="text-left py-3 px-4 w-[30%] min-w-[250px] border-b border-gray-200 font-normal">
+              <tr className="toolbar-row">
+                <th className="text-left py-3 px-4 w-[30%] min-w-[250px] border-b border-gray-200 font-normal sticky top-0 z-30 bg-white">
                   {searchElement}
                 </th>
-                <th className="py-3 px-4 w-[55px] min-w-[55px] border-b border-gray-200" />
-                <th className="py-3 px-4 w-[145px] min-w-[145px] border-b border-gray-200" />
-                <th className="text-left py-3 px-4 w-[265px] min-w-[265px] border-b border-gray-200 font-normal">
+                <th className="py-3 px-4 w-[55px] min-w-[55px] border-b border-gray-200 sticky top-0 z-30 bg-white" />
+                <th className="py-3 px-4 w-[145px] min-w-[145px] border-b border-gray-200 sticky top-0 z-30 bg-white" />
+                <th className="text-left py-3 px-4 w-[265px] min-w-[265px] border-b border-gray-200 font-normal sticky top-0 z-30 bg-white">
                   {productSelectorElement}
                 </th>
               </tr>
             )}
-            {/* Column Headers */}
-            <tr className="bg-gray-50">
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[30%] min-w-[250px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+            {/* Column Headers - sticky below toolbar */}
+            <tr className="column-headers">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[30%] min-w-[250px] sticky z-20 bg-gray-50 border-b border-gray-200" style={{ top: '49px' }}>
                 OpenAI Field
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[55px] min-w-[55px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[55px] min-w-[55px] sticky z-20 bg-gray-50 border-b border-gray-200" style={{ top: '49px' }}>
                 Status
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[145px] min-w-[145px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[145px] min-w-[145px] sticky z-20 bg-gray-50 border-b border-gray-200" style={{ top: '49px' }}>
                 WooCommerce Mapping
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[265px] min-w-[265px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[265px] min-w-[265px] sticky z-20 bg-gray-50 border-b border-gray-200" style={{ top: '49px' }}>
                 Preview Value
               </th>
             </tr>
@@ -78,12 +78,12 @@ export function FieldMappingTable({
           <tbody>
             {categories.map((category) => (
               <Fragment key={category.id}>
-                {/* Section Header Row - Sticky below column headers */}
+                {/* Section Header Row - Sticky below toolbar + column headers */}
                 <tr className="section-header">
                   <td
                     colSpan={4}
                     className="py-2 px-4 bg-gray-100 border-b border-gray-200 sticky z-10"
-                    style={{ top: '41px' }}
+                    style={{ top: '90px' }}
                   >
                     <div className="flex items-center gap-3">
                       <h3 className="text-sm font-semibold text-gray-900">
