@@ -3,10 +3,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
-import { FieldMappingRow } from '@/components/setup/FieldMappingRow';
+import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS, OpenAIFieldCategory } from '@productsynch/shared';
 import { ProductSelector } from '@/components/setup/ProductSelector';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
+import { FieldMappingTable, FieldMappingTableSkeleton } from '@/components/setup/FieldMappingTable';
 import { useFieldMappingsQuery, useUpdateFieldMappingsMutation } from '@/hooks/useFieldMappingsQuery';
 import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
 import { useProductsQuery } from '@/hooks/useProductsQuery';
@@ -154,12 +154,13 @@ export default function SetupPage() {
     setPendingChange(null);
   }
 
-  // Filter fields based on search
+  // Filter fields based on search - now includes example
   const filteredSpecs = searchQuery
     ? OPENAI_FEED_SPEC.filter(
         (spec) =>
           spec.attribute.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          spec.description.toLowerCase().includes(searchQuery.toLowerCase())
+          spec.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (spec.example && spec.example.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : OPENAI_FEED_SPEC;
 
@@ -173,7 +174,7 @@ export default function SetupPage() {
   // Group by category
   const categories = Object.entries(CATEGORY_CONFIG)
     .map(([id, config]) => ({
-      id: id as any,
+      id: id as OpenAIFieldCategory,
       label: config.label,
       order: config.order,
       fields: filteredSpecs.filter((spec) => spec.category === id),
@@ -181,10 +182,42 @@ export default function SetupPage() {
     .filter((cat) => cat.fields.length > 0)
     .sort((a, b) => a.order - b.order);
 
+  // Loading state with skeleton
   if (loading || wooFieldsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#F9FAFB]">
-        <div className="text-gray-500">Loading field mappings...</div>
+      <div className="min-h-screen bg-[#F9FAFB]">
+        <div className="p-4">
+          <div className="w-full">
+            {/* Shop Profile Banner skeleton */}
+            <div className="animate-pulse mb-6">
+              <div className="h-16 bg-gray-200 rounded-lg" />
+            </div>
+
+            {/* Header skeleton */}
+            <div className="mb-6 animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-64 mb-2" />
+              <div className="h-4 bg-gray-200 rounded w-96 mb-4" />
+
+              {/* Status badges skeleton */}
+              <div className="flex gap-4 mt-4">
+                <div className="h-8 bg-gray-200 rounded w-44" />
+                <div className="h-8 bg-gray-200 rounded w-40" />
+              </div>
+            </div>
+
+            {/* Search and selector row skeleton */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6 animate-pulse">
+              <div className="flex-1 h-12 bg-gray-200 rounded-lg" />
+              <div className="sm:w-72 space-y-1">
+                <div className="h-4 bg-gray-200 rounded w-20" />
+                <div className="h-10 bg-gray-200 rounded-lg" />
+              </div>
+            </div>
+
+            {/* Table skeleton */}
+            <FieldMappingTableSkeleton />
+          </div>
+        </div>
       </div>
     );
   }
@@ -215,8 +248,8 @@ export default function SetupPage() {
           )}
 
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Field Mapping Setup</h1>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Field Mapping Setup</h1>
             <p className="text-gray-600">
               Map OpenAI feed attributes to your WooCommerce product fields. Changes save automatically.
             </p>
@@ -228,7 +261,7 @@ export default function SetupPage() {
             {saveError && (
               <div className="mt-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <span className="text-red-600 text-lg">⚠️</span>
+                  <span className="text-red-600 text-lg">!</span>
                   <div>
                     <div className="text-sm font-medium text-red-700">Failed to save changes</div>
                     <div className="text-xs text-red-600 mt-0.5">{saveError}</div>
@@ -236,61 +269,55 @@ export default function SetupPage() {
                 </div>
               </div>
             )}
-            {/* Required Fields Counter */}
-            <div className="mt-4 flex items-center gap-4 text-sm">
+
+            {/* Status Badges Row */}
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
               <div
-                className={`px-3 py-1.5 rounded-lg border ${
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
                   allRequiredFieldsMapped
                     ? 'bg-green-50 border-green-200'
                     : 'bg-amber-50 border-amber-200'
                 }`}
               >
                 <span className={allRequiredFieldsMapped ? 'text-green-700' : 'text-amber-700'}>
-                  {allRequiredFieldsMapped ? '✓' : '⚠️'} Required Fields: {' '}
+                  {allRequiredFieldsMapped ? 'v' : '!'} Required Fields:{' '}
                   <span className="font-medium">{requiredFieldsMapped}</span>
                   <span className="opacity-60"> / {totalRequiredFields}</span>
                 </span>
                 {!allRequiredFieldsMapped && (
-                  <span className="ml-2 text-xs text-amber-600">
+                  <span className="text-xs text-amber-600">
                     ({totalRequiredFields - requiredFieldsMapped} missing)
                   </span>
                 )}
               </div>
               {previewProductJson && (
-                <div className="px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
-                  <span className="text-green-700">✓ Preview data loaded</span>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
+                  <span className="text-green-700">v Preview data loaded</span>
+                </div>
+              )}
+              {loadingPreview && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
+                  <span className="text-gray-500">Loading preview...</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="mb-6">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search fields by name or description..."
-              className="w-full px-4 py-3 bg-white text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10"
-            />
-          </div>
-
-          {/* Column Headers */}
-          <div className="grid grid-cols-[1fr_280px_1fr] gap-6 mb-6 pb-4 border-b border-gray-200">
-            <div className="text-sm font-semibold text-gray-700">
-              OpenAI Attribute
+          {/* Search and Product Selector Row */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search fields by name, description, or example..."
+                className="w-full px-4 py-3 bg-white text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10"
+              />
             </div>
-            <div className="text-sm font-semibold text-gray-700">
-              WooCommerce Field
-            </div>
-            <div className="text-sm font-semibold text-gray-700">
-              <div className="mb-2 flex items-center gap-2">
-                Preview Data
-                <span className="text-xs font-normal text-gray-500">(Excludes custom product matching)</span>
-                {loadingPreview && (
-                  <span className="text-xs text-[#FA7315]">Loading...</span>
-                )}
-              </div>
+            <div className="sm:w-72">
+              <label className="block text-xs text-gray-500 mb-1">
+                Preview Data <span className="text-gray-400">(Excludes custom product matching)</span>
+              </label>
               {productsError ? (
                 <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                   {productsError}
@@ -309,38 +336,20 @@ export default function SetupPage() {
             </div>
           </div>
 
-          {/* Field Mappings - One Continuous List */}
-          <div>
-            {categories.map((category) => (
-              <div key={category.id} className="mb-8">
-                {/* Category Header */}
-                <div className="mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">{category.label}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{category.fields.length} fields</p>
-                </div>
-
-                {/* Field Rows */}
-                <div>
-                  {category.fields.map((spec) => (
-                    <FieldMappingRow
-                      key={spec.attribute}
-                      spec={spec}
-                      currentMapping={mappings[spec.attribute] || null}
-                      isUserSelected={spec.attribute in userMappings}
-                      onMappingChange={handleMappingChange}
-                      previewProductJson={previewProductJson}
-                      previewShopData={previewShopData}
-                      wooFields={wooFields}
-                      wooFieldsLoading={wooFieldsLoading}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {filteredSpecs.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+          {/* Field Mapping Table */}
+          {categories.length > 0 ? (
+            <FieldMappingTable
+              categories={categories}
+              mappings={mappings}
+              userMappings={userMappings}
+              onMappingChange={handleMappingChange}
+              previewProductJson={previewProductJson}
+              previewShopData={previewShopData}
+              wooFields={wooFields}
+              wooFieldsLoading={wooFieldsLoading}
+            />
+          ) : (
+            <div className="text-center py-12 text-gray-500 bg-white rounded-lg border border-gray-200">
               No fields match your search.
             </div>
           )}

@@ -205,3 +205,71 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 }
+
+/* Field Mapping Table - Sticky Headers */
+.field-mapping-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.field-mapping-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #F9FAFB;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.field-mapping-table .section-header td {
+  position: sticky;
+  top: 48px; /* Height of column header row */
+  z-index: 10;
+  background: #F3F4F6;
+}
+
+/* Radix Tooltip Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.animate-in {
+  animation: fadeIn 0.15s ease-out;
+}
+
+.fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+
+.zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+
+[data-state="closed"].animate-out {
+  animation: fadeOut 0.1s ease-in;
+}
+
+.fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+
+.zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
