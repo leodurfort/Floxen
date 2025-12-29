@@ -51,7 +51,7 @@ export function ProductSelector({ products, value, onChange }: Props) {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2 text-left bg-white hover:bg-gray-50 rounded-lg border border-gray-300 transition-colors flex items-center justify-between"
+        className="w-full px-4 py-2 text-left bg-white hover:bg-gray-50 rounded-lg border border-[#FA7315] transition-colors flex items-center justify-between"
       >
         <span className="text-sm text-gray-900 truncate">
           {selectedProduct ? getProductName(selectedProduct) : 'Select product for preview...'}

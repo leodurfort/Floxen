@@ -41,7 +41,7 @@ export function FieldMappingTable({
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       {/* Scrollable table container - both horizontal and vertical */}
-      <div className="overflow-auto max-h-[calc(100vh-280px)]">
+      <div className="overflow-auto max-h-[calc(100vh-180px)]">
         <table className="w-full field-mapping-table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
           {/* Toolbar Row + Column Headers - both in thead for perfect alignment */}
           <thead>
