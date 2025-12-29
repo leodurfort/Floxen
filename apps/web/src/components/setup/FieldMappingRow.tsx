@@ -86,6 +86,8 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     if (isEnableCheckoutField) return 'Disabled';
     if (spec.isAutoPopulated) return 'Auto-populated';
     if (isLockedField) return effectiveMapping || 'Locked';
+    // For shop-managed fields, show the default mapping value
+    if (spec.isShopManaged && defaultMapping) return defaultMapping;
     return 'Managed in Shops page';
   };
 
