@@ -20,10 +20,10 @@ interface Props {
 // Status badge component
 function StatusBadge({ status }: { status: 'Required' | 'Recommended' | 'Optional' | 'Conditional' }) {
   const styles = {
-    Required: 'bg-red-50 text-red-600 border-red-200',
-    Recommended: 'bg-amber-50 text-amber-600 border-amber-200',
-    Optional: 'bg-blue-50 text-blue-600 border-blue-200',
-    Conditional: 'bg-purple-50 text-purple-600 border-purple-200',
+    Required: 'bg-red-100 text-red-700 border-red-300',
+    Recommended: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    Optional: 'bg-blue-100 text-blue-700 border-blue-300',
+    Conditional: 'bg-purple-100 text-purple-700 border-purple-300',
   };
 
   return (
@@ -211,15 +211,15 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
         )}
       </td>
 
-      {/* Column 4: Preview Value */}
-      <td className="py-4 px-4">
+      {/* Column 4: Preview Value - Fixed width */}
+      <td className="py-4 px-4 w-[180px] max-w-[180px]">
         <Tooltip
-          content={previewDisplay !== '-' && previewDisplay.length > 30 ? previewDisplay : null}
+          content={previewDisplay !== '-' && previewDisplay.length > 20 ? previewDisplay : null}
           side="top"
           maxWidth={400}
         >
           <div
-            className={`px-4 py-2.5 bg-gray-50 rounded-lg border border-gray-200 text-sm ${previewStyle} truncate cursor-default`}
+            className={`px-3 py-2.5 bg-gray-50 rounded-lg border border-gray-200 text-sm ${previewStyle} truncate cursor-default max-w-full overflow-hidden`}
           >
             {previewDisplay}
           </div>

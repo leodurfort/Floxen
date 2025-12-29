@@ -36,11 +36,11 @@ export function Tooltip({
             side={side}
             align={align}
             sideOffset={5}
-            className="z-50 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+            className="z-50 px-3 py-2 text-sm bg-[#FFF7ED] text-[#9A3412] border border-[#FDBA74] rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
             style={{ maxWidth }}
           >
             {content}
-            <TooltipPrimitive.Arrow className="fill-gray-900" />
+            <TooltipPrimitive.Arrow className="fill-[#FFF7ED]" />
           </TooltipPrimitive.Content>
         </TooltipPrimitive.Portal>
       </TooltipPrimitive.Root>

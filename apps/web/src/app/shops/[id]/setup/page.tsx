@@ -280,7 +280,7 @@ export default function SetupPage() {
                 }`}
               >
                 <span className={allRequiredFieldsMapped ? 'text-green-700' : 'text-amber-700'}>
-                  {allRequiredFieldsMapped ? 'v' : '!'} Required Fields:{' '}
+                  {allRequiredFieldsMapped ? '✓' : '⚠️'} Required Fields:{' '}
                   <span className="font-medium">{requiredFieldsMapped}</span>
                   <span className="opacity-60"> / {totalRequiredFields}</span>
                 </span>
@@ -292,7 +292,7 @@ export default function SetupPage() {
               </div>
               {previewProductJson && (
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
-                  <span className="text-green-700">v Preview data loaded</span>
+                  <span className="text-green-700">✓ Preview data loaded</span>
                 </div>
               )}
               {loadingPreview && (

@@ -35,21 +35,22 @@ export function FieldMappingTable({
 }: FieldMappingTableProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full field-mapping-table">
+      {/* Scrollable table container - both horizontal and vertical */}
+      <div className="overflow-auto max-h-[calc(100vh-280px)]">
+        <table className="w-full field-mapping-table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
           {/* Column Headers - Sticky */}
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[30%] min-w-[250px] sticky top-0 z-20 bg-gray-50">
+            <tr className="bg-gray-50">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[30%] min-w-[250px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 OpenAI Field
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[100px] min-w-[100px] sticky top-0 z-20 bg-gray-50">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[100px] min-w-[100px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 Status
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[25%] min-w-[200px] sticky top-0 z-20 bg-gray-50">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[200px] min-w-[200px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 WooCommerce Mapping
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide min-w-[150px] sticky top-0 z-20 bg-gray-50">
+              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[180px] min-w-[180px] sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
                 Preview Value
               </th>
             </tr>
@@ -62,8 +63,8 @@ export function FieldMappingTable({
                 <tr className="section-header">
                   <td
                     colSpan={4}
-                    className="py-3 px-4 bg-gray-100 border-b border-gray-200 sticky z-10"
-                    style={{ top: '48px' }}
+                    className="py-3 px-4 bg-gray-100 border-b border-gray-200 sticky z-10 bg-gray-100"
+                    style={{ top: '45px' }}
                   >
                     <div className="flex items-center gap-3">
                       <h3 className="text-sm font-semibold text-gray-900">
@@ -110,8 +111,8 @@ export function FieldMappingTableSkeleton() {
         <div className="h-12 bg-gray-50 border-b border-gray-200 flex items-center px-4 gap-4">
           <div className="h-3 bg-gray-200 rounded w-[30%]" />
           <div className="h-3 bg-gray-200 rounded w-[100px]" />
-          <div className="h-3 bg-gray-200 rounded w-[25%]" />
-          <div className="h-3 bg-gray-200 rounded flex-1" />
+          <div className="h-3 bg-gray-200 rounded w-[200px]" />
+          <div className="h-3 bg-gray-200 rounded w-[180px]" />
         </div>
 
         {/* Section header skeleton */}
@@ -138,12 +139,12 @@ export function FieldMappingTableSkeleton() {
             </div>
 
             {/* WooCommerce Mapping column */}
-            <div className="w-[25%] min-w-[200px]">
+            <div className="w-[200px] min-w-[200px]">
               <div className="h-10 bg-gray-200 rounded w-full" />
             </div>
 
             {/* Preview Value column */}
-            <div className="flex-1 min-w-[150px]">
+            <div className="w-[180px] min-w-[180px]">
               <div className="h-4 bg-gray-200 rounded w-3/4" />
             </div>
           </div>
