@@ -9,8 +9,9 @@ import {
   CATEGORY_CONFIG,
   ProductFieldOverride,
   ProductFieldOverrides,
+  OpenAIFieldCategory,
 } from '@productsynch/shared';
-import { ProductFieldMappingRow } from '@/components/setup/ProductFieldMappingRow';
+import { ProductFieldMappingTable, ProductFieldMappingTableSkeleton } from '@/components/setup/ProductFieldMappingTable';
 import { useFieldMappingsQuery, useProductOverridesQuery, useUpdateProductOverridesMutation, useUpdateFeedEnableSearchMutation } from '@/hooks/useFieldMappingsQuery';
 import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
 
@@ -123,19 +124,20 @@ export default function ProductMappingPage() {
     [updateEnableSearchMutation]
   );
 
-  // Filter specs based on search
+  // Filter specs based on search (includes example field)
   const filteredSpecs = searchQuery
     ? OPENAI_FEED_SPEC.filter(
         (spec) =>
           spec.attribute.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          spec.description.toLowerCase().includes(searchQuery.toLowerCase())
+          spec.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (spec.example && spec.example.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : OPENAI_FEED_SPEC;
 
   // Group by category
   const categories = Object.entries(CATEGORY_CONFIG)
     .map(([id, config]) => ({
-      id: id as any,
+      id: id as OpenAIFieldCategory,
       label: config.label,
       order: config.order,
       fields: filteredSpecs.filter((spec) => spec.category === id),
@@ -148,8 +150,24 @@ export default function ProductMappingPage() {
 
   if (loading || shopMappingsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#F9FAFB]">
-        <div className="text-gray-500">Loading product mappings...</div>
+      <div className="min-h-screen bg-[#F9FAFB]">
+        <div className="p-4">
+          <div className="w-full">
+            {/* Breadcrumb skeleton */}
+            <div className="mb-4">
+              <div className="h-4 bg-gray-200 rounded w-32 animate-pulse" />
+            </div>
+
+            {/* Header skeleton */}
+            <div className="mb-8">
+              <div className="h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse" />
+              <div className="h-4 bg-gray-200 rounded w-96 animate-pulse" />
+            </div>
+
+            {/* Table skeleton */}
+            <ProductFieldMappingTableSkeleton />
+          </div>
+        </div>
       </div>
     );
   }
@@ -243,58 +261,31 @@ export default function ProductMappingPage() {
             )}
           </div>
 
-          {/* Search Bar */}
-          <div className="mb-6">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search fields by name or description..."
-              className="w-full px-4 py-3 bg-white text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10"
-            />
-          </div>
-
-          {/* Column Headers */}
-          <div className="grid grid-cols-[1fr_280px_1fr] gap-6 mb-6 pb-4 border-b border-gray-200">
-            <div className="text-sm font-semibold text-gray-700">OpenAI Attribute</div>
-            <div className="text-sm font-semibold text-gray-700">Mapping Source</div>
-            <div className="text-sm font-semibold text-gray-700">Resolved Value</div>
-          </div>
-
-          {/* Field Mappings */}
-          <div>
-            {categories.map((category) => (
-              <div key={category.id} className="mb-8">
-                {/* Category Header */}
-                <div className="mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">{category.label}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{category.fields.length} fields</p>
-                </div>
-
-                {/* Field Rows */}
-                <div>
-                  {category.fields.map((spec) => (
-                    <ProductFieldMappingRow
-                      key={spec.attribute}
-                      spec={spec}
-                      shopMapping={shopMappings[spec.attribute] || null}
-                      productOverride={productOverrides[spec.attribute] || null}
-                      onOverrideChange={handleOverrideChange}
-                      previewProductJson={previewProductJson}
-                      previewShopData={previewShopData}
-                      previewValue={resolvedValues[spec.attribute]}
-                      wooFields={wooFields}
-                      wooFieldsLoading={wooFieldsLoading}
-                      serverValidationErrors={overridesData?.validationErrors?.[spec.attribute] || null}
-                      feedEnableSearch={overridesData?.feedEnableSearch}
-                      onEnableSearchChange={handleEnableSearchChange}
-                      shopDefaultEnableSearch={overridesData?.shopDefaultEnableSearch}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Field Mappings Table */}
+          <ProductFieldMappingTable
+            categories={categories}
+            shopMappings={shopMappings}
+            productOverrides={productOverrides}
+            resolvedValues={resolvedValues}
+            onOverrideChange={handleOverrideChange}
+            onEnableSearchChange={handleEnableSearchChange}
+            previewProductJson={previewProductJson}
+            previewShopData={previewShopData}
+            wooFields={wooFields}
+            wooFieldsLoading={wooFieldsLoading}
+            feedEnableSearch={overridesData?.feedEnableSearch}
+            shopDefaultEnableSearch={overridesData?.shopDefaultEnableSearch}
+            validationErrors={overridesData?.validationErrors ?? undefined}
+            searchElement={
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search fields by name, description, or example..."
+                className="w-full max-w-md px-4 py-2 bg-gray-50 text-gray-900 rounded-lg border border-gray-200 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10 text-sm"
+              />
+            }
+          />
 
           {filteredSpecs.length === 0 && (
             <div className="text-center py-12 text-gray-500">
