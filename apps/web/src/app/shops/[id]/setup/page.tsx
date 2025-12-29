@@ -303,11 +303,15 @@ export default function SetupPage() {
             </div>
           </div>
 
-          {/* Search and Product Selector Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-            <div className="relative">
+          {/* Search and Product Selector Row - Grid matches table columns */}
+          <div
+            className="grid items-center mb-6"
+            style={{ gridTemplateColumns: 'minmax(250px, 30%) 55px 145px 265px' }}
+          >
+            {/* Column 1: Search bar */}
+            <div className="relative px-4">
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -327,8 +331,12 @@ export default function SetupPage() {
                 className="w-64 pl-9 pr-4 py-2 bg-white text-gray-900 text-sm rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] placeholder-gray-400"
               />
             </div>
-            <div className="flex-1" />
-            <div className="w-[265px]">
+            {/* Column 2: Empty (Status) */}
+            <div />
+            {/* Column 3: Empty (WooCommerce Mapping) */}
+            <div />
+            {/* Column 4: Preview Data dropdown (matches Preview Value) */}
+            <div className="px-4">
               {productsError ? (
                 <div className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                   {productsError}
