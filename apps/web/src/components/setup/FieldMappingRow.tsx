@@ -161,10 +161,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
                 content={
                   <div>
                     <div className="font-semibold text-amber-600 mb-1">Conditional Field</div>
-                    <div>
-                      <span className="text-gray-400">Required when: </span>
-                      {spec.dependencies}
-                    </div>
+                    <div>{spec.dependencies}</div>
                   </div>
                 }
                 side="right"
