@@ -151,7 +151,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
                 }
                 side="right"
               >
-                <span className="text-gray-500 cursor-help text-sm">i</span>
+                <span className="text-[#FA7315] cursor-help text-sm font-medium">i</span>
               </Tooltip>
             )}
 
@@ -169,7 +169,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
                 }
                 side="right"
               >
-                <span className="text-amber-500 cursor-help text-sm">i</span>
+                <span className="text-[#FA7315] cursor-help text-sm font-medium">i</span>
               </Tooltip>
             )}
           </div>
@@ -196,7 +196,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
               <span className="text-gray-900 text-sm font-medium truncate">
                 {getLockedFieldDisplay()}
               </span>
-              <span className="text-gray-400 text-xs">i</span>
+              <span className="text-[#FA7315] text-xs font-medium">i</span>
             </div>
           </Tooltip>
         ) : (
@@ -212,9 +212,9 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
       </td>
 
       {/* Column 4: Preview Value - Fixed width */}
-      <td className="py-4 px-4 w-[180px] max-w-[180px]">
+      <td className="py-4 px-4 w-[220px] max-w-[220px]">
         <Tooltip
-          content={previewDisplay !== '-' && previewDisplay.length > 20 ? previewDisplay : null}
+          content={previewDisplay !== '-' && previewDisplay.length > 25 ? previewDisplay : null}
           side="top"
           maxWidth={400}
         >
