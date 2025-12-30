@@ -19,12 +19,14 @@ export function ProductSelector({ products, value, onChange }: Props) {
     return openaiTitle || `Product ${product.id}`;
   };
 
-  const filteredProducts = searchQuery
+  // Filter and sort products alphabetically (A to Z)
+  const filteredProducts = (searchQuery
     ? products.filter((p) => {
         const name = getProductName(p);
         return name.toLowerCase().includes(searchQuery.toLowerCase());
       })
-    : products;
+    : products
+  ).slice().sort((a, b) => getProductName(a).localeCompare(getProductName(b)));
 
   const selectedProduct = products.find((p) => p.id === value);
 
