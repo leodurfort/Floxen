@@ -304,63 +304,58 @@ export default function SetupPage() {
           </div>
 
           {/* Field Mapping Table with integrated toolbar */}
-          {categories.length > 0 ? (
-            <FieldMappingTable
-              categories={categories}
-              mappings={mappings}
-              userMappings={userMappings}
-              onMappingChange={handleMappingChange}
-              previewProductJson={previewProductJson}
-              previewShopData={previewShopData}
-              wooFields={wooFields}
-              wooFieldsLoading={wooFieldsLoading}
-              searchElement={
-                <div className="relative">
-                  <svg
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search fields..."
-                    className="w-64 pl-9 pr-4 py-2 bg-gray-50 text-gray-900 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-[#FA7315] placeholder-gray-400"
+          <FieldMappingTable
+            categories={categories}
+            mappings={mappings}
+            userMappings={userMappings}
+            onMappingChange={handleMappingChange}
+            previewProductJson={previewProductJson}
+            previewShopData={previewShopData}
+            wooFields={wooFields}
+            wooFieldsLoading={wooFieldsLoading}
+            emptyMessage="No fields match your search."
+            searchElement={
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search fields..."
+                  className="w-64 pl-9 pr-4 py-2 bg-gray-50 text-gray-900 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-[#FA7315] placeholder-gray-400"
+                />
+              </div>
+            }
+            productSelectorElement={
+              productsError ? (
+                <div className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  {productsError}
                 </div>
-              }
-              productSelectorElement={
-                productsError ? (
-                  <div className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                    {productsError}
-                  </div>
-                ) : productsLoading ? (
-                  <div className="w-full px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
-                    Loading products...
-                  </div>
-                ) : (
-                  <ProductSelector
-                    products={products}
-                    value={selectedProductId}
-                    onChange={setSelectedProductId}
-                  />
-                )
-              }
-            />
-          ) : (
-            <div className="text-center py-12 text-gray-500 bg-white rounded-lg border border-gray-200">
-              No fields match your search.
-            </div>
-          )}
+              ) : productsLoading ? (
+                <div className="w-full px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
+                  Loading products...
+                </div>
+              ) : (
+                <ProductSelector
+                  products={products}
+                  value={selectedProductId}
+                  onChange={setSelectedProductId}
+                />
+              )
+            }
+          />
         </div>
       </div>
 

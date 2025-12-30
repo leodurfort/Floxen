@@ -28,6 +28,8 @@ interface ProductFieldMappingTableProps {
   validationErrors?: Record<string, string[]>;
   // Toolbar
   searchElement?: ReactNode;
+  // Empty state
+  emptyMessage?: ReactNode;
 }
 
 export function ProductFieldMappingTable({
@@ -45,6 +47,7 @@ export function ProductFieldMappingTable({
   shopDefaultEnableSearch,
   validationErrors,
   searchElement,
+  emptyMessage,
 }: ProductFieldMappingTableProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -93,47 +96,55 @@ export function ProductFieldMappingTable({
           </thead>
 
           <tbody>
-            {categories.map((category) => (
-              <Fragment key={category.id}>
-                {/* Section Header Row - Sticky below toolbar + column headers */}
-                <tr className="section-header">
-                  <td
-                    colSpan={4}
-                    className="py-2 px-4 bg-gray-100 border-b border-gray-200 sticky z-10"
-                    style={{ top: searchElement ? '90px' : '41px' }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-sm font-semibold text-gray-900">
-                        {category.label}
-                      </h3>
-                      <span className="text-xs text-gray-500">
-                        {category.fields.length} fields
-                      </span>
-                    </div>
-                  </td>
-                </tr>
+            {categories.length > 0 ? (
+              categories.map((category) => (
+                <Fragment key={category.id}>
+                  {/* Section Header Row - Sticky below toolbar + column headers */}
+                  <tr className="section-header">
+                    <td
+                      colSpan={4}
+                      className="py-2 px-4 bg-gray-100 border-b border-gray-200 sticky z-10"
+                      style={{ top: searchElement ? '90px' : '41px' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          {category.label}
+                        </h3>
+                        <span className="text-xs text-gray-500">
+                          {category.fields.length} fields
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
 
-                {/* Field Rows */}
-                {category.fields.map((spec) => (
-                  <ProductFieldMappingRow
-                    key={spec.attribute}
-                    spec={spec}
-                    shopMapping={shopMappings[spec.attribute] || null}
-                    productOverride={productOverrides[spec.attribute] || null}
-                    onOverrideChange={onOverrideChange}
-                    previewProductJson={previewProductJson}
-                    previewShopData={previewShopData}
-                    previewValue={resolvedValues[spec.attribute]}
-                    wooFields={wooFields}
-                    wooFieldsLoading={wooFieldsLoading}
-                    serverValidationErrors={validationErrors?.[spec.attribute] || null}
-                    feedEnableSearch={feedEnableSearch}
-                    onEnableSearchChange={onEnableSearchChange}
-                    shopDefaultEnableSearch={shopDefaultEnableSearch}
-                  />
-                ))}
-              </Fragment>
-            ))}
+                  {/* Field Rows */}
+                  {category.fields.map((spec) => (
+                    <ProductFieldMappingRow
+                      key={spec.attribute}
+                      spec={spec}
+                      shopMapping={shopMappings[spec.attribute] || null}
+                      productOverride={productOverrides[spec.attribute] || null}
+                      onOverrideChange={onOverrideChange}
+                      previewProductJson={previewProductJson}
+                      previewShopData={previewShopData}
+                      previewValue={resolvedValues[spec.attribute]}
+                      wooFields={wooFields}
+                      wooFieldsLoading={wooFieldsLoading}
+                      serverValidationErrors={validationErrors?.[spec.attribute] || null}
+                      feedEnableSearch={feedEnableSearch}
+                      onEnableSearchChange={onEnableSearchChange}
+                      shopDefaultEnableSearch={shopDefaultEnableSearch}
+                    />
+                  ))}
+                </Fragment>
+              ))
+            ) : emptyMessage ? (
+              <tr>
+                <td colSpan={4} className="py-12 text-center text-gray-500">
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>

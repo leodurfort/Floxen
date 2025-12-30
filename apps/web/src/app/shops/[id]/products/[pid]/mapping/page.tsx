@@ -276,6 +276,7 @@ export default function ProductMappingPage() {
             feedEnableSearch={overridesData?.feedEnableSearch}
             shopDefaultEnableSearch={overridesData?.shopDefaultEnableSearch}
             validationErrors={overridesData?.validationErrors ?? undefined}
+            emptyMessage="No fields match your search."
             searchElement={
               <input
                 type="text"
@@ -286,12 +287,6 @@ export default function ProductMappingPage() {
               />
             }
           />
-
-          {filteredSpecs.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              No fields match your search.
-            </div>
-          )}
         </div>
       </div>
     </div>

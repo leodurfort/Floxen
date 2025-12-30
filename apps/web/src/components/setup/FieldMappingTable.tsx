@@ -24,6 +24,8 @@ interface FieldMappingTableProps {
   // Toolbar elements
   searchElement?: ReactNode;
   productSelectorElement?: ReactNode;
+  // Empty state
+  emptyMessage?: ReactNode;
 }
 
 export function FieldMappingTable({
@@ -37,6 +39,7 @@ export function FieldMappingTable({
   wooFieldsLoading,
   searchElement,
   productSelectorElement,
+  emptyMessage,
 }: FieldMappingTableProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -76,42 +79,50 @@ export function FieldMappingTable({
           </thead>
 
           <tbody>
-            {categories.map((category) => (
-              <Fragment key={category.id}>
-                {/* Section Header Row - Sticky below toolbar + column headers */}
-                <tr className="section-header">
-                  <td
-                    colSpan={4}
-                    className="py-2 px-4 bg-gray-100 border-b border-gray-200 sticky z-10"
-                    style={{ top: '90px' }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-sm font-semibold text-gray-900">
-                        {category.label}
-                      </h3>
-                      <span className="text-xs text-gray-500">
-                        {category.fields.length} fields
-                      </span>
-                    </div>
-                  </td>
-                </tr>
+            {categories.length > 0 ? (
+              categories.map((category) => (
+                <Fragment key={category.id}>
+                  {/* Section Header Row - Sticky below toolbar + column headers */}
+                  <tr className="section-header">
+                    <td
+                      colSpan={4}
+                      className="py-2 px-4 bg-gray-100 border-b border-gray-200 sticky z-10"
+                      style={{ top: '90px' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          {category.label}
+                        </h3>
+                        <span className="text-xs text-gray-500">
+                          {category.fields.length} fields
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
 
-                {/* Field Rows */}
-                {category.fields.map((spec) => (
-                  <FieldMappingRow
-                    key={spec.attribute}
-                    spec={spec}
-                    currentMapping={mappings[spec.attribute] || null}
-                    isUserSelected={spec.attribute in userMappings}
-                    onMappingChange={onMappingChange}
-                    previewProductJson={previewProductJson}
-                    previewShopData={previewShopData}
-                    wooFields={wooFields}
-                    wooFieldsLoading={wooFieldsLoading}
-                  />
-                ))}
-              </Fragment>
-            ))}
+                  {/* Field Rows */}
+                  {category.fields.map((spec) => (
+                    <FieldMappingRow
+                      key={spec.attribute}
+                      spec={spec}
+                      currentMapping={mappings[spec.attribute] || null}
+                      isUserSelected={spec.attribute in userMappings}
+                      onMappingChange={onMappingChange}
+                      previewProductJson={previewProductJson}
+                      previewShopData={previewShopData}
+                      wooFields={wooFields}
+                      wooFieldsLoading={wooFieldsLoading}
+                    />
+                  ))}
+                </Fragment>
+              ))
+            ) : emptyMessage ? (
+              <tr>
+                <td colSpan={4} className="py-12 text-center text-gray-500">
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
