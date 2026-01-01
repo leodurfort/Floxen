@@ -1175,7 +1175,7 @@ export const LOCKED_FIELD_SET = new Set(LOCKED_FIELDS.map(f => f.attribute));
 
 // Locked fields that allow static value overrides at product level
 // These are locked for WooCommerce mapping but can have manual static overrides
-export const STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS = new Set(['title', 'description', 'product_category']);
+export const STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS = new Set(['title', 'description', 'product_category', 'brand']);
 
 // Get fields by category
 export const getFieldsByCategory = (category: OpenAIFieldCategory): OpenAIFieldSpec[] =>
