@@ -73,7 +73,7 @@ export function FieldMappingTable({
                 WooCommerce Mapping
               </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[265px] min-w-[265px] sticky z-20 bg-gray-50 border-b border-gray-200" style={{ top: '49px' }}>
-                Preview Value
+                Preview Value <span className="font-normal opacity-60">(excludes product overrides)</span>
               </th>
             </tr>
           </thead>
