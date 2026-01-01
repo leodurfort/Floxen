@@ -30,7 +30,7 @@ export default function SetupPage() {
   // Propagation modal state
   const [showPropagationModal, setShowPropagationModal] = useState(false);
   const [skipPropagationModal, setSkipPropagationModal] = useState(false);
-  const [pendingChange, setPendingChange] = useState<{ attribute: string; newValue: string | null } | null>(null);
+  const [pendingChange, setPendingChange] = useState<{ attribute: string; newValue: string | null; overrideCount: number } | null>(null);
 
   // React Query hooks - these replace all manual data fetching
   const {
@@ -41,6 +41,7 @@ export default function SetupPage() {
 
   const mappings = mappingsData?.mappings ?? {};
   const userMappings = mappingsData?.userMappings ?? {};
+  const overrideCounts = mappingsData?.overrideCounts ?? {};
 
   const {
     data: productsData,
@@ -118,9 +119,18 @@ export default function SetupPage() {
     );
   }
 
-  // Handle mapping change - show propagation modal or save directly
+  // Handle mapping change - show propagation modal only if products have overrides
   function handleMappingChange(attribute: string, wooField: string | null) {
     if (LOCKED_FIELD_MAPPINGS[attribute]) {
+      return;
+    }
+
+    // Check if any products have overrides for this field
+    const overrideCount = overrideCounts[attribute] || 0;
+
+    // If no products have overrides, save directly with apply_all
+    if (overrideCount === 0) {
+      saveMappingChange(attribute, wooField, 'apply_all');
       return;
     }
 
@@ -130,8 +140,8 @@ export default function SetupPage() {
       return;
     }
 
-    // Show the propagation modal
-    setPendingChange({ attribute, newValue: wooField });
+    // Show the propagation modal (products have overrides for this field)
+    setPendingChange({ attribute, newValue: wooField, overrideCount });
     setShowPropagationModal(true);
   }
 
@@ -313,11 +323,6 @@ export default function SetupPage() {
                   </span>
                 )}
               </div>
-              {previewProductJson && (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
-                  <span className="text-green-700">✓ Preview data loaded</span>
-                </div>
-              )}
               {loadingPreview && (
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
                   <span className="text-gray-500">Loading preview...</span>
@@ -383,9 +388,10 @@ export default function SetupPage() {
       </div>
 
       {/* Propagation Modal */}
-      {showPropagationModal && (
+      {showPropagationModal && pendingChange && (
         <PropagationModal
-          attribute={pendingChange?.attribute || ''}
+          attribute={pendingChange.attribute}
+          overrideCount={pendingChange.overrideCount}
           onChoice={handlePropagationChoice}
           onCancel={handlePropagationCancel}
         />
@@ -397,10 +403,12 @@ export default function SetupPage() {
 // Propagation Modal Component
 function PropagationModal({
   attribute,
+  overrideCount,
   onChoice,
   onCancel,
 }: {
   attribute: string;
+  overrideCount: number;
   onChoice: (mode: 'apply_all' | 'preserve_overrides', dontAskAgain: boolean) => void;
   onCancel: () => void;
 }) {
@@ -414,7 +422,7 @@ function PropagationModal({
         </h3>
         <p className="text-gray-600 text-sm mb-6">
           You're changing the mapping for <span className="text-[#FA7315] font-medium">{attribute}</span>.
-          Some products may have custom overrides for this field.
+          {' '}<span className="font-medium">{overrideCount} product{overrideCount !== 1 ? 's have' : ' has'}</span> custom overrides for this field.
         </p>
 
         <div className="space-y-3 mb-6">

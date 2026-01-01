@@ -582,9 +582,11 @@ export async function refreshFeed(shopId: string, retryCount = 0): Promise<Refre
  * Get field mappings for a shop
  */
 export async function getFieldMappings(shopId: string) {
-  return requestWithAuth<{ mappings: Record<string, string | null>; userMappings: Record<string, string | null> }>(
-    `/api/v1/shops/${shopId}/field-mappings`
-  );
+  return requestWithAuth<{
+    mappings: Record<string, string | null>;
+    userMappings: Record<string, string | null>;
+    overrideCounts: Record<string, number>;
+  }>(`/api/v1/shops/${shopId}/field-mappings`);
 }
 
 /**

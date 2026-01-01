@@ -16,7 +16,7 @@ import { syncQueue, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
-import { clearOverridesForField } from '../services/productReprocessService';
+import { clearOverridesForField, getOverrideCountsByField } from '../services/productReprocessService';
 
 const FLAG_FIELDS = new Set(['enable_search', 'enable_checkout']);
 const ALLOWED_MAPPING_ATTRIBUTES = new Set(Object.keys(DEFAULT_FIELD_MAPPINGS));
@@ -315,18 +315,23 @@ export async function getFieldMappings(req: Request, res: Response) {
       userMappings[attribute] = lockedValue;
     }
 
+    // Get override counts for all fields (for conditional modal display)
+    const overrideCounts = await getOverrideCountsByField(id);
+
     logger.info('shops:field-mappings:get', {
       shopId: id,
       userId,
       dbMappings: fieldMappings.length,
       userMappings: Object.keys(userMappings).length,
       totalFields: Object.keys(mappings).length,
+      fieldsWithOverrides: Object.keys(overrideCounts).length,
     });
 
     return res.json({
       mappings,           // Merged: user selections + spec defaults (backward compatible)
       userMappings,       // Only explicit user selections from database
       specDefaults,       // Default mappings from OpenAI spec
+      overrideCounts,     // Count of products with overrides per field (for conditional modal)
     });
   } catch (err: any) {
     logger.error('shops:field-mappings:get error', err);

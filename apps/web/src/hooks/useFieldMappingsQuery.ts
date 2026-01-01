@@ -30,6 +30,7 @@ export function useFieldMappingsQuery(shopId: string | undefined) {
       return {
         mappings: loadedMappings,
         userMappings: result.userMappings || {},
+        overrideCounts: result.overrideCounts || {},
       };
     },
     enabled: hydrated && !!user && !!shopId,
@@ -63,13 +64,15 @@ export function useUpdateFieldMappingsMutation(shopId: string | undefined) {
       const previousData = queryClient.getQueryData<{
         mappings: Record<string, string | null>;
         userMappings: Record<string, string | null>;
+        overrideCounts: Record<string, number>;
       }>(queryKeys.fieldMappings.shop(shopId));
 
-      // Optimistic update
+      // Optimistic update (preserve overrideCounts)
       queryClient.setQueryData(queryKeys.fieldMappings.shop(shopId), (old: typeof previousData) => ({
         ...old,
         mappings: { ...old?.mappings, ...mappings },
         userMappings: { ...old?.userMappings, ...mappings },
+        overrideCounts: old?.overrideCounts || {},
       }));
 
       return { previousData };

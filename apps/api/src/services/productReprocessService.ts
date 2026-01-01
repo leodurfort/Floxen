@@ -316,3 +316,27 @@ export async function getOverrideCountForField(
     return !!overrides[attribute];
   }).length;
 }
+
+/**
+ * Get override counts for ALL fields in a single query
+ * Returns a map of attribute -> count (only includes fields with count > 0)
+ */
+export async function getOverrideCountsByField(
+  shopId: string
+): Promise<Record<string, number>> {
+  const products = await prisma.product.findMany({
+    where: { shopId },
+    select: { productFieldOverrides: true },
+  });
+
+  const counts: Record<string, number> = {};
+
+  for (const product of products) {
+    const overrides = (product.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+    for (const attribute of Object.keys(overrides)) {
+      counts[attribute] = (counts[attribute] || 0) + 1;
+    }
+  }
+
+  return counts;
+}
