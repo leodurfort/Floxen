@@ -169,6 +169,11 @@ export function useUpdateProductOverridesMutation(shopId: string | undefined, pr
           queryKey: ['products', shopId],
           exact: false,
         });
+        // Invalidate shop field mappings so overrideCounts is refreshed
+        // (needed for conditional modal display on Setup page)
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.fieldMappings.shop(shopId),
+        });
       }
     },
   });
