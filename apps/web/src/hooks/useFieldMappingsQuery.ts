@@ -15,7 +15,7 @@ export function useFieldMappingsQuery(shopId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.fieldMappings.shop(shopId ?? ''),
     queryFn: async () => {
-      if (!shopId) throw new Error('No shop selected');
+      if (!shopId) throw new Error('No store selected');
       const result = await api.getFieldMappings(shopId);
 
       // Apply locked field mappings (these can't be changed by the user)
@@ -53,7 +53,7 @@ export function useUpdateFieldMappingsMutation(shopId: string | undefined) {
       mappings: Record<string, string | null>;
       propagationMode: 'apply_all' | 'preserve_overrides';
     }) => {
-      if (!shopId) throw new Error('No shop selected');
+      if (!shopId) throw new Error('No store selected');
       return api.updateFieldMappings(shopId, mappings, propagationMode);
     },
     onMutate: async ({ mappings }) => {
@@ -101,7 +101,7 @@ export function useProductOverridesQuery(shopId: string | undefined, productId: 
   return useQuery({
     queryKey: queryKeys.fieldMappings.productOverrides(shopId ?? '', productId ?? ''),
     queryFn: async () => {
-      if (!shopId || !productId) throw new Error('No shop or product selected');
+      if (!shopId || !productId) throw new Error('No store or product selected');
       return api.getProductOverrides(shopId, productId);
     },
     enabled: hydrated && !!user && !!shopId && !!productId,
@@ -119,7 +119,7 @@ export function useUpdateProductOverridesMutation(shopId: string | undefined, pr
 
   return useMutation({
     mutationFn: async (overrides: Record<string, unknown>) => {
-      if (!shopId || !productId) throw new Error('No shop or product selected');
+      if (!shopId || !productId) throw new Error('No store or product selected');
       return api.updateProductOverrides(shopId, productId, overrides);
     },
     onMutate: async (overrides) => {
@@ -189,7 +189,7 @@ export function useUpdateFeedEnableSearchMutation(shopId: string | undefined, pr
 
   return useMutation({
     mutationFn: async (enableSearch: boolean) => {
-      if (!shopId || !productId) throw new Error('No shop or product selected');
+      if (!shopId || !productId) throw new Error('No store or product selected');
       return api.updateProduct(shopId, productId, { feedEnableSearch: enableSearch });
     },
     onSuccess: () => {

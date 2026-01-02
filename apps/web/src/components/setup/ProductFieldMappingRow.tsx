@@ -178,7 +178,7 @@ export function ProductFieldMappingRow({
   const getReadOnlyDisplayText = () => {
     if (spec.isFeatureDisabled) return 'Feature coming soon';
     if (spec.isAutoPopulated) return 'Auto-populated';
-    if (spec.isShopManaged) return 'Managed in Shops page';
+    if (spec.isShopManaged) return 'Managed in Stores page';
     return lockedMappingValue || 'Locked';
   };
 
@@ -202,9 +202,9 @@ export function ProductFieldMappingRow({
     if (spec.isShopManaged) {
       return (
         <div>
-          <div className="font-semibold mb-1">Update in Shops page</div>
-          <div className="mb-2">Edit this value from the Shops page to change the feed output.</div>
-          <Link href="/shops" className="text-[#FA7315] underline">Go to Shops</Link>
+          <div className="font-semibold mb-1">Update in Stores page</div>
+          <div className="mb-2">Edit this value from the Stores page to change the feed output.</div>
+          <Link href="/shops" className="text-[#FA7315] underline">Go to Stores</Link>
         </div>
       );
     }

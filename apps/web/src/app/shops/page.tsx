@@ -80,7 +80,7 @@ export default function ShopsPage() {
   useEffect(() => {
     if (isOAuthRedirect && shopIdFromUrl) {
       router.replace('/shops', { scroll: false });
-      setToast({ message: 'Shop connected successfully! Syncing products...', type: 'success' });
+      setToast({ message: 'Store connected successfully! Syncing products...', type: 'success' });
     }
   }, [isOAuthRedirect, shopIdFromUrl, router]);
 
@@ -175,7 +175,7 @@ export default function ShopsPage() {
   }
 
   function handleDeleteShop(shopId: string) {
-    if (!user || !confirm('Are you sure you want to delete this shop? This action cannot be undone.')) return;
+    if (!user || !confirm('Are you sure you want to delete this store? This action cannot be undone.')) return;
     deleteShopMutation.mutate(shopId, {
       onError: (err) => {
         setError(err.message);
@@ -221,7 +221,7 @@ export default function ShopsPage() {
         {
           onSuccess: () => {
             setModalShop(null);
-            setToast({ message: 'Shop profile saved successfully!', type: 'success' });
+            setToast({ message: 'Store profile saved successfully!', type: 'success' });
             resolve();
           },
           onError: (err) => {
@@ -304,17 +304,17 @@ export default function ShopsPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Your Shops</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Your Stores</h1>
             </div>
             <button
               onClick={() => setShowConnectForm(!showConnectForm)}
               className="btn btn--primary"
             >
-              {showConnectForm ? 'Cancel' : 'Connect new shop'}
+              {showConnectForm ? 'Cancel' : 'Connect new store'}
             </button>
           </div>
           <p className="text-gray-600 text-sm">
-            Manage your WooCommerce shop connections
+            Manage your WooCommerce store connections
           </p>
         </div>
 
@@ -364,23 +364,23 @@ export default function ShopsPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              {shops.length} {shops.length === 1 ? 'connection' : 'connections'}
+              {shops.length} {shops.length === 1 ? 'Store' : 'Stores'}
             </h2>
           </div>
 
           {loading && shops.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-              <div className="text-center text-gray-500">Loading shops...</div>
+              <div className="text-center text-gray-500">Loading stores...</div>
             </div>
           ) : shops.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="text-center">
-                <p className="text-gray-600 mb-4">No shops yet. Connect one to start syncing.</p>
+                <p className="text-gray-600 mb-4">No stores yet. Connect one to start syncing.</p>
                 <button
                   onClick={() => setShowConnectForm(true)}
                   className="btn btn--primary"
                 >
-                  Connect new shop
+                  Connect new store
                 </button>
               </div>
             </div>
@@ -480,7 +480,7 @@ export default function ShopsPage() {
                         {/* Header row */}
                         <div className="flex justify-between items-center mb-4">
                           <div className="flex items-center gap-3">
-                            <span className="font-medium text-gray-900">Shop Profile</span>
+                            <span className="font-medium text-gray-900">Store Profile</span>
                             {/* Button/Edit link */}
                             {profileComplete ? (
                               <button
@@ -494,7 +494,7 @@ export default function ShopsPage() {
                                 onClick={() => setModalShop(shop)}
                                 className="bg-[#FA7315] hover:bg-[#E5650F] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                               >
-                                Complete Shop Profile
+                                Complete Store Profile
                               </button>
                             )}
                           </div>
@@ -602,14 +602,14 @@ export default function ShopsPage() {
                               <p className="text-xs text-gray-500 italic">Saving...</p>
                             )}
 
-                            {/* Delete Shop */}
+                            {/* Delete Store */}
                             <div className="pt-4 mt-4 border-t border-gray-200">
                               <button
                                 onClick={() => handleDeleteShop(shop.id)}
                                 disabled={deleteShopMutation.isPending}
                                 className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors"
                               >
-                                Delete Shop
+                                Delete Store
                               </button>
                             </div>
                           </div>
@@ -625,7 +625,7 @@ export default function ShopsPage() {
                           disabled={deleteShopMutation.isPending}
                           className="text-sm text-red-500 hover:text-red-700 transition-colors"
                         >
-                          Delete Shop
+                          Delete Store
                         </button>
                       </div>
                     )}

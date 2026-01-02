@@ -30,7 +30,7 @@ export function useProductsQuery(shopId: string | undefined, params: ListProduct
   return useQuery({
     queryKey: queryKeys.products.list(shopId ?? '', serializedFilters),
     queryFn: async () => {
-      if (!shopId) throw new Error('No shop selected');
+      if (!shopId) throw new Error('No store selected');
       return api.listProducts(shopId, params);
     },
     enabled: hydrated && !!user && !!shopId,
@@ -71,7 +71,7 @@ export function useColumnValuesQuery(
   return useQuery({
     queryKey: queryKeys.products.columnValues(shopId ?? '', columnId, filterKey),
     queryFn: async () => {
-      if (!shopId) throw new Error('No shop selected');
+      if (!shopId) throw new Error('No store selected');
       const result = await api.getColumnValues(shopId, columnId, 100, undefined, currentFilters);
       return result.values;
     },
@@ -90,7 +90,7 @@ export function useRefreshFeedMutation(shopId: string | undefined) {
 
   return useMutation({
     mutationFn: async () => {
-      if (!shopId) throw new Error('No shop selected');
+      if (!shopId) throw new Error('No store selected');
       return api.refreshFeed(shopId);
     },
     onSuccess: () => {
@@ -114,7 +114,7 @@ export function useBulkUpdateMutation(shopId: string | undefined) {
 
   return useMutation({
     mutationFn: async (payload: BulkUpdateRequest) => {
-      if (!shopId) throw new Error('No shop selected');
+      if (!shopId) throw new Error('No store selected');
       return api.bulkUpdateProducts(shopId, payload);
     },
     onSuccess: () => {

@@ -93,7 +93,7 @@ export function CompleteShopSetupModal({
         <div className="p-8 pb-0">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Complete your shop profile</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Complete your store profile</h2>
               <p className="text-sm text-gray-600 mt-2">
                 This information is mandatory in order to share your product feed with ChatGPT.
               </p>

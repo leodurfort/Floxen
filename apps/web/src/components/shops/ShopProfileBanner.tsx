@@ -27,7 +27,7 @@ export function ShopProfileBanner({ shop, currentPath }: ShopProfileBannerProps)
       <div className="flex items-center gap-3">
         <span className="text-amber-600 text-lg">&#9888;</span>
         <span className="text-amber-800 text-sm font-medium">
-          Complete your shop profile to publish products to ChatGPT
+          Complete your store profile to publish products to ChatGPT
         </span>
       </div>
       {showButton && shop.id && (

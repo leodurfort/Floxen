@@ -3,6 +3,7 @@ import { encrypt } from '../lib/encryption';
 import { env } from '../config/env';
 import { fetchStoreSettings } from './wooClient';
 import { logger } from '../lib/logger';
+import { deleteShopFiles } from './storage';
 
 export async function listShopsByUser(userId: string) {
   const shops = await prisma.shop.findMany({
@@ -85,7 +86,7 @@ export async function disconnectShop(shopId: string) {
 
 export async function deleteShop(shopId: string) {
   // Use transaction to ensure all-or-nothing deletion
-  return prisma.$transaction(async (tx) => {
+  const deletedShop = await prisma.$transaction(async (tx) => {
     // Delete all related data in the correct order to respect foreign key constraints
     await tx.productVariant.deleteMany({
       where: { product: { shopId } },
@@ -111,6 +112,25 @@ export async function deleteShop(shopId: string) {
       where: { id: shopId },
     });
   });
+
+  // Clean up S3 storage files after successful database deletion
+  // This is done outside the transaction since S3 operations can't be rolled back
+  try {
+    const storageCleanup = await deleteShopFiles(shopId);
+    logger.info('shop:delete:storage-cleanup', {
+      shopId,
+      filesDeleted: storageCleanup.deleted,
+      errors: storageCleanup.errors,
+    });
+  } catch (storageErr) {
+    // Log but don't fail the deletion - database records are already gone
+    logger.error('shop:delete:storage-cleanup-failed', {
+      shopId,
+      error: storageErr instanceof Error ? storageErr : new Error(String(storageErr)),
+    });
+  }
+
+  return deletedShop;
 }
 
 export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string) {

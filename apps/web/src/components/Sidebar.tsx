@@ -51,7 +51,7 @@ export function Sidebar() {
 
   // Build nav items based on current shop from URL
   const navItems = [
-    { href: '/shops', label: 'Shops', icon: '🏪' },
+    { href: '/shops', label: 'Stores', icon: '🏪' },
     ...(currentShop?.isConnected ? [
       { href: `/shops/${currentShop.id}/setup`, label: 'Setup', icon: '⚙️' },
       { href: `/shops/${currentShop.id}/products`, label: 'Products', icon: '📦' },
@@ -76,9 +76,9 @@ export function Sidebar() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-white/70 mb-1">Current Shop</div>
+                  <div className="text-xs text-white/70 mb-1">Current Store</div>
                   <div className="text-sm text-white font-medium truncate">
-                    {currentShop?.sellerUrl?.replace(/^https?:\/\//, '') || 'Select a shop'}
+                    {currentShop?.sellerUrl?.replace(/^https?:\/\//, '') || 'Select a store'}
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +117,7 @@ export function Sidebar() {
             isActive = pathname.includes('/setup');
           } else if (item.label === 'Products') {
             isActive = pathname.includes('/products');
-          } else if (item.label === 'Shops') {
+          } else if (item.label === 'Stores') {
             isActive = pathname === '/shops';
           } else {
             isActive = pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/');

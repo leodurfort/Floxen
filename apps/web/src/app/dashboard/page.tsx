@@ -39,7 +39,7 @@ export default function DashboardPage() {
           <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">WELCOME</p>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Hi {user.firstName || user.email}</h1>
           <p className="text-gray-600">
-            Manage your WooCommerce shops and sync products to OpenAI feeds with AI enrichment.
+            Manage your WooCommerce stores and sync products to OpenAI feeds with AI enrichment.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export default function DashboardPage() {
                 <span className="text-2xl">🏪</span>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Connected Shops</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Connected Stores</p>
                 <p className="text-3xl font-bold text-gray-900">{connectedShops.length}</p>
               </div>
             </div>
@@ -94,7 +94,7 @@ export default function DashboardPage() {
                 <span className="text-xl">🏪</span>
               </div>
               <div>
-                <h3 className="text-gray-900 font-medium">Manage Shops</h3>
+                <h3 className="text-gray-900 font-medium">Manage Stores</h3>
                 <p className="text-sm text-gray-500">Connect and manage your WooCommerce stores</p>
               </div>
             </Link>
@@ -137,12 +137,12 @@ export default function DashboardPage() {
             <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">🏪</span>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No shops connected yet</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No stores connected yet</h3>
             <p className="text-gray-600 mb-6">
               Connect your first WooCommerce store to start syncing products to OpenAI feeds
             </p>
             <Link href="/shops" className="btn btn--primary">
-              Connect your first shop
+              Connect your first store
             </Link>
           </div>
         )}

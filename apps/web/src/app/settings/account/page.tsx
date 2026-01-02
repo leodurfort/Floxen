@@ -59,9 +59,9 @@ export default function AccountSettingsPage() {
 
             <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
               <p className="text-sm text-gray-600">
-                Want to keep your account but disconnect a shop?{' '}
+                Want to keep your account but disconnect a store?{' '}
                 <Link href="/shops" className="text-[#FA7315] hover:underline">
-                  Manage your shops
+                  Manage your stores
                 </Link>
               </p>
             </div>
@@ -90,7 +90,7 @@ export default function AccountSettingsPage() {
             </p>
             <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 ml-2">
               <li>Your profile information</li>
-              <li>All connected shops</li>
+              <li>All connected stores</li>
               <li>All product data and mappings</li>
               <li>Generated feeds and configurations</li>
             </ul>

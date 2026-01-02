@@ -88,7 +88,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     if (isLockedField) return effectiveMapping || 'Locked';
     // For shop-managed fields, show the default mapping value
     if (spec.isShopManaged && defaultMapping) return defaultMapping;
-    return 'Managed in Shops page';
+    return 'Managed in Stores page';
   };
 
   // Get tooltip content for locked/non-editable fields

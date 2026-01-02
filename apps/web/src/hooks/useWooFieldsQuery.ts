@@ -17,7 +17,7 @@ export function useWooFieldsQuery(shopId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.wooCommerce.fields(shopId ?? ''),
     queryFn: async () => {
-      if (!shopId) throw new Error('No shop selected');
+      if (!shopId) throw new Error('No store selected');
       const result = await api.getWooFields(shopId);
       return result.fields;
     },
@@ -37,7 +37,7 @@ export function useWooProductDataQuery(shopId: string | undefined, productId: st
   return useQuery({
     queryKey: queryKeys.wooCommerce.productData(shopId ?? '', productId ?? ''),
     queryFn: async () => {
-      if (!shopId || !productId) throw new Error('No shop or product selected');
+      if (!shopId || !productId) throw new Error('No store or product selected');
       return api.getProductWooData(shopId, productId);
     },
     enabled: hydrated && !!user && !!shopId && !!productId,

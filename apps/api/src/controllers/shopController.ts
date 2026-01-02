@@ -82,7 +82,7 @@ export async function getShop(req: Request, res: Response) {
 
   try {
     const shop = await getShopRecord(req.params.id);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    if (!shop) return res.status(404).json({ error: 'Store not found' });
     if (shop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
 
     logger.info('shops:get', { shopId: shop.id, userId });
@@ -115,7 +115,7 @@ export async function updateShop(req: Request, res: Response) {
   try {
     // Verify ownership before updating
     const existingShop = await getShopRecord(req.params.id);
-    if (!existingShop) return res.status(404).json({ error: 'Shop not found' });
+    if (!existingShop) return res.status(404).json({ error: 'Store not found' });
     if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
 
     // Check if any auto-fill affecting fields were updated
@@ -128,7 +128,7 @@ export async function updateShop(req: Request, res: Response) {
       : parse.data;
 
     const shop = await updateShopRecord(req.params.id, updateData);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    if (!shop) return res.status(404).json({ error: 'Store not found' });
 
     if (affectsAutofill && syncQueue) {
       await syncQueue!.add('product-reprocess', {
@@ -158,12 +158,12 @@ export async function disconnectShop(req: Request, res: Response) {
   try {
     // Verify ownership before deleting
     const existingShop = await getShopRecord(req.params.id);
-    if (!existingShop) return res.status(404).json({ error: 'Shop not found' });
+    if (!existingShop) return res.status(404).json({ error: 'Store not found' });
     if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
 
     const shop = await deleteShopRecord(req.params.id);
     logger.info('shops:delete', { shopId: shop?.id, userId });
-    return res.json({ shop, message: 'Shop deleted successfully' });
+    return res.json({ shop, message: 'Store deleted successfully' });
   } catch (err: any) {
     logger.error('shops:delete error', err);
     return res.status(500).json({ error: err.message });
@@ -217,7 +217,7 @@ export async function verifyConnection(req: Request, res: Response) {
 
   try {
     const shop = await getShopRecord(req.params.id);
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
+    if (!shop) return res.status(404).json({ error: 'Store not found' });
     if (shop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
 
     logger.info('shops:verify', { shopId: shop.id, userId, isConnected: shop.isConnected });
@@ -239,7 +239,7 @@ export async function configureOpenAI(req: Request, res: Response) {
   try {
     // Verify ownership before updating
     const existingShop = await getShopRecord(req.params.id);
-    if (!existingShop) return res.status(404).json({ error: 'Shop not found' });
+    if (!existingShop) return res.status(404).json({ error: 'Store not found' });
     if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
 
     const shop = await updateShopRecord(req.params.id, {
@@ -683,7 +683,7 @@ export async function testWooSettings(req: Request, res: Response) {
     });
 
     if (!shop || !shop.isConnected) {
-      return res.status(404).json({ error: 'Shop not found or not connected' });
+      return res.status(404).json({ error: 'Store not found or not connected' });
     }
 
     const { createWooClient, fetchStoreSettings } = await import('../services/wooClient');
