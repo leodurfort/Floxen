@@ -194,3 +194,40 @@ export function useUpdateShopMutation() {
     },
   });
 }
+
+/**
+ * Mutation hook for activating feed
+ * Sets openaiEnabled=true, syncEnabled=true, triggers sync
+ */
+export function useActivateFeedMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (shopId: string) => {
+      return api.activateFeed(shopId);
+    },
+    onMutate: async (shopId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.shops.all });
+      const previousShops = queryClient.getQueryData<Shop[]>(queryKeys.shops.all);
+
+      // Optimistic update
+      queryClient.setQueryData<Shop[]>(queryKeys.shops.all, (old) =>
+        old?.map((s) =>
+          s.id === shopId
+            ? { ...s, openaiEnabled: true, syncEnabled: true, syncStatus: 'SYNCING' as const }
+            : s
+        ) ?? []
+      );
+
+      return { previousShops };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousShops) {
+        queryClient.setQueryData(queryKeys.shops.all, context.previousShops);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
+    },
+  });
+}

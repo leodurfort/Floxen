@@ -44,6 +44,7 @@ export const queryKeys = {
   shops: {
     all: ['shops'] as const,
     detail: (shopId: string) => ['shop', shopId] as const,
+    productStats: (shopId: string) => ['shops', shopId, 'product-stats'] as const,
   },
 
   // Products

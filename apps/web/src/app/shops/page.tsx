@@ -435,7 +435,7 @@ export default function ShopsPage() {
                               disabled={syncDisabled}
                               className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Sync
+                              Sync WooCommerce Products
                             </button>
                           </div>
                         )}
@@ -577,9 +577,9 @@ export default function ShopsPage() {
                               />
                             </div>
 
-                            {/* Auto-sync toggle */}
+                            {/* Auto-sync & Publish toggle */}
                             <div className="flex items-center gap-3">
-                              <span className="text-sm text-gray-700">Auto-sync:</span>
+                              <span className="text-sm text-gray-700">Auto-sync & Publish:</span>
                               <button
                                 onClick={() => handleToggleSync(shop.id, shop.syncEnabled)}
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${

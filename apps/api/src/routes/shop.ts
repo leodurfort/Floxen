@@ -13,6 +13,8 @@ import {
   discoverWooFields,
   getWooFields,
   testWooSettings,
+  activateFeed,
+  getProductStats,
 } from '../controllers/shopController';
 import { requireAuth } from '../middleware/auth';
 
@@ -32,5 +34,7 @@ router.put('/:id/field-mappings', requireAuth, updateFieldMappings);
 router.post('/:id/discover-fields', requireAuth, discoverWooFields);
 router.get('/:id/woo-fields', requireAuth, getWooFields);
 router.get('/:id/test-woo-settings', requireAuth, testWooSettings);
+router.post('/:id/activate-feed', requireAuth, activateFeed);
+router.get('/:id/product-stats', requireAuth, getProductStats);
 
 export default router;

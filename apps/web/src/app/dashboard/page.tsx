@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { useRouter } from 'next/navigation';
 import { useShopsQuery } from '@/hooks/useShopsQuery';
+import { useCurrentShop } from '@/hooks/useCurrentShop';
+import { FeedHealthCard } from '@/components/dashboard/FeedHealthCard';
 
 export default function DashboardPage() {
   const router = useRouter();
   // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
   const { data: shops = [], isLoading: loading } = useShopsQuery();
+  const { currentShop } = useCurrentShop();
 
   useEffect(() => {
     if (hydrated && !user) {
@@ -81,6 +84,13 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Feed Health - shown when a store is selected */}
+        {currentShop && (
+          <div className="mb-8">
+            <FeedHealthCard />
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">

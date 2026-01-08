@@ -56,6 +56,7 @@ export class CronScheduler {
         where: {
           isConnected: true,
           syncEnabled: true,
+          openaiEnabled: true,
         },
         select: {
           id: true,

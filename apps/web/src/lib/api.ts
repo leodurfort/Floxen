@@ -352,6 +352,66 @@ export async function latestFeed(shopId: string) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// FEED ACTIVATION & STATS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ActivateFeedResponse {
+  shop: Shop;
+  message: string;
+  validProductCount: number;
+}
+
+export interface ActivateFeedError {
+  error: string;
+  code: 'ALREADY_ACTIVATED' | 'INCOMPLETE_PROFILE' | 'NO_VALID_PRODUCTS' | 'SERVICE_UNAVAILABLE';
+  details?: string | string[];
+}
+
+export async function activateFeed(shopId: string) {
+  return requestWithAuth<ActivateFeedResponse>(`/api/v1/shops/${shopId}/activate-feed`, {
+    method: 'POST',
+  });
+}
+
+export async function getProductStats(shopId: string) {
+  return requestWithAuth<{
+    total: number;
+    inFeed: number;
+    needsAttention: number;
+    disabled: number;
+  }>(`/api/v1/shops/${shopId}/product-stats`);
+}
+
+export interface FeedPreviewResponse {
+  preview: boolean;
+  generatedAt: string;
+  seller: {
+    id: string;
+    name: string | null;
+    url: string | null;
+    privacy_policy: string | null;
+    terms_of_service: string | null;
+  };
+  items: Record<string, unknown>[];
+  stats: {
+    total: number;
+    included: number;
+    invalid: number;
+    disabled: number;
+    validationStats?: {
+      total: number;
+      valid: number;
+      invalid: number;
+      warnings: number;
+    };
+  };
+}
+
+export async function getFeedPreview(shopId: string) {
+  return requestWithAuth<FeedPreviewResponse>(`/api/v1/shops/${shopId}/sync/feed/preview`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // PRODUCT LISTING WITH FILTERS
 // ═══════════════════════════════════════════════════════════════════════════
 

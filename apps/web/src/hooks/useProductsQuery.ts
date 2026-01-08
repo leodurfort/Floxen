@@ -100,6 +100,10 @@ export function useRefreshFeedMutation(shopId: string | undefined) {
           queryKey: ['products', shopId],
           exact: false,
         });
+        // Invalidate product stats as validation may have changed counts
+        queryClient.invalidateQueries({
+          queryKey: ['shops', shopId, 'product-stats'],
+        });
       }
     },
   });
@@ -128,6 +132,10 @@ export function useBulkUpdateMutation(shopId: string | undefined) {
         queryClient.invalidateQueries({
           queryKey: ['columnValues', shopId],
           exact: false,
+        });
+        // Invalidate product stats as counts may have changed
+        queryClient.invalidateQueries({
+          queryKey: ['shops', shopId, 'product-stats'],
         });
       }
     },

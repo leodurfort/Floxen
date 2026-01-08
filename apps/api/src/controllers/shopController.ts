@@ -12,7 +12,7 @@ import {
 } from '../services/shopService';
 import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET } from '@productsynch/shared';
 import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
-import { syncQueue, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
+import { syncQueue, syncFlowProducer, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
@@ -28,6 +28,7 @@ const createShopSchema = z.object({
 
 const updateShopSchema = z.object({
   syncEnabled: z.boolean().optional(),
+  openaiEnabled: z.boolean().optional(),
   sellerName: z.string().nullable().optional(),
   sellerUrl: z.string().url().optional(),
   sellerPrivacyPolicy: z.string().url().nullable().optional(),
@@ -727,5 +728,159 @@ export async function testWooSettings(req: Request, res: Response) {
   } catch (error: any) {
     logger.error('testWooSettings error', { error: error.message });
     return res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * POST /api/v1/shops/:id/activate-feed
+ * Activates the ChatGPT feed for a store:
+ * - Validates store profile is complete
+ * - Validates at least 1 product is ready for feed
+ * - Sets openaiEnabled=true, syncEnabled=true
+ * - Triggers immediate sync flow (product-sync -> feed-generation)
+ */
+export async function activateFeed(req: Request, res: Response) {
+  const userId = getUserId(req);
+  const { id } = req.params;
+
+  try {
+    // Verify ownership
+    const existingShop = await getShopRecord(id);
+    if (!existingShop) return res.status(404).json({ error: 'Store not found' });
+    if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    // Check if already activated
+    if (existingShop.openaiEnabled && existingShop.syncEnabled) {
+      return res.status(400).json({
+        error: 'Feed already activated',
+        code: 'ALREADY_ACTIVATED',
+      });
+    }
+
+    // Validate store profile is complete
+    const profileErrors: string[] = [];
+    if (!existingShop.sellerName) profileErrors.push('Store name is required');
+    if (!existingShop.returnPolicy) profileErrors.push('Return policy URL is required');
+    if (!existingShop.returnWindow) profileErrors.push('Return window is required');
+
+    if (profileErrors.length > 0) {
+      return res.status(400).json({
+        error: 'Store profile is incomplete',
+        code: 'INCOMPLETE_PROFILE',
+        details: profileErrors,
+      });
+    }
+
+    // Check for at least 1 valid product ready for feed
+    const validProductCount = await prisma.product.count({
+      where: {
+        shopId: id,
+        isValid: true,
+        feedEnableSearch: true,
+      },
+    });
+
+    if (validProductCount === 0) {
+      return res.status(400).json({
+        error: 'No products ready for feed',
+        code: 'NO_VALID_PRODUCTS',
+        details: 'You need at least one valid product with search enabled to activate the feed.',
+      });
+    }
+
+    // Check Redis availability
+    if (!isQueueAvailable() || !syncFlowProducer) {
+      return res.status(503).json({
+        error: 'Sync service unavailable',
+        code: 'SERVICE_UNAVAILABLE',
+        details: 'Redis queue not configured. Please try again later.',
+      });
+    }
+
+    // Update store flags
+    const shop = await updateShopRecord(id, {
+      openaiEnabled: true,
+      syncEnabled: true,
+    });
+
+    // Trigger sync flow (product-sync -> feed-generation)
+    await syncFlowProducer.add({
+      name: 'feed-generation',
+      queueName: 'sync',
+      data: { shopId: id, triggeredBy: 'activate-feed' },
+      opts: { ...DEFAULT_JOB_OPTIONS, priority: JOB_PRIORITIES.MANUAL },
+      children: [
+        {
+          name: 'product-sync',
+          queueName: 'sync',
+          data: { shopId: id, triggeredBy: 'activate-feed' },
+          opts: { ...DEFAULT_JOB_OPTIONS, priority: JOB_PRIORITIES.MANUAL },
+        },
+      ],
+    });
+
+    logger.info('shops:activate-feed', {
+      shopId: id,
+      userId,
+      validProductCount,
+    });
+
+    return res.json({
+      shop,
+      message: 'Feed activated successfully. Sync in progress.',
+      validProductCount,
+    });
+  } catch (err: any) {
+    logger.error('shops:activate-feed error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * GET /api/v1/shops/:id/product-stats
+ * Returns product counts for feed status display
+ */
+export async function getProductStats(req: Request, res: Response) {
+  const userId = getUserId(req);
+  const { id } = req.params;
+
+  try {
+    // Verify ownership
+    const shop = await getShopRecord(id);
+    if (!shop) return res.status(404).json({ error: 'Store not found' });
+    if (shop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    // Get counts in parallel for efficiency
+    const [total, inFeed, needsAttention, disabled] = await Promise.all([
+      prisma.product.count({ where: { shopId: id } }),
+      prisma.product.count({
+        where: { shopId: id, isValid: true, feedEnableSearch: true },
+      }),
+      prisma.product.count({
+        where: { shopId: id, isValid: false },
+      }),
+      prisma.product.count({
+        where: { shopId: id, feedEnableSearch: false },
+      }),
+    ]);
+
+    logger.info('shops:product-stats', {
+      shopId: id,
+      userId,
+      total,
+      inFeed,
+      needsAttention,
+      disabled,
+    });
+
+    return res.json({
+      total,
+      inFeed,
+      needsAttention,
+      disabled,
+    });
+  } catch (err: any) {
+    logger.error('shops:product-stats error', err);
+    return res.status(500).json({ error: err.message });
   }
 }

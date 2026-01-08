@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { API_URL, BulkUpdateOperation, CurrentFiltersForColumnValues } from '@/lib/api';
+import { BulkUpdateOperation, CurrentFiltersForColumnValues } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
-import { useProductsQuery, useRefreshFeedMutation, useBulkUpdateMutation } from '@/hooks/useProductsQuery';
+import { useProductsQuery, useBulkUpdateMutation, useRefreshFeedMutation } from '@/hooks/useProductsQuery';
 import { useCurrentShop } from '@/hooks/useCurrentShop';
-import { CatalogProduct } from '@productsynch/shared';
+import { useProductStats } from '@/hooks/useProductStats';
+import { useActivateFeedMutation } from '@/hooks/useShopsQuery';
+import { CatalogProduct, deriveFeedState, type FeedState } from '@productsynch/shared';
 import { SearchFilter } from '@/components/catalog/FilterDropdown';
 import { BulkActionToolbar } from '@/components/catalog/BulkActionToolbar';
 import { BulkEditModal } from '@/components/catalog/BulkEditModal';
@@ -17,6 +19,8 @@ import { Toast } from '@/components/catalog/Toast';
 import { ColumnHeaderDropdown } from '@/components/catalog/ColumnHeaderDropdown';
 import { ClearFiltersButton } from '@/components/catalog/ClearFiltersButton';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
+import { ProductTabs, type ProductTabId } from '@/components/catalog/ProductTabs';
+import { FeedPreviewModal } from '@/components/catalog/FeedPreviewModal';
 import {
   COLUMN_MAP,
   formatColumnValue,
@@ -24,6 +28,33 @@ import {
   type ColumnDefinition,
   type ProductData,
 } from '@/lib/columnDefinitions';
+
+// Feed state display configuration
+const FEED_STATE_CONFIG: Record<
+  FeedState,
+  { label: string; colorClass: string; dotClass: string }
+> = {
+  not_activated: {
+    label: 'Not Activated',
+    colorClass: 'text-gray-600',
+    dotClass: 'bg-gray-400',
+  },
+  active: {
+    label: 'Active',
+    colorClass: 'text-green-600',
+    dotClass: 'bg-green-500',
+  },
+  paused: {
+    label: 'Paused',
+    colorClass: 'text-amber-600',
+    dotClass: 'bg-amber-500',
+  },
+  error: {
+    label: 'Error',
+    colorClass: 'text-red-600',
+    dotClass: 'bg-red-500',
+  },
+};
 
 // Page size options
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
@@ -50,6 +81,10 @@ function CatalogPageContent() {
   // Modal states
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showEditColumnsModal, setShowEditColumnsModal] = useState(false);
+  const [showFeedPreviewModal, setShowFeedPreviewModal] = useState(false);
+
+  // Active tab for product filtering
+  const [activeTab, setActiveTab] = useState<ProductTabId>('all');
 
   // Column visibility
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
@@ -100,6 +135,14 @@ function CatalogPageContent() {
 
   // Bulk update mutation
   const bulkUpdateMutation = useBulkUpdateMutation(params?.id);
+
+  // Product stats and activation hooks
+  const { data: stats } = useProductStats(params?.id);
+  const activateFeedMutation = useActivateFeedMutation();
+
+  // Derive feed state from current shop
+  const feedState = currentShop ? deriveFeedState(currentShop) : 'not_activated';
+  const feedStateConfig = FEED_STATE_CONFIG[feedState];
 
   useEffect(() => {
     if (hydrated && !user) {
@@ -184,21 +227,72 @@ function CatalogPageContent() {
     return `${diffDays}d ago`;
   };
 
-  // Refresh OpenAI feed using mutation
-  const handleRefreshFeed = () => {
-    refreshFeedMutation.mutate(undefined, {
+  // Handle tab change - applies predefined column filters
+  const handleTabChange = (tab: ProductTabId) => {
+    setActiveTab(tab);
+
+    // Apply filters based on tab
+    switch (tab) {
+      case 'all':
+        // Clear filters for "All" tab
+        clearAllFilters();
+        break;
+      case 'inFeed':
+        // Valid AND enabled products
+        setFilters({
+          page: 1,
+          columnFilters: {
+            isValid: { values: ['valid'] },
+            enable_search: { values: ['Enabled'] },
+          },
+        });
+        break;
+      case 'needsAttention':
+        // Invalid products
+        setFilters({
+          page: 1,
+          columnFilters: {
+            isValid: { values: ['invalid'] },
+          },
+        });
+        break;
+      case 'disabled':
+        // Disabled products
+        setFilters({
+          page: 1,
+          columnFilters: {
+            enable_search: { values: ['Disabled'] },
+          },
+        });
+        break;
+    }
+  };
+
+  // Handle activate feed
+  const handleActivateFeed = () => {
+    if (!params?.id) return;
+
+    activateFeedMutation.mutate(params.id, {
       onSuccess: (result) => {
-        const lastSyncText = formatLastSync(result.lastSyncAt);
-        setToast({ message: `Feed refreshed! (last sync: ${lastSyncText})`, type: 'success' });
+        setToast({
+          message: `Feed activated! ${result.validProductCount} products will be synced.`,
+          type: 'success',
+        });
       },
       onError: (err) => {
-        const error = err as Error & { syncInProgress?: boolean; lastSyncAt?: string | null };
-        if (error.syncInProgress) {
-          const lastSyncText = formatLastSync(error.lastSyncAt || null);
-          setToast({ message: `Sync in progress. Please wait. (last sync: ${lastSyncText})`, type: 'error' });
-        } else {
-          setToast({ message: error.message || 'Failed to refresh feed', type: 'error' });
+        const error = err as Error & { code?: string; details?: string | string[] };
+        let message = error.message || 'Failed to activate feed';
+
+        // Add details if available
+        if (error.details) {
+          if (Array.isArray(error.details)) {
+            message = error.details.join('\n');
+          } else {
+            message = error.details;
+          }
         }
+
+        setToast({ message, type: 'error' });
       },
     });
   };
@@ -436,25 +530,56 @@ function CatalogPageContent() {
           <div>
             <p className="uppercase tracking-[0.18em] text-xs text-gray-500">Products</p>
             <h1 className="text-2xl font-bold text-gray-900">Catalog</h1>
+            {/* Stats line */}
+            {stats && (
+              <div className="flex items-center gap-4 mt-1 text-sm">
+                <span className="text-gray-600">
+                  <span className="font-medium text-gray-900">{stats.inFeed}</span>
+                  <span className="text-gray-400">/</span>
+                  <span>{stats.total}</span>
+                  {' '}products in ChatGPT feed
+                </span>
+                {stats.needsAttention > 0 && (
+                  <span className="text-amber-600">
+                    {stats.needsAttention} need{stats.needsAttention === 1 ? 's' : ''} attention
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleRefreshFeed}
-              disabled={refreshFeedMutation.isPending}
-              className="px-4 py-2 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
-            >
-              {refreshFeedMutation.isPending ? 'Refreshing...' : 'Refresh Feed'}
-            </button>
-            <a
-              href={`${API_URL}/api/v1/feed/${params.id}/view`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all text-sm"
-            >
-              View Feed
-            </a>
+            {/* Feed status badge */}
+            <span className={`flex items-center gap-1.5 text-sm font-medium ${feedStateConfig.colorClass}`}>
+              <span className={`w-2 h-2 rounded-full ${feedStateConfig.dotClass}`} />
+              {feedStateConfig.label}
+            </span>
+
+            {/* Conditional buttons based on feed state */}
+            {feedState === 'not_activated' ? (
+              <button
+                onClick={handleActivateFeed}
+                disabled={activateFeedMutation.isPending}
+                className="px-4 py-2 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+              >
+                {activateFeedMutation.isPending ? 'Activating...' : 'Activate Feed'}
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowFeedPreviewModal(true)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all text-sm"
+              >
+                Preview Feed
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Product Tabs */}
+        <ProductTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          stats={stats}
+        />
 
         {/* Filters Bar */}
         <div className="flex items-center gap-4 flex-wrap">
@@ -658,6 +783,12 @@ function CatalogPageContent() {
         shopId={params?.id || ''}
         visibleColumns={visibleColumns}
         onSave={handleSaveColumns}
+      />
+
+      <FeedPreviewModal
+        isOpen={showFeedPreviewModal}
+        onClose={() => setShowFeedPreviewModal(false)}
+        shopId={params?.id || ''}
       />
     </main>
   );

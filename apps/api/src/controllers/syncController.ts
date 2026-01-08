@@ -3,6 +3,8 @@ import { prisma } from '../lib/prisma';
 import { SyncStatus } from '@prisma/client';
 import { syncQueue, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 import { logger } from '../lib/logger';
+import { generateFeedPayload } from '../services/feedService';
+import { getUserId } from '../utils/request';
 
 export async function triggerSync(req: Request, res: Response) {
   // Check Redis availability FIRST before modifying shop status
@@ -121,23 +123,68 @@ export async function pushFeed(req: Request, res: Response) {
   }
 }
 
+/**
+ * GET /api/v1/shops/:id/sync/feed/preview
+ * Generates feed in-memory without saving snapshot
+ * Returns the same structure as the actual feed for accurate preview
+ */
 export async function previewFeed(req: Request, res: Response) {
+  const shopId = req.params.id;
+
   try {
-    const products = await prisma.product.findMany({
-      where: { shopId: req.params.id },
-      take: 50,
-      orderBy: { updatedAt: 'desc' },
+    const userId = getUserId(req);
+
+    // Get shop with ownership check
+    const shop = await prisma.shop.findFirst({
+      where: { id: shopId, userId },
     });
+
+    if (!shop) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    // Get all products for this shop
+    const allProducts = await prisma.product.findMany({
+      where: { shopId },
+    });
+
+    // Get counts for stats
+    const totalProducts = allProducts.length;
+    const validProducts = allProducts.filter(p => p.isValid && p.feedEnableSearch);
+    const invalidCount = allProducts.filter(p => !p.isValid).length;
+    const disabledCount = allProducts.filter(p => !p.feedEnableSearch).length;
+
+    // Generate feed payload in-memory (no snapshot saved)
+    const feedPayload = generateFeedPayload(shop, allProducts, {
+      validateEntries: true,
+      skipInvalidEntries: true,
+    });
+
+    logger.info('feed:preview generated', {
+      shopId,
+      userId,
+      totalProducts,
+      includedInFeed: feedPayload.items.length,
+      invalidCount,
+      disabledCount,
+    });
+
     return res.json({
-      shopId: req.params.id,
-      products: products.map((p) => ({
-        id: p.id,
-        title: p.wooTitle,
-        price: p.wooPrice,
-      })),
+      preview: true,
+      generatedAt: feedPayload.generatedAt,
+      seller: feedPayload.seller,
+      items: feedPayload.items,
+      stats: {
+        total: totalProducts,
+        included: feedPayload.items.length,
+        invalid: invalidCount,
+        disabled: disabledCount,
+        validationStats: feedPayload.validationStats,
+      },
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    logger.error('feed:preview error', { shopId, error: err.message });
+    return res.status(500).json({ error: 'Failed to generate preview' });
   }
 }
 

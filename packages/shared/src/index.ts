@@ -44,6 +44,31 @@ export interface Shop {
   updatedAt: string;
 }
 
+// Feed activation state
+export type FeedState = 'not_activated' | 'active' | 'paused' | 'error';
+
+/**
+ * Derive feed state from shop flags
+ * Priority: error > active > paused > not_activated
+ */
+export function deriveFeedState(
+  shop: Pick<Shop, 'openaiEnabled' | 'syncEnabled' | 'feedStatus'>
+): FeedState {
+  if (shop.feedStatus === 'FAILED') return 'error';
+  if (!shop.openaiEnabled) return 'not_activated';
+  if (shop.openaiEnabled && shop.syncEnabled) return 'active';
+  if (shop.openaiEnabled && !shop.syncEnabled) return 'paused';
+  return 'not_activated';
+}
+
+// Product stats for feed status display
+export interface ProductStats {
+  total: number;
+  inFeed: number;
+  needsAttention: number;
+  disabled: number;
+}
+
 import type { ProductFieldOverrides } from './openai-feed-spec';
 
 export interface Product {

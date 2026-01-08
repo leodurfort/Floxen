@@ -102,7 +102,7 @@ model Shop {
   isConnected       Boolean    @default(false) @map("is_connected")
   lastSyncAt        DateTime?  @map("last_sync_at")
   syncStatus        SyncStatus @default(PENDING) @map("sync_status")
-  syncEnabled       Boolean    @default(true) @map("sync_enabled")
+  syncEnabled       Boolean    @default(false) @map("sync_enabled")
   feedStatus        SyncStatus @default(PENDING) @map("feed_status")
   lastFeedGeneratedAt DateTime? @map("last_feed_generated_at")
   openaiMerchantId  String?    @map("openai_merchant_id")
