@@ -64,7 +64,7 @@ export class WooClient {
   // ========================
 
   /**
-   * Create a category
+   * Create a category (or return existing if already exists)
    */
   async createCategory(data: {
     name: string;
@@ -78,9 +78,28 @@ export class WooClient {
       console.log('[WooClient] Category created:', response.data.id, response.data.name);
       return response.data;
     } catch (error) {
-      console.error('[WooClient] Category creation failed:', data.name, error);
+      // Check if category already exists
       if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: unknown } };
+        const axiosError = error as { response?: { data?: { code?: string; data?: { resource_id?: number } } } };
+        const errorData = axiosError.response?.data;
+
+        if (errorData?.code === 'term_exists' && errorData?.data?.resource_id) {
+          console.log('[WooClient] Category already exists, using existing ID:', errorData.data.resource_id);
+          // Return a minimal category object with the existing ID
+          return {
+            id: errorData.data.resource_id,
+            name: data.name,
+            slug: data.slug,
+            parent: data.parent || 0,
+            description: '',
+            display: 'default',
+            image: null,
+            menu_order: 0,
+            count: 0,
+          };
+        }
+
+        console.error('[WooClient] Category creation failed:', data.name);
         console.error('[WooClient] Error response:', JSON.stringify(axiosError.response?.data, null, 2));
       }
       throw error;

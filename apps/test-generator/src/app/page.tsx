@@ -117,6 +117,7 @@ export default function Home() {
                 storeInfo={storeInfo}
                 onDisconnect={handleDisconnect}
                 onGenerate={() => setState('generating')}
+                onCleanup={() => setState('cleaning')}
               />
             ) : state === 'generating' ? (
               <GeneratingState
@@ -227,11 +228,13 @@ function ConnectedState({
   storeInfo,
   onDisconnect,
   onGenerate,
+  onCleanup,
 }: {
   storeUrl: string;
   storeInfo: StoreInfo | null;
   onDisconnect: () => void;
   onGenerate: () => void;
+  onCleanup: () => void;
 }) {
   return (
     <div>
@@ -264,8 +267,14 @@ function ConnectedState({
           Generate Products
         </button>
         <button
-          onClick={onDisconnect}
+          onClick={onCleanup}
           className="w-full bg-surface-bg hover:bg-border text-text-secondary font-medium py-2 px-4 rounded-md transition-colors"
+        >
+          Cleanup Previous Products
+        </button>
+        <button
+          onClick={onDisconnect}
+          className="w-full text-text-muted hover:text-text-secondary font-medium py-2 px-4 transition-colors"
         >
           Disconnect
         </button>
