@@ -1,5 +1,8 @@
 /**
  * Placeholder image generation utilities
+ *
+ * Uses placehold.co which provides reliable placeholder images
+ * that WooCommerce can fetch and import.
  */
 
 // Colors for different categories
@@ -21,6 +24,7 @@ const TEXT_COLOR = '333333';
 
 /**
  * Generate a placeholder image URL
+ * Uses placehold.co format: https://placehold.co/WIDTHxHEIGHT/BGCOLOR/TEXTCOLOR.png
  */
 export function getPlaceholderUrl(
   sku: string,
@@ -28,11 +32,10 @@ export function getPlaceholderUrl(
   size = '800x800'
 ): string {
   const bgColor = CATEGORY_COLORS[category] || 'CCCCCC';
-  const text = encodeURIComponent(sku);
-  const baseUrl =
-    process.env.PLACEHOLDER_IMAGE_URL || 'https://via.placeholder.com';
 
-  return `${baseUrl}/${size}/${bgColor}/${TEXT_COLOR}?text=${text}`;
+  // Use placehold.co which WooCommerce can reliably fetch
+  // Format: https://placehold.co/800x800/BGCOLOR/TEXTCOLOR.png
+  return `https://placehold.co/${size}/${bgColor}/${TEXT_COLOR}.png`;
 }
 
 /**
