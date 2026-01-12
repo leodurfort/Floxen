@@ -3,6 +3,7 @@
  */
 
 export type GeneratorPhase =
+  | 'checking'
   | 'categories'
   | 'simple-products'
   | 'variable-products'
@@ -66,6 +67,13 @@ export interface GenerationSummary {
   groupedProducts: number;
   totalProducts: number;
   durationMs: number;
+  // Resume info (when continuing from interrupted generation)
+  resumed?: boolean;
+  skipped?: {
+    categories: number;
+    products: number;
+    variations: number;
+  };
 }
 
 /**

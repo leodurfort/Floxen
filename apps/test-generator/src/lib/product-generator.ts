@@ -1,5 +1,8 @@
 /**
  * Main Product Generator - Orchestrates creation of all products in WooCommerce
+ *
+ * Supports resuming interrupted generations by checking for existing items
+ * and skipping already-created categories, products, and variations.
  */
 
 import { WooClient } from './woo-client';
@@ -20,7 +23,7 @@ import {
   GenerationSummary,
   GeneratorPhase,
 } from '@/types/events';
-import { WooMetaData, WooProduct, WooProductAttribute } from '@/types/woocommerce';
+import { WooMetaData, WooProduct, WooProductAttribute, WooCategory } from '@/types/woocommerce';
 
 const GENERATOR_META_KEY = '_generated_by';
 const GENERATOR_META_VALUE = 'woo-test-generator';
@@ -33,7 +36,9 @@ export class ProductGenerator {
   private wooClient: WooClient;
   private categoryIdMap: Map<string, number> = new Map();
   private productIdMap: Map<string, number> = new Map(); // SKU -> WooCommerce ID
+  private productsWithVariations: Set<number> = new Set(); // Product IDs that already have variations
   private startTime: number = 0;
+  private isResume: boolean = false;
 
   // Counters for summary
   private categoriesCreated = 0;
@@ -42,17 +47,92 @@ export class ProductGenerator {
   private variationsCreated = 0;
   private groupedProductsCreated = 0;
 
+  // Resume counters (items found from previous run)
+  private categoriesSkipped = 0;
+  private productsSkipped = 0;
+  private variationsSkipped = 0;
+
   constructor(wooClient: WooClient) {
     this.wooClient = wooClient;
   }
 
   /**
+   * Check for existing generated items to support resume functionality
+   * This queries WooCommerce for categories and products with our meta tag
+   */
+  private async *checkExistingItems(): AsyncGenerator<ProgressEvent> {
+    yield this.progress('checking', 0, 3, 'Checking for existing generated items...');
+
+    // Check existing categories
+    try {
+      const existingCategories = await this.wooClient.getCategories({ per_page: 100 });
+      for (const cat of existingCategories) {
+        // Map by slug for matching with our category definitions
+        this.categoryIdMap.set(cat.slug, cat.id);
+        this.categoriesSkipped++;
+      }
+      console.log(`[Generator] Found ${this.categoriesSkipped} existing categories`);
+    } catch (error) {
+      console.error('[Generator] Failed to fetch existing categories:', error);
+    }
+
+    yield this.progress('checking', 1, 3, 'Checking existing products...');
+
+    // Check existing products with our meta tag
+    try {
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const products = await this.wooClient.getProducts({ page, per_page: 100 });
+
+        for (const product of products) {
+          const isGenerated = product.meta_data?.some(
+            (m) => m.key === GENERATOR_META_KEY && m.value === GENERATOR_META_VALUE
+          );
+
+          if (isGenerated && product.sku) {
+            this.productIdMap.set(product.sku, product.id);
+            this.productsSkipped++;
+
+            // For variable products, check if they have variations
+            if (product.type === 'variable' && product.variations && product.variations.length > 0) {
+              this.productsWithVariations.add(product.id);
+              this.variationsSkipped += product.variations.length;
+            }
+          }
+        }
+
+        hasMore = products.length === 100;
+        page++;
+      }
+
+      console.log(`[Generator] Found ${this.productsSkipped} existing generated products`);
+      console.log(`[Generator] Found ${this.productsWithVariations.size} products with variations`);
+    } catch (error) {
+      console.error('[Generator] Failed to fetch existing products:', error);
+    }
+
+    yield this.progress('checking', 3, 3, 'Resume check complete');
+
+    // Determine if this is a resume
+    this.isResume = this.productsSkipped > 0 || this.categoriesSkipped > 0;
+    if (this.isResume) {
+      console.log(`[Generator] Resuming generation - skipping ${this.categoriesSkipped} categories, ${this.productsSkipped} products`);
+    }
+  }
+
+  /**
    * Main generation method - yields progress events
+   * Automatically resumes from where a previous generation left off
    */
   async *generate(): AsyncGenerator<GeneratorEvent> {
     this.startTime = Date.now();
 
     try {
+      // Check for existing items to enable resume
+      yield* this.checkExistingItems();
+
       // Phase 1: Categories
       yield* this.generateCategories();
 
@@ -77,6 +157,7 @@ export class ProductGenerator {
 
   /**
    * Generate categories in hierarchy order
+   * Skips categories that already exist (resume support)
    */
   private async *generateCategories(): AsyncGenerator<ProgressEvent> {
     const categories = getCategoriesByHierarchy();
@@ -85,6 +166,13 @@ export class ProductGenerator {
 
     for (const category of categories) {
       current++;
+
+      // Skip if category already exists (from resume check)
+      if (this.categoryIdMap.has(category.slug)) {
+        yield this.progress('categories', current, total, `Category exists: ${category.name} (skipped)`);
+        continue;
+      }
+
       yield this.progress('categories', current, total, `Creating category: ${category.name}`);
 
       const parentId = category.parent
@@ -110,22 +198,38 @@ export class ProductGenerator {
 
   /**
    * Generate simple products in batches
+   * Skips products that already exist (resume support)
    */
   private async *generateSimpleProducts(): AsyncGenerator<ProgressEvent> {
     const simpleProducts = ALL_PRODUCTS.filter(
       (p): p is SimpleProductDefinition => p.type === 'simple'
     );
-    const total = simpleProducts.length;
 
-    for (let i = 0; i < simpleProducts.length; i += BATCH_SIZE) {
-      const batch = simpleProducts.slice(i, i + BATCH_SIZE);
+    // Filter out products that already exist
+    const productsToCreate = simpleProducts.filter(
+      (p) => !this.productIdMap.has(p.sku)
+    );
+
+    const skipped = simpleProducts.length - productsToCreate.length;
+    if (skipped > 0) {
+      console.log(`[Generator] Skipping ${skipped} existing simple products`);
+    }
+
+    const total = productsToCreate.length;
+    if (total === 0) {
+      yield this.progress('simple-products', simpleProducts.length, simpleProducts.length, 'All simple products exist (skipped)');
+      return;
+    }
+
+    for (let i = 0; i < productsToCreate.length; i += BATCH_SIZE) {
+      const batch = productsToCreate.slice(i, i + BATCH_SIZE);
       const current = Math.min(i + BATCH_SIZE, total);
 
       yield this.progress(
         'simple-products',
         current,
         total,
-        `Creating simple products: ${current}/${total}`
+        `Creating simple products: ${current}/${total}${skipped > 0 ? ` (${skipped} skipped)` : ''}`
       );
 
       const wooProducts = batch.map((product) =>
@@ -147,22 +251,38 @@ export class ProductGenerator {
 
   /**
    * Generate variable products (parent products only)
+   * Skips products that already exist (resume support)
    */
   private async *generateVariableProducts(): AsyncGenerator<ProgressEvent> {
     const variableProducts = ALL_PRODUCTS.filter(
       (p): p is VariableProductDefinition => p.type === 'variable'
     );
-    const total = variableProducts.length;
 
-    for (let i = 0; i < variableProducts.length; i += BATCH_SIZE) {
-      const batch = variableProducts.slice(i, i + BATCH_SIZE);
+    // Filter out products that already exist
+    const productsToCreate = variableProducts.filter(
+      (p) => !this.productIdMap.has(p.sku)
+    );
+
+    const skipped = variableProducts.length - productsToCreate.length;
+    if (skipped > 0) {
+      console.log(`[Generator] Skipping ${skipped} existing variable products`);
+    }
+
+    const total = productsToCreate.length;
+    if (total === 0) {
+      yield this.progress('variable-products', variableProducts.length, variableProducts.length, 'All variable products exist (skipped)');
+      return;
+    }
+
+    for (let i = 0; i < productsToCreate.length; i += BATCH_SIZE) {
+      const batch = productsToCreate.slice(i, i + BATCH_SIZE);
       const current = Math.min(i + BATCH_SIZE, total);
 
       yield this.progress(
         'variable-products',
         current,
         total,
-        `Creating variable products: ${current}/${total}`
+        `Creating variable products: ${current}/${total}${skipped > 0 ? ` (${skipped} skipped)` : ''}`
       );
 
       const wooProducts = batch.map((product) =>
@@ -184,19 +304,37 @@ export class ProductGenerator {
 
   /**
    * Generate variations for all variable products
+   * Skips products that already have variations (resume support)
    */
   private async *generateVariations(): AsyncGenerator<ProgressEvent> {
     const variableProducts = ALL_PRODUCTS.filter(
       (p): p is VariableProductDefinition => p.type === 'variable'
     );
 
-    const totalVariations = variableProducts.reduce(
+    // Filter to only products that need variations
+    const productsNeedingVariations = variableProducts.filter((p) => {
+      const productId = this.productIdMap.get(p.sku);
+      return productId && !this.productsWithVariations.has(productId);
+    });
+
+    const skippedProducts = variableProducts.length - productsNeedingVariations.length;
+    if (skippedProducts > 0) {
+      console.log(`[Generator] Skipping variations for ${skippedProducts} products that already have them`);
+    }
+
+    const totalVariations = productsNeedingVariations.reduce(
       (sum, p) => sum + p.variations.length,
       0
     );
+
+    if (totalVariations === 0) {
+      yield this.progress('variations', 1, 1, 'All variations exist (skipped)');
+      return;
+    }
+
     let createdVariations = 0;
 
-    for (const product of variableProducts) {
+    for (const product of productsNeedingVariations) {
       const productId = this.productIdMap.get(product.sku);
       if (!productId) {
         console.error(`Product ID not found for SKU: ${product.sku}`);
@@ -211,7 +349,7 @@ export class ProductGenerator {
           'variations',
           createdVariations + batch.length,
           totalVariations,
-          `Creating variations for ${product.sku}: ${i + batch.length}/${product.variations.length}`
+          `Creating variations for ${product.sku}: ${i + batch.length}/${product.variations.length}${skippedProducts > 0 ? ` (${skippedProducts} products skipped)` : ''}`
         );
 
         const wooVariations = batch.map((variation) => ({
@@ -253,21 +391,38 @@ export class ProductGenerator {
 
   /**
    * Generate grouped products
+   * Skips products that already exist (resume support)
    */
   private async *generateGroupedProducts(): AsyncGenerator<ProgressEvent> {
     const groupedProducts = ALL_PRODUCTS.filter(
       (p): p is GroupedProductDefinition => p.type === 'grouped'
     );
-    const total = groupedProducts.length;
+
+    // Filter out products that already exist
+    const productsToCreate = groupedProducts.filter(
+      (p) => !this.productIdMap.has(p.sku)
+    );
+
+    const skipped = groupedProducts.length - productsToCreate.length;
+    if (skipped > 0) {
+      console.log(`[Generator] Skipping ${skipped} existing grouped products`);
+    }
+
+    const total = productsToCreate.length;
+    if (total === 0) {
+      yield this.progress('grouped-products', groupedProducts.length, groupedProducts.length, 'All grouped products exist (skipped)');
+      return;
+    }
+
     let current = 0;
 
-    for (const product of groupedProducts) {
+    for (const product of productsToCreate) {
       current++;
       yield this.progress(
         'grouped-products',
         current,
         total,
-        `Creating grouped product: ${product.name}`
+        `Creating grouped product: ${product.name}${skipped > 0 ? ` (${skipped} skipped)` : ''}`
       );
 
       // Map child SKUs to WooCommerce IDs
@@ -422,6 +577,16 @@ export class ProductGenerator {
         this.groupedProductsCreated,
       durationMs: Date.now() - this.startTime,
     };
+
+    // Add resume info if this was a resumed generation
+    if (this.isResume) {
+      summary.resumed = true;
+      summary.skipped = {
+        categories: this.categoriesSkipped,
+        products: this.productsSkipped,
+        variations: this.variationsSkipped,
+      };
+    }
 
     return { type: 'complete', summary };
   }
