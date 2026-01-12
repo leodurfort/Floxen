@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { WooClient } from '@/lib/woo-client';
+import { storePendingCredentials } from '@/lib/pending-credentials';
 
 /**
  * Decode store URL from Base64url encoded user_id
@@ -152,8 +153,8 @@ async function processOAuthCallback(request: Request): Promise<{
     // Continue without store info - not critical
   }
 
-  // Save credentials to session
-  session.storeUrl = storeUrl; // Ensure store URL is saved
+  // Save credentials to session (works for GET requests from same browser)
+  session.storeUrl = storeUrl;
   session.consumerKey = credentials.consumer_key;
   session.consumerSecret = credentials.consumer_secret;
   session.connectedAt = Date.now();
@@ -162,7 +163,19 @@ async function processOAuthCallback(request: Request): Promise<{
   }
   await session.save();
 
-  console.log('[OAuth Callback] Credentials saved to session successfully');
+  // Also store in pending credentials (bridges server-to-server POST to browser redirect)
+  // This is needed because WooCommerce POST and browser redirect are different sessions
+  if (credentials.user_id) {
+    storePendingCredentials(credentials.user_id, {
+      storeUrl,
+      consumerKey: credentials.consumer_key,
+      consumerSecret: credentials.consumer_secret,
+      storeInfo: storeInfo || undefined,
+    });
+    console.log('[OAuth Callback] Credentials stored in pending store for browser pickup');
+  }
+
+  console.log('[OAuth Callback] Credentials saved successfully');
 
   return { success: true, storeUrl };
 }
