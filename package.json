@@ -14,10 +14,12 @@
   "scripts": {
     "dev:api": "npm --workspace apps/api run dev",
     "dev:web": "npm --workspace apps/web run dev",
+    "dev:test-gen": "npm --workspace apps/test-generator run dev",
     "build": "npm run build:shared && npm run build:api && npm run build:web",
     "build:shared": "npm --workspace packages/shared run build",
     "build:api": "npm --workspace apps/api run build",
     "build:web": "npm --workspace apps/web run build",
+    "build:test-gen": "npm --workspace apps/test-generator run build",
     "start": "npm --workspace apps/api run start",
     "migrate:deploy": "cd apps/api && npx prisma migrate deploy",
     "lint": "npm --workspaces run lint",
