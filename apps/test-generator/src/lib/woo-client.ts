@@ -72,8 +72,19 @@ export class WooClient {
     parent?: number;
     meta_data?: WooMetaData[];
   }): Promise<WooCategory> {
-    const response = await this.api.post('products/categories', data);
-    return response.data;
+    console.log('[WooClient] Creating category:', data.name);
+    try {
+      const response = await this.api.post('products/categories', data);
+      console.log('[WooClient] Category created:', response.data.id, response.data.name);
+      return response.data;
+    } catch (error) {
+      console.error('[WooClient] Category creation failed:', data.name, error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: unknown } };
+        console.error('[WooClient] Error response:', JSON.stringify(axiosError.response?.data, null, 2));
+      }
+      throw error;
+    }
   }
 
   /**
@@ -112,9 +123,42 @@ export class WooClient {
     products: Partial<WooProduct>[]
   ): Promise<WooProduct[]> {
     const request: WooBatchRequest<Partial<WooProduct>> = { create: products };
-    const response = await this.api.post('products/batch', request);
-    const batchResponse: WooBatchResponse<WooProduct> = response.data;
-    return batchResponse.create || [];
+
+    console.log('[WooClient] Creating products batch:', {
+      count: products.length,
+      skus: products.map((p) => p.sku).slice(0, 5),
+    });
+
+    try {
+      const response = await this.api.post('products/batch', request);
+      const batchResponse = response.data;
+
+      console.log('[WooClient] Batch response status:', response.status);
+      console.log('[WooClient] Batch response keys:', Object.keys(batchResponse));
+
+      // Check for errors in the create array
+      const created = batchResponse.create || [];
+      const errors = created.filter((item: { error?: { message?: string } }) => item.error);
+
+      if (errors.length > 0) {
+        console.error('[WooClient] Batch creation errors:', JSON.stringify(errors.slice(0, 3), null, 2));
+      }
+
+      // Filter out items with errors
+      const successful = created.filter((item: { error?: unknown; id?: number }) => !item.error && item.id);
+      console.log('[WooClient] Successfully created:', successful.length, 'products');
+
+      return successful;
+    } catch (error) {
+      console.error('[WooClient] Batch creation failed:', error);
+      // Log the full error response if available
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: unknown; status?: number } };
+        console.error('[WooClient] Error response:', JSON.stringify(axiosError.response?.data, null, 2));
+        console.error('[WooClient] Error status:', axiosError.response?.status);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -186,12 +230,36 @@ export class WooClient {
     const request: WooBatchRequest<Partial<WooVariation>> = {
       create: variations,
     };
-    const response = await this.api.post(
-      `products/${productId}/variations/batch`,
-      request
-    );
-    const batchResponse: WooBatchResponse<WooVariation> = response.data;
-    return batchResponse.create || [];
+
+    console.log('[WooClient] Creating variations batch for product:', productId, 'count:', variations.length);
+
+    try {
+      const response = await this.api.post(
+        `products/${productId}/variations/batch`,
+        request
+      );
+      const batchResponse = response.data;
+
+      // Check for errors in the create array
+      const created = batchResponse.create || [];
+      const errors = created.filter((item: { error?: { message?: string } }) => item.error);
+
+      if (errors.length > 0) {
+        console.error('[WooClient] Variation batch errors:', JSON.stringify(errors.slice(0, 3), null, 2));
+      }
+
+      const successful = created.filter((item: { error?: unknown; id?: number }) => !item.error && item.id);
+      console.log('[WooClient] Successfully created:', successful.length, 'variations');
+
+      return successful;
+    } catch (error) {
+      console.error('[WooClient] Variation batch creation failed:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: unknown; status?: number } };
+        console.error('[WooClient] Error response:', JSON.stringify(axiosError.response?.data, null, 2));
+      }
+      throw error;
+    }
   }
 
   /**
