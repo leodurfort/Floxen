@@ -98,6 +98,10 @@ function CatalogPageContent() {
   const [searchInput, setSearchInput] = useState('');
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Scroll tracking for sticky header shadow
+  const [isScrolled, setIsScrolled] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   // Use hooks
   const {
     filters,
@@ -201,6 +205,19 @@ function CatalogPageContent() {
       prevFiltersRef.current = { search: filters.search, columnFilters: filters.columnFilters };
     }
   }, [filters.search, filters.columnFilters, selection]);
+
+  // Scroll detection for sticky header shadow
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      setIsScrolled(container.scrollTop > 0);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Fetch item group count when exactly 1 product is selected
   useEffect(() => {
@@ -610,107 +627,111 @@ function CatalogPageContent() {
         <SyncStatusBanner shop={currentShop} />
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="uppercase tracking-[0.18em] text-xs text-gray-500">Products</p>
-            <h1 className="text-2xl font-bold text-gray-900">Catalog</h1>
-            {/* Stats line */}
-            {stats && (
-              <div className="flex items-center gap-4 mt-1 text-sm">
-                <span className="text-gray-600">
-                  <span className="font-medium text-gray-900">{stats.inFeed}</span>
-                  <span className="text-gray-400">/</span>
-                  <span>{stats.total}</span>
-                  {' '}products in ChatGPT feed
-                </span>
-                {stats.needsAttention > 0 && (
-                  <span className="text-amber-600">
-                    {stats.needsAttention} need{stats.needsAttention === 1 ? 's' : ''} attention
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
+        {/* Sticky Header Section */}
+        <div className={`catalog-sticky-header p-6 pb-0 space-y-4 flex-shrink-0 ${isScrolled ? 'scrolled' : ''}`}>
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="uppercase tracking-[0.18em] text-xs text-gray-500">Products</p>
+              <h1 className="text-2xl font-bold text-gray-900">Catalog</h1>
+              {/* Stats line */}
+              {stats && (
+                <div className="flex items-center gap-4 mt-1 text-sm">
+                  <span className="text-gray-600">
+                    <span className="font-medium text-gray-900">{stats.inFeed}</span>
+                    <span className="text-gray-400">/</span>
+                    <span>{stats.total}</span>
+                    {' '}products in ChatGPT feed
                   </span>
-                )}
-              </div>
-            )}
+                  {stats.needsAttention > 0 && (
+                    <span className="text-amber-600">
+                      {stats.needsAttention} need{stats.needsAttention === 1 ? 's' : ''} attention
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Feed status badge */}
+              <span className={`flex items-center gap-1.5 text-sm font-medium ${feedStateConfig.colorClass}`}>
+                <span className={`w-2 h-2 rounded-full ${feedStateConfig.dotClass}`} />
+                {feedStateConfig.label}
+              </span>
+
+              {/* Conditional buttons based on feed state */}
+              {feedState === 'not_activated' ? (
+                <button
+                  onClick={handleActivateFeed}
+                  disabled={activateFeedMutation.isPending}
+                  className="px-4 py-2 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                >
+                  {activateFeedMutation.isPending ? 'Activating...' : 'Activate Feed'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowFeedPreviewModal(true)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all text-sm"
+                >
+                  Preview Feed
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Feed status badge */}
-            <span className={`flex items-center gap-1.5 text-sm font-medium ${feedStateConfig.colorClass}`}>
-              <span className={`w-2 h-2 rounded-full ${feedStateConfig.dotClass}`} />
-              {feedStateConfig.label}
-            </span>
 
-            {/* Conditional buttons based on feed state */}
-            {feedState === 'not_activated' ? (
-              <button
-                onClick={handleActivateFeed}
-                disabled={activateFeedMutation.isPending}
-                className="px-4 py-2 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
-              >
-                {activateFeedMutation.isPending ? 'Activating...' : 'Activate Feed'}
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowFeedPreviewModal(true)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all text-sm"
-              >
-                Preview Feed
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Product Tabs */}
-        <ProductTabs
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          stats={stats}
-        />
-
-        {/* Filters Bar */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <SearchFilter value={searchInput} onChange={setSearchInput} placeholder="Search products..." />
-          <div className="flex-1" />
-          <ClearFiltersButton hasActiveFilters={hasActiveFilters} onClear={clearAllFilters} />
-          <button
-            onClick={() => setShowEditColumnsModal(true)}
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Edit Columns
-          </button>
-        </div>
-
-        {error && <div className="text-sm text-red-700 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">{error}</div>}
-
-        {/* Bulk Action Toolbar */}
-        {hasSelection && (
-          <BulkActionToolbar
-            selectedCount={selection.getSelectedCount()}
-            totalMatchingCount={totalProducts}
-            totalCatalogCount={totalCatalogCount}
-            selectAllMatching={selection.selectAllMatching}
-            selectAllGlobal={selection.selectAllGlobal}
-            selectAllByItemGroupId={selection.selectAllByItemGroupId}
-            selectAllByItemGroupCount={selection.selectAllByItemGroupCount}
-            hasActiveFilters={hasActiveFilters}
-            onSelectAllMatching={handleSelectAllMatching}
-            onSelectAllGlobal={handleSelectAllGlobal}
-            onSelectAllByItemGroup={handleSelectAllByItemGroup}
-            onClearSelection={selection.clearSelection}
-            onBulkEdit={handleOpenBulkEdit}
-            isProcessing={bulkUpdateMutation.isPending}
-            selectedProductItemGroupId={selectedProductItemGroupId}
-            itemGroupCount={itemGroupCount}
+          {/* Product Tabs */}
+          <ProductTabs
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            stats={stats}
           />
-        )}
 
-        {/* Table with Horizontal Scroll */}
-        {loading && <div className="text-gray-500">Loading products...</div>}
-        {!loading && !products.length && <div className="text-gray-500">No products found.</div>}
-        {!loading && products.length > 0 && (
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="table min-w-max">
-              <thead>
+          {/* Filters Bar */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <SearchFilter value={searchInput} onChange={setSearchInput} placeholder="Search products..." />
+            <div className="flex-1" />
+            <ClearFiltersButton hasActiveFilters={hasActiveFilters} onClear={clearAllFilters} />
+            <button
+              onClick={() => setShowEditColumnsModal(true)}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Edit Columns
+            </button>
+          </div>
+
+          {error && <div className="text-sm text-red-700 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">{error}</div>}
+
+          {/* Bulk Action Toolbar */}
+          {hasSelection && (
+            <BulkActionToolbar
+              selectedCount={selection.getSelectedCount()}
+              totalMatchingCount={totalProducts}
+              totalCatalogCount={totalCatalogCount}
+              selectAllMatching={selection.selectAllMatching}
+              selectAllGlobal={selection.selectAllGlobal}
+              selectAllByItemGroupId={selection.selectAllByItemGroupId}
+              selectAllByItemGroupCount={selection.selectAllByItemGroupCount}
+              hasActiveFilters={hasActiveFilters}
+              onSelectAllMatching={handleSelectAllMatching}
+              onSelectAllGlobal={handleSelectAllGlobal}
+              onSelectAllByItemGroup={handleSelectAllByItemGroup}
+              onClearSelection={selection.clearSelection}
+              onBulkEdit={handleOpenBulkEdit}
+              isProcessing={bulkUpdateMutation.isPending}
+              selectedProductItemGroupId={selectedProductItemGroupId}
+              itemGroupCount={itemGroupCount}
+            />
+          )}
+        </div>
+
+        {/* Scrollable Table Section */}
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pb-6">
+          {loading && <div className="text-gray-500 pt-4">Loading products...</div>}
+          {!loading && !products.length && <div className="text-gray-500 pt-4">No products found.</div>}
+          {!loading && products.length > 0 && (
+            <div className="catalog-table-container rounded-xl border border-gray-200 mt-4">
+              <table className="table catalog-table min-w-max">
+                <thead>
                 <tr>
                   {visibleColumnDefs.map((column) => {
                     // Checkbox column - sticky left
@@ -813,52 +834,53 @@ function CatalogPageContent() {
               </tbody>
             </table>
           </div>
-        )}
+          )}
 
-        {/* Pagination */}
-        {totalProducts > 0 && (
-          <div className="flex items-center justify-between pt-4">
-            <div className="text-sm text-gray-600">
-              Showing {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of{' '}
-              {totalProducts.toLocaleString()} products
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Per page:</span>
-                <select
-                  value={filters.limit}
-                  onChange={(e) => setFilters({ limit: Number(e.target.value), page: 1 })}
-                  className="px-2 py-1 bg-white text-gray-900 text-sm rounded border border-gray-300 focus:outline-none focus:border-[#FA7315]"
-                >
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
+          {/* Pagination */}
+          {totalProducts > 0 && (
+            <div className="flex items-center justify-between pt-4">
+              <div className="text-sm text-gray-600">
+                Showing {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of{' '}
+                {totalProducts.toLocaleString()} products
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setFilters({ page: filters.page - 1 })}
-                  disabled={filters.page <= 1}
-                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  ← Prev
-                </button>
-                <span className="px-3 py-1 text-sm text-gray-700">
-                  {filters.page} / {totalPages}
-                </span>
-                <button
-                  onClick={() => setFilters({ page: filters.page + 1 })}
-                  disabled={filters.page >= totalPages}
-                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Next →
-                </button>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Per page:</span>
+                  <select
+                    value={filters.limit}
+                    onChange={(e) => setFilters({ limit: Number(e.target.value), page: 1 })}
+                    className="px-2 py-1 bg-white text-gray-900 text-sm rounded border border-gray-300 focus:outline-none focus:border-[#FA7315]"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setFilters({ page: filters.page - 1 })}
+                    disabled={filters.page <= 1}
+                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ← Prev
+                  </button>
+                  <span className="px-3 py-1 text-sm text-gray-700">
+                    {filters.page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setFilters({ page: filters.page + 1 })}
+                    disabled={filters.page >= totalPages}
+                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Modals */}

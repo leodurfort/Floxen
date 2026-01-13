@@ -587,7 +587,7 @@ export async function getItemGroupCount(req: Request, res: Response) {
 export async function getColumnValues(req: Request, res: Response) {
   const { id: shopId } = req.params;
   const column = req.query.column as string;
-  const limit = Number(req.query.limit) || 100;
+  const limit = Number(req.query.limit) || 10000;
   const search = req.query.search as string | undefined;
 
   if (!column) {

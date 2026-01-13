@@ -283,3 +283,39 @@ textarea::placeholder {
 .zoom-out-95 {
   --tw-exit-scale: 0.95;
 }
+
+/* Catalog Page - Sticky Header */
+.catalog-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #FFFFFF;
+  transition: box-shadow 0.2s ease;
+}
+
+.catalog-sticky-header.scrolled {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Catalog Table with Sticky Header */
+.catalog-table-container {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.catalog-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #F9FAFB;
+}
+
+.catalog-table thead::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #E5E7EB;
+}
