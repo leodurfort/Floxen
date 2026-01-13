@@ -12,6 +12,8 @@ interface CatalogSelectionState {
 
   // "Select all by item group" mode - when set, selection applies to ALL products with this item_group_id
   selectAllByItemGroupId: string | null;
+  // Count of products in the selected item group (stored alongside selectAllByItemGroupId)
+  selectAllByItemGroupCount: number | null;
 
   // Shop ID to scope selection (clear selection when shop changes)
   currentShopId: string | null;
@@ -25,7 +27,7 @@ interface CatalogSelectionState {
   deselectAllOnPage: (ids: string[]) => void;
   setSelectAllMatching: (value: boolean) => void;
   setSelectAllGlobal: (value: boolean) => void;
-  setSelectAllByItemGroupId: (itemGroupId: string | null) => void;
+  setSelectAllByItemGroupId: (itemGroupId: string | null, count?: number) => void;
   clearSelection: () => void;
   isSelected: (id: string) => boolean;
   getSelectedCount: () => number;
@@ -38,6 +40,7 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
   selectAllMatching: false,
   selectAllGlobal: false,
   selectAllByItemGroupId: null,
+  selectAllByItemGroupCount: null,
   currentShopId: null,
 
   setShopId: (shopId) => {
@@ -50,6 +53,7 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
         selectAllMatching: false,
         selectAllGlobal: false,
         selectAllByItemGroupId: null,
+        selectAllByItemGroupCount: null,
       });
     }
   },
@@ -61,7 +65,7 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
     } else {
       newSet.add(id);
     }
-    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null };
+    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null };
   }),
 
   selectProducts: (ids) => set((state) => {
@@ -73,7 +77,7 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
   deselectProducts: (ids) => set((state) => {
     const newSet = new Set(state.selectedIds);
     ids.forEach(id => newSet.delete(id));
-    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null };
+    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null };
   }),
 
   selectAllOnPage: (ids) => set((state) => {
@@ -85,20 +89,26 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
   deselectAllOnPage: (ids) => set((state) => {
     const newSet = new Set(state.selectedIds);
     ids.forEach(id => newSet.delete(id));
-    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null };
+    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null };
   }),
 
-  setSelectAllMatching: (value) => set({ selectAllMatching: value, selectAllGlobal: false, selectAllByItemGroupId: null }),
+  setSelectAllMatching: (value) => set({ selectAllMatching: value, selectAllGlobal: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null }),
 
-  setSelectAllGlobal: (value) => set({ selectAllGlobal: value, selectAllMatching: false, selectAllByItemGroupId: null }),
+  setSelectAllGlobal: (value) => set({ selectAllGlobal: value, selectAllMatching: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null }),
 
-  setSelectAllByItemGroupId: (itemGroupId) => set({ selectAllByItemGroupId: itemGroupId, selectAllMatching: false, selectAllGlobal: false }),
+  setSelectAllByItemGroupId: (itemGroupId, count) => set({
+    selectAllByItemGroupId: itemGroupId,
+    selectAllByItemGroupCount: count ?? null,
+    selectAllMatching: false,
+    selectAllGlobal: false,
+  }),
 
   clearSelection: () => set({
     selectedIds: new Set(),
     selectAllMatching: false,
     selectAllGlobal: false,
     selectAllByItemGroupId: null,
+    selectAllByItemGroupCount: null,
   }),
 
   isSelected: (id) => get().selectedIds.has(id),

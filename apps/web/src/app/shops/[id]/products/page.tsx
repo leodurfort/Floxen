@@ -362,8 +362,8 @@ function CatalogPageContent() {
   };
 
   const handleSelectAllByItemGroup = () => {
-    if (selectedProductItemGroupId) {
-      selection.setSelectAllByItemGroupId(selectedProductItemGroupId);
+    if (selectedProductItemGroupId && itemGroupCount) {
+      selection.setSelectAllByItemGroupId(selectedProductItemGroupId, itemGroupCount);
     }
   };
 
@@ -466,8 +466,8 @@ function CatalogPageContent() {
     ? totalCatalogCount
     : selection.selectAllMatching
     ? totalProducts
-    : selection.selectAllByItemGroupId && itemGroupCount
-    ? itemGroupCount
+    : selection.selectAllByItemGroupId && selection.selectAllByItemGroupCount
+    ? selection.selectAllByItemGroupCount
     : selection.getSelectedCount();
 
   // Pagination
@@ -691,6 +691,7 @@ function CatalogPageContent() {
             selectAllMatching={selection.selectAllMatching}
             selectAllGlobal={selection.selectAllGlobal}
             selectAllByItemGroupId={selection.selectAllByItemGroupId}
+            selectAllByItemGroupCount={selection.selectAllByItemGroupCount}
             hasActiveFilters={hasActiveFilters}
             onSelectAllMatching={handleSelectAllMatching}
             onSelectAllGlobal={handleSelectAllGlobal}

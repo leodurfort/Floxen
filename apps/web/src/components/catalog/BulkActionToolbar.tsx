@@ -7,6 +7,7 @@ interface BulkActionToolbarProps {
   selectAllMatching: boolean;
   selectAllGlobal: boolean;
   selectAllByItemGroupId: string | null;
+  selectAllByItemGroupCount: number | null; // Count stored in selection store (for display when in item group mode)
   hasActiveFilters: boolean;
   onSelectAllMatching: () => void;
   onSelectAllGlobal: () => void;
@@ -14,7 +15,7 @@ interface BulkActionToolbarProps {
   onClearSelection: () => void;
   onBulkEdit: () => void;
   isProcessing: boolean;
-  // Item group info for "Select similar products" feature
+  // Item group info for "Select similar products" feature (from local state, for the button)
   selectedProductItemGroupId: string | null;
   itemGroupCount: number | null;
 }
@@ -26,6 +27,7 @@ export function BulkActionToolbar({
   selectAllMatching,
   selectAllGlobal,
   selectAllByItemGroupId,
+  selectAllByItemGroupCount,
   hasActiveFilters,
   onSelectAllMatching,
   onSelectAllGlobal,
@@ -41,8 +43,8 @@ export function BulkActionToolbar({
     ? totalCatalogCount
     : selectAllMatching
     ? totalMatchingCount
-    : selectAllByItemGroupId !== null && itemGroupCount !== null
-    ? itemGroupCount
+    : selectAllByItemGroupId !== null && selectAllByItemGroupCount !== null
+    ? selectAllByItemGroupCount
     : selectedCount;
 
   // Show "Select all" button when:
