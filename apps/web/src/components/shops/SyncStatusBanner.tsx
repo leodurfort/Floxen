@@ -51,7 +51,7 @@ export function SyncStatusBanner({ shop }: SyncStatusBannerProps) {
 
           {/* Progress bar */}
           <div className="mt-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-w-sm">
               <div className="flex-1 h-2 bg-blue-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-500 rounded-full transition-all duration-300"
