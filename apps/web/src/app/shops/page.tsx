@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { Toast } from '@/components/catalog/Toast';
 import { CompleteShopSetupModal } from '@/components/shops/CompleteShopSetupModal';
+import { ConnectShopModal } from '@/components/shops/ConnectShopModal';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import type { Shop } from '@productsynch/shared';
 import {
@@ -139,8 +140,8 @@ export default function ShopsPage() {
   const updateShopMutation = useUpdateShopMutation();
 
   // Local state
-  const [showConnectForm, setShowConnectForm] = useState(false);
-  const [storeUrl, setStoreUrl] = useState('');
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // For advanced settings inline editing (debounced)
@@ -158,9 +159,9 @@ export default function ShopsPage() {
     };
   }, []);
 
-  function handleConnectShop() {
+  function handleConnectShop(storeUrl: string) {
     if (!user || !storeUrl.trim()) return;
-    setError(null);
+    setConnectError(null);
     createShopMutation.mutate(
       { storeUrl: storeUrl.trim() },
       {
@@ -168,7 +169,7 @@ export default function ShopsPage() {
           window.location.href = data.authUrl;
         },
         onError: (err) => {
-          setError(err.message);
+          setConnectError(err.message);
         },
       }
     );
@@ -307,10 +308,10 @@ export default function ShopsPage() {
               <h1 className="text-3xl font-bold text-gray-900">Your Stores</h1>
             </div>
             <button
-              onClick={() => setShowConnectForm(!showConnectForm)}
+              onClick={() => setShowConnectModal(true)}
               className="btn btn--primary"
             >
-              {showConnectForm ? 'Cancel' : 'Connect new store'}
+              Connect new store
             </button>
           </div>
           <p className="text-gray-600 text-sm">
@@ -324,32 +325,6 @@ export default function ShopsPage() {
           </div>
         )}
 
-
-        {/* Connect Form */}
-        {showConnectForm && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Connect WooCommerce Store</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">Store URL *</label>
-                <input
-                  type="url"
-                  placeholder="https://your-store.com"
-                  value={storeUrl}
-                  onChange={(e) => setStoreUrl(e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10"
-                />
-              </div>
-              <button
-                onClick={handleConnectShop}
-                disabled={createShopMutation.isPending || !storeUrl.trim()}
-                className="btn btn--primary"
-              >
-                {createShopMutation.isPending ? 'Connecting...' : 'Connect'}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Shops List */}
         <div>
@@ -366,9 +341,9 @@ export default function ShopsPage() {
           ) : shops.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="text-center">
-                <p className="text-gray-600 mb-4">No stores yet. Connect one to start syncing.</p>
+                <p className="text-gray-600 mb-4">No stores yet. Click below to connect your first store.</p>
                 <button
-                  onClick={() => setShowConnectForm(true)}
+                  onClick={() => setShowConnectModal(true)}
                   className="btn btn--primary"
                 >
                   Connect new store
@@ -651,7 +626,19 @@ export default function ShopsPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Connect Shop Modal */}
+      <ConnectShopModal
+        isOpen={showConnectModal}
+        onClose={() => {
+          setShowConnectModal(false);
+          setConnectError(null);
+        }}
+        onConnect={handleConnectShop}
+        isConnecting={createShopMutation.isPending}
+        error={connectError}
+      />
+
+      {/* Complete Shop Setup Modal */}
       {modalShop && (
         <CompleteShopSetupModal
           isOpen={true}
