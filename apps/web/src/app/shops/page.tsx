@@ -298,6 +298,9 @@ export default function ShopsPage() {
   // Find first shop with incomplete profile for banner
   const incompleteShop = shops.find(shop => shop.isConnected && !isProfileComplete(shop));
 
+  // Check if any shop is in first sync state
+  const hasShopInFirstSync = shops.some(shop => isFirstSync(shop));
+
   return (
     <div className="p-4">
       <div className="w-full">
@@ -312,12 +315,14 @@ export default function ShopsPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Your Stores</h1>
             </div>
-            <button
-              onClick={() => setShowConnectModal(true)}
-              className="btn btn--primary"
-            >
-              Connect new store
-            </button>
+            {!hasShopInFirstSync && (
+              <button
+                onClick={() => setShowConnectModal(true)}
+                className="btn btn--primary"
+              >
+                Connect new store
+              </button>
+            )}
           </div>
           <p className="text-gray-600 text-sm">
             Manage your WooCommerce store connections
@@ -458,7 +463,7 @@ export default function ShopsPage() {
                             </div>
                             <span className="text-xs text-gray-500 min-w-[3rem] text-right">
                               {shop.syncProgress !== null && shop.syncProgress !== undefined
-                                ? `${shop.syncProgress}%`
+                                ? `${Math.max(shop.syncProgress, 5)}%`
                                 : 'Starting...'}
                             </span>
                           </div>

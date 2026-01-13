@@ -9,12 +9,12 @@ interface SyncStatusBannerProps {
 }
 
 export function SyncStatusBanner({ shop }: SyncStatusBannerProps) {
-  // Only show during first sync (syncing with no previous sync)
-  const isFirstSync = shop.syncStatus === 'SYNCING' && shop.lastSyncAt === null;
+  // Only show during first sync (syncing/pending with no previous sync)
+  const isFirstSync = (shop.syncStatus === 'SYNCING' || shop.syncStatus === 'PENDING') && shop.lastSyncAt === null;
 
   if (!isFirstSync) return null;
 
-  // Ensure minimum 5% display for progress bar
+  // Ensure minimum 5% display for progress bar and text
   const displayProgress = Math.max(shop.syncProgress ?? 0, 5);
 
   return (
@@ -60,7 +60,7 @@ export function SyncStatusBanner({ shop }: SyncStatusBannerProps) {
               </div>
               <span className="text-xs text-blue-600 min-w-[3rem] text-right">
                 {shop.syncProgress !== null && shop.syncProgress !== undefined
-                  ? `${shop.syncProgress}%`
+                  ? `${Math.max(shop.syncProgress, 5)}%`
                   : 'Starting...'}
               </span>
             </div>
