@@ -286,7 +286,7 @@ All phases have been implemented:
 | Sale Dates | 20% | ✅ maybeGenerateSaleDates (past/current/future) |
 | Cross-sell | 20% | ✅ generateRelationships (40% total with upsell) |
 | Upsell | 20% | ✅ generateRelationships |
-| Reviews | 60% | ✅ generateReviews (1-5 star distribution) |
+| Reviews | 5% | ✅ generateReviews (1-5 star distribution) |
 | Optional fields | Various | ✅ generateOptionalFields (video, 3D, delivery, warning, age restriction) |
 
 ### Build Verification

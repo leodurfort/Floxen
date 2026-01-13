@@ -55,6 +55,10 @@ export class ProductGenerator {
   private brandAttributeId: number | null = null; // ID of the pa_brand attribute
   private brandTermIdMap: Map<string, number> = new Map(); // Brand name -> term ID
 
+  // Resume tracking for relationships and reviews
+  private productsWithRelationships: Set<number> = new Set(); // Product IDs that already have cross-sell/upsell
+  private productsWithReviews: Set<number> = new Set(); // Product IDs that already have reviews
+
   // Counters for summary
   private brandsCreated = 0;
   private categoriesCreated = 0;
@@ -78,6 +82,8 @@ export class ProductGenerator {
   private categoriesSkipped = 0;
   private productsSkipped = 0;
   private variationsSkipped = 0;
+  private relationshipsSkipped = 0;
+  private reviewsSkipped = 0;
 
   constructor(wooClient: WooClient) {
     this.wooClient = wooClient;
@@ -149,6 +155,14 @@ export class ProductGenerator {
               this.productsWithVariations.add(product.id);
               this.variationsSkipped += product.variations.length;
             }
+
+            // Track products that already have relationships (cross-sell/upsell)
+            const hasCrossSell = product.cross_sell_ids && product.cross_sell_ids.length > 0;
+            const hasUpsell = product.upsell_ids && product.upsell_ids.length > 0;
+            if (hasCrossSell || hasUpsell) {
+              this.productsWithRelationships.add(product.id);
+              this.relationshipsSkipped++;
+            }
           }
         }
 
@@ -162,10 +176,37 @@ export class ProductGenerator {
       console.error('[Generator] Failed to fetch existing products:', error);
     }
 
-    yield this.progress('checking', 4, 4, 'Resume check complete');
+    yield this.progress('checking', 3, 5, 'Checking existing reviews...');
+
+    // Check existing reviews (reviews don't have meta_data, so we check by product_id)
+    try {
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const reviews = await this.wooClient.getReviews({ page, per_page: 100 });
+
+        for (const review of reviews) {
+          // Track unique products that have reviews
+          if (!this.productsWithReviews.has(review.product_id)) {
+            this.productsWithReviews.add(review.product_id);
+            this.reviewsSkipped++;
+          }
+        }
+
+        hasMore = reviews.length === 100;
+        page++;
+      }
+
+      console.log(`[Generator] Found ${this.productsWithReviews.size} products with existing reviews`);
+    } catch (error) {
+      console.error('[Generator] Failed to fetch existing reviews:', error);
+    }
+
+    yield this.progress('checking', 5, 5, 'Resume check complete');
 
     // Determine if this is a resume
-    this.isResume = this.productsSkipped > 0 || this.categoriesSkipped > 0 || this.brandsSkipped > 0;
+    this.isResume = this.productsSkipped > 0 || this.categoriesSkipped > 0 || this.brandsSkipped > 0 || this.reviewsSkipped > 0;
     if (this.isResume) {
       console.log(`[Generator] Resuming generation - skipping ${this.brandsSkipped} brands, ${this.categoriesSkipped} categories, ${this.productsSkipped} products`);
     }
@@ -590,18 +631,33 @@ export class ProductGenerator {
    * Generate product relationships (cross-sell, upsell)
    * EC-REL-01 to EC-REL-06 coverage
    * Note: related_ids is read-only in WooCommerce API, we can only set cross_sell_ids and upsell_ids
+   * Skips products that already have relationships (resume support)
    */
   private async *generateRelationships(): AsyncGenerator<ProgressEvent> {
     // Get products that should have relationships (40% per PRD)
-    const allProductIds = Array.from(this.productIdMap.values());
     const productsToUpdate = ALL_PRODUCTS.filter((p, index) => {
       // 40% have relationships (indices 0-3 out of each 10)
-      return index % 10 < 4 && this.productIdMap.has(p.sku);
+      if (!(index % 10 < 4) || !this.productIdMap.has(p.sku)) {
+        return false;
+      }
+      // Skip products that already have relationships (resume support)
+      const productId = this.productIdMap.get(p.sku);
+      if (productId && this.productsWithRelationships.has(productId)) {
+        return false;
+      }
+      return true;
     });
+
+    // Count skipped products for logging
+    const totalEligible = ALL_PRODUCTS.filter((p, index) => index % 10 < 4 && this.productIdMap.has(p.sku)).length;
+    const skipped = totalEligible - productsToUpdate.length;
+    if (skipped > 0) {
+      console.log(`[Generator] Skipping ${skipped} products that already have relationships`);
+    }
 
     const total = productsToUpdate.length;
     if (total === 0) {
-      yield this.progress('relationships', 1, 1, 'No relationships to create');
+      yield this.progress('relationships', 1, 1, `All relationships exist (${skipped} skipped)`);
       return;
     }
 
@@ -649,7 +705,7 @@ export class ProductGenerator {
         'relationships',
         current,
         updates.length,
-        `Setting product relationships: ${current}/${updates.length}`
+        `Setting product relationships: ${current}/${updates.length}${skipped > 0 ? ` (${skipped} skipped)` : ''}`
       );
 
       try {
@@ -665,17 +721,33 @@ export class ProductGenerator {
    * Generate product reviews
    * EC-REV-01 to EC-REV-06 coverage
    * Creates actual reviews via WooCommerce API
+   * Skips products that already have reviews (resume support)
    */
   private async *generateReviews(): AsyncGenerator<ProgressEvent> {
-    // Get products that should have reviews (60% per PRD)
+    // Get products that should have reviews (5%), excluding those that already have reviews
     const productsToReview = ALL_PRODUCTS.filter((p, index) => {
-      // 60% have reviews (indices 0-5 out of each 10)
-      return index % 10 < 6 && this.productIdMap.has(p.sku);
+      // 5% have reviews (1 out of every 20 products)
+      if (!(index % 20 === 0) || !this.productIdMap.has(p.sku)) {
+        return false;
+      }
+      // Skip products that already have reviews (resume support)
+      const productId = this.productIdMap.get(p.sku);
+      if (productId && this.productsWithReviews.has(productId)) {
+        return false;
+      }
+      return true;
     });
+
+    // Count skipped products for logging
+    const totalEligible = ALL_PRODUCTS.filter((p, index) => index % 20 === 0 && this.productIdMap.has(p.sku)).length;
+    const skipped = totalEligible - productsToReview.length;
+    if (skipped > 0) {
+      console.log(`[Generator] Skipping ${skipped} products that already have reviews`);
+    }
 
     const total = productsToReview.length;
     if (total === 0) {
-      yield this.progress('reviews', 1, 1, 'No reviews to create');
+      yield this.progress('reviews', 1, 1, `All reviews exist (${skipped} skipped)`);
       return;
     }
 
@@ -709,7 +781,7 @@ export class ProductGenerator {
         'reviews',
         current,
         total,
-        `Creating reviews for product ${current}/${total}`
+        `Creating reviews for product ${current}/${total}${skipped > 0 ? ` (${skipped} skipped)` : ''}`
       );
 
       // Determine review count based on edge cases
@@ -1248,6 +1320,8 @@ export class ProductGenerator {
         categories: this.categoriesSkipped,
         products: this.productsSkipped,
         variations: this.variationsSkipped,
+        relationships: this.relationshipsSkipped,
+        reviews: this.reviewsSkipped,
       };
     }
 

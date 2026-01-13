@@ -1136,8 +1136,8 @@ This matrix shows how each of the 70 OpenAI feed fields is covered by test produ
 | 58 | warning | Compliance | Conditional | 15 (3%) | - |
 | 59 | warning_url | Compliance | Conditional | 15 (3%) | - |
 | 60 | age_restriction | Compliance | Optional | 10 (2%) | - |
-| 61 | product_review_count | Reviews | Recommended | 300 (60%) | - |
-| 62 | product_review_rating | Reviews | Recommended | 300 (60%) | - |
+| 61 | product_review_count | Reviews | Recommended | 25 (5%) | - |
+| 62 | product_review_rating | Reviews | Recommended | 25 (5%) | - |
 | 63 | store_review_count | Reviews | Optional | Shop-level | - |
 | 64 | store_review_rating | Reviews | Optional | Shop-level | - |
 | 65 | q_and_a | Reviews | Optional | 50 (10%) | formatQAndA |

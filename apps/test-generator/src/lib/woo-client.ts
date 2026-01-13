@@ -519,6 +519,22 @@ export class WooClient {
   // ========================
 
   /**
+   * Get all product reviews with pagination
+   */
+  async getReviews(params?: {
+    page?: number;
+    per_page?: number;
+    product?: number;
+  }): Promise<Array<{ id: number; product_id: number; rating: number }>> {
+    const response = await this.api.get('products/reviews', {
+      page: params?.page || 1,
+      per_page: params?.per_page || 100,
+      ...(params?.product ? { product: params.product } : {}),
+    });
+    return response.data;
+  }
+
+  /**
    * Create a product review
    * Used to populate review data for testing EC-REV-01 to EC-REV-06
    */

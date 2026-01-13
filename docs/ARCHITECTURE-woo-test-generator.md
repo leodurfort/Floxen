@@ -1527,7 +1527,7 @@ The following order ensures all dependencies are satisfied:
        ├── ~200 products with cross-sell relationships
        └── ~200 products with upsell relationships
 
-7. REVIEWS (60% of products)
+7. REVIEWS (5% of products)
    └── Create reviews via WooCommerce Reviews API
        ├── Varied ratings (1-5 stars)
        └── Covers EC-REV-01 to EC-REV-06 edge cases

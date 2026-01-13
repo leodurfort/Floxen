@@ -94,6 +94,8 @@ export interface GenerationSummary {
     categories: number;
     products: number;
     variations: number;
+    relationships: number;
+    reviews: number;
   };
 }
 

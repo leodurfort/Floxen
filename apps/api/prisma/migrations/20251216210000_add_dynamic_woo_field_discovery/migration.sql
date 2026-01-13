@@ -1,0 +1,1 @@
+-- Migration was applied directly to production
