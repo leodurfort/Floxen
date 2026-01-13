@@ -16,9 +16,9 @@ interface ConcurrencyState {
   lastAdjustmentTime: number;
 }
 
-const DEFAULT_CONCURRENCY = 5;
+const DEFAULT_CONCURRENCY = 10;
 const MIN_CONCURRENCY = 1;
-const MAX_CONCURRENCY = 10;
+const MAX_CONCURRENCY = 20;
 const SUCCESSES_BEFORE_SCALE_UP = 3; // Scale up after 3 successful batches
 const SCALE_UP_COOLDOWN_MS = 5000; // Wait 5s between scale-ups
 
