@@ -1,8 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import {
+  ValidationResult,
+  ValidationCategory,
+  ValidationStatus,
+  MissingItems,
+} from '@/types/validation';
 
-type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'generating' | 'complete' | 'error' | 'cleaning';
+type ConnectionState =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'validating'
+  | 'generating'
+  | 'complete'
+  | 'cleaning'
+  | 'fixing'
+  | 'error';
 
 interface StoreInfo {
   currency: string;
@@ -23,6 +38,7 @@ export default function Home() {
   const [inputUrl, setInputUrl] = useState('');
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
   // Check connection status on mount
   useEffect(() => {
@@ -45,9 +61,10 @@ export default function Home() {
       const res = await fetch('/api/status');
       const data: StatusResponse = await res.json();
       if (data.connected) {
-        setState('connected');
         setStoreUrl(data.storeUrl || '');
         setStoreInfo(data.storeInfo || null);
+        // Auto-validate on connect
+        setState('validating');
       }
     } catch {
       // Not connected
@@ -85,6 +102,29 @@ export default function Home() {
     setStoreUrl('');
     setStoreInfo(null);
     setInputUrl('');
+    setValidationResult(null);
+  };
+
+  const handleValidationComplete = (result: ValidationResult) => {
+    setValidationResult(result);
+    setState('connected');
+  };
+
+  const handleRevalidate = () => {
+    setValidationResult(null);
+    setState('validating');
+  };
+
+  const handleFix = () => {
+    if (validationResult?.missingItems) {
+      setState('fixing');
+    }
+  };
+
+  const handleFixComplete = () => {
+    // Re-validate after fix
+    setValidationResult(null);
+    setState('validating');
   };
 
   return (
@@ -111,13 +151,24 @@ export default function Home() {
                 isLoading={state === 'connecting'}
                 error={error}
               />
+            ) : state === 'validating' ? (
+              <ValidatingState
+                onComplete={handleValidationComplete}
+                onError={(msg) => {
+                  setError(msg);
+                  setState('error');
+                }}
+              />
             ) : state === 'connected' ? (
               <ConnectedState
                 storeUrl={storeUrl}
                 storeInfo={storeInfo}
+                validationResult={validationResult}
                 onDisconnect={handleDisconnect}
                 onGenerate={() => setState('generating')}
                 onCleanup={() => setState('cleaning')}
+                onRevalidate={handleRevalidate}
+                onFix={handleFix}
               />
             ) : state === 'generating' ? (
               <GeneratingState
@@ -135,7 +186,16 @@ export default function Home() {
               />
             ) : state === 'cleaning' ? (
               <CleaningState
-                onComplete={() => setState('connected')}
+                onComplete={handleRevalidate}
+                onError={(msg) => {
+                  setError(msg);
+                  setState('error');
+                }}
+              />
+            ) : state === 'fixing' ? (
+              <FixingState
+                missingItems={validationResult?.missingItems || null}
+                onComplete={handleFixComplete}
                 onError={(msg) => {
                   setError(msg);
                   setState('error');
@@ -146,7 +206,7 @@ export default function Home() {
                 error={error}
                 onRetry={() => {
                   setError(null);
-                  setState('connected');
+                  setState('validating');
                 }}
               />
             ) : null}
@@ -226,15 +286,21 @@ function ConnectForm({
 function ConnectedState({
   storeUrl,
   storeInfo,
+  validationResult,
   onDisconnect,
   onGenerate,
   onCleanup,
+  onRevalidate,
+  onFix,
 }: {
   storeUrl: string;
   storeInfo: StoreInfo | null;
+  validationResult: ValidationResult | null;
   onDisconnect: () => void;
   onGenerate: () => void;
   onCleanup: () => void;
+  onRevalidate: () => void;
+  onFix: () => void;
 }) {
   return (
     <div>
@@ -252,6 +318,15 @@ function ConnectedState({
           </p>
         )}
       </div>
+
+      {/* Validation Dashboard */}
+      {validationResult && (
+        <ValidationDashboard
+          result={validationResult}
+          onRevalidate={onRevalidate}
+          onFix={onFix}
+        />
+      )}
 
       <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
         <p className="text-sm text-amber-800">
@@ -496,6 +571,295 @@ function ErrorState({
       >
         Try Again
       </button>
+    </div>
+  );
+}
+
+// Validating State Component
+function ValidatingState({
+  onComplete,
+  onError,
+}: {
+  onComplete: (result: ValidationResult) => void;
+  onError: (msg: string) => void;
+}) {
+  const [progress, setProgress] = useState({ phase: 'Initializing...', current: 0, total: 0, message: '' });
+
+  useEffect(() => {
+    const eventSource = new EventSource('/api/validate');
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'progress') {
+        setProgress({
+          phase: data.phase,
+          current: data.current,
+          total: data.total,
+          message: data.message,
+        });
+      } else if (data.type === 'complete') {
+        eventSource.close();
+        onComplete(data.result);
+      } else if (data.type === 'error') {
+        eventSource.close();
+        onError(data.error?.message || 'Validation failed');
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      onError('Connection lost during validation');
+    };
+
+    return () => eventSource.close();
+  }, [onComplete, onError]);
+
+  const percentage = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold mb-4">Validating Store...</h2>
+
+      <div className="mb-4">
+        <div className="flex justify-between text-sm mb-1">
+          <span className="capitalize">{progress.phase.replace(/-/g, ' ')}</span>
+          <span>{percentage}%</span>
+        </div>
+        <div className="w-full bg-border rounded-full h-2">
+          <div
+            className="bg-accent h-2 rounded-full transition-all duration-300"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      </div>
+
+      <p className="text-sm text-text-secondary text-center">
+        {progress.message || 'Checking store data...'}
+      </p>
+    </div>
+  );
+}
+
+// Validation Dashboard Component
+function ValidationDashboard({
+  result,
+  onRevalidate,
+  onFix,
+}: {
+  result: ValidationResult;
+  onRevalidate: () => void;
+  onFix: () => void;
+}) {
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  const hasMissingItems =
+    result.missingItems.brands.length > 0 ||
+    result.missingItems.categories.length > 0 ||
+    result.missingItems.products.simple.length > 0 ||
+    result.missingItems.products.variable.length > 0 ||
+    result.missingItems.products.grouped.length > 0 ||
+    result.missingItems.relationships.length > 0 ||
+    result.missingItems.reviews.length > 0;
+
+  const statusColors: Record<ValidationStatus, string> = {
+    pass: 'bg-green-100 text-green-800',
+    warning: 'bg-yellow-100 text-yellow-800',
+    fail: 'bg-red-100 text-red-800',
+    skipped: 'bg-gray-100 text-gray-800',
+  };
+
+  const statusLabels: Record<ValidationStatus, string> = {
+    pass: 'All Passed',
+    warning: 'Warnings',
+    fail: 'Issues Found',
+    skipped: 'Skipped',
+  };
+
+  const categories = [
+    { key: 'counts', data: result.categories.counts },
+    { key: 'dataCompleteness', data: result.categories.dataCompleteness },
+    { key: 'edgeCases', data: result.categories.edgeCases },
+    { key: 'relationships', data: result.categories.relationships },
+    { key: 'reviews', data: result.categories.reviews },
+  ];
+
+  return (
+    <div className="mb-4 p-4 bg-surface-bg rounded-md border border-border">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-text-primary">Store Validation</h3>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[result.overallStatus]}`}>
+          {statusLabels[result.overallStatus]}
+        </span>
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-2 mb-3 text-sm">
+        <div className="text-center p-2 bg-green-50 rounded">
+          <div className="font-bold text-green-700">{result.summary.passed}</div>
+          <div className="text-green-600 text-xs">Passed</div>
+        </div>
+        <div className="text-center p-2 bg-yellow-50 rounded">
+          <div className="font-bold text-yellow-700">{result.summary.warnings}</div>
+          <div className="text-yellow-600 text-xs">Warnings</div>
+        </div>
+        <div className="text-center p-2 bg-red-50 rounded">
+          <div className="font-bold text-red-700">{result.summary.failed}</div>
+          <div className="text-red-600 text-xs">Failed</div>
+        </div>
+      </div>
+
+      {/* Category breakdown - expandable */}
+      <div className="space-y-1 mb-3">
+        {categories.map(({ key, data }) => (
+          <div key={key}>
+            <button
+              onClick={() => setExpandedCategory(expandedCategory === key ? null : key)}
+              className="w-full flex items-center justify-between text-xs py-1.5 px-2 hover:bg-white rounded transition-colors"
+            >
+              <span className="flex items-center gap-1">
+                <span className="text-text-muted">{expandedCategory === key ? '▼' : '▶'}</span>
+                <span className="text-text-secondary">{data.name}</span>
+              </span>
+              <span className={data.status === 'pass' ? 'text-green-600' : data.status === 'warning' ? 'text-yellow-600' : data.status === 'fail' ? 'text-red-600' : 'text-gray-400'}>
+                {data.status === 'pass' ? '✓' : data.status === 'warning' ? '⚠' : data.status === 'fail' ? '✕' : '-'} {data.passCount}/{data.checks.length}
+              </span>
+            </button>
+
+            {/* Expanded checks */}
+            {expandedCategory === key && (
+              <div className="ml-4 mt-1 space-y-0.5 text-xs border-l-2 border-gray-200 pl-2">
+                {data.checks.map((check, idx) => (
+                  <div key={idx} className="flex items-center justify-between py-0.5">
+                    <span className="text-text-muted truncate max-w-[180px]">{check.name}</span>
+                    <span className={check.status === 'pass' ? 'text-green-600' : check.status === 'warning' ? 'text-yellow-600' : check.status === 'fail' ? 'text-red-600' : 'text-gray-400'}>
+                      {check.actual}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={onRevalidate}
+          className="flex-1 text-sm bg-white hover:bg-gray-50 text-text-secondary py-1.5 px-3 rounded border border-border transition-colors"
+        >
+          Re-validate
+        </button>
+        {hasMissingItems && (
+          <button
+            onClick={onFix}
+            className="flex-1 text-sm bg-accent hover:bg-accent-hover text-white py-1.5 px-3 rounded transition-colors"
+          >
+            Fix Missing Items
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Fixing State Component
+function FixingState({
+  missingItems,
+  onComplete,
+  onError,
+}: {
+  missingItems: MissingItems | null;
+  onComplete: () => void;
+  onError: (msg: string) => void;
+}) {
+  const [progress, setProgress] = useState({ phase: 'Starting...', current: 0, total: 0, message: '' });
+
+  useEffect(() => {
+    if (!missingItems) {
+      onError('No missing items to fix');
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetch('/api/fix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(missingItems),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const reader = response.body?.getReader();
+        if (!reader) return;
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === 'progress') {
+                setProgress({
+                  phase: data.phase,
+                  current: data.current,
+                  total: data.total,
+                  message: data.message,
+                });
+              } else if (data.type === 'complete') {
+                onComplete();
+                return;
+              } else if (data.type === 'error') {
+                onError(data.error?.message || 'Fix failed');
+                return;
+              }
+            }
+          }
+        }
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          onError('Connection lost during fix');
+        }
+      });
+
+    return () => controller.abort();
+  }, [missingItems, onComplete, onError]);
+
+  const percentage = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold mb-4">Fixing Missing Items...</h2>
+
+      <div className="mb-4">
+        <div className="flex justify-between text-sm mb-1">
+          <span className="capitalize">{progress.phase.replace(/-/g, ' ')}</span>
+          <span>{percentage}%</span>
+        </div>
+        <div className="w-full bg-border rounded-full h-2">
+          <div
+            className="bg-success h-2 rounded-full transition-all duration-300"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      </div>
+
+      <p className="text-sm text-text-secondary text-center">
+        {progress.message || `${progress.current} / ${progress.total}`}
+      </p>
+
+      <p className="mt-4 text-xs text-text-muted text-center">
+        Please do not close this page.
+      </p>
     </div>
   );
 }
