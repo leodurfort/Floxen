@@ -100,6 +100,7 @@ function CatalogPageContent() {
 
   // Scroll tracking for sticky header shadow
   const [isScrolled, setIsScrolled] = useState(false);
+  const stickyHeaderRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Use hooks
@@ -627,9 +628,9 @@ function CatalogPageContent() {
         <SyncStatusBanner shop={currentShop} />
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100vh-120px)]">
         {/* Sticky Header Section */}
-        <div className={`catalog-sticky-header p-6 pb-0 space-y-4 flex-shrink-0 ${isScrolled ? 'scrolled' : ''}`}>
+        <div ref={stickyHeaderRef} className={`catalog-sticky-header p-6 pb-4 space-y-4 flex-shrink-0 ${isScrolled ? 'scrolled' : ''}`}>
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -725,13 +726,14 @@ function CatalogPageContent() {
         </div>
 
         {/* Scrollable Table Section */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pb-6">
-          {loading && <div className="text-gray-500 pt-4">Loading products...</div>}
-          {!loading && !products.length && <div className="text-gray-500 pt-4">No products found.</div>}
+        <div className="flex-1 min-h-0 px-6 pb-6 flex flex-col">
+          {loading && <div className="text-gray-500">Loading products...</div>}
+          {!loading && !products.length && <div className="text-gray-500">No products found.</div>}
           {!loading && products.length > 0 && (
-            <div className="catalog-table-container rounded-xl border border-gray-200 mt-4">
-              <table className="table catalog-table min-w-max">
-                <thead>
+            <div className="flex-1 min-h-0 rounded-xl border border-gray-200 overflow-hidden">
+              <div ref={scrollContainerRef} className="h-full overflow-auto">
+                <table className="table catalog-table min-w-max">
+                  <thead>
                 <tr>
                   {visibleColumnDefs.map((column) => {
                     // Checkbox column - sticky left
@@ -831,9 +833,10 @@ function CatalogPageContent() {
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+              </div>
+            </div>
           )}
 
           {/* Pagination */}
