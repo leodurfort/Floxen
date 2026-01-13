@@ -304,6 +304,10 @@ textarea::placeholder {
 }
 
 .catalog-table thead {
+  background: #F9FAFB;
+}
+
+.catalog-table thead th {
   position: sticky;
   top: 0;
   z-index: 10;
