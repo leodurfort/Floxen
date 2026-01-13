@@ -19,6 +19,7 @@ import { Toast } from '@/components/catalog/Toast';
 import { ColumnHeaderDropdown } from '@/components/catalog/ColumnHeaderDropdown';
 import { ClearFiltersButton } from '@/components/catalog/ClearFiltersButton';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
+import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
 import { ProductTabs, type ProductTabId } from '@/components/catalog/ProductTabs';
 import { FeedPreviewModal } from '@/components/catalog/FeedPreviewModal';
 import {
@@ -546,6 +547,11 @@ function CatalogPageContent() {
       {/* Shop Profile Banner */}
       {currentShop && (
         <ShopProfileBanner shop={currentShop} currentPath="products" />
+      )}
+
+      {/* Sync Status Banner - during first sync */}
+      {currentShop && (
+        <SyncStatusBanner shop={currentShop} />
       )}
 
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">

@@ -26,6 +26,11 @@ function isProfileComplete(shop: Shop): boolean {
   return Boolean(shop.sellerName && shop.returnPolicy && shop.returnWindow);
 }
 
+// Helper to check if shop is in first sync state (never synced before)
+function isFirstSync(shop: Shop): boolean {
+  return (shop.syncStatus === 'SYNCING' || shop.syncStatus === 'PENDING') && shop.lastSyncAt === null;
+}
+
 // Validate URL
 function isValidUrl(value: string): boolean {
   if (!value.trim()) return true;
@@ -386,23 +391,36 @@ export default function ShopsPage() {
                         {/* Right: Action buttons */}
                         {shop.isConnected && (
                           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                            <Link
-                              href={`/shops/${shop.id}/setup`}
-                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                                mappingButtonOrange
-                                  ? 'bg-[#FA7315] hover:bg-[#E5650F] text-white'
-                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
-                              }`}
-                            >
-                              {mappingButtonText}
-                            </Link>
-                            <button
-                              onClick={() => handleSync(shop.id)}
-                              disabled={syncDisabled}
-                              className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              Sync WooCommerce Products
-                            </button>
+                            {isFirstSync(shop) ? (
+                              /* First sync state: Show "Complete Store Profile" button instead of action buttons */
+                              <button
+                                onClick={() => setModalShop(shop)}
+                                className="bg-[#FA7315] hover:bg-[#E5650F] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                              >
+                                Complete Store Profile
+                              </button>
+                            ) : (
+                              /* Normal state: Show mapping and sync buttons */
+                              <>
+                                <Link
+                                  href={`/shops/${shop.id}/setup`}
+                                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                                    mappingButtonOrange
+                                      ? 'bg-[#FA7315] hover:bg-[#E5650F] text-white'
+                                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
+                                  }`}
+                                >
+                                  {mappingButtonText}
+                                </Link>
+                                <button
+                                  onClick={() => handleSync(shop.id)}
+                                  disabled={syncDisabled}
+                                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Sync WooCommerce Products
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -429,10 +447,13 @@ export default function ShopsPage() {
                               {shop.syncProgress !== null && shop.syncProgress !== undefined ? (
                                 <div
                                   className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                                  style={{ width: `${shop.syncProgress}%` }}
+                                  style={{ width: `${Math.max(shop.syncProgress, 5)}%` }}
                                 />
                               ) : (
-                                <div className="h-full w-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-400 animate-pulse" />
+                                <div
+                                  className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                                  style={{ width: '5%' }}
+                                />
                               )}
                             </div>
                             <span className="text-xs text-gray-500 min-w-[3rem] text-right">
@@ -471,19 +492,21 @@ export default function ShopsPage() {
                           <div className="flex items-center gap-3">
                             <span className="font-medium text-gray-900">Store Profile</span>
                             {/* Button/Edit link */}
-                            {profileComplete ? (
-                              <button
-                                onClick={() => setModalShop(shop)}
-                                className="text-[#FA7315] hover:underline font-medium text-sm"
-                              >
-                                Edit
-                              </button>
-                            ) : (
+                            {isFirstSync(shop) || !profileComplete ? (
+                              /* During first sync OR profile incomplete: Always show prominent button */
                               <button
                                 onClick={() => setModalShop(shop)}
                                 className="bg-[#FA7315] hover:bg-[#E5650F] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                               >
                                 Complete Store Profile
+                              </button>
+                            ) : (
+                              /* Profile complete and not first sync: Show edit link */
+                              <button
+                                onClick={() => setModalShop(shop)}
+                                className="text-[#FA7315] hover:underline font-medium text-sm"
+                              >
+                                Edit
                               </button>
                             )}
                           </div>

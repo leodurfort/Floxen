@@ -6,6 +6,7 @@ import { useAuth } from '@/store/auth';
 import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS, OpenAIFieldCategory } from '@productsynch/shared';
 import { ProductSelector } from '@/components/setup/ProductSelector';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
+import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
 import { FieldMappingTable, FieldMappingTableSkeleton } from '@/components/setup/FieldMappingTable';
 import { useFieldMappingsQuery, useUpdateFieldMappingsMutation } from '@/hooks/useFieldMappingsQuery';
 import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
@@ -255,6 +256,11 @@ export default function SetupPage() {
           {/* Shop Profile Banner - at very top */}
           {currentShop && (
             <ShopProfileBanner shop={currentShop} currentPath="setup" />
+          )}
+
+          {/* Sync Status Banner - during first sync */}
+          {currentShop && (
+            <SyncStatusBanner shop={currentShop} />
           )}
 
           {/* Header */}
