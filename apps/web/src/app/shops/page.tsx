@@ -10,6 +10,7 @@ import { Toast } from '@/components/catalog/Toast';
 import { CompleteShopSetupModal } from '@/components/shops/CompleteShopSetupModal';
 import { ConnectShopModal } from '@/components/shops/ConnectShopModal';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
+import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
 import type { Shop } from '@productsynch/shared';
 import {
   useShopsQuery,
@@ -430,30 +431,40 @@ export default function ShopsPage() {
                         )}
                       </div>
 
-                      {/* Row 2: Sync status */}
-                      <div className="text-sm text-gray-600 mb-1">
-                        Sync:{' '}
-                        <span className={`font-medium ${
-                          shop.syncStatus === 'COMPLETED' ? 'text-green-600' :
-                          shop.syncStatus === 'FAILED' ? 'text-red-600' :
-                          shop.syncStatus === 'SYNCING' ? 'text-blue-600' :
-                          'text-amber-600'
-                        }`}>
-                          {shop.syncStatus.toLowerCase()}
-                        </span>
-                        {' '}• Last synced: {formatTimestamp(shop.lastSyncAt)}
-                      </div>
+                      {/* First Sync Banner - shows during initial sync */}
+                      {isFirstSync(shop) && (
+                        <div className="mt-3">
+                          <SyncStatusBanner shop={shop} />
+                        </div>
+                      )}
 
-                      {/* Sync Progress Bar */}
-                      {(shop.syncStatus === 'SYNCING' || shop.syncStatus === 'PENDING') && (
-                        <div className="mt-2 mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              {shop.syncProgress !== null && shop.syncProgress !== undefined ? (
-                                <div
-                                  className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                                  style={{ width: `${Math.max(shop.syncProgress, 5)}%` }}
-                                />
+                      {/* Sync/Feed status - hidden during first sync */}
+                      {!isFirstSync(shop) && (
+                        <>
+                          {/* Row 2: Sync status */}
+                          <div className="text-sm text-gray-600 mb-1">
+                            Sync:{' '}
+                            <span className={`font-medium ${
+                              shop.syncStatus === 'COMPLETED' ? 'text-green-600' :
+                              shop.syncStatus === 'FAILED' ? 'text-red-600' :
+                              shop.syncStatus === 'SYNCING' ? 'text-blue-600' :
+                              'text-amber-600'
+                            }`}>
+                              {shop.syncStatus.toLowerCase()}
+                            </span>
+                            {' '}• Last synced: {formatTimestamp(shop.lastSyncAt)}
+                          </div>
+
+                          {/* Sync Progress Bar */}
+                          {(shop.syncStatus === 'SYNCING' || shop.syncStatus === 'PENDING') && (
+                            <div className="mt-2 mb-1">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  {shop.syncProgress !== null && shop.syncProgress !== undefined ? (
+                                    <div
+                                      className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                                      style={{ width: `${Math.max(shop.syncProgress, 5)}%` }}
+                                    />
                               ) : (
                                 <div
                                   className="h-full bg-blue-500 rounded-full transition-all duration-300"
@@ -483,9 +494,11 @@ export default function ShopsPage() {
                         </span>
                         {' '}• Last published: {formatTimestamp(shop.lastFeedGeneratedAt)}
                       </div>
-                    </div>
+                    </>
+                  )}
+                </div>
 
-                    {/* Shop Profile Section */}
+                {/* Shop Profile Section */}
                     {shop.isConnected && (
                       <div className={`mx-5 mb-5 rounded-xl p-5 ${
                         profileComplete
