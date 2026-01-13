@@ -726,14 +726,13 @@ function CatalogPageContent() {
         </div>
 
         {/* Scrollable Table Section */}
-        <div className="flex-1 min-h-0 px-6 pb-6 flex flex-col">
+        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto px-6 pb-6">
           {loading && <div className="text-gray-500">Loading products...</div>}
           {!loading && !products.length && <div className="text-gray-500">No products found.</div>}
           {!loading && products.length > 0 && (
-            <div className="flex-1 min-h-0 rounded-xl border border-gray-200 overflow-hidden">
-              <div ref={scrollContainerRef} className="h-full overflow-auto">
-                <table className="table catalog-table min-w-max">
-                  <thead>
+            <div className="rounded-xl border border-gray-200">
+              <table className="table catalog-table min-w-max">
+                <thead>
                 <tr>
                   {visibleColumnDefs.map((column) => {
                     // Checkbox column - sticky left
@@ -835,7 +834,6 @@ function CatalogPageContent() {
                 })}
                 </tbody>
               </table>
-              </div>
             </div>
           )}
 
