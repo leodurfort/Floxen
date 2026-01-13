@@ -543,9 +543,10 @@ export type BulkUpdateOperation =
   | { type: 'remove_override'; attribute: string };
 
 export interface BulkUpdateRequest {
-  selectionMode: 'selected' | 'filtered' | 'all';
+  selectionMode: 'selected' | 'filtered' | 'all' | 'itemGroup';
   productIds?: string[];
   filters?: BulkUpdateFilters;
+  itemGroupId?: string;
   update: BulkUpdateOperation;
 }
 
@@ -568,6 +569,18 @@ export async function bulkUpdateProducts(
       method: 'POST',
       body: JSON.stringify(payload),
     }
+  );
+}
+
+/**
+ * Get count of products that share the same item_group_id
+ */
+export async function getItemGroupCount(
+  shopId: string,
+  itemGroupId: string
+): Promise<{ itemGroupId: string; count: number }> {
+  return requestWithAuth<{ itemGroupId: string; count: number }>(
+    `/api/v1/shops/${shopId}/products/item-group-count/${encodeURIComponent(itemGroupId)}`
   );
 }
 

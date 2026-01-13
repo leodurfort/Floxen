@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useShopsQuery } from './useShopsQuery';
+import { useShopsQuery, useShopsSyncPolling } from './useShopsQuery';
 import type { Shop } from '@productsynch/shared';
 
 /**
@@ -59,6 +59,11 @@ export function useCurrentShop() {
     // Priority 3: First shop in list
     return shops[0];
   }, [shops, shopIdFromUrl]);
+
+  // Enable polling only during first sync (for first sync banner auto-hide)
+  const isFirstSync = (currentShop?.syncStatus === 'SYNCING' || currentShop?.syncStatus === 'PENDING')
+    && currentShop?.lastSyncAt === null;
+  useShopsSyncPolling(isFirstSync);
 
   return {
     currentShop,

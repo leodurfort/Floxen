@@ -838,6 +838,46 @@ function formatValueLabel(value: string, column: string): string {
   return value;
 }
 
+/**
+ * Count products that share the same item_group_id
+ * Used for "Select similar products" feature
+ */
+export async function countProductsByItemGroupId(
+  shopId: string,
+  itemGroupId: string
+): Promise<number> {
+  const parentIds = await getParentProductIds(shopId);
+
+  const result = await prisma.$queryRawUnsafe<{ count: bigint }[]>(`
+    SELECT COUNT(*) as count FROM "Product"
+    WHERE "shop_id" = '${escapeSqlString(shopId)}'
+    AND "woo_product_id" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})
+    AND "openai_auto_filled"->>'item_group_id' = '${escapeSqlString(itemGroupId)}'
+  `);
+
+  return Number(result[0]?.count || 0);
+}
+
+/**
+ * Get product IDs that share the same item_group_id
+ * Used for bulk operations on product groups
+ */
+export async function getProductIdsByItemGroupId(
+  shopId: string,
+  itemGroupId: string
+): Promise<string[]> {
+  const parentIds = await getParentProductIds(shopId);
+
+  const products = await prisma.$queryRawUnsafe<{ id: string }[]>(`
+    SELECT "id" FROM "Product"
+    WHERE "shop_id" = '${escapeSqlString(shopId)}'
+    AND "woo_product_id" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})
+    AND "openai_auto_filled"->>'item_group_id' = '${escapeSqlString(itemGroupId)}'
+  `);
+
+  return products.map(p => p.id);
+}
+
 export function transformWooProduct(woo: any) {
   return {
     wooProductId: woo.id,

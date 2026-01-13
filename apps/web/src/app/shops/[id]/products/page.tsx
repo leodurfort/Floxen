@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { BulkUpdateOperation, CurrentFiltersForColumnValues } from '@/lib/api';
+import { BulkUpdateOperation, CurrentFiltersForColumnValues, getItemGroupCount } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
@@ -83,6 +83,10 @@ function CatalogPageContent() {
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showEditColumnsModal, setShowEditColumnsModal] = useState(false);
   const [showFeedPreviewModal, setShowFeedPreviewModal] = useState(false);
+
+  // Item group count state for "Select similar products" feature
+  const [itemGroupCount, setItemGroupCount] = useState<number | null>(null);
+  const [selectedProductItemGroupId, setSelectedProductItemGroupId] = useState<string | null>(null);
 
   // Active tab for product filtering
   const [activeTab, setActiveTab] = useState<ProductTabId>('all');
@@ -197,6 +201,46 @@ function CatalogPageContent() {
       prevFiltersRef.current = { search: filters.search, columnFilters: filters.columnFilters };
     }
   }, [filters.search, filters.columnFilters, selection]);
+
+  // Fetch item group count when exactly 1 product is selected
+  useEffect(() => {
+    const selectedIds = selection.getSelectedIds();
+
+    // Only fetch when exactly 1 product is selected and not in any "select all" mode
+    if (selectedIds.length !== 1 || selection.selectAllMatching || selection.selectAllGlobal || selection.selectAllByItemGroupId) {
+      setItemGroupCount(null);
+      setSelectedProductItemGroupId(null);
+      return;
+    }
+
+    // Find the selected product in the current page
+    const selectedProduct = products.find(p => p.id === selectedIds[0]);
+    if (!selectedProduct) {
+      setItemGroupCount(null);
+      setSelectedProductItemGroupId(null);
+      return;
+    }
+
+    // Get item_group_id from the product
+    const productData = selectedProduct as unknown as ProductData;
+    const itemGroupId = getColumnValue(productData, 'item_group_id') as string | null;
+
+    if (!itemGroupId || !params?.id) {
+      setItemGroupCount(null);
+      setSelectedProductItemGroupId(null);
+      return;
+    }
+
+    // Fetch the count of products with the same item_group_id
+    setSelectedProductItemGroupId(itemGroupId);
+    getItemGroupCount(params.id, itemGroupId)
+      .then(result => {
+        setItemGroupCount(result.count);
+      })
+      .catch(() => {
+        setItemGroupCount(null);
+      });
+  }, [selection.getSelectedIds().join(','), selection.selectAllMatching, selection.selectAllGlobal, selection.selectAllByItemGroupId, products, params?.id]);
 
   // Build current filters for cascading filter support (passed to ColumnHeaderDropdown)
   const currentFiltersForColumnValues: CurrentFiltersForColumnValues | undefined =
@@ -317,6 +361,12 @@ function CatalogPageContent() {
     selection.setSelectAllGlobal(true);
   };
 
+  const handleSelectAllByItemGroup = () => {
+    if (selectedProductItemGroupId) {
+      selection.setSelectAllByItemGroupId(selectedProductItemGroupId);
+    }
+  };
+
   // Open bulk edit modal and capture current filters
   const handleOpenBulkEdit = useCallback(() => {
     setBulkEditFilters({
@@ -342,11 +392,14 @@ function CatalogPageContent() {
       // Determine selection mode:
       // - 'all' for global select (no filters, all products)
       // - 'filtered' for select all matching (with filters)
+      // - 'itemGroup' for select all by item group
       // - 'selected' for individual product selection
       const selectionMode = selection.selectAllGlobal
         ? 'all'
         : selection.selectAllMatching
         ? 'filtered'
+        : selection.selectAllByItemGroupId
+        ? 'itemGroup'
         : 'selected';
 
       return new Promise((resolve) => {
@@ -355,6 +408,7 @@ function CatalogPageContent() {
             selectionMode,
             productIds: selectionMode === 'selected' ? selection.getSelectedIds() : undefined,
             filters: selectionMode === 'filtered' ? apiFilters : undefined,
+            itemGroupId: selectionMode === 'itemGroup' ? selection.selectAllByItemGroupId! : undefined,
             update,
           },
           {
@@ -399,7 +453,7 @@ function CatalogPageContent() {
   // Calculate selection state
   const pageIds = products.map((p) => p.id);
   const selectedOnPage = pageIds.filter((id) => selection.isSelected(id)).length;
-  const isGlobalMode = selection.selectAllMatching || selection.selectAllGlobal;
+  const isGlobalMode = selection.selectAllMatching || selection.selectAllGlobal || selection.selectAllByItemGroupId !== null;
   const allOnPageSelected = isGlobalMode || (pageIds.length > 0 && selectedOnPage === pageIds.length);
   const someOnPageSelected = !isGlobalMode && selectedOnPage > 0 && selectedOnPage < pageIds.length;
   const hasSelection = selection.getSelectedCount() > 0 || isGlobalMode;
@@ -412,6 +466,8 @@ function CatalogPageContent() {
     ? totalCatalogCount
     : selection.selectAllMatching
     ? totalProducts
+    : selection.selectAllByItemGroupId && itemGroupCount
+    ? itemGroupCount
     : selection.getSelectedCount();
 
   // Pagination
@@ -634,12 +690,16 @@ function CatalogPageContent() {
             totalCatalogCount={totalCatalogCount}
             selectAllMatching={selection.selectAllMatching}
             selectAllGlobal={selection.selectAllGlobal}
+            selectAllByItemGroupId={selection.selectAllByItemGroupId}
             hasActiveFilters={hasActiveFilters}
             onSelectAllMatching={handleSelectAllMatching}
             onSelectAllGlobal={handleSelectAllGlobal}
+            onSelectAllByItemGroup={handleSelectAllByItemGroup}
             onClearSelection={selection.clearSelection}
             onBulkEdit={handleOpenBulkEdit}
             isProcessing={bulkUpdateMutation.isPending}
+            selectedProductItemGroupId={selectedProductItemGroupId}
+            itemGroupCount={itemGroupCount}
           />
         )}
 
@@ -705,7 +765,10 @@ function CatalogPageContent() {
               </thead>
               <tbody>
                 {products.map((p) => {
-                  const isSelected = selection.selectAllMatching || selection.selectAllGlobal || selection.isSelected(p.id);
+                  // Check if product is selected (including item group selection mode)
+                  const productItemGroupId = getColumnValue(p as unknown as ProductData, 'item_group_id') as string | null;
+                  const isSelectedByItemGroup = selection.selectAllByItemGroupId !== null && productItemGroupId === selection.selectAllByItemGroupId;
+                  const isSelected = selection.selectAllMatching || selection.selectAllGlobal || isSelectedByItemGroup || selection.isSelected(p.id);
 
                   return (
                     <tr

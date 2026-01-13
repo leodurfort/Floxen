@@ -9,7 +9,7 @@ import {
   OPENAI_FEED_SPEC,
   isProductEditable,
 } from '@productsynch/shared';
-import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, getColumnValues as getColumnValuesService, ListProductsOptions } from '../services/productService';
+import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, getColumnValues as getColumnValuesService, ListProductsOptions, countProductsByItemGroupId, getProductIdsByItemGroupId } from '../services/productService';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
@@ -55,16 +55,20 @@ const bulkUpdateOperationSchema = z.discriminatedUnion('type', [
 ]);
 
 const bulkUpdateSchema = z.object({
-  selectionMode: z.enum(['selected', 'filtered', 'all']),
+  selectionMode: z.enum(['selected', 'filtered', 'all', 'itemGroup']),
   productIds: z.array(z.string()).optional(),
   filters: bulkUpdateFilterSchema.optional(),
+  itemGroupId: z.string().optional(),
   update: bulkUpdateOperationSchema,
 }).refine((data) => {
   if (data.selectionMode === 'selected') {
     return data.productIds && data.productIds.length > 0;
   }
+  if (data.selectionMode === 'itemGroup') {
+    return data.itemGroupId && data.itemGroupId.length > 0;
+  }
   return true;
-}, { message: 'productIds required when selectionMode is "selected"' });
+}, { message: 'productIds required when selectionMode is "selected", itemGroupId required when selectionMode is "itemGroup"' });
 
 type BulkUpdateOperation = z.infer<typeof bulkUpdateOperationSchema>;
 
@@ -407,7 +411,7 @@ export async function bulkUpdate(req: Request, res: Response) {
     return res.status(400).json({ error: parse.error.flatten() });
   }
 
-  const { selectionMode, productIds: selectedIds, filters, update } = parse.data;
+  const { selectionMode, productIds: selectedIds, filters, itemGroupId, update } = parse.data;
 
   try {
     // Pre-validate update operation before processing any products
@@ -457,6 +461,9 @@ export async function bulkUpdate(req: Request, res: Response) {
     } else if (selectionMode === 'all') {
       // All mode: get all products in the shop (no filters)
       productIdsToUpdate = await getFilteredProductIds(shopId, {});
+    } else if (selectionMode === 'itemGroup') {
+      // Item group mode: get all products with the same item_group_id
+      productIdsToUpdate = await getProductIdsByItemGroupId(shopId, itemGroupId!);
     } else {
       // Filtered mode: get all products matching filters
       productIdsToUpdate = await getFilteredProductIds(shopId, filters || {});
@@ -537,6 +544,38 @@ export async function bulkUpdate(req: Request, res: Response) {
     res.status(500).json({
       error: err instanceof Error ? err.message : 'Bulk update failed',
     });
+  }
+}
+
+/**
+ * GET /shops/:id/products/item-group-count/:itemGroupId
+ * Get count of products that share the same item_group_id
+ */
+export async function getItemGroupCount(req: Request, res: Response) {
+  const { id: shopId, itemGroupId } = req.params;
+
+  if (!itemGroupId) {
+    return res.status(400).json({ error: 'itemGroupId parameter is required' });
+  }
+
+  try {
+    const count = await countProductsByItemGroupId(shopId, itemGroupId);
+
+    logger.info('Item group count retrieved', {
+      shopId,
+      itemGroupId,
+      count,
+    });
+
+    res.json({ itemGroupId, count });
+  } catch (err) {
+    logger.error('Failed to get item group count', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      shopId,
+      itemGroupId,
+      userId: getUserId(req),
+    });
+    res.status(500).json({ error: 'Failed to fetch item group count' });
   }
 }
 
