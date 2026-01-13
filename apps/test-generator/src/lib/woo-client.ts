@@ -7,6 +7,8 @@ import {
   WooBatchRequest,
   WooBatchResponse,
   WooMetaData,
+  WooProductAttributeTaxonomy,
+  WooAttributeTerm,
 } from '@/types/woocommerce';
 import { StoreInfo } from '@/types/session';
 
@@ -303,6 +305,119 @@ export class WooClient {
   ): Promise<void> {
     const request: WooBatchRequest<WooVariation> = { delete: ids };
     await this.api.post(`products/${productId}/variations/batch`, request);
+  }
+
+  // ========================
+  // Product Attribute Operations
+  // ========================
+
+  /**
+   * Get all global product attributes (taxonomies like pa_color, pa_brand)
+   */
+  async getProductAttributes(): Promise<WooProductAttributeTaxonomy[]> {
+    const response = await this.api.get('products/attributes');
+    return response.data;
+  }
+
+  /**
+   * Create a global product attribute (taxonomy)
+   * This creates attributes like pa_brand that can be used across products
+   */
+  async createProductAttribute(data: {
+    name: string;
+    slug?: string;
+    type?: string;
+    order_by?: string;
+    has_archives?: boolean;
+  }): Promise<WooProductAttributeTaxonomy> {
+    console.log('[WooClient] Creating product attribute:', data.name);
+    try {
+      const response = await this.api.post('products/attributes', data);
+      console.log('[WooClient] Product attribute created:', response.data.id, response.data.name);
+      return response.data;
+    } catch (error) {
+      // Check if attribute already exists
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { code?: string; data?: { resource_id?: number } } } };
+        const errorData = axiosError.response?.data;
+
+        if (errorData?.code === 'woocommerce_rest_duplicate_attribute_slug' ||
+            errorData?.code === 'term_exists') {
+          console.log('[WooClient] Product attribute already exists, fetching existing...');
+          // Fetch all attributes to find the existing one
+          const attributes = await this.getProductAttributes();
+          const existing = attributes.find(a => a.slug === (data.slug || data.name.toLowerCase()));
+          if (existing) {
+            return existing;
+          }
+        }
+
+        console.error('[WooClient] Product attribute creation failed:', data.name);
+        console.error('[WooClient] Error response:', JSON.stringify(axiosError.response?.data, null, 2));
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a product attribute
+   */
+  async deleteProductAttribute(id: number): Promise<void> {
+    await this.api.delete(`products/attributes/${id}`, { force: true });
+  }
+
+  /**
+   * Get all terms for a product attribute
+   */
+  async getAttributeTerms(attributeId: number, params?: { per_page?: number }): Promise<WooAttributeTerm[]> {
+    const response = await this.api.get(`products/attributes/${attributeId}/terms`, {
+      per_page: params?.per_page || 100,
+    });
+    return response.data;
+  }
+
+  /**
+   * Create a term for a product attribute
+   */
+  async createAttributeTerm(
+    attributeId: number,
+    data: { name: string; slug?: string; description?: string }
+  ): Promise<WooAttributeTerm> {
+    console.log('[WooClient] Creating attribute term:', data.name, 'for attribute:', attributeId);
+    try {
+      const response = await this.api.post(`products/attributes/${attributeId}/terms`, data);
+      console.log('[WooClient] Attribute term created:', response.data.id, response.data.name);
+      return response.data;
+    } catch (error) {
+      // Check if term already exists
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { code?: string; data?: { resource_id?: number } } } };
+        const errorData = axiosError.response?.data;
+
+        if (errorData?.code === 'term_exists' && errorData?.data?.resource_id) {
+          console.log('[WooClient] Attribute term already exists, using existing ID:', errorData.data.resource_id);
+          return {
+            id: errorData.data.resource_id,
+            name: data.name,
+            slug: data.slug || data.name.toLowerCase().replace(/\s+/g, '-'),
+            description: data.description || '',
+            menu_order: 0,
+            count: 0,
+          };
+        }
+
+        console.error('[WooClient] Attribute term creation failed:', data.name);
+        console.error('[WooClient] Error response:', JSON.stringify(axiosError.response?.data, null, 2));
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an attribute term
+   */
+  async deleteAttributeTerm(attributeId: number, termId: number): Promise<void> {
+    await this.api.delete(`products/attributes/${attributeId}/terms/${termId}`, { force: true });
   }
 }
 

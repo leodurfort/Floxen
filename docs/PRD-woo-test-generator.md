@@ -1034,13 +1034,15 @@ Apparel (Parent)
 
 ### 8.12 Brand Edge Cases
 
-| ID | Edge Case | Test Data | Fields Affected |
-|----|-----------|-----------|-----------------|
-| EC-BRD-01 | Brand in WooCommerce Brands | pa_brand: "UrbanThread" | brand taxonomy |
-| EC-BRD-02 | Brand in attributes | attributes: [{name: "Brand", options: ["UrbanThread"]}] | attributes |
-| EC-BRD-03 | Brand in meta_data | meta_data: [{key: "_brand", value: "UrbanThread"}] | meta_data |
-| EC-BRD-04 | No brand | No brand data | - |
-| EC-BRD-05 | Brand with special chars | "Nike & Adidas Collab" | brand |
+| ID | Edge Case | Test Data | Fields Affected | Distribution |
+|----|-----------|-----------|-----------------|--------------|
+| EC-BRD-01 | Brand in WooCommerce Brands | pa_brand: "UrbanThread" | brand taxonomy | ~40% of products |
+| EC-BRD-02 | Brand in attributes | attributes: [{name: "Brand", options: ["UrbanThread"]}] | attributes | ~30% of products |
+| EC-BRD-03 | Brand in meta_data | meta_data: [{key: "_brand", value: "UrbanThread"}] | meta_data | ~20% of products |
+| EC-BRD-04 | No brand | No brand data | - | ~10% of products |
+| EC-BRD-05 | Brand with special chars | "Nike & Adidas Collab" | brand | Included in above |
+
+**Implementation:** Products are automatically distributed across brand storage methods using a deterministic pattern based on product index. The generator creates the `pa_brand` global attribute taxonomy and all brand terms during the brands phase, before creating products.
 
 ### 8.13 Related Products Edge Cases
 

@@ -4,6 +4,15 @@
 export type ProductType = 'simple' | 'variable' | 'grouped';
 
 /**
+ * How the brand is stored in WooCommerce
+ * - taxonomy: Uses the pa_brand taxonomy (like WooCommerce Brands plugin)
+ * - attribute: Uses a visible product attribute named "Brand"
+ * - meta: Uses product meta_data with key "_brand"
+ * - none: No brand information stored
+ */
+export type BrandStorageMethod = 'taxonomy' | 'attribute' | 'meta' | 'none';
+
+/**
  * Product status in WooCommerce
  */
 export type ProductStatus = 'draft' | 'pending' | 'private' | 'publish';
@@ -51,6 +60,7 @@ export interface BaseProductDefinition {
   shortDescription: string;
   categories: string[]; // Category slugs
   brand: string;
+  brandStorageMethod: BrandStorageMethod; // How brand is stored in WooCommerce (assigned at aggregation)
   weight?: string;
   dimensions?: {
     length: string;

@@ -543,7 +543,7 @@ export type BulkUpdateOperation =
   | { type: 'remove_override'; attribute: string };
 
 export interface BulkUpdateRequest {
-  selectionMode: 'selected' | 'filtered';
+  selectionMode: 'selected' | 'filtered' | 'all';
   productIds?: string[];
   filters?: BulkUpdateFilters;
   update: BulkUpdateOperation;

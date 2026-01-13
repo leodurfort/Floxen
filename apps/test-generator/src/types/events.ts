@@ -4,6 +4,7 @@
 
 export type GeneratorPhase =
   | 'checking'
+  | 'brands'
   | 'categories'
   | 'simple-products'
   | 'variable-products'
@@ -14,7 +15,8 @@ export type CleanupPhase =
   | 'finding'
   | 'deleting-variations'
   | 'deleting-products'
-  | 'deleting-categories';
+  | 'deleting-categories'
+  | 'deleting-brands';
 
 /**
  * Progress event during generation or cleanup
@@ -60,6 +62,7 @@ export interface ErrorEvent {
  * Generation summary
  */
 export interface GenerationSummary {
+  brands: number;
   categories: number;
   simpleProducts: number;
   variableProducts: number;
@@ -67,9 +70,17 @@ export interface GenerationSummary {
   groupedProducts: number;
   totalProducts: number;
   durationMs: number;
+  // Brand storage distribution
+  brandDistribution?: {
+    taxonomy: number;
+    attribute: number;
+    meta: number;
+    none: number;
+  };
   // Resume info (when continuing from interrupted generation)
   resumed?: boolean;
   skipped?: {
+    brands: number;
     categories: number;
     products: number;
     variations: number;
@@ -83,6 +94,7 @@ export interface CleanupSummary {
   productsDeleted: number;
   variationsDeleted: number;
   categoriesDeleted: number;
+  brandsDeleted: number;
   durationMs: number;
 }
 

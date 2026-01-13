@@ -3,17 +3,25 @@
  *
  * Supports resuming interrupted generations by checking for existing items
  * and skipping already-created categories, products, and variations.
+ *
+ * Brand Storage Methods (EC-BRD-01 through EC-BRD-04):
+ * - taxonomy: Uses pa_brand global attribute taxonomy
+ * - attribute: Uses a visible "Brand" product attribute
+ * - meta: Uses product meta_data with key "_brand"
+ * - none: No brand information stored
  */
 
 import { WooClient } from './woo-client';
 import { getPlaceholderGallery } from './placeholder-images';
 import { CATEGORIES, getCategoriesByHierarchy } from '@/data/categories';
 import { ALL_PRODUCTS, PRODUCT_COUNTS } from '@/data/products';
+import { BRAND_LIST } from '@/data/brands';
 import {
   ProductDefinition,
   SimpleProductDefinition,
   VariableProductDefinition,
   GroupedProductDefinition,
+  BrandStorageMethod,
 } from '@/types/product';
 import {
   GeneratorEvent,
@@ -28,6 +36,7 @@ import { WooMetaData, WooProduct, WooProductAttribute, WooCategory } from '@/typ
 const GENERATOR_META_KEY = '_generated_by';
 const GENERATOR_META_VALUE = 'woo-test-generator';
 const BATCH_SIZE = 50; // Products per batch request
+const BRAND_ATTRIBUTE_SLUG = 'pa_brand';
 
 /**
  * Main Product Generator class
@@ -40,14 +49,28 @@ export class ProductGenerator {
   private startTime: number = 0;
   private isResume: boolean = false;
 
+  // Brand taxonomy tracking
+  private brandAttributeId: number | null = null; // ID of the pa_brand attribute
+  private brandTermIdMap: Map<string, number> = new Map(); // Brand name -> term ID
+
   // Counters for summary
+  private brandsCreated = 0;
   private categoriesCreated = 0;
   private simpleProductsCreated = 0;
   private variableProductsCreated = 0;
   private variationsCreated = 0;
   private groupedProductsCreated = 0;
 
+  // Brand storage distribution tracking
+  private brandDistribution = {
+    taxonomy: 0,
+    attribute: 0,
+    meta: 0,
+    none: 0,
+  };
+
   // Resume counters (items found from previous run)
+  private brandsSkipped = 0;
   private categoriesSkipped = 0;
   private productsSkipped = 0;
   private variationsSkipped = 0;
@@ -58,10 +81,32 @@ export class ProductGenerator {
 
   /**
    * Check for existing generated items to support resume functionality
-   * This queries WooCommerce for categories and products with our meta tag
+   * This queries WooCommerce for categories, products, and brand attributes
    */
   private async *checkExistingItems(): AsyncGenerator<ProgressEvent> {
-    yield this.progress('checking', 0, 3, 'Checking for existing generated items...');
+    yield this.progress('checking', 0, 4, 'Checking for existing generated items...');
+
+    // Check existing brand attribute
+    try {
+      const attributes = await this.wooClient.getProductAttributes();
+      const brandAttr = attributes.find((a) => a.slug === 'brand' || a.slug === BRAND_ATTRIBUTE_SLUG);
+      if (brandAttr) {
+        this.brandAttributeId = brandAttr.id;
+        console.log(`[Generator] Found existing brand attribute: ${brandAttr.id}`);
+
+        // Fetch existing brand terms
+        const terms = await this.wooClient.getAttributeTerms(brandAttr.id);
+        for (const term of terms) {
+          this.brandTermIdMap.set(term.name, term.id);
+          this.brandsSkipped++;
+        }
+        console.log(`[Generator] Found ${this.brandsSkipped} existing brand terms`);
+      }
+    } catch (error) {
+      console.error('[Generator] Failed to fetch existing brand attribute:', error);
+    }
+
+    yield this.progress('checking', 1, 4, 'Checking existing categories...');
 
     // Check existing categories
     try {
@@ -76,7 +121,7 @@ export class ProductGenerator {
       console.error('[Generator] Failed to fetch existing categories:', error);
     }
 
-    yield this.progress('checking', 1, 3, 'Checking existing products...');
+    yield this.progress('checking', 2, 4, 'Checking existing products...');
 
     // Check existing products with our meta tag
     try {
@@ -113,12 +158,12 @@ export class ProductGenerator {
       console.error('[Generator] Failed to fetch existing products:', error);
     }
 
-    yield this.progress('checking', 3, 3, 'Resume check complete');
+    yield this.progress('checking', 4, 4, 'Resume check complete');
 
     // Determine if this is a resume
-    this.isResume = this.productsSkipped > 0 || this.categoriesSkipped > 0;
+    this.isResume = this.productsSkipped > 0 || this.categoriesSkipped > 0 || this.brandsSkipped > 0;
     if (this.isResume) {
-      console.log(`[Generator] Resuming generation - skipping ${this.categoriesSkipped} categories, ${this.productsSkipped} products`);
+      console.log(`[Generator] Resuming generation - skipping ${this.brandsSkipped} brands, ${this.categoriesSkipped} categories, ${this.productsSkipped} products`);
     }
   }
 
@@ -133,25 +178,87 @@ export class ProductGenerator {
       // Check for existing items to enable resume
       yield* this.checkExistingItems();
 
-      // Phase 1: Categories
+      // Phase 1: Brands (pa_brand taxonomy and terms)
+      yield* this.generateBrands();
+
+      // Phase 2: Categories
       yield* this.generateCategories();
 
-      // Phase 2: Simple products
+      // Phase 3: Simple products
       yield* this.generateSimpleProducts();
 
-      // Phase 3: Variable products (without variations)
+      // Phase 4: Variable products (without variations)
       yield* this.generateVariableProducts();
 
-      // Phase 4: Variations for variable products
+      // Phase 5: Variations for variable products
       yield* this.generateVariations();
 
-      // Phase 5: Grouped products
+      // Phase 6: Grouped products
       yield* this.generateGroupedProducts();
 
       // Complete
       yield this.buildCompleteEvent();
     } catch (error) {
       yield this.buildErrorEvent(error);
+    }
+  }
+
+  /**
+   * Generate brand attribute taxonomy and terms
+   * Creates pa_brand attribute and terms for all brands used in products with taxonomy storage
+   */
+  private async *generateBrands(): AsyncGenerator<ProgressEvent> {
+    const brands = BRAND_LIST;
+    const total = brands.length + 1; // +1 for attribute creation
+    let current = 0;
+
+    // Create or get the Brand attribute (pa_brand)
+    if (!this.brandAttributeId) {
+      current++;
+      yield this.progress('brands', current, total, 'Creating Brand attribute taxonomy...');
+
+      try {
+        const brandAttr = await this.wooClient.createProductAttribute({
+          name: 'Brand',
+          slug: 'brand',
+          type: 'select',
+          order_by: 'name',
+          has_archives: true,
+        });
+        this.brandAttributeId = brandAttr.id;
+        console.log(`[Generator] Created Brand attribute with ID: ${brandAttr.id}`);
+      } catch (error) {
+        console.error('[Generator] Failed to create Brand attribute:', error);
+        throw error;
+      }
+    } else {
+      current++;
+      yield this.progress('brands', current, total, 'Brand attribute exists (skipped)');
+    }
+
+    // Create brand terms
+    for (const brand of brands) {
+      current++;
+
+      // Skip if term already exists
+      if (this.brandTermIdMap.has(brand.name)) {
+        yield this.progress('brands', current, total, `Brand term exists: ${brand.name} (skipped)`);
+        continue;
+      }
+
+      yield this.progress('brands', current, total, `Creating brand term: ${brand.name}`);
+
+      try {
+        const term = await this.wooClient.createAttributeTerm(this.brandAttributeId!, {
+          name: brand.name,
+          slug: brand.name.toLowerCase().replace(/\s+/g, '-'),
+        });
+        this.brandTermIdMap.set(brand.name, term.id);
+        this.brandsCreated++;
+      } catch (error) {
+        console.error(`[Generator] Failed to create brand term ${brand.name}:`, error);
+        throw error;
+      }
     }
   }
 
@@ -449,12 +556,78 @@ export class ProductGenerator {
   }
 
   /**
+   * Build brand-related fields based on storage method
+   * Returns attributes, meta_data additions based on brandStorageMethod
+   */
+  private buildBrandFields(
+    brand: string,
+    storageMethod: BrandStorageMethod,
+    existingAttributes: WooProductAttribute[] = []
+  ): {
+    attributes: WooProductAttribute[];
+    meta_data: WooMetaData[];
+  } {
+    const meta_data: WooMetaData[] = [
+      { key: GENERATOR_META_KEY, value: GENERATOR_META_VALUE },
+    ];
+    const attributes = [...existingAttributes];
+
+    // Track distribution
+    this.brandDistribution[storageMethod]++;
+
+    switch (storageMethod) {
+      case 'taxonomy':
+        // EC-BRD-01: Use pa_brand taxonomy
+        // Add brand as a global attribute (references the taxonomy term)
+        if (this.brandAttributeId && this.brandTermIdMap.has(brand)) {
+          attributes.push({
+            id: this.brandAttributeId,
+            name: 'Brand',
+            position: attributes.length,
+            visible: true,
+            variation: false,
+            options: [brand],
+          });
+        }
+        break;
+
+      case 'attribute':
+        // EC-BRD-02: Use a local product attribute (not taxonomy)
+        attributes.push({
+          id: 0, // 0 = local attribute, not a taxonomy
+          name: 'Brand',
+          position: attributes.length,
+          visible: true,
+          variation: false,
+          options: [brand],
+        });
+        break;
+
+      case 'meta':
+        // EC-BRD-03: Use product meta_data
+        meta_data.push({ key: '_brand', value: brand });
+        break;
+
+      case 'none':
+        // EC-BRD-04: No brand information
+        break;
+    }
+
+    return { attributes, meta_data };
+  }
+
+  /**
    * Map a simple product definition to WooCommerce format
    */
   private mapSimpleProduct(product: SimpleProductDefinition): Partial<WooProduct> {
     const categoryIds = product.categories
       .map((slug) => this.categoryIdMap.get(slug))
       .filter((id): id is number => id !== undefined);
+
+    const { attributes, meta_data } = this.buildBrandFields(
+      product.brand,
+      product.brandStorageMethod
+    );
 
     return {
       name: product.name,
@@ -469,13 +642,11 @@ export class ProductGenerator {
       stock_quantity: product.stockQuantity ?? 10,
       stock_status: product.stockStatus || 'instock',
       categories: categoryIds.map((id) => ({ id, name: '', slug: '' })),
+      attributes: attributes.length > 0 ? attributes : undefined,
       images: getPlaceholderGallery(product.sku, product.categories[0], 2).map(
         (src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' })
       ),
-      meta_data: [
-        { key: GENERATOR_META_KEY, value: GENERATOR_META_VALUE },
-        { key: '_brand', value: product.brand },
-      ],
+      meta_data,
     };
   }
 
@@ -489,7 +660,8 @@ export class ProductGenerator {
       .map((slug) => this.categoryIdMap.get(slug))
       .filter((id): id is number => id !== undefined);
 
-    const attributes: WooProductAttribute[] = product.attributes.map(
+    // Start with the product's variation attributes
+    const variationAttributes: WooProductAttribute[] = product.attributes.map(
       (attr, index) => ({
         id: 0,
         name: attr.name,
@@ -498,6 +670,13 @@ export class ProductGenerator {
         variation: attr.variation,
         options: attr.options,
       })
+    );
+
+    // Add brand based on storage method
+    const { attributes, meta_data } = this.buildBrandFields(
+      product.brand,
+      product.brandStorageMethod,
+      variationAttributes
     );
 
     return {
@@ -512,10 +691,7 @@ export class ProductGenerator {
       images: getPlaceholderGallery(product.sku, product.categories[0], 2).map(
         (src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' })
       ),
-      meta_data: [
-        { key: GENERATOR_META_KEY, value: GENERATOR_META_VALUE },
-        { key: '_brand', value: product.brand },
-      ],
+      meta_data,
     };
   }
 
@@ -530,6 +706,11 @@ export class ProductGenerator {
       .map((slug) => this.categoryIdMap.get(slug))
       .filter((id): id is number => id !== undefined);
 
+    const { attributes, meta_data } = this.buildBrandFields(
+      product.brand,
+      product.brandStorageMethod
+    );
+
     return {
       name: product.name,
       type: 'grouped',
@@ -539,13 +720,11 @@ export class ProductGenerator {
       short_description: product.shortDescription,
       categories: categoryIds.map((id) => ({ id, name: '', slug: '' })),
       grouped_products: groupedIds,
+      attributes: attributes.length > 0 ? attributes : undefined,
       images: getPlaceholderGallery(product.sku, product.categories[0], 1).map(
         (src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' })
       ),
-      meta_data: [
-        { key: GENERATOR_META_KEY, value: GENERATOR_META_VALUE },
-        { key: '_brand', value: product.brand },
-      ],
+      meta_data,
     };
   }
 
@@ -566,6 +745,7 @@ export class ProductGenerator {
    */
   private buildCompleteEvent(): CompleteEvent {
     const summary: GenerationSummary = {
+      brands: this.brandsCreated,
       categories: this.categoriesCreated,
       simpleProducts: this.simpleProductsCreated,
       variableProducts: this.variableProductsCreated,
@@ -576,12 +756,14 @@ export class ProductGenerator {
         this.variableProductsCreated +
         this.groupedProductsCreated,
       durationMs: Date.now() - this.startTime,
+      brandDistribution: { ...this.brandDistribution },
     };
 
     // Add resume info if this was a resumed generation
     if (this.isResume) {
       summary.resumed = true;
       summary.skipped = {
+        brands: this.brandsSkipped,
         categories: this.categoriesSkipped,
         products: this.productsSkipped,
         variations: this.variationsSkipped,
@@ -613,6 +795,7 @@ export class ProductGenerator {
  */
 export function getExpectedCounts() {
   return {
+    brands: BRAND_LIST.length,
     categories: CATEGORIES.length,
     ...PRODUCT_COUNTS,
   };

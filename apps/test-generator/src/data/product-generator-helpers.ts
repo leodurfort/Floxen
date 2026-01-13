@@ -9,8 +9,30 @@ import {
   VariationDefinition,
   ProductAttribute,
   StockStatus,
+  BrandStorageMethod,
 } from '@/types/product';
 import { BRANDS, getBrandForCategory } from './brands';
+
+/**
+ * Brand storage method distribution for test coverage:
+ * - 40% taxonomy (pa_brand) - EC-BRD-01
+ * - 30% attribute (visible Brand attribute) - EC-BRD-02
+ * - 20% meta (_brand meta_data) - EC-BRD-03
+ * - 10% none (no brand) - EC-BRD-04
+ */
+const BRAND_STORAGE_DISTRIBUTION: BrandStorageMethod[] = [
+  'taxonomy', 'taxonomy', 'taxonomy', 'taxonomy', // 40%
+  'attribute', 'attribute', 'attribute',           // 30%
+  'meta', 'meta',                                  // 20%
+  'none',                                          // 10%
+];
+
+/**
+ * Get brand storage method based on product index for deterministic distribution
+ */
+export function getBrandStorageMethod(index: number): BrandStorageMethod {
+  return BRAND_STORAGE_DISTRIBUTION[index % BRAND_STORAGE_DISTRIBUTION.length];
+}
 
 // Common attributes
 export const SIZES = {
@@ -237,6 +259,8 @@ export function generateShortDescription(name: string, brand: string): string {
 
 /**
  * Create a simple product definition
+ * Note: brandStorageMethod is assigned by getBrandStorageMethod using index,
+ * but gets reassigned in products/index.ts for proper global distribution
  */
 export function createSimpleProduct(
   category: string,
@@ -256,6 +280,7 @@ export function createSimpleProduct(
     shortDescription: generateShortDescription(name, brand.name),
     categories: [category],
     brand: brand.name,
+    brandStorageMethod: getBrandStorageMethod(index), // Placeholder, reassigned in index.ts
     regularPrice,
     salePrice: maybeSalePrice(regularPrice),
     stockQuantity: stock.quantity,
@@ -267,6 +292,8 @@ export function createSimpleProduct(
 
 /**
  * Create a variable product definition
+ * Note: brandStorageMethod is assigned by getBrandStorageMethod using index,
+ * but gets reassigned in products/index.ts for proper global distribution
  */
 export function createVariableProduct(
   category: string,
@@ -287,6 +314,7 @@ export function createVariableProduct(
     shortDescription: generateShortDescription(name, brand.name),
     categories: [category],
     brand: brand.name,
+    brandStorageMethod: getBrandStorageMethod(index), // Placeholder, reassigned in index.ts
     attributes,
     variations: createVariations(baseSku, attributes),
     ...overrides,
@@ -295,6 +323,8 @@ export function createVariableProduct(
 
 /**
  * Create a grouped product definition
+ * Note: brandStorageMethod is assigned by getBrandStorageMethod using index,
+ * but gets reassigned in products/index.ts for proper global distribution
  */
 export function createGroupedProduct(
   category: string,
@@ -313,6 +343,7 @@ export function createGroupedProduct(
     shortDescription: `${brand.name} ${name} - Complete set.`,
     categories: [category],
     brand: brand.name,
+    brandStorageMethod: getBrandStorageMethod(index), // Placeholder, reassigned in index.ts
     groupedProductSkus: childSkus,
     ...overrides,
   };

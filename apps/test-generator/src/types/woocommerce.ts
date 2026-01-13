@@ -164,3 +164,29 @@ export interface WooBatchResponse<T> {
   update?: T[];
   delete?: T[];
 }
+
+/**
+ * WooCommerce global product attribute (taxonomy)
+ * These are attributes like pa_color, pa_size, pa_brand
+ */
+export interface WooProductAttributeTaxonomy {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+  order_by: string;
+  has_archives: boolean;
+}
+
+/**
+ * WooCommerce product attribute term
+ * Individual values for a product attribute taxonomy (e.g., "Red" for pa_color)
+ */
+export interface WooAttributeTerm {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  menu_order: number;
+  count: number;
+}

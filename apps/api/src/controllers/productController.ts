@@ -55,7 +55,7 @@ const bulkUpdateOperationSchema = z.discriminatedUnion('type', [
 ]);
 
 const bulkUpdateSchema = z.object({
-  selectionMode: z.enum(['selected', 'filtered']),
+  selectionMode: z.enum(['selected', 'filtered', 'all']),
   productIds: z.array(z.string()).optional(),
   filters: bulkUpdateFilterSchema.optional(),
   update: bulkUpdateOperationSchema,
@@ -454,6 +454,9 @@ export async function bulkUpdate(req: Request, res: Response) {
 
     if (selectionMode === 'selected') {
       productIdsToUpdate = selectedIds!;
+    } else if (selectionMode === 'all') {
+      // All mode: get all products in the shop (no filters)
+      productIdsToUpdate = await getFilteredProductIds(shopId, {});
     } else {
       // Filtered mode: get all products matching filters
       productIdsToUpdate = await getFilteredProductIds(shopId, filters || {});

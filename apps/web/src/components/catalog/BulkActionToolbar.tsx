@@ -3,9 +3,12 @@
 interface BulkActionToolbarProps {
   selectedCount: number;
   totalMatchingCount: number;
+  totalCatalogCount: number;
   selectAllMatching: boolean;
+  selectAllGlobal: boolean;
   hasActiveFilters: boolean;
   onSelectAllMatching: () => void;
+  onSelectAllGlobal: () => void;
   onClearSelection: () => void;
   onBulkEdit: () => void;
   isProcessing: boolean;
@@ -14,14 +17,38 @@ interface BulkActionToolbarProps {
 export function BulkActionToolbar({
   selectedCount,
   totalMatchingCount,
+  totalCatalogCount,
   selectAllMatching,
+  selectAllGlobal,
   hasActiveFilters,
   onSelectAllMatching,
+  onSelectAllGlobal,
   onClearSelection,
   onBulkEdit,
   isProcessing,
 }: BulkActionToolbarProps) {
-  const displayCount = selectAllMatching ? totalMatchingCount : selectedCount;
+  // Determine display count based on selection mode
+  const displayCount = selectAllGlobal
+    ? totalCatalogCount
+    : selectAllMatching
+    ? totalMatchingCount
+    : selectedCount;
+
+  // Show "Select all" button when:
+  // - Not already in a "select all" mode
+  // - Some products are selected but not all
+  const showSelectAllButton =
+    !selectAllMatching &&
+    !selectAllGlobal &&
+    selectedCount > 0 &&
+    selectedCount < (hasActiveFilters ? totalMatchingCount : totalCatalogCount);
+
+  // Determine the target count and handler based on filters
+  const selectAllTargetCount = hasActiveFilters ? totalMatchingCount : totalCatalogCount;
+  const selectAllHandler = hasActiveFilters ? onSelectAllMatching : onSelectAllGlobal;
+  const selectAllLabel = hasActiveFilters
+    ? `Select all ${totalMatchingCount.toLocaleString()} matching products`
+    : `Select all ${totalCatalogCount.toLocaleString()} products`;
 
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-[#FA7315]/10 border border-[#FA7315]/30 rounded-lg mb-4">
@@ -30,19 +57,27 @@ export function BulkActionToolbar({
           {displayCount.toLocaleString()} product{displayCount !== 1 ? 's' : ''} selected
         </span>
 
-        {/* Only show "Select all matching" when filters are active and not all are selected */}
-        {!selectAllMatching && hasActiveFilters && selectedCount > 0 && selectedCount < totalMatchingCount && (
+        {/* Show "Select all" button */}
+        {showSelectAllButton && (
           <button
-            onClick={onSelectAllMatching}
+            onClick={selectAllHandler}
             className="text-sm text-gray-600 hover:text-gray-900 underline"
           >
-            Select all {totalMatchingCount.toLocaleString()} matching products
+            {selectAllLabel}
           </button>
         )}
 
+        {/* Status message when all filtered products are selected */}
         {selectAllMatching && hasActiveFilters && (
           <span className="text-sm text-gray-600">
             All products matching current filters are selected
+          </span>
+        )}
+
+        {/* Status message when all products in catalog are selected */}
+        {selectAllGlobal && (
+          <span className="text-sm text-gray-600">
+            All products in catalog are selected
           </span>
         )}
       </div>

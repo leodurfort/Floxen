@@ -21,6 +21,7 @@ import { ClearFiltersButton } from '@/components/catalog/ClearFiltersButton';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import { ProductTabs, type ProductTabId } from '@/components/catalog/ProductTabs';
 import { FeedPreviewModal } from '@/components/catalog/FeedPreviewModal';
+import { SelectAllConfirmDialog } from '@/components/catalog/SelectAllConfirmDialog';
 import {
   COLUMN_MAP,
   formatColumnValue,
@@ -82,6 +83,7 @@ function CatalogPageContent() {
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showEditColumnsModal, setShowEditColumnsModal] = useState(false);
   const [showFeedPreviewModal, setShowFeedPreviewModal] = useState(false);
+  const [showSelectAllConfirm, setShowSelectAllConfirm] = useState(false);
 
   // Active tab for product filtering
   const [activeTab, setActiveTab] = useState<ProductTabId>('all');
@@ -312,6 +314,16 @@ function CatalogPageContent() {
     selection.setSelectAllMatching(true);
   };
 
+  // Global select all (without filters) - shows confirmation dialog first
+  const handleSelectAllGlobalClick = () => {
+    setShowSelectAllConfirm(true);
+  };
+
+  const handleSelectAllGlobalConfirm = () => {
+    selection.setSelectAllGlobal(true);
+    setShowSelectAllConfirm(false);
+  };
+
   // Open bulk edit modal and capture current filters
   const handleOpenBulkEdit = useCallback(() => {
     setBulkEditFilters({
@@ -334,12 +346,22 @@ function CatalogPageContent() {
           : undefined,
       };
 
+      // Determine selection mode:
+      // - 'all' for global select (no filters, all products)
+      // - 'filtered' for select all matching (with filters)
+      // - 'selected' for individual product selection
+      const selectionMode = selection.selectAllGlobal
+        ? 'all'
+        : selection.selectAllMatching
+        ? 'filtered'
+        : 'selected';
+
       return new Promise((resolve) => {
         bulkUpdateMutation.mutate(
           {
-            selectionMode: selection.selectAllMatching ? 'filtered' : 'selected',
-            productIds: selection.selectAllMatching ? undefined : selection.getSelectedIds(),
-            filters: selection.selectAllMatching ? apiFilters : undefined,
+            selectionMode,
+            productIds: selectionMode === 'selected' ? selection.getSelectedIds() : undefined,
+            filters: selectionMode === 'filtered' ? apiFilters : undefined,
             update,
           },
           {
@@ -384,10 +406,20 @@ function CatalogPageContent() {
   // Calculate selection state
   const pageIds = products.map((p) => p.id);
   const selectedOnPage = pageIds.filter((id) => selection.isSelected(id)).length;
-  const allOnPageSelected = selection.selectAllMatching || (pageIds.length > 0 && selectedOnPage === pageIds.length);
-  const someOnPageSelected = !selection.selectAllMatching && selectedOnPage > 0 && selectedOnPage < pageIds.length;
-  const hasSelection = selection.getSelectedCount() > 0 || selection.selectAllMatching;
-  const displayedSelectionCount = selection.selectAllMatching ? totalProducts : selection.getSelectedCount();
+  const isGlobalMode = selection.selectAllMatching || selection.selectAllGlobal;
+  const allOnPageSelected = isGlobalMode || (pageIds.length > 0 && selectedOnPage === pageIds.length);
+  const someOnPageSelected = !isGlobalMode && selectedOnPage > 0 && selectedOnPage < pageIds.length;
+  const hasSelection = selection.getSelectedCount() > 0 || isGlobalMode;
+
+  // Total catalog count from stats (for global select all)
+  const totalCatalogCount = stats?.total ?? 0;
+
+  // Display count depends on selection mode
+  const displayedSelectionCount = selection.selectAllGlobal
+    ? totalCatalogCount
+    : selection.selectAllMatching
+    ? totalProducts
+    : selection.getSelectedCount();
 
   // Pagination
   const totalPages = Math.ceil(totalProducts / filters.limit) || 1;
@@ -599,11 +631,14 @@ function CatalogPageContent() {
         {/* Bulk Action Toolbar */}
         {hasSelection && (
           <BulkActionToolbar
-            selectedCount={displayedSelectionCount}
+            selectedCount={selection.getSelectedCount()}
             totalMatchingCount={totalProducts}
+            totalCatalogCount={totalCatalogCount}
             selectAllMatching={selection.selectAllMatching}
+            selectAllGlobal={selection.selectAllGlobal}
             hasActiveFilters={hasActiveFilters}
             onSelectAllMatching={handleSelectAllMatching}
+            onSelectAllGlobal={handleSelectAllGlobalClick}
             onClearSelection={selection.clearSelection}
             onBulkEdit={handleOpenBulkEdit}
             isProcessing={bulkUpdateMutation.isPending}
@@ -672,7 +707,7 @@ function CatalogPageContent() {
               </thead>
               <tbody>
                 {products.map((p) => {
-                  const isSelected = selection.selectAllMatching || selection.isSelected(p.id);
+                  const isSelected = selection.selectAllMatching || selection.selectAllGlobal || selection.isSelected(p.id);
 
                   return (
                     <tr
@@ -789,6 +824,13 @@ function CatalogPageContent() {
         isOpen={showFeedPreviewModal}
         onClose={() => setShowFeedPreviewModal(false)}
         shopId={params?.id || ''}
+      />
+
+      <SelectAllConfirmDialog
+        isOpen={showSelectAllConfirm}
+        totalCount={totalCatalogCount}
+        onConfirm={handleSelectAllGlobalConfirm}
+        onCancel={() => setShowSelectAllConfirm(false)}
       />
     </main>
   );

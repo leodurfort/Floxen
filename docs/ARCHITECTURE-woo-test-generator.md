@@ -539,27 +539,33 @@ class ProductGenerator {
   private wooClient: WooClient;
   private categoryIdMap: Map<string, number>;
   private productIdMap: Map<string, number>;
+  private brandAttributeId: number | null;  // pa_brand attribute ID
+  private brandTermIdMap: Map<string, number>;  // Brand name -> term ID
 
   constructor(wooClient: WooClient);
 
   // Main generation flow
   async *generate(): AsyncGenerator<ProgressEvent>;
 
-  // Phase 1: Categories
+  // Phase 1: Brands (pa_brand taxonomy and terms)
+  private async createBrands(): Promise<void>;
+
+  // Phase 2: Categories
   private async createCategories(): Promise<void>;
 
-  // Phase 2: Simple products
+  // Phase 3: Simple products
   private async createSimpleProducts(): Promise<void>;
 
-  // Phase 3: Variable products + variations
+  // Phase 4: Variable products + variations
   private async createVariableProducts(): Promise<void>;
 
-  // Phase 4: Grouped products
+  // Phase 5: Grouped products
   private async createGroupedProducts(): Promise<void>;
 
   // Helpers
   private buildProductData(definition: ProductDefinition): ProductInput;
   private buildVariationData(definition: VariationDefinition): VariationInput;
+  private buildBrandFields(brand: string, storageMethod: BrandStorageMethod): BrandFields;
 }
 ```
 
@@ -842,11 +848,12 @@ interface HeartbeatEvent {
 // Progress update
 interface ProgressEvent {
   type: 'progress';
-  phase: 'categories' | 'simple' | 'variable' | 'variations' | 'grouped';
+  phase: 'checking' | 'brands' | 'categories' | 'simple' | 'variable' | 'variations' | 'grouped';
   current: number;
   total: number;
   message: string;
   details?: {
+    brandsCreated?: number;
     categoriesCreated?: number;
     simpleCreated?: number;
     variableCreated?: number;
@@ -860,12 +867,19 @@ interface CompleteEvent {
   type: 'complete';
   summary: {
     totalProducts: number;
+    brandsCreated: number;
     categoriesCreated: number;
     simpleProducts: number;
     variableProducts: number;
     totalVariations: number;
     groupedProducts: number;
     duration: number; // milliseconds
+    brandDistribution?: {
+      taxonomy: number;   // Products using pa_brand taxonomy
+      attribute: number;  // Products using Brand attribute
+      meta: number;       // Products using _brand meta
+      none: number;       // Products with no brand
+    };
   };
 }
 
@@ -965,11 +979,20 @@ interface CategoryDefinition {
   description?: string;
 }
 
+// Brand storage method - determines how brand is stored in WooCommerce
+// Covers edge cases EC-BRD-01 through EC-BRD-04
+type BrandStorageMethod =
+  | 'taxonomy'   // EC-BRD-01: pa_brand taxonomy (like WooCommerce Brands plugin)
+  | 'attribute'  // EC-BRD-02: Visible product attribute named "Brand"
+  | 'meta'       // EC-BRD-03: Product meta_data with key "_brand"
+  | 'none';      // EC-BRD-04: No brand information stored
+
 // Base product definition
 interface ProductDefinitionBase {
   sku: string;
   name: string;
   brand: string;
+  brandStorageMethod: BrandStorageMethod;  // How brand is stored in WooCommerce
   categorySlug: string;
   description?: string;
   shortDescription?: string;

@@ -7,6 +7,9 @@ interface CatalogSelectionState {
   // "Select all matching" mode - when true, selection applies to ALL filtered products
   selectAllMatching: boolean;
 
+  // "Select all global" mode - when true, selection applies to ALL products in catalog (no filters)
+  selectAllGlobal: boolean;
+
   // Shop ID to scope selection (clear selection when shop changes)
   currentShopId: string | null;
 
@@ -18,15 +21,18 @@ interface CatalogSelectionState {
   selectAllOnPage: (ids: string[]) => void;
   deselectAllOnPage: (ids: string[]) => void;
   setSelectAllMatching: (value: boolean) => void;
+  setSelectAllGlobal: (value: boolean) => void;
   clearSelection: () => void;
   isSelected: (id: string) => boolean;
   getSelectedCount: () => number;
   getSelectedIds: () => string[];
+  isGlobalSelectMode: () => boolean;
 }
 
 export const useCatalogSelection = create<CatalogSelectionState>((set, get) => ({
   selectedIds: new Set(),
   selectAllMatching: false,
+  selectAllGlobal: false,
   currentShopId: null,
 
   setShopId: (shopId) => {
@@ -37,6 +43,7 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
         currentShopId: shopId,
         selectedIds: new Set(),
         selectAllMatching: false,
+        selectAllGlobal: false,
       });
     }
   },
@@ -48,7 +55,7 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
     } else {
       newSet.add(id);
     }
-    return { selectedIds: newSet, selectAllMatching: false };
+    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false };
   }),
 
   selectProducts: (ids) => set((state) => {
@@ -60,7 +67,7 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
   deselectProducts: (ids) => set((state) => {
     const newSet = new Set(state.selectedIds);
     ids.forEach(id => newSet.delete(id));
-    return { selectedIds: newSet, selectAllMatching: false };
+    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false };
   }),
 
   selectAllOnPage: (ids) => set((state) => {
@@ -72,14 +79,17 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
   deselectAllOnPage: (ids) => set((state) => {
     const newSet = new Set(state.selectedIds);
     ids.forEach(id => newSet.delete(id));
-    return { selectedIds: newSet, selectAllMatching: false };
+    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false };
   }),
 
-  setSelectAllMatching: (value) => set({ selectAllMatching: value }),
+  setSelectAllMatching: (value) => set({ selectAllMatching: value, selectAllGlobal: false }),
+
+  setSelectAllGlobal: (value) => set({ selectAllGlobal: value, selectAllMatching: false }),
 
   clearSelection: () => set({
     selectedIds: new Set(),
     selectAllMatching: false,
+    selectAllGlobal: false,
   }),
 
   isSelected: (id) => get().selectedIds.has(id),
@@ -87,4 +97,6 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
   getSelectedCount: () => get().selectedIds.size,
 
   getSelectedIds: () => Array.from(get().selectedIds),
+
+  isGlobalSelectMode: () => get().selectAllGlobal || get().selectAllMatching,
 }));
