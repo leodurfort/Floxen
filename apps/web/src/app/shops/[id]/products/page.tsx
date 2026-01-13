@@ -21,7 +21,6 @@ import { ClearFiltersButton } from '@/components/catalog/ClearFiltersButton';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import { ProductTabs, type ProductTabId } from '@/components/catalog/ProductTabs';
 import { FeedPreviewModal } from '@/components/catalog/FeedPreviewModal';
-import { SelectAllConfirmDialog } from '@/components/catalog/SelectAllConfirmDialog';
 import {
   COLUMN_MAP,
   formatColumnValue,
@@ -83,7 +82,6 @@ function CatalogPageContent() {
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showEditColumnsModal, setShowEditColumnsModal] = useState(false);
   const [showFeedPreviewModal, setShowFeedPreviewModal] = useState(false);
-  const [showSelectAllConfirm, setShowSelectAllConfirm] = useState(false);
 
   // Active tab for product filtering
   const [activeTab, setActiveTab] = useState<ProductTabId>('all');
@@ -314,14 +312,8 @@ function CatalogPageContent() {
     selection.setSelectAllMatching(true);
   };
 
-  // Global select all (without filters) - shows confirmation dialog first
-  const handleSelectAllGlobalClick = () => {
-    setShowSelectAllConfirm(true);
-  };
-
-  const handleSelectAllGlobalConfirm = () => {
+  const handleSelectAllGlobal = () => {
     selection.setSelectAllGlobal(true);
-    setShowSelectAllConfirm(false);
   };
 
   // Open bulk edit modal and capture current filters
@@ -638,7 +630,7 @@ function CatalogPageContent() {
             selectAllGlobal={selection.selectAllGlobal}
             hasActiveFilters={hasActiveFilters}
             onSelectAllMatching={handleSelectAllMatching}
-            onSelectAllGlobal={handleSelectAllGlobalClick}
+            onSelectAllGlobal={handleSelectAllGlobal}
             onClearSelection={selection.clearSelection}
             onBulkEdit={handleOpenBulkEdit}
             isProcessing={bulkUpdateMutation.isPending}
@@ -824,13 +816,6 @@ function CatalogPageContent() {
         isOpen={showFeedPreviewModal}
         onClose={() => setShowFeedPreviewModal(false)}
         shopId={params?.id || ''}
-      />
-
-      <SelectAllConfirmDialog
-        isOpen={showSelectAllConfirm}
-        totalCount={totalCatalogCount}
-        onConfirm={handleSelectAllGlobalConfirm}
-        onCancel={() => setShowSelectAllConfirm(false)}
       />
     </main>
   );
