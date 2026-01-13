@@ -738,7 +738,7 @@ function CatalogPageContent() {
                     // Checkbox column - sticky left
                     if (column.id === 'checkbox') {
                       return (
-                        <th key={column.id} className="w-12 sticky left-0 z-10 bg-gray-50">
+                        <th key={column.id} className="w-12 sticky left-0 z-20 bg-gray-50">
                           <input
                             type="checkbox"
                             checked={allOnPageSelected}
