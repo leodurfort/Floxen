@@ -562,10 +562,18 @@ class ProductGenerator {
   // Phase 5: Grouped products
   private async createGroupedProducts(): Promise<void>;
 
+  // Phase 6: Product relationships (cross-sell, upsell)
+  private async generateRelationships(): Promise<void>;
+
+  // Phase 7: Product reviews
+  private async generateReviews(): Promise<void>;
+
   // Helpers
   private buildProductData(definition: ProductDefinition): ProductInput;
   private buildVariationData(definition: VariationDefinition): VariationInput;
   private buildBrandFields(brand: string, storageMethod: BrandStorageMethod): BrandFields;
+  private buildExtendedFields(definition: ProductDefinition): ExtendedFields;
+  private buildVariationGtinMeta(variation: VariationDefinition): MetaDataItem[];
 }
 ```
 
@@ -848,7 +856,7 @@ interface HeartbeatEvent {
 // Progress update
 interface ProgressEvent {
   type: 'progress';
-  phase: 'checking' | 'brands' | 'categories' | 'simple' | 'variable' | 'variations' | 'grouped';
+  phase: 'checking' | 'brands' | 'categories' | 'simple-products' | 'variable-products' | 'variations' | 'grouped-products' | 'relationships' | 'reviews';
   current: number;
   total: number;
   message: string;
@@ -859,6 +867,8 @@ interface ProgressEvent {
     variableCreated?: number;
     variationsCreated?: number;
     groupedCreated?: number;
+    relationshipsCreated?: number;
+    reviewsCreated?: number;
   };
 }
 
@@ -880,6 +890,12 @@ interface CompleteEvent {
       meta: number;       // Products using _brand meta
       none: number;       // Products with no brand
     };
+    relationships?: {
+      related: number;    // Related product relationships
+      crossSell: number;  // Cross-sell relationships
+      upsell: number;     // Upsell relationships
+    };
+    reviews?: number;     // Total reviews created
   };
 }
 
@@ -923,7 +939,7 @@ async function* generateWithHeartbeat(): AsyncGenerator<GeneratorEvent> {
 // Progress update
 interface CleanupProgressEvent {
   type: 'progress';
-  phase: 'finding' | 'deleting-products' | 'deleting-categories';
+  phase: 'finding' | 'deleting-variations' | 'deleting-products' | 'deleting-categories' | 'deleting-brands';
   current: number;
   total: number;
   message: string;
@@ -934,7 +950,9 @@ interface CleanupCompleteEvent {
   type: 'complete';
   summary: {
     productsDeleted: number;
+    variationsDeleted: number;
     categoriesDeleted: number;
+    brandsDeleted: number;
     duration: number;
   };
 }
@@ -987,6 +1005,19 @@ type BrandStorageMethod =
   | 'meta'       // EC-BRD-03: Product meta_data with key "_brand"
   | 'none';      // EC-BRD-04: No brand information stored
 
+// GTIN storage method - determines how GTIN is stored in WooCommerce
+type GtinStorageMethod = '_gtin' | 'gtin' | 'global_unique_id';
+type GtinType = 'UPC-A' | 'EAN-13' | 'GTIN-14' | 'ISBN-13';
+type Gender = 'male' | 'female' | 'unisex';
+type AgeGroup = 'adult' | 'kids' | 'toddler' | 'infant' | 'newborn';
+type SizeSystem = 'US' | 'UK' | 'EU' | 'AU' | 'BR' | 'CN' | 'JP';
+
+// Sale date range
+interface SaleDateRange {
+  from: string;  // ISO date string
+  to: string;    // ISO date string
+}
+
 // Base product definition
 interface ProductDefinitionBase {
   sku: string;
@@ -998,20 +1029,47 @@ interface ProductDefinitionBase {
   shortDescription?: string;
   regularPrice: string;
   salePrice?: string;
-  saleDateFrom?: string;
-  saleDateTo?: string;
+  saleDates?: SaleDateRange;  // EC-PRC-08 to EC-PRC-10
   stockStatus: 'instock' | 'outofstock' | 'onbackorder';
   stockQuantity?: number;
   manageStock?: boolean;
-  weight?: string;
-  dimensions?: {
+
+  // Physical attributes (EC-DIM-01 to EC-DIM-10)
+  weight?: string;           // 80% coverage
+  dimensions?: {             // 60% coverage
     length: string;
     width: string;
     height: string;
   };
-  images?: string[];       // Placeholder URLs
+
+  // Product identifiers (EC-GTIN-01 to EC-GTIN-09)
+  gtin?: string;             // 30% coverage
+  gtinType?: GtinType;
+  gtinStorageMethod?: GtinStorageMethod;
+  mpn?: string;              // 20% coverage
+
+  // Product attributes (for OpenAI feed)
+  material?: string;         // 70% coverage
+  gender?: Gender;           // 60% coverage
+  ageGroup?: AgeGroup;       // 40% coverage
+  sizeSystem?: SizeSystem;   // 20% footwear
+
+  // Product relationships (EC-REL-01 to EC-REL-06)
+  relatedSkus?: string[];    // For cross-sell assignment
+  crossSellSkus?: string[];  // 20% coverage
+  upsellSkus?: string[];     // 20% coverage
+
+  // Optional fields (various coverage)
+  videoLink?: string;        // 4%
+  model3dLink?: string;      // 1%
+  deliveryEstimate?: string; // 16%
+  warning?: string;          // 3%
+  warningUrl?: string;       // 3%
+  ageRestriction?: number;   // 2%
+
+  images?: string[];         // Placeholder URLs
   metaData?: MetaDataItem[];
-  edgeCase?: string;       // Description of edge case being tested
+  edgeCase?: string;         // Description of edge case being tested
 }
 
 // Simple product
@@ -1043,13 +1101,19 @@ interface AttributeDefinition {
 // Variation definition
 interface VariationDefinition {
   sku: string;
-  attributes: { name: string; option: string }[];
+  attributes: Record<string, string>;  // { "Color": "Red", "Size": "M" }
   regularPrice: string;
   salePrice?: string;
   stockStatus?: string;
   stockQuantity?: number;
   weight?: string;
   dimensions?: { length: string; width: string; height: string };
+  // Variation-specific identifiers (EC-VAR-14)
+  gtin?: string;
+  gtinType?: GtinType;
+  gtinStorageMethod?: GtinStorageMethod;
+  mpn?: string;
+  saleDates?: SaleDateRange;
   image?: string;
 }
 
@@ -1433,25 +1497,40 @@ function useSession(): {
 The following order ensures all dependencies are satisfied:
 
 ```
-1. CATEGORIES (14 total)
+1. BRANDS (pa_brand taxonomy)
+   └── Create attribute taxonomy
+   └── Create brand terms (Urban Style, Street Wear, etc.)
+
+2. CATEGORIES (14 total)
    └── Create in hierarchical order (parents first)
        ├── Apparel (root)
        ├── Tops, Bottoms, Footwear, Accessories (level 1)
        └── T-Shirts, Hoodies, ... (level 2)
 
-2. SIMPLE PRODUCTS (180 total)
+3. SIMPLE PRODUCTS (180 total)
    └── Create in batches of 100
        ├── Batch 1: Products 1-100
        └── Batch 2: Products 101-180
+   └── Include: weight, dimensions, GTIN, MPN, material, gender, etc.
 
-3. VARIABLE PRODUCTS (270 total)
+4. VARIABLE PRODUCTS (270 total)
    └── For each variable product:
-       ├── Create parent product
-       └── Create variations in batch
+       ├── Create parent product with attributes
+       └── Create variations in batch (with GTIN, weight, dimensions)
 
-4. GROUPED PRODUCTS (50 total)
+5. GROUPED PRODUCTS (50 total)
    └── Create after all children exist
        └── Reference children by WooCommerce ID
+
+6. RELATIONSHIPS (40% of products)
+   └── Update products with cross_sell_ids and upsell_ids
+       ├── ~200 products with cross-sell relationships
+       └── ~200 products with upsell relationships
+
+7. REVIEWS (60% of products)
+   └── Create reviews via WooCommerce Reviews API
+       ├── Varied ratings (1-5 stars)
+       └── Covers EC-REV-01 to EC-REV-06 edge cases
 ```
 
 ---
@@ -1520,6 +1599,7 @@ function getPlaceholderUrl(sku: string, category: string, size: string): string 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-01-11 | Architect Agent | Initial draft |
+| 1.1 | 2026-01-13 | Claude | Added full PRD compliance: weight/dimensions, GTIN/MPN, material/gender/age group, relationships, reviews, optional fields |
 
 ---
 

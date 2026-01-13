@@ -41,7 +41,7 @@ export function useShopsSyncPolling(enabled: boolean) {
       return result.shops;
     },
     enabled: hydrated && !!user && enabled,
-    refetchInterval: enabled ? 5000 : false, // 5s polling only when enabled
+    refetchInterval: enabled ? 3000 : false, // 3s polling only when enabled
   });
 }
 

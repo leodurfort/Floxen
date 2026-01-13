@@ -186,6 +186,16 @@ async function processSingleWooProduct(
 }
 
 /**
+ * Update sync progress in database (0-100)
+ */
+async function updateSyncProgress(shopId: string, progress: number) {
+  await prisma.shop.update({
+    where: { id: shopId },
+    data: { syncProgress: Math.min(100, Math.max(0, Math.round(progress))) },
+  });
+}
+
+/**
  * Full sync - fetch and process all products
  */
 async function runFullSync(
@@ -195,6 +205,9 @@ async function runFullSync(
 ) {
   logger.info('product-sync: running full sync', { shopId });
 
+  // Initialize progress to 0
+  await updateSyncProgress(shopId, 0);
+
   const products = await fetchAllProducts(client);
   logger.info(`product-sync: fetched products`, { shopId, count: products.length });
 
@@ -203,8 +216,20 @@ async function runFullSync(
 
   const autoFillService = await AutoFillService.create(shop);
 
+  const totalProducts = products.length;
+  let processedCount = 0;
+  let lastReportedProgress = 0;
+
   for (const wooProd of products) {
     await processSingleWooProduct(wooProd, shop, shopId, autoFillService, client, categoryMap);
+    processedCount++;
+
+    // Update progress every 5% or at least every 10 products
+    const currentProgress = totalProducts > 0 ? (processedCount / totalProducts) * 100 : 0;
+    if (currentProgress - lastReportedProgress >= 5 || processedCount % 10 === 0) {
+      await updateSyncProgress(shopId, currentProgress);
+      lastReportedProgress = currentProgress;
+    }
   }
 
   // Field discovery only on full sync
@@ -308,7 +333,7 @@ export async function productSyncProcessor(job: Job) {
 
     await prisma.shop.update({
       where: { id: shopId },
-      data: { syncStatus: 'COMPLETED', lastSyncAt: new Date() },
+      data: { syncStatus: 'COMPLETED', lastSyncAt: new Date(), syncProgress: null },
     });
   } catch (err) {
     const classification = classifyError(err);
@@ -325,7 +350,7 @@ export async function productSyncProcessor(job: Job) {
     if (isLastAttempt || !classification.isRetryable) {
       await prisma.shop.update({
         where: { id: shopId },
-        data: { syncStatus: 'FAILED' },
+        data: { syncStatus: 'FAILED', syncProgress: null },
       });
     }
 

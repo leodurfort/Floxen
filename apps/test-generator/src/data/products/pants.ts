@@ -14,6 +14,7 @@ import {
   SIZES,
   COLORS,
 } from '../product-generator-helpers';
+import { getEdgeCaseOverride } from './edge-cases';
 
 const CATEGORY = 'pants';
 
@@ -58,7 +59,8 @@ export function generatePants(): ProductDefinition[] {
 
   // Simple products (12)
   for (let i = 0; i < 12; i++) {
-    products.push(createSimpleProduct(CATEGORY, i));
+    const edgeCaseOverride = getEdgeCaseOverride(CATEGORY, i);
+    products.push(createSimpleProduct(CATEGORY, i, edgeCaseOverride));
   }
 
   // Variable products (28)

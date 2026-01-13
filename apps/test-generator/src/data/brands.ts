@@ -11,6 +11,7 @@ export interface BrandDefinition {
 }
 
 export const BRANDS: Record<string, BrandDefinition> = {
+  // PRD Section 7.2 - 10 Fictional Brands
   URBAN_THREAD: {
     key: 'URBAN_THREAD',
     name: 'UrbanThread',
@@ -23,17 +24,29 @@ export const BRANDS: Record<string, BrandDefinition> = {
     style: 'Outdoor, performance, durable',
     categories: ['jackets', 'boots', 'pants', 'bags'],
   },
-  CLASSIC_FIT: {
-    key: 'CLASSIC_FIT',
-    name: 'ClassicFit',
-    style: 'Traditional, timeless, professional',
-    categories: ['pants', 'belts', 't-shirts', 'jackets'],
+  VELVET_STRIDE: {
+    key: 'VELVET_STRIDE',
+    name: 'VelvetStride',
+    style: 'Premium, luxury, elegant',
+    categories: ['pants', 'belts', 't-shirts', 'jackets', 'sandals'],
   },
-  WAVE_RIDER: {
-    key: 'WAVE_RIDER',
-    name: 'WaveRider',
-    style: 'Surf, beach, relaxed',
+  COASTAL_BREEZE: {
+    key: 'COASTAL_BREEZE',
+    name: 'CoastalBreeze',
+    style: 'Summer, beachwear, relaxed',
     categories: ['shorts', 'sandals', 't-shirts', 'hats'],
+  },
+  IRON_FORGE: {
+    key: 'IRON_FORGE',
+    name: 'IronForge',
+    style: 'Industrial, workwear, rugged',
+    categories: ['boots', 'pants', 'jackets', 'belts'],
+  },
+  ZEN_FLOW: {
+    key: 'ZEN_FLOW',
+    name: 'ZenFlow',
+    style: 'Wellness, yoga, comfort',
+    categories: ['shorts', 'sneakers', 't-shirts', 'hoodies'],
   },
   METRO_STYLE: {
     key: 'METRO_STYLE',
@@ -41,35 +54,23 @@ export const BRANDS: Record<string, BrandDefinition> = {
     style: 'Urban, sophisticated, modern',
     categories: ['pants', 'jackets', 'bags', 'belts'],
   },
-  ACTIVE_EDGE: {
-    key: 'ACTIVE_EDGE',
-    name: 'ActiveEdge',
-    style: 'Athletic, sports, performance',
-    categories: ['shorts', 'sneakers', 't-shirts', 'hoodies'],
+  WILD_TRAIL: {
+    key: 'WILD_TRAIL',
+    name: 'WildTrail',
+    style: 'Outdoor, hiking, adventure',
+    categories: ['boots', 'jackets', 'pants', 'bags', 'sandals'],
   },
-  VINTAGE_VAULT: {
-    key: 'VINTAGE_VAULT',
-    name: 'VintageVault',
-    style: 'Retro, nostalgic, classic',
-    categories: ['t-shirts', 'jackets', 'boots', 'hats'],
+  SILK_HAVEN: {
+    key: 'SILK_HAVEN',
+    name: 'SilkHaven',
+    style: 'Luxury, elegant, refined',
+    categories: ['t-shirts', 'jackets', 'pants', 'hats'],
   },
-  SUMMIT_GEAR: {
-    key: 'SUMMIT_GEAR',
-    name: 'SummitGear',
-    style: 'Mountain, hiking, adventure',
-    categories: ['boots', 'jackets', 'pants', 'bags'],
-  },
-  COASTAL_CRAFT: {
-    key: 'COASTAL_CRAFT',
-    name: 'CoastalCraft',
-    style: 'Nautical, preppy, casual',
-    categories: ['shorts', 'sandals', 'belts', 'bags'],
-  },
-  TERRA_FIRMA: {
-    key: 'TERRA_FIRMA',
-    name: 'TerraFirma',
-    style: 'Workwear, rugged, utility',
-    categories: ['boots', 'pants', 'jackets', 'belts'],
+  STREET_PULSE: {
+    key: 'STREET_PULSE',
+    name: 'StreetPulse',
+    style: 'Urban, edgy, streetwear',
+    categories: ['hoodies', 'sneakers', 'hats', 'bags'],
   },
 };
 

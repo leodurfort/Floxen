@@ -9,7 +9,9 @@ export type GeneratorPhase =
   | 'simple-products'
   | 'variable-products'
   | 'variations'
-  | 'grouped-products';
+  | 'grouped-products'
+  | 'relationships'
+  | 'reviews';
 
 export type CleanupPhase =
   | 'finding'
@@ -77,6 +79,14 @@ export interface GenerationSummary {
     meta: number;
     none: number;
   };
+  // Relationship counts
+  relationships?: {
+    related: number;
+    crossSell: number;
+    upsell: number;
+  };
+  // Review counts
+  reviews?: number;
   // Resume info (when continuing from interrupted generation)
   resumed?: boolean;
   skipped?: {

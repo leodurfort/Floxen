@@ -138,6 +138,48 @@ export class WooClient {
   }
 
   /**
+   * Update a single product (for setting relationships, etc.)
+   */
+  async updateProduct(id: number, data: Partial<WooProduct>): Promise<WooProduct> {
+    const response = await this.api.put(`products/${id}`, data);
+    return response.data;
+  }
+
+  /**
+   * Update products in batch (for setting relationships)
+   */
+  async updateProductsBatch(
+    updates: Array<{ id: number } & Partial<WooProduct>>
+  ): Promise<WooProduct[]> {
+    const request: WooBatchRequest<{ id: number } & Partial<WooProduct>> = { update: updates };
+
+    console.log('[WooClient] Updating products batch:', {
+      count: updates.length,
+      ids: updates.map((p) => p.id).slice(0, 5),
+    });
+
+    try {
+      const response = await this.api.post('products/batch', request);
+      const batchResponse = response.data;
+
+      const updated = batchResponse.update || [];
+      const errors = updated.filter((item: { error?: { message?: string } }) => item.error);
+
+      if (errors.length > 0) {
+        console.error('[WooClient] Batch update errors:', JSON.stringify(errors.slice(0, 3), null, 2));
+      }
+
+      const successful = updated.filter((item: { error?: unknown; id?: number }) => !item.error && item.id);
+      console.log('[WooClient] Successfully updated:', successful.length, 'products');
+
+      return successful;
+    } catch (error) {
+      console.error('[WooClient] Batch update failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create products in batch
    */
   async createProductsBatch(
@@ -418,6 +460,105 @@ export class WooClient {
    */
   async deleteAttributeTerm(attributeId: number, termId: number): Promise<void> {
     await this.api.delete(`products/attributes/${attributeId}/terms/${termId}`, { force: true });
+  }
+
+  // ========================
+  // Brand Operations (pa_brand taxonomy)
+  // ========================
+
+  /**
+   * Get all brands (pa_brand attribute terms)
+   * Returns empty array if pa_brand attribute doesn't exist
+   */
+  async getBrands(): Promise<WooAttributeTerm[]> {
+    try {
+      // First find the pa_brand attribute
+      const attributes = await this.getProductAttributes();
+      const brandAttribute = attributes.find(
+        (a) => a.slug === 'pa_brand' || a.name.toLowerCase() === 'brand'
+      );
+
+      if (!brandAttribute) {
+        console.log('[WooClient] No brand attribute found');
+        return [];
+      }
+
+      // Get all terms for this attribute
+      const terms = await this.getAttributeTerms(brandAttribute.id, { per_page: 100 });
+      return terms;
+    } catch (error) {
+      console.error('[WooClient] Failed to get brands:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete a brand (pa_brand attribute term)
+   */
+  async deleteBrand(termId: number): Promise<void> {
+    try {
+      // First find the pa_brand attribute
+      const attributes = await this.getProductAttributes();
+      const brandAttribute = attributes.find(
+        (a) => a.slug === 'pa_brand' || a.name.toLowerCase() === 'brand'
+      );
+
+      if (!brandAttribute) {
+        throw new Error('Brand attribute not found');
+      }
+
+      await this.deleteAttributeTerm(brandAttribute.id, termId);
+    } catch (error) {
+      console.error('[WooClient] Failed to delete brand:', termId, error);
+      throw error;
+    }
+  }
+
+  // ========================
+  // Review Operations
+  // ========================
+
+  /**
+   * Create a product review
+   * Used to populate review data for testing EC-REV-01 to EC-REV-06
+   */
+  async createReview(data: {
+    product_id: number;
+    review: string;
+    reviewer: string;
+    reviewer_email: string;
+    rating: number;
+  }): Promise<{ id: number }> {
+    console.log('[WooClient] Creating review for product:', data.product_id);
+    try {
+      const response = await this.api.post('products/reviews', {
+        ...data,
+        status: 'approved', // Auto-approve reviews for testing
+      });
+      return response.data;
+    } catch (error) {
+      console.error('[WooClient] Review creation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all reviews for a product
+   */
+  async deleteProductReviews(productId: number): Promise<void> {
+    try {
+      const response = await this.api.get('products/reviews', {
+        product: productId,
+        per_page: 100,
+      });
+      const reviews = response.data as Array<{ id: number }>;
+
+      for (const review of reviews) {
+        await this.api.delete(`products/reviews/${review.id}`, { force: true });
+      }
+    } catch (error) {
+      console.error('[WooClient] Failed to delete reviews for product:', productId, error);
+    }
   }
 }
 

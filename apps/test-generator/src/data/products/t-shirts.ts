@@ -13,6 +13,7 @@ import {
   SIZES,
   COLORS,
 } from '../product-generator-helpers';
+import { getEdgeCaseOverride } from './edge-cases';
 
 const CATEGORY = 't-shirts';
 
@@ -30,7 +31,8 @@ export function generateTShirts(): ProductDefinition[] {
 
   // Simple products (15)
   for (let i = 0; i < 15; i++) {
-    products.push(createSimpleProduct(CATEGORY, i));
+    const edgeCaseOverride = getEdgeCaseOverride(CATEGORY, i);
+    products.push(createSimpleProduct(CATEGORY, i, edgeCaseOverride));
   }
 
   // Variable products (30)

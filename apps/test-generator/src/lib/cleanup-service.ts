@@ -28,6 +28,7 @@ export class CleanupService {
   private productsDeleted = 0;
   private variationsDeleted = 0;
   private categoriesDeleted = 0;
+  private brandsDeleted = 0;
 
   constructor(wooClient: WooClient) {
     this.wooClient = wooClient;
@@ -54,6 +55,10 @@ export class CleanupService {
       yield this.progress('deleting-categories', 0, 0, 'Finding generated categories...');
       const categories = await this.findGeneratedCategories();
       yield* this.deleteCategories(categories);
+
+      // Phase 5: Find and delete brands (pa_brand taxonomy terms)
+      yield this.progress('deleting-brands', 0, 0, 'Finding generated brands...');
+      yield* this.deleteBrands();
 
       // Complete
       yield this.buildCompleteEvent();
@@ -212,6 +217,39 @@ export class CleanupService {
   }
 
   /**
+   * Delete brands (pa_brand taxonomy terms)
+   */
+  private async *deleteBrands(): AsyncGenerator<ProgressEvent> {
+    try {
+      // Get all brands (pa_brand terms)
+      const brands = await this.wooClient.getBrands();
+      const total = brands.length;
+      let current = 0;
+
+      for (const brand of brands) {
+        current++;
+        yield this.progress(
+          'deleting-brands',
+          current,
+          total,
+          `Deleting brand: ${brand.name}`
+        );
+
+        try {
+          await this.wooClient.deleteBrand(brand.id);
+          this.brandsDeleted++;
+        } catch (error) {
+          console.error(`Failed to delete brand ${brand.name}:`, error);
+          // Continue with other brands
+        }
+      }
+    } catch (error) {
+      // Brand attribute might not exist, which is fine
+      console.log('No brands to delete or brand attribute not found');
+    }
+  }
+
+  /**
    * Sort categories by hierarchy depth (deepest first for deletion)
    */
   private sortByHierarchyDepth(categories: WooCategory[]): WooCategory[] {
@@ -257,6 +295,7 @@ export class CleanupService {
       productsDeleted: this.productsDeleted,
       variationsDeleted: this.variationsDeleted,
       categoriesDeleted: this.categoriesDeleted,
+      brandsDeleted: this.brandsDeleted,
       durationMs: Date.now() - this.startTime,
     };
 

@@ -1,10 +1,10 @@
 # Epics and Stories
 # WooCommerce Test Data Generator
 
-**Version:** 1.0
-**Date:** January 11, 2026
+**Version:** 1.1
+**Date:** January 13, 2026
 **Author:** Scrum Master Agent
-**Status:** Draft
+**Status:** Implementation Complete
 **Related Documents:**
 - [PRD](./PRD-woo-test-generator.md)
 - [Architecture](./ARCHITECTURE-woo-test-generator.md)
@@ -72,10 +72,10 @@ This document breaks down the WooCommerce Test Data Generator into implementable
 **Dependencies:** None (this is the foundation)
 
 **Acceptance Criteria:**
-- [ ] New Next.js app created in `apps/test-generator/`
-- [ ] Monorepo workspace configuration updated
-- [ ] Development server runs independently
-- [ ] Railway deployment configuration ready
+- [x] New Next.js app created in `apps/test-generator/`
+- [x] Monorepo workspace configuration updated
+- [x] Development server runs independently
+- [x] Railway deployment configuration ready
 
 ---
 
@@ -85,16 +85,16 @@ This document breaks down the WooCommerce Test Data Generator into implementable
 **I want** a new Next.js 14 application in the monorepo
 **So that** I have the foundation for the test generator
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Next.js 14 app created with App Router at `apps/test-generator/`
-- [ ] TypeScript configured with strict mode
-- [ ] Tailwind CSS configured matching ProductSync web app
-- [ ] ESLint and Prettier configured
-- [ ] App runs on port 3002 (to avoid conflicts with existing apps)
+- [x] Next.js 14 app created with App Router at `apps/test-generator/`
+- [x] TypeScript configured with strict mode
+- [x] Tailwind CSS configured matching ProductSync web app
+- [x] ESLint and Prettier configured
+- [x] App runs on port 3002 (to avoid conflicts with existing apps)
 
 **Technical Notes:**
 ```bash
@@ -120,15 +120,15 @@ npx create-next-app@14 test-generator --typescript --tailwind --app --src-dir
 **I want** the test generator integrated into the monorepo workspace
 **So that** I can run it alongside other apps and share dependencies
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 2
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Root `package.json` updated with workspace scripts
-- [ ] `npm run dev:test-gen` starts the test generator
-- [ ] `npm run build:test-gen` builds the test generator
-- [ ] Shared packages accessible from test generator
+- [x] Root `package.json` updated with workspace scripts
+- [x] `npm run dev:test-gen` starts the test generator
+- [x] `npm run build:test-gen` builds the test generator
+- [x] Shared packages accessible from test generator
 
 **Technical Notes:**
 ```json
@@ -152,15 +152,15 @@ npx create-next-app@14 test-generator --typescript --tailwind --app --src-dir
 **I want** environment variables properly configured
 **So that** the app works in development and production
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 2
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] `.env.local.example` created with all required variables
-- [ ] Environment variables documented
-- [ ] `SESSION_SECRET` generation instructions provided
-- [ ] `NEXT_PUBLIC_APP_URL` configured for development
+- [x] `.env.local.example` created with all required variables
+- [x] Environment variables documented
+- [x] `SESSION_SECRET` generation instructions provided
+- [x] `NEXT_PUBLIC_APP_URL` configured for development
 
 **Environment Variables:**
 ```env
@@ -184,15 +184,15 @@ PLACEHOLDER_IMAGE_URL=https://via.placeholder.com
 **I want** Railway deployment configuration ready
 **So that** the app can be deployed as a separate service
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] `railway.toml` configured with build and start commands
-- [ ] Health check endpoint configured (`/api/status`)
-- [ ] Service runs on internal port 3000
-- [ ] Documentation for Railway setup provided
+- [x] `railway.toml` configured with build and start commands
+- [x] Health check endpoint configured (`/api/status`)
+- [x] Service runs on internal port 3000
+- [x] Documentation for Railway setup provided
 
 **Files to Create:**
 - `apps/test-generator/railway.toml`
@@ -219,14 +219,14 @@ restartPolicyMaxRetries = 3
 **I want** the directory structure established
 **So that** I have clear organization for all components
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] All directories created per architecture document
-- [ ] Barrel exports (`index.ts`) in each directory
-- [ ] README placeholder in key directories
+- [x] All directories created per architecture document
+- [x] Barrel exports (`index.ts`) in each directory
+- [x] README placeholder in key directories
 
 **Directory Structure:**
 ```
@@ -256,16 +256,16 @@ src/
 **I want** TypeScript type definitions established
 **So that** all code is type-safe from the start
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Session types defined
-- [ ] Product definition types defined
-- [ ] WooCommerce API types defined
-- [ ] API response types defined
-- [ ] SSE event types defined
+- [x] Session types defined
+- [x] Product definition types defined
+- [x] WooCommerce API types defined
+- [x] API response types defined
+- [x] SSE event types defined
 
 **Files to Create:**
 - `apps/test-generator/src/types/index.ts`
@@ -305,10 +305,10 @@ export interface ProgressEvent {
 **Dependencies:** Epic 1 (Project Setup)
 
 **Acceptance Criteria:**
-- [ ] Users can connect to any WooCommerce store via OAuth
-- [ ] Credentials stored securely in encrypted session
-- [ ] Session expires after 1 hour
-- [ ] Users can disconnect and reconnect
+- [x] Users can connect to any WooCommerce store via OAuth
+- [x] Credentials stored securely in encrypted session
+- [x] Session expires after 1 hour
+- [x] Users can disconnect and reconnect
 
 ---
 
@@ -318,16 +318,16 @@ export interface ProgressEvent {
 **I want** iron-session configured for secure credential storage
 **So that** WooCommerce credentials are stored safely
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] `iron-session` package installed
-- [ ] Session configuration with 1-hour TTL
-- [ ] HTTP-only, secure cookies in production
-- [ ] Helper functions for get/set/clear session
-- [ ] Session type augmentation for TypeScript
+- [x] `iron-session` package installed
+- [x] Session configuration with 1-hour TTL
+- [x] HTTP-only, secure cookies in production
+- [x] Helper functions for get/set/clear session
+- [x] Session type augmentation for TypeScript
 
 **Files to Create:**
 - `apps/test-generator/src/lib/session.ts`
@@ -362,16 +362,16 @@ export async function getSession() {
 **I want** to enter my WooCommerce store URL and initiate connection
 **So that** I can authorize the app to access my store
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] `POST /api/oauth/initiate` endpoint created
-- [ ] URL validation (must be valid HTTPS URL)
-- [ ] OAuth URL generated with correct parameters
-- [ ] Store URL saved to session
-- [ ] Error handling for invalid URLs
+- [x] `POST /api/oauth/initiate` endpoint created
+- [x] URL validation (must be valid HTTPS URL)
+- [x] OAuth URL generated with correct parameters
+- [x] Store URL saved to session
+- [x] Error handling for invalid URLs
 
 **Files to Create:**
 - `apps/test-generator/src/app/api/oauth/initiate/route.ts`
@@ -404,20 +404,20 @@ POST /api/oauth/initiate
 **I want** the app to receive my WooCommerce credentials after authorization
 **So that** I can generate products in my store
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] `GET /api/oauth/callback` endpoint created
-- [ ] `POST /api/oauth/callback` endpoint created (some WooCommerce versions use POST)
-- [ ] Both GET and POST methods handled identically
-- [ ] Credentials extracted from query params (GET) or body (POST)
-- [ ] Credentials validated (must be strings, not arrays)
-- [ ] Connection tested with WooCommerce API
-- [ ] Store settings fetched (currency, units)
-- [ ] All data saved to session
-- [ ] Redirect to app with success/error
+- [x] `GET /api/oauth/callback` endpoint created
+- [x] `POST /api/oauth/callback` endpoint created (some WooCommerce versions use POST)
+- [x] Both GET and POST methods handled identically
+- [x] Credentials extracted from query params (GET) or body (POST)
+- [x] Credentials validated (must be strings, not arrays)
+- [x] Connection tested with WooCommerce API
+- [x] Store settings fetched (currency, units)
+- [x] All data saved to session
+- [x] Redirect to app with success/error
 
 **Files to Create:**
 - `apps/test-generator/src/app/api/oauth/callback/route.ts`
@@ -442,15 +442,15 @@ if (Array.isArray(consumer_key) || Array.isArray(consumer_secret)) {
 **I want** to check the current connection status
 **So that** I can display the appropriate UI state
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] `GET /api/status` endpoint created
-- [ ] Returns connection status and store info
-- [ ] Returns false if no session
-- [ ] Used by frontend to restore state on page load
+- [x] `GET /api/status` endpoint created
+- [x] Returns connection status and store info
+- [x] Returns false if no session
+- [x] Used by frontend to restore state on page load
 
 **Files to Create:**
 - `apps/test-generator/src/app/api/status/route.ts`
@@ -481,16 +481,16 @@ if (Array.isArray(consumer_key) || Array.isArray(consumer_secret)) {
 **I want** a WooCommerce API client wrapper
 **So that** I can interact with WooCommerce stores consistently
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] `@woocommerce/woocommerce-rest-api` package installed
-- [ ] Client wrapper class created
-- [ ] Methods for testing connection
-- [ ] Methods for fetching store settings
-- [ ] Proper error handling and typing
+- [x] `@woocommerce/woocommerce-rest-api` package installed
+- [x] Client wrapper class created
+- [x] Methods for testing connection
+- [x] Methods for fetching store settings
+- [x] Proper error handling and typing
 
 **Files to Create:**
 - `apps/test-generator/src/lib/woo-client.ts`
@@ -532,11 +532,11 @@ export class WooClient {
 **Dependencies:** Epic 1 (Types defined)
 
 **Acceptance Criteria:**
-- [ ] All 14 categories defined
-- [ ] All 10 brands defined
-- [ ] All 500 products defined with edge cases
-- [ ] Type-safe product definitions
-- [ ] Products organized by category
+- [x] All 14 categories defined
+- [x] All 10 brands defined
+- [x] All 500 products defined with edge cases
+- [x] Type-safe product definitions
+- [x] Products organized by category
 
 ---
 
@@ -546,15 +546,15 @@ export class WooClient {
 **I want** all product categories defined
 **So that** products can be properly categorized
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 2
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] 14 categories defined with hierarchy
-- [ ] Category slugs and names defined
-- [ ] Parent-child relationships established
-- [ ] Meta data for generator tracking included
+- [x] 14 categories defined with hierarchy
+- [x] Category slugs and names defined
+- [x] Parent-child relationships established
+- [x] Meta data for generator tracking included
 
 **Files to Create:**
 - `apps/test-generator/src/data/categories.ts`
@@ -578,14 +578,14 @@ export const CATEGORIES: CategoryDefinition[] = [
 **I want** all fictional brands defined
 **So that** products have realistic brand assignments
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 1
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] 10 fictional brands defined
-- [ ] Brand styles and target categories documented
-- [ ] Brand selection logic for products
+- [x] 10 fictional brands defined
+- [x] Brand styles and target categories documented
+- [x] Brand selection logic for products
 
 **Files to Create:**
 - `apps/test-generator/src/data/brands.ts`
@@ -607,16 +607,16 @@ export const BRANDS = {
 **I want** tops category products defined
 **So that** they can be generated in WooCommerce
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 8
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] 50 T-Shirt products (15 simple, 30 variable, 5 grouped)
-- [ ] 40 Hoodie products (12 simple, 25 variable, 3 grouped)
-- [ ] 40 Jacket products (10 simple, 25 variable, 5 grouped)
-- [ ] All edge cases from PRD included
-- [ ] Variations properly defined for variable products
+- [x] 50 T-Shirt products (15 simple, 30 variable, 5 grouped)
+- [x] 40 Hoodie products (12 simple, 25 variable, 3 grouped)
+- [x] 40 Jacket products (10 simple, 25 variable, 5 grouped)
+- [x] All edge cases from PRD included
+- [x] Variations properly defined for variable products
 
 **Files to Create:**
 - `apps/test-generator/src/data/products/t-shirts.ts`
@@ -631,15 +631,15 @@ export const BRANDS = {
 **I want** bottoms category products defined
 **So that** they can be generated in WooCommerce
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] 45 Pants products (12 simple, 28 variable, 5 grouped)
-- [ ] 40 Shorts products (15 simple, 20 variable, 5 grouped)
-- [ ] Waist/length sizing variations included
-- [ ] All edge cases included
+- [x] 45 Pants products (12 simple, 28 variable, 5 grouped)
+- [x] 40 Shorts products (15 simple, 20 variable, 5 grouped)
+- [x] Waist/length sizing variations included
+- [x] All edge cases included
 
 **Files to Create:**
 - `apps/test-generator/src/data/products/pants.ts`
@@ -653,16 +653,16 @@ export const BRANDS = {
 **I want** footwear category products defined
 **So that** they can be generated in WooCommerce
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] 45 Sneaker products (10 simple, 30 variable, 5 grouped)
-- [ ] 40 Boot products (12 simple, 23 variable, 5 grouped)
-- [ ] 40 Sandal products (18 simple, 17 variable, 5 grouped)
-- [ ] US/EU/UK sizing variations included
-- [ ] Width attribute variations included
+- [x] 45 Sneaker products (10 simple, 30 variable, 5 grouped)
+- [x] 40 Boot products (12 simple, 23 variable, 5 grouped)
+- [x] 40 Sandal products (18 simple, 17 variable, 5 grouped)
+- [x] US/EU/UK sizing variations included
+- [x] Width attribute variations included
 
 **Files to Create:**
 - `apps/test-generator/src/data/products/sneakers.ts`
@@ -677,15 +677,15 @@ export const BRANDS = {
 **I want** accessories category products defined
 **So that** they can be generated in WooCommerce
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] 45 Hat products (25 simple, 15 variable, 5 grouped)
-- [ ] 45 Bag products (20 simple, 22 variable, 3 grouped)
-- [ ] 70 Belt products (31 simple, 35 variable, 4 grouped)
-- [ ] All edge cases included
+- [x] 45 Hat products (25 simple, 15 variable, 5 grouped)
+- [x] 45 Bag products (20 simple, 22 variable, 3 grouped)
+- [x] 70 Belt products (31 simple, 35 variable, 4 grouped)
+- [x] All edge cases included
 
 **Files to Create:**
 - `apps/test-generator/src/data/products/hats.ts`
@@ -702,12 +702,12 @@ export const BRANDS = {
 **Dependencies:** Epic 2 (WooClient), Epic 3 (Product Data)
 
 **Acceptance Criteria:**
-- [ ] Categories created first with proper hierarchy
-- [ ] Simple products created in batches
-- [ ] Variable products with all variations created
-- [ ] Grouped products reference correct children
-- [ ] Progress events emitted via SSE
-- [ ] Fail-fast on any error
+- [x] Categories created first with proper hierarchy
+- [x] Simple products created in batches
+- [x] Variable products with all variations created
+- [x] Grouped products reference correct children
+- [x] Progress events emitted via SSE
+- [x] Fail-fast on any error
 
 ---
 
@@ -717,15 +717,15 @@ export const BRANDS = {
 **I want** categories created in WooCommerce
 **So that** products can be properly categorized
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Categories created in hierarchical order (parents first)
-- [ ] Category IDs mapped for product creation
-- [ ] Generator meta field added to all categories
-- [ ] Progress events yielded
+- [x] Categories created in hierarchical order (parents first)
+- [x] Category IDs mapped for product creation
+- [x] Generator meta field added to all categories
+- [x] Progress events yielded
 
 **Files to Create:**
 - `apps/test-generator/src/lib/category-generator.ts`
@@ -769,16 +769,16 @@ export class CategoryGenerator {
 **I want** simple products created in WooCommerce
 **So that** basic products are available for testing
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Simple products created using batch API (100 per batch)
-- [ ] All fields mapped correctly (price, stock, images, etc.)
-- [ ] Generator meta field added
-- [ ] Product IDs stored for grouped product references
-- [ ] Progress events yielded
+- [x] Simple products created using batch API (100 per batch)
+- [x] All fields mapped correctly (price, stock, images, etc.)
+- [x] Generator meta field added
+- [x] Product IDs stored for grouped product references
+- [x] Progress events yielded
 
 **Files to Create:**
 - `apps/test-generator/src/lib/simple-product-generator.ts`
@@ -791,16 +791,16 @@ export class CategoryGenerator {
 **I want** variable products created in WooCommerce
 **So that** products with variations are available for testing
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 8
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Parent variable products created first
-- [ ] Attributes defined on parent product
-- [ ] Product ID captured for variation creation
-- [ ] Generator meta field added
-- [ ] Progress events yielded
+- [x] Parent variable products created first
+- [x] Attributes defined on parent product
+- [x] Product ID captured for variation creation
+- [x] Generator meta field added
+- [x] Progress events yielded
 
 **Files to Create:**
 - `apps/test-generator/src/lib/variable-product-generator.ts`
@@ -813,17 +813,17 @@ export class CategoryGenerator {
 **I want** product variations created in WooCommerce
 **So that** variable products have all their options
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 8
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Variations created using batch API (100 per batch)
-- [ ] Each variation linked to correct parent product
-- [ ] Attribute combinations correctly assigned
-- [ ] Individual variation data (price, stock, images) applied
-- [ ] Generator meta field added
-- [ ] Progress events yielded
+- [x] Variations created using batch API (100 per batch)
+- [x] Each variation linked to correct parent product
+- [x] Attribute combinations correctly assigned
+- [x] Individual variation data (price, stock, images) applied
+- [x] Generator meta field added
+- [x] Progress events yielded
 
 **Technical Notes:**
 - ~1800 total variations across 270 variable products
@@ -838,16 +838,16 @@ export class CategoryGenerator {
 **I want** grouped products created in WooCommerce
 **So that** product bundles are available for testing
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Grouped products created after all children exist
-- [ ] `grouped_products` array contains correct WooCommerce IDs
-- [ ] Children referenced by SKU, mapped to WooCommerce ID
-- [ ] Generator meta field added
-- [ ] Progress events yielded
+- [x] Grouped products created after all children exist
+- [x] `grouped_products` array contains correct WooCommerce IDs
+- [x] Children referenced by SKU, mapped to WooCommerce ID
+- [x] Generator meta field added
+- [x] Progress events yielded
 
 **Implementation:**
 ```typescript
@@ -872,16 +872,16 @@ async createGroupedProduct(definition: GroupedProductDefinition) {
 **I want** a main orchestrator that coordinates all generators
 **So that** the entire generation process is managed
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Orchestrates all generators in correct order
-- [ ] Passes shared state (ID maps) between generators
-- [ ] Aggregates progress events
-- [ ] Implements fail-fast on any error
-- [ ] Emits completion event with summary
+- [x] Orchestrates all generators in correct order
+- [x] Passes shared state (ID maps) between generators
+- [x] Aggregates progress events
+- [x] Implements fail-fast on any error
+- [x] Emits completion event with summary
 
 **Files to Create:**
 - `apps/test-generator/src/lib/product-generator.ts`
@@ -924,16 +924,16 @@ export class ProductGenerator {
 **I want** to trigger product generation via API
 **So that** the frontend can start and monitor generation
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] `POST /api/generate` endpoint created
-- [ ] Session credentials used to create WooClient
-- [ ] SSE stream for progress events
-- [ ] Heartbeat event sent every 30 seconds to keep connection alive
-- [ ] Proper error responses for unauthorized/invalid requests
+- [x] `POST /api/generate` endpoint created
+- [x] Session credentials used to create WooClient
+- [x] SSE stream for progress events
+- [x] Heartbeat event sent every 30 seconds to keep connection alive
+- [x] Proper error responses for unauthorized/invalid requests
 
 **Files to Create:**
 - `apps/test-generator/src/app/api/generate/route.ts`
@@ -990,15 +990,15 @@ export async function POST(request: Request) {
 **I want** placeholder images generated for products
 **So that** products have visual representation
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P0
 
 **Acceptance Criteria:**
-- [ ] Placeholder URLs generated per category
-- [ ] SKU displayed on placeholder
-- [ ] Multiple images for products with galleries
-- [ ] Consistent sizing (800x800 main, 300x300 thumbnail)
+- [x] Placeholder URLs generated per category
+- [x] SKU displayed on placeholder
+- [x] Multiple images for products with galleries
+- [x] Consistent sizing (800x800 main, 300x300 thumbnail)
 
 **Files to Create:**
 - `apps/test-generator/src/lib/placeholder-images.ts`
@@ -1031,11 +1031,11 @@ export function getPlaceholderUrl(
 **Dependencies:** Epic 4 (API endpoints ready)
 
 **Acceptance Criteria:**
-- [ ] Single-page application
-- [ ] Clear state transitions
-- [ ] Real-time progress display
-- [ ] Error states handled gracefully
-- [ ] Matches ProductSync visual style
+- [x] Single-page application
+- [x] Clear state transitions
+- [x] Real-time progress display
+- [x] Error states handled gracefully
+- [x] Matches ProductSync visual style
 
 ---
 
@@ -1045,16 +1045,16 @@ export function getPlaceholderUrl(
 **I want** a clean, single-page interface
 **So that** I can easily use the tool
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Header with logo/title
-- [ ] Centered content card
-- [ ] Footer with attribution
-- [ ] Responsive design (mobile-first)
-- [ ] Matches ProductSync styling
+- [x] Header with logo/title
+- [x] Centered content card
+- [x] Footer with attribution
+- [x] Responsive design (mobile-first)
+- [x] Matches ProductSync styling
 
 **Files to Create/Modify:**
 - `apps/test-generator/src/app/page.tsx`
@@ -1069,16 +1069,16 @@ export function getPlaceholderUrl(
 **I want** to enter my WooCommerce store URL
 **So that** I can connect my store
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] URL input with validation
-- [ ] Connect button
-- [ ] Loading state during OAuth initiation
-- [ ] Error display for invalid URLs
-- [ ] Redirect to WooCommerce on success
+- [x] URL input with validation
+- [x] Connect button
+- [x] Loading state during OAuth initiation
+- [x] Error display for invalid URLs
+- [x] Redirect to WooCommerce on success
 
 **Files to Create:**
 - `apps/test-generator/src/components/ConnectForm.tsx`
@@ -1091,18 +1091,18 @@ export function getPlaceholderUrl(
 **I want** to see my connection status after OAuth
 **So that** I know I'm connected and can generate products
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Shows connected store URL
-- [ ] Shows store info (currency, units)
-- [ ] Generate Products button
-- [ ] Disconnect button visible
-- [ ] Disconnect button clears session and returns to initial (Connect) state
-- [ ] Disconnect calls API to clear session cookie
-- [ ] Product count preview (shows "~500 products will be generated")
+- [x] Shows connected store URL
+- [x] Shows store info (currency, units)
+- [x] Generate Products button
+- [x] Disconnect button visible
+- [x] Disconnect button clears session and returns to initial (Connect) state
+- [x] Disconnect calls API to clear session cookie
+- [x] Product count preview (shows "~500 products will be generated")
 
 **Files to Create:**
 - `apps/test-generator/src/components/ConnectedState.tsx`
@@ -1124,20 +1124,20 @@ async function handleDisconnect() {
 **I want** to see generation progress
 **So that** I know the tool is working
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Overall progress bar
-- [ ] Current phase indicator
-- [ ] Product count (created / total)
-- [ ] Current product being created
-- [ ] Breakdown by product type
-- [ ] Real-time updates via SSE
-- [ ] Handle heartbeat events (ignore for UI, use for connection health)
-- [ ] Auto-reconnect if SSE connection drops unexpectedly
-- [ ] Show reconnection status to user if reconnecting
+- [x] Overall progress bar
+- [x] Current phase indicator
+- [x] Product count (created / total)
+- [x] Current product being created
+- [x] Breakdown by product type
+- [x] Real-time updates via SSE
+- [x] Handle heartbeat events (ignore for UI, use for connection health)
+- [x] Auto-reconnect if SSE connection drops unexpectedly
+- [x] Show reconnection status to user if reconnecting
 
 **Files to Create:**
 - `apps/test-generator/src/components/GenerateProgress.tsx`
@@ -1199,18 +1199,18 @@ export function useSSE<T>(url: string) {
 **I want** to see a summary after generation
 **So that** I know what was created
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Success message
-- [ ] Total products created
-- [ ] Breakdown by type
-- [ ] Categories created count
-- [ ] Duration
-- [ ] View in WooCommerce button
-- [ ] Cleanup button
+- [x] Success message
+- [x] Total products created
+- [x] Breakdown by type
+- [x] Categories created count
+- [x] Duration
+- [x] View in WooCommerce button
+- [x] Cleanup button
 
 **Files to Create:**
 - `apps/test-generator/src/components/CompletionSummary.tsx`
@@ -1223,17 +1223,17 @@ export function useSSE<T>(url: string) {
 **I want** to see clear error messages
 **So that** I understand what went wrong
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 2
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Error message displayed prominently
-- [ ] Error code shown
-- [ ] Phase where error occurred
-- [ ] Product SKU if applicable
-- [ ] Retry option
-- [ ] Return to start option
+- [x] Error message displayed prominently
+- [x] Error code shown
+- [x] Phase where error occurred
+- [x] Product SKU if applicable
+- [x] Retry option
+- [x] Return to start option
 
 **Files to Create:**
 - `apps/test-generator/src/components/ErrorDisplay.tsx`
@@ -1246,17 +1246,17 @@ export function useSSE<T>(url: string) {
 **I want** reusable UI components
 **So that** the interface is consistent
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Button component (primary, secondary, danger variants)
-- [ ] Card component
-- [ ] ProgressBar component
-- [ ] Alert component (success, error, warning)
-- [ ] Input component with validation
-- [ ] Loading spinner
+- [x] Button component (primary, secondary, danger variants)
+- [x] Card component
+- [x] ProgressBar component
+- [x] Alert component (success, error, warning)
+- [x] Input component with validation
+- [x] Loading spinner
 
 **Files to Create:**
 - `apps/test-generator/src/components/ui/Button.tsx`
@@ -1276,11 +1276,11 @@ export function useSSE<T>(url: string) {
 **Dependencies:** Epic 4 (Generator meta fields), Epic 5 (UI)
 
 **Acceptance Criteria:**
-- [ ] Find all products with generator meta field
-- [ ] Delete products in batches
-- [ ] Delete generated categories
-- [ ] Progress tracking during cleanup
-- [ ] Confirmation before deletion
+- [x] Find all products with generator meta field
+- [x] Delete products in batches
+- [x] Delete generated categories
+- [x] Progress tracking during cleanup
+- [x] Confirmation before deletion
 
 ---
 
@@ -1290,17 +1290,17 @@ export function useSSE<T>(url: string) {
 **I want** a service to find and delete generated products
 **So that** users can clean up after testing
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Query products by meta field `_generated_by`
-- [ ] Paginate through all matching products
-- [ ] Delete products in batches
-- [ ] Query and delete generated categories
-- [ ] **Delete categories in reverse hierarchy order** (children before parents to avoid WooCommerce foreign key errors)
-- [ ] Progress events yielded
+- [x] Query products by meta field `_generated_by`
+- [x] Paginate through all matching products
+- [x] Delete products in batches
+- [x] Query and delete generated categories
+- [x] **Delete categories in reverse hierarchy order** (children before parents to avoid WooCommerce foreign key errors)
+- [x] Progress events yielded
 
 **Files to Create:**
 - `apps/test-generator/src/lib/cleanup-service.ts`
@@ -1366,15 +1366,15 @@ export class CleanupService {
 **I want** to trigger cleanup via API
 **So that** the frontend can manage cleanup
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] `POST /api/cleanup` endpoint created
-- [ ] SSE stream for progress events
-- [ ] Requires valid session
-- [ ] Returns summary on completion
+- [x] `POST /api/cleanup` endpoint created
+- [x] SSE stream for progress events
+- [x] Requires valid session
+- [x] Returns summary on completion
 
 **Files to Create:**
 - `apps/test-generator/src/app/api/cleanup/route.ts`
@@ -1387,17 +1387,17 @@ export class CleanupService {
 **I want** to confirm before deleting products
 **So that** I don't accidentally delete data
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 3
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Warning message displayed
-- [ ] Count of products to be deleted
-- [ ] Explanation of what will be deleted
-- [ ] Assurance that other products are safe
-- [ ] Cancel and Delete buttons
-- [ ] Delete button requires confirmation
+- [x] Warning message displayed
+- [x] Count of products to be deleted
+- [x] Explanation of what will be deleted
+- [x] Assurance that other products are safe
+- [x] Cancel and Delete buttons
+- [x] Delete button requires confirmation
 
 **Files to Create:**
 - `apps/test-generator/src/components/CleanupConfirm.tsx`
@@ -1410,15 +1410,15 @@ export class CleanupService {
 **I want** to see cleanup progress
 **So that** I know deletion is working
 
-**Status:** `[ ]` Not Started
+**Status:** `[x]` Completed
 **Points:** 5
 **Priority:** P1
 
 **Acceptance Criteria:**
-- [ ] Progress bar
-- [ ] Current phase (finding, deleting products, deleting categories)
-- [ ] Count deleted
-- [ ] Completion summary
+- [x] Progress bar
+- [x] Current phase (finding, deleting products, deleting categories)
+- [x] Count deleted
+- [x] Completion summary
 
 **Files to Create:**
 - `apps/test-generator/src/components/CleanupProgress.tsx`

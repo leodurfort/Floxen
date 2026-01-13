@@ -28,6 +28,7 @@ export interface Shop {
   shopSettingsUpdatedAt?: string | null;
   productsReprocessedAt?: string | null;
   syncStatus: SyncStatus;
+  syncProgress?: number | null; // 0-100 during sync, null when not syncing
   syncEnabled: boolean;
   feedStatus: SyncStatus;
   lastFeedGeneratedAt?: string | null;
