@@ -15,6 +15,9 @@ interface SyncJobData {
   triggeredBy?: string;
 }
 
+// Refresh shop data every N products to pick up user changes during sync
+const SHOP_REFRESH_INTERVAL = 50;
+
 /**
  * Process a single product (simple product or merged variation)
  */
@@ -254,9 +257,38 @@ async function runFullSync(
     const totalProducts = products.length;
     let processedCount = 0;
     let lastReportedProgress = 0;
+    let currentShop = shop;
 
     for (const wooProd of products) {
-      await processSingleWooProduct(wooProd, shop, shopId, autoFillService, categoryMap, variationsMap);
+      // Periodically refresh shop data to pick up user changes during sync
+      // This prevents race condition where user edits profile while sync is running
+      if (processedCount > 0 && processedCount % SHOP_REFRESH_INTERVAL === 0) {
+        const freshShop = await prisma.shop.findUnique({ where: { id: shopId } });
+        if (freshShop) {
+          // Check if shop settings changed (user edited profile)
+          const settingsChanged =
+            freshShop.sellerName !== currentShop.sellerName ||
+            freshShop.returnPolicy !== currentShop.returnPolicy ||
+            freshShop.returnWindow !== currentShop.returnWindow ||
+            freshShop.shopSettingsUpdatedAt?.getTime() !== currentShop.shopSettingsUpdatedAt?.getTime();
+
+          if (settingsChanged) {
+            logger.info('product-sync: shop settings changed during sync, refreshing', {
+              shopId,
+              processedCount,
+              oldSellerName: currentShop.sellerName,
+              newSellerName: freshShop.sellerName,
+              oldReturnPolicy: currentShop.returnPolicy,
+              newReturnPolicy: freshShop.returnPolicy,
+            });
+          }
+
+          currentShop = freshShop;
+          autoFillService.refreshShop(freshShop);
+        }
+      }
+
+      await processSingleWooProduct(wooProd, currentShop, shopId, autoFillService, categoryMap, variationsMap);
       processedCount++;
 
       // Update progress every 5% or at least every 10 products

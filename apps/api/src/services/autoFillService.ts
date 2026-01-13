@@ -60,6 +60,21 @@ export class AutoFillService {
   }
 
   /**
+   * Refresh the shop object with fresh data from database.
+   * Used during long-running syncs to pick up user changes to shop settings.
+   */
+  refreshShop(shop: Shop): void {
+    this.shop = shop;
+  }
+
+  /**
+   * Get the current shop ID (for external refresh checks)
+   */
+  getShopId(): string {
+    return this.shop.id;
+  }
+
+  /**
    * Auto-fill all OpenAI attributes from WooCommerce product data
    * Returns a record of attribute -> value for all 70 fields
    *
