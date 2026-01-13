@@ -1,6 +1,12 @@
 import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 import { decrypt } from '../lib/encryption';
 import { logger } from '../lib/logger';
+import {
+  getConcurrency,
+  recordSuccess,
+  recordRateLimit,
+  isRateLimitError,
+} from '../lib/adaptiveConcurrency';
 
 // 30 second timeout per WooCommerce API request
 const WOO_REQUEST_TIMEOUT_MS = 30000;
@@ -129,6 +135,151 @@ export async function fetchProductVariations(api: WooCommerceRestApi, parentId: 
     });
     return [];
   }
+}
+
+/**
+ * Result of fetching variations for a single parent product
+ */
+export interface VariationFetchResult {
+  parentId: number;
+  variations: any[];
+  success: boolean;
+  error?: Error;
+}
+
+/**
+ * Fetch variations for a single parent with retry on rate limit
+ */
+async function fetchVariationsWithRetry(
+  api: WooCommerceRestApi,
+  parentId: number,
+  shopId: string,
+  maxRetries: number = 2
+): Promise<VariationFetchResult> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const variations = await fetchProductVariations(api, parentId);
+      return { parentId, variations, success: true };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (isRateLimitError(err)) {
+        recordRateLimit(shopId);
+
+        // Exponential backoff: 1s, 2s, 4s
+        const backoffMs = Math.pow(2, attempt) * 1000;
+        logger.warn('woo:fetch variations rate limited, retrying', {
+          parentId,
+          shopId,
+          attempt: attempt + 1,
+          maxRetries: maxRetries + 1,
+          backoffMs,
+        });
+
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          continue;
+        }
+      }
+
+      // Non-retryable error or max retries reached
+      break;
+    }
+  }
+
+  return {
+    parentId,
+    variations: [],
+    success: false,
+    error: lastError,
+  };
+}
+
+/**
+ * Fetch variations for multiple products in parallel with adaptive concurrency
+ *
+ * @param api - WooCommerce REST API client
+ * @param parentProducts - Array of variable products (must have .id property)
+ * @param shopId - Shop ID for concurrency tracking
+ * @returns Map of parentId -> variations array
+ */
+export async function fetchVariationsParallel(
+  api: WooCommerceRestApi,
+  parentProducts: { id: number; name?: string }[],
+  shopId: string
+): Promise<Map<number, any[]>> {
+  const results = new Map<number, any[]>();
+
+  if (parentProducts.length === 0) {
+    return results;
+  }
+
+  logger.info('woo:fetch variations parallel start', {
+    shopId,
+    totalParents: parentProducts.length,
+    initialConcurrency: getConcurrency(shopId),
+  });
+
+  const queue = [...parentProducts];
+  let successCount = 0;
+  let failCount = 0;
+
+  while (queue.length > 0) {
+    // Get current concurrency (may change during processing)
+    const concurrency = getConcurrency(shopId);
+
+    // Take a batch from the queue
+    const batch = queue.splice(0, concurrency);
+
+    logger.info('woo:fetch variations batch', {
+      shopId,
+      batchSize: batch.length,
+      remaining: queue.length,
+      concurrency,
+    });
+
+    // Fetch all in parallel
+    const batchResults = await Promise.all(
+      batch.map(parent => fetchVariationsWithRetry(api, parent.id, shopId))
+    );
+
+    // Process results
+    let batchHadRateLimit = false;
+    for (const result of batchResults) {
+      results.set(result.parentId, result.variations);
+
+      if (result.success) {
+        successCount++;
+      } else {
+        failCount++;
+        if (result.error && isRateLimitError(result.error)) {
+          batchHadRateLimit = true;
+        }
+      }
+    }
+
+    // Record success if no rate limits in this batch (for scale-up logic)
+    if (!batchHadRateLimit && batchResults.some(r => r.success)) {
+      recordSuccess(shopId);
+    }
+
+    // Small delay between batches to be nice to the server
+    if (queue.length > 0) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  logger.info('woo:fetch variations parallel complete', {
+    shopId,
+    totalParents: parentProducts.length,
+    successCount,
+    failCount,
+    finalConcurrency: getConcurrency(shopId),
+  });
+
+  return results;
 }
 
 /**

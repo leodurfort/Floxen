@@ -2,7 +2,8 @@ import { Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { wrapNonRetryableError, classifyError } from '../lib/errors';
-import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchProductVariations, fetchStoreSettings, fetchAllCategories, enrichProductCategories } from '../services/wooClient';
+import { initConcurrency, cleanupConcurrency, getConcurrencyStats } from '../lib/adaptiveConcurrency';
+import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchStoreSettings, fetchAllCategories, enrichProductCategories, fetchVariationsParallel } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { validateProduct, ProductFieldOverrides } from '@productsynch/shared';
@@ -135,30 +136,27 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
 
 /**
  * Process a single WooCommerce product (handles both simple and variable products)
+ * For variable products, variations should be pre-fetched and passed in variationsMap
  */
 async function processSingleWooProduct(
   wooProd: any,
   shop: Shop,
   shopId: string,
   autoFillService: AutoFillService,
-  client: any,
-  categoryMap: Map<number, any>
+  categoryMap: Map<number, any>,
+  variationsMap: Map<number, any[]>
 ) {
   const enrichedProduct = enrichProductCategories(wooProd, categoryMap);
   const isVariable = enrichedProduct.type === 'variable';
 
   if (isVariable) {
-    logger.info(`product-sync: detected variable product, fetching variations`, {
+    // Get pre-fetched variations from the map
+    const variations = variationsMap.get(enrichedProduct.id) || [];
+
+    logger.info(`product-sync: processing ${variations.length} variations for variable product`, {
       shopId,
       parentId: enrichedProduct.id,
       title: enrichedProduct.name,
-    });
-
-    const variations = await fetchProductVariations(client, enrichedProduct.id);
-
-    logger.info(`product-sync: processing ${variations.length} variations`, {
-      shopId,
-      parentId: enrichedProduct.id,
     });
 
     for (const variation of variations) {
@@ -197,6 +195,7 @@ async function updateSyncProgress(shopId: string, progress: number) {
 
 /**
  * Full sync - fetch and process all products
+ * Uses parallel variation fetching with adaptive concurrency
  */
 async function runFullSync(
   shop: Shop,
@@ -205,52 +204,92 @@ async function runFullSync(
 ) {
   logger.info('product-sync: running full sync', { shopId });
 
-  // Initialize progress to 0
-  await updateSyncProgress(shopId, 0);
+  // Initialize adaptive concurrency tracking for this sync
+  initConcurrency(shopId);
 
-  const products = await fetchAllProducts(client);
-  logger.info(`product-sync: fetched products`, { shopId, count: products.length });
-
-  const categoryMap = await fetchAllCategories(client);
-  logger.info(`product-sync: fetched categories`, { shopId, categoryCount: categoryMap.size });
-
-  const autoFillService = await AutoFillService.create(shop);
-
-  const totalProducts = products.length;
-  let processedCount = 0;
-  let lastReportedProgress = 0;
-
-  for (const wooProd of products) {
-    await processSingleWooProduct(wooProd, shop, shopId, autoFillService, client, categoryMap);
-    processedCount++;
-
-    // Update progress every 5% or at least every 10 products
-    const currentProgress = totalProducts > 0 ? (processedCount / totalProducts) * 100 : 0;
-    if (currentProgress - lastReportedProgress >= 5 || processedCount % 10 === 0) {
-      await updateSyncProgress(shopId, currentProgress);
-      lastReportedProgress = currentProgress;
-    }
-  }
-
-  // Field discovery only on full sync
-  logger.info('product-sync: triggering field discovery', { shopId });
   try {
-    const discoveryResult = await FieldDiscoveryService.discoverFields(shopId);
-    logger.info('product-sync: field discovery completed', {
-      shopId,
-      discovered: discoveryResult.discovered.length,
-      saved: discoveryResult.saved,
-      skipped: discoveryResult.skipped,
-      errors: discoveryResult.errors.length,
-    });
-  } catch (discoveryErr) {
-    logger.error('product-sync: field discovery failed (non-fatal)', {
-      shopId,
-      error: discoveryErr instanceof Error ? discoveryErr : new Error(String(discoveryErr)),
-    });
-  }
+    // Initialize progress to 0
+    await updateSyncProgress(shopId, 0);
 
-  logger.info('product-sync: full sync completed', { shopId, productCount: products.length });
+    const products = await fetchAllProducts(client);
+    logger.info(`product-sync: fetched products`, { shopId, count: products.length });
+
+    const categoryMap = await fetchAllCategories(client);
+    logger.info(`product-sync: fetched categories`, { shopId, categoryCount: categoryMap.size });
+
+    // Identify variable products that need variation fetching
+    const variableProducts = products.filter((p: any) => p.type === 'variable');
+    logger.info('product-sync: identified variable products', {
+      shopId,
+      variableCount: variableProducts.length,
+      simpleCount: products.length - variableProducts.length,
+    });
+
+    // Fetch all variations in parallel with adaptive concurrency
+    let variationsMap = new Map<number, any[]>();
+    if (variableProducts.length > 0) {
+      const startTime = Date.now();
+      variationsMap = await fetchVariationsParallel(client, variableProducts, shopId);
+      const duration = Date.now() - startTime;
+
+      // Count total variations fetched
+      let totalVariations = 0;
+      variationsMap.forEach(variations => {
+        totalVariations += variations.length;
+      });
+
+      const stats = getConcurrencyStats(shopId);
+      logger.info('product-sync: parallel variation fetch complete', {
+        shopId,
+        variableProducts: variableProducts.length,
+        totalVariations,
+        durationMs: duration,
+        avgMsPerParent: variableProducts.length > 0 ? Math.round(duration / variableProducts.length) : 0,
+        finalConcurrency: stats?.current,
+      });
+    }
+
+    const autoFillService = await AutoFillService.create(shop);
+
+    const totalProducts = products.length;
+    let processedCount = 0;
+    let lastReportedProgress = 0;
+
+    for (const wooProd of products) {
+      await processSingleWooProduct(wooProd, shop, shopId, autoFillService, categoryMap, variationsMap);
+      processedCount++;
+
+      // Update progress every 5% or at least every 10 products
+      const currentProgress = totalProducts > 0 ? (processedCount / totalProducts) * 100 : 0;
+      if (currentProgress - lastReportedProgress >= 5 || processedCount % 10 === 0) {
+        await updateSyncProgress(shopId, currentProgress);
+        lastReportedProgress = currentProgress;
+      }
+    }
+
+    // Field discovery only on full sync
+    logger.info('product-sync: triggering field discovery', { shopId });
+    try {
+      const discoveryResult = await FieldDiscoveryService.discoverFields(shopId);
+      logger.info('product-sync: field discovery completed', {
+        shopId,
+        discovered: discoveryResult.discovered.length,
+        saved: discoveryResult.saved,
+        skipped: discoveryResult.skipped,
+        errors: discoveryResult.errors.length,
+      });
+    } catch (discoveryErr) {
+      logger.error('product-sync: field discovery failed (non-fatal)', {
+        shopId,
+        error: discoveryErr instanceof Error ? discoveryErr : new Error(String(discoveryErr)),
+      });
+    }
+
+    logger.info('product-sync: full sync completed', { shopId, productCount: products.length });
+  } finally {
+    // Always clean up concurrency tracking
+    cleanupConcurrency(shopId);
+  }
 }
 
 export async function productSyncProcessor(job: Job) {
