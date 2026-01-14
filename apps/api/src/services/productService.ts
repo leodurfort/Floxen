@@ -162,6 +162,9 @@ function requiresRawSqlFiltering(options: ListProductsOptions): boolean {
   const columnFilters = options.columnFilters;
   if (!columnFilters) return false;
 
+  // Database columns that can be filtered with Prisma (no raw SQL needed)
+  const PRISMA_FILTERABLE_COLUMNS = new Set(['isValid', 'feedEnableSearch', 'enable_search']);
+
   for (const columnId of Object.keys(columnFilters)) {
     const filter = columnFilters[columnId];
     if (!filter.values?.length && !filter.text) continue;
@@ -169,8 +172,9 @@ function requiresRawSqlFiltering(options: ListProductsOptions): boolean {
     // Computed columns require raw SQL
     if (COMPUTED_SORT_COLUMNS.has(columnId)) return true;
 
-    // OpenAI JSON columns require raw SQL
-    if (OPENAI_COLUMNS.has(columnId)) return true;
+    // Any column not in PRISMA_FILTERABLE_COLUMNS is assumed to be an OpenAI JSON column
+    // and requires raw SQL for filtering
+    if (!PRISMA_FILTERABLE_COLUMNS.has(columnId)) return true;
   }
 
   return false;
@@ -308,38 +312,38 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
     }
 
     // Handle OpenAI JSON column filters (text and value filters)
+    // Any column not in the special handled list is treated as an OpenAI JSON attribute
     for (const [columnId, filter] of Object.entries(cf)) {
-      // Skip already handled columns
+      // Skip already handled columns (database columns and computed columns)
       if (['isValid', 'enable_search', 'overrides'].includes(columnId)) {
         continue;
       }
 
-      // Check if it's an OpenAI attribute
-      if (OPENAI_COLUMNS.has(columnId)) {
-        // Value filter on OpenAI JSON attribute
-        if (filter.values?.length) {
-          const hasEmpty = filter.values.includes('__empty__');
-          const nonEmptyValues = filter.values.filter(v => v !== '__empty__');
+      // Value filter on OpenAI JSON attribute
+      // Note: We no longer check OPENAI_COLUMNS whitelist - any column can be filtered
+      if (filter.values?.length) {
+        const hasEmpty = filter.values.includes('__empty__');
+        const nonEmptyValues = filter.values.filter(v => v !== '__empty__');
+        const safeColumnId = escapeSqlString(columnId);
 
-          if (hasEmpty && nonEmptyValues.length > 0) {
-            // Filter for empty OR specific values
-            const values = nonEmptyValues.map(v => `'${escapeSqlString(v)}'`).join(',');
-            whereConditions.push(`(
-              "openai_auto_filled"->>'${columnId}' IS NULL
-              OR "openai_auto_filled"->>'${columnId}' = ''
-              OR "openai_auto_filled"->>'${columnId}' IN (${values})
-            )`);
-          } else if (hasEmpty) {
-            // Filter for empty only
-            whereConditions.push(`(
-              "openai_auto_filled"->>'${columnId}' IS NULL
-              OR "openai_auto_filled"->>'${columnId}' = ''
-            )`);
-          } else {
-            // Filter for specific values only
-            const values = filter.values.map(v => `'${escapeSqlString(v)}'`).join(',');
-            whereConditions.push(`"openai_auto_filled"->>'${columnId}' IN (${values})`);
-          }
+        if (hasEmpty && nonEmptyValues.length > 0) {
+          // Filter for empty OR specific values
+          const values = nonEmptyValues.map(v => `'${escapeSqlString(v)}'`).join(',');
+          whereConditions.push(`(
+            "openai_auto_filled"->>'${safeColumnId}' IS NULL
+            OR "openai_auto_filled"->>'${safeColumnId}' = ''
+            OR "openai_auto_filled"->>'${safeColumnId}' IN (${values})
+          )`);
+        } else if (hasEmpty) {
+          // Filter for empty only
+          whereConditions.push(`(
+            "openai_auto_filled"->>'${safeColumnId}' IS NULL
+            OR "openai_auto_filled"->>'${safeColumnId}' = ''
+          )`);
+        } else {
+          // Filter for specific values only
+          const values = filter.values.map(v => `'${escapeSqlString(v)}'`).join(',');
+          whereConditions.push(`"openai_auto_filled"->>'${safeColumnId}' IN (${values})`);
         }
       }
     }
