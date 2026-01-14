@@ -287,11 +287,6 @@ textarea::placeholder {
 /* Catalog Page - Header Section (non-scrolling) */
 .catalog-sticky-header {
   background: #FFFFFF;
-  transition: box-shadow 0.2s ease;
-}
-
-.catalog-sticky-header.scrolled {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* Catalog Table with Sticky Header */
@@ -314,6 +309,12 @@ textarea::placeholder {
   top: 0;
   z-index: 10;
   background: #F9FAFB;
+  transition: box-shadow 0.2s ease;
+}
+
+/* Shadow on table header when scrolling */
+.catalog-table.scrolled thead th {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* First column (checkbox) - sticky in both directions */

@@ -730,8 +730,7 @@ function CatalogPageContent() {
           {loading && <div className="text-gray-500">Loading products...</div>}
           {!loading && !products.length && <div className="text-gray-500">No products found.</div>}
           {!loading && products.length > 0 && (
-            <div className="rounded-xl border border-gray-200">
-              <table className="table catalog-table min-w-max">
+              <table className={`table catalog-table min-w-max rounded-xl border border-gray-200 ${isScrolled ? 'scrolled' : ''}`}>
                 <thead>
                 <tr>
                   {visibleColumnDefs.map((column) => {
@@ -834,7 +833,6 @@ function CatalogPageContent() {
                 })}
                 </tbody>
               </table>
-            </div>
           )}
 
           {/* Pagination */}
