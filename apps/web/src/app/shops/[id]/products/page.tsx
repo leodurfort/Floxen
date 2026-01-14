@@ -686,22 +686,6 @@ function CatalogPageContent() {
             <div>
               <p className="uppercase tracking-[0.18em] text-xs text-gray-500">Products</p>
               <h1 className="text-2xl font-bold text-gray-900">Catalog</h1>
-              {/* Stats line */}
-              {stats && (
-                <div className="flex items-center gap-4 mt-1 text-sm">
-                  <span className="text-gray-600">
-                    <span className="font-medium text-gray-900">{stats.inFeed}</span>
-                    <span className="text-gray-400">/</span>
-                    <span>{stats.total}</span>
-                    {' '}products in ChatGPT feed
-                  </span>
-                  {stats.needsAttention > 0 && (
-                    <span className="text-amber-600">
-                      {stats.needsAttention} need{stats.needsAttention === 1 ? 's' : ''} attention
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-3">
               {/* Feed status badge */}
