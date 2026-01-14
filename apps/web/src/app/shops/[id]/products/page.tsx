@@ -730,7 +730,7 @@ function CatalogPageContent() {
           {loading && <div className="text-gray-500">Loading products...</div>}
           {!loading && !products.length && <div className="text-gray-500">No products found.</div>}
           {!loading && products.length > 0 && (
-              <table className={`table catalog-table min-w-max rounded-xl border border-gray-200 ${isScrolled ? 'scrolled' : ''}`}>
+              <table className={`table catalog-table min-w-max border border-gray-200 ${isScrolled ? 'scrolled' : ''}`}>
                 <thead>
                 <tr>
                   {visibleColumnDefs.map((column) => {

@@ -304,17 +304,27 @@ textarea::placeholder {
   background: #F9FAFB;
 }
 
+.catalog-table thead tr {
+  position: relative;
+}
+
 .catalog-table thead th {
   position: sticky;
   top: 0;
   z-index: 10;
   background: #F9FAFB;
-  transition: box-shadow 0.2s ease;
 }
 
-/* Shadow on table header when scrolling */
-.catalog-table.scrolled thead th {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+/* Shadow on entire header row when scrolling (using pseudo-element) */
+.catalog-table.scrolled thead tr::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 8px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.08), transparent);
+  pointer-events: none;
 }
 
 /* First column (checkbox) - sticky in both directions */
