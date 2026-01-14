@@ -301,6 +301,7 @@ textarea::placeholder {
 }
 
 .catalog-table thead {
+  position: relative;
   background: #F9FAFB;
 }
 

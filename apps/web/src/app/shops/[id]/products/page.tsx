@@ -644,7 +644,7 @@ function CatalogPageContent() {
         <SyncStatusBanner shop={currentShop} />
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100vh-120px)]">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-clip flex flex-col max-h-[calc(100vh-120px)]">
         {/* Sticky Header Section */}
         <div ref={stickyHeaderRef} className={`catalog-sticky-header p-6 pb-4 space-y-4 flex-shrink-0 ${isScrolled ? 'scrolled' : ''}`}>
           {/* Header */}
