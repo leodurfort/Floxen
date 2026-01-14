@@ -610,6 +610,38 @@ function CatalogPageContent() {
     }
   };
 
+  // Get column width class based on column ID
+  const getColumnWidthClass = (columnId: string): string => {
+    switch (columnId) {
+      case 'checkbox':
+        return 'w-12';
+      case 'actions':
+        return 'w-16';
+      case 'id':
+        return 'w-20';
+      case 'image_link':
+        return 'w-20';
+      case 'title':
+        return 'min-w-[200px]';
+      case 'description':
+        return 'min-w-[280px]';
+      case 'link':
+        return 'min-w-[180px]';
+      case 'enable_search':
+        return 'w-28';
+      case 'overrides':
+        return 'w-24';
+      case 'isValid':
+        return 'w-20';
+      case 'updatedAt':
+        return 'w-32';
+      case 'gtin':
+        return 'w-28';
+      default:
+        return 'min-w-[100px]';
+    }
+  };
+
   if (!hydrated) {
     return <main className="p-4"><div className="text-gray-500">Loading session...</div></main>;
   }
@@ -739,7 +771,7 @@ function CatalogPageContent() {
                     // Checkbox column - sticky both directions (top + left)
                     if (column.id === 'checkbox') {
                       return (
-                        <th key={column.id} className="sticky top-0 left-0 z-20 w-12 bg-gray-50 border-b border-gray-200 px-4 py-3">
+                        <th key={column.id} className={`sticky top-0 left-0 z-20 ${getColumnWidthClass('checkbox')} bg-gray-50 border-b border-gray-200 px-3 py-2`}>
                           <input
                             type="checkbox"
                             checked={allOnPageSelected}
@@ -756,7 +788,7 @@ function CatalogPageContent() {
                     // Actions column - sticky top only
                     if (column.id === 'actions') {
                       return (
-                        <th key={column.id} className="sticky top-0 z-10 w-20 bg-gray-50 border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        <th key={column.id} className={`sticky top-0 z-10 ${getColumnWidthClass('actions')} bg-gray-50 border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider`}>
                           Actions
                         </th>
                       );
@@ -768,7 +800,7 @@ function CatalogPageContent() {
                       filters.sortBy === column.id ? { column: column.id, order: filters.sortOrder } : null;
 
                     return (
-                      <th key={column.id} className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-4 py-3 min-w-[120px]">
+                      <th key={column.id} className={`sticky top-0 z-10 ${getColumnWidthClass(column.id)} bg-gray-50 border-b border-gray-200 px-3 py-2`}>
                         <ColumnHeaderDropdown
                           columnId={column.id}
                           label={column.label}
@@ -803,7 +835,7 @@ function CatalogPageContent() {
                         // Checkbox column - sticky left only
                         if (column.id === 'checkbox') {
                           return (
-                            <td key={column.id} className="sticky left-0 z-[5] bg-white px-4 py-3 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className={`sticky left-0 z-[5] bg-white ${getColumnWidthClass('checkbox')} px-3 py-2 border-b border-gray-100`} onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -817,7 +849,7 @@ function CatalogPageContent() {
                         // Actions column
                         if (column.id === 'actions') {
                           return (
-                            <td key={column.id} className="px-4 py-3 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className={`${getColumnWidthClass('actions')} px-3 py-2 border-b border-gray-100`} onClick={(e) => e.stopPropagation()}>
                               {renderCellValue(column, p)}
                             </td>
                           );
@@ -825,7 +857,7 @@ function CatalogPageContent() {
 
                         // Regular columns - clickable to navigate
                         return (
-                          <td key={column.id} className="px-4 py-3 border-b border-gray-100" onClick={() => handleRowClick(p.id)}>
+                          <td key={column.id} className={`${getColumnWidthClass(column.id)} px-3 py-2 border-b border-gray-100`} onClick={() => handleRowClick(p.id)}>
                             {renderCellValue(column, p)}
                           </td>
                         );
