@@ -656,7 +656,7 @@ function CatalogPageContent() {
   if (!user) return null;
 
   return (
-    <main className="p-4 space-y-4">
+    <main className="p-4 space-y-4 flex flex-col h-[calc(100vh-52px)]">
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
@@ -670,7 +670,7 @@ function CatalogPageContent() {
         <SyncStatusBanner shop={currentShop} />
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col max-h-[calc(100vh-120px)]">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Fixed Header Section (not scrollable) */}
         <div className="p-6 pb-4 space-y-4 flex-shrink-0 border-b border-gray-100">
           {/* Header */}
