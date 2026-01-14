@@ -463,10 +463,26 @@ function CatalogPageContent() {
     }
   };
 
-  // Get visible column definitions
-  const visibleColumnDefs = visibleColumns
-    .map((id) => COLUMN_MAP.get(id))
-    .filter((col): col is ColumnDefinition => col !== undefined);
+  // Get visible column definitions with guaranteed order:
+  // - checkbox always first (for sticky left behavior)
+  // - actions always last
+  const visibleColumnDefs = (() => {
+    const cols = visibleColumns
+      .map((id) => COLUMN_MAP.get(id))
+      .filter((col): col is ColumnDefinition => col !== undefined);
+
+    // Extract special columns
+    const checkboxCol = cols.find(c => c.id === 'checkbox');
+    const actionsCol = cols.find(c => c.id === 'actions');
+    const otherCols = cols.filter(c => c.id !== 'checkbox' && c.id !== 'actions');
+
+    // Rebuild with correct order: checkbox first, actions last
+    const result: ColumnDefinition[] = [];
+    if (checkboxCol) result.push(checkboxCol);
+    result.push(...otherCols);
+    if (actionsCol) result.push(actionsCol);
+    return result;
+  })();
 
   // Calculate selection state
   const pageIds = products.map((p) => p.id);
