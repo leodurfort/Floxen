@@ -319,6 +319,18 @@ textarea::placeholder {
   background: #F9FAFB;
 }
 
+/* First column (checkbox) - sticky in both directions */
+.catalog-table thead th:first-child,
+.catalog-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 15;
+}
+
+.catalog-table thead th:first-child {
+  z-index: 20;
+}
+
 .catalog-table thead::after {
   content: '';
   position: absolute;
