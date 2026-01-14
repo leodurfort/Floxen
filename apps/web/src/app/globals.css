@@ -303,6 +303,11 @@ textarea::placeholder {
   overflow-y: visible;
 }
 
+.catalog-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
 .catalog-table thead {
   background: #F9FAFB;
 }
