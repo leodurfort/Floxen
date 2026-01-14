@@ -320,15 +320,19 @@ textarea::placeholder {
 }
 
 /* First column (checkbox) - sticky in both directions */
-.catalog-table thead th:first-child,
+.catalog-table thead th:first-child {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  background: #F9FAFB;
+}
+
 .catalog-table tbody td:first-child {
   position: sticky;
   left: 0;
   z-index: 15;
-}
-
-.catalog-table thead th:first-child {
-  z-index: 20;
+  background: #FFFFFF;
 }
 
 .catalog-table thead::after {
