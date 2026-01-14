@@ -84,9 +84,12 @@ function saveFilters(shopId: string, filters: CatalogFilters): void {
 // URL ENCODING HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Column filter URL format: cf_{columnId}_v = value filter (comma-separated)
+// Column filter URL format: cf_{columnId}_v = value filter (pipe-separated)
+// Using pipe | as separator because URLSearchParams auto-encodes values,
+// and comma is common in product data (dimensions, prices, etc.)
 const CF_PREFIX = 'cf_';
 const CF_VALUES_SUFFIX = '_v';
+const CF_SEPARATOR = '|';
 
 function parseColumnFiltersFromParams(searchParams: URLSearchParams): Record<string, ColumnFilter> {
   const columnFilters: Record<string, ColumnFilter> = {};
@@ -101,11 +104,12 @@ function parseColumnFiltersFromParams(searchParams: URLSearchParams): Record<str
       if (!columnFilters[columnId]) {
         columnFilters[columnId] = { values: [] };
       }
-      // Decode each URL-encoded value to handle commas and special characters
+      // URLSearchParams auto-decodes values, just split by separator
+      // Support both pipe (new) and comma (legacy) separators for backwards compatibility
+      const separator = value.includes(CF_SEPARATOR) ? CF_SEPARATOR : ',';
       columnFilters[columnId].values = value
-        .split(',')
-        .filter(Boolean)
-        .map(v => decodeURIComponent(v));
+        .split(separator)
+        .filter(Boolean);
     }
   });
 
@@ -118,10 +122,11 @@ function encodeColumnFiltersToParams(
 ): void {
   for (const [columnId, filter] of Object.entries(columnFilters)) {
     if (filter.values.length > 0) {
-      // URL-encode each value before joining to handle commas and special characters
+      // URLSearchParams.set() auto-encodes values, just join with separator
+      // Using pipe separator to avoid conflicts with commas in values
       params.set(
         `${CF_PREFIX}${columnId}${CF_VALUES_SUFFIX}`,
-        filter.values.map(v => encodeURIComponent(v)).join(',')
+        filter.values.join(CF_SEPARATOR)
       );
     }
   }
