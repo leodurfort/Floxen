@@ -192,8 +192,19 @@ export function useCatalogFilters(shopId?: string) {
   }, [shopId, filters]);
 
   // Update URL with new filters
+  // Read current filters directly from searchParams to avoid stale closure issues
   const setFilters = useCallback((updates: Partial<CatalogFilters>) => {
-    const newFilters = { ...filters, ...updates };
+    // Parse current state directly from URL (not from memoized filters)
+    const currentFilters: CatalogFilters = {
+      search: searchParams.get('search') || '',
+      sortBy: searchParams.get('sortBy') || 'id',
+      sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'asc',
+      page: parseInt(searchParams.get('page') || '1', 10),
+      limit: parseInt(searchParams.get('limit') || '50', 10),
+      columnFilters: parseColumnFiltersFromParams(searchParams),
+    };
+
+    const newFilters = { ...currentFilters, ...updates };
 
     // Reset to page 1 when filters change (except page and limit changes)
     if (!('page' in updates) && !('limit' in updates)) {
@@ -214,7 +225,7 @@ export function useCatalogFilters(shopId?: string) {
 
     const queryString = params.toString();
     router.push(`${pathname}${queryString ? `?${queryString}` : ''}`, { scroll: false });
-  }, [filters, router, pathname]);
+  }, [searchParams, router, pathname]);
 
   // Set sort directly
   const setSort = useCallback((column: string, order: 'asc' | 'desc' | null) => {
@@ -230,24 +241,27 @@ export function useCatalogFilters(shopId?: string) {
   // ═══════════════════════════════════════════════════════════════════════════
 
   // Set value filter for a column
+  // Read current columnFilters directly from URL to avoid stale closure issues
   const setColumnValueFilter = useCallback((columnId: string, values: string[]) => {
-    const newColumnFilters = { ...filters.columnFilters };
+    const currentColumnFilters = parseColumnFiltersFromParams(searchParams);
 
     if (values.length === 0) {
-      delete newColumnFilters[columnId];
+      delete currentColumnFilters[columnId];
     } else {
-      newColumnFilters[columnId] = { values };
+      currentColumnFilters[columnId] = { values };
     }
 
-    setFilters({ columnFilters: newColumnFilters });
-  }, [filters.columnFilters, setFilters]);
+    setFilters({ columnFilters: currentColumnFilters });
+  }, [searchParams, setFilters]);
 
   // Clear filter for a specific column
+  // Read current columnFilters directly from URL to avoid stale closure issues
   const clearColumnFilter = useCallback((columnId: string) => {
-    const newColumnFilters = { ...filters.columnFilters };
+    const currentColumnFilters = parseColumnFiltersFromParams(searchParams);
+    const newColumnFilters = { ...currentColumnFilters };
     delete newColumnFilters[columnId];
     setFilters({ columnFilters: newColumnFilters });
-  }, [filters.columnFilters, setFilters]);
+  }, [searchParams, setFilters]);
 
   // Clear all column filters (keeps search)
   const clearAllColumnFilters = useCallback(() => {

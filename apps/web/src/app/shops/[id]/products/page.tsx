@@ -285,6 +285,8 @@ function CatalogPageContent() {
     switch (tab) {
       case 'all':
         // Clear filters for "All" tab
+        // Must also clear searchInput to prevent debounce from restoring old value
+        setSearchInput('');
         clearAllFilters();
         break;
       case 'inFeed':
