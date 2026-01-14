@@ -120,16 +120,13 @@ function encodeColumnFiltersToParams(
   columnFilters: Record<string, ColumnFilter>,
   params: URLSearchParams
 ): void {
-  console.log('[useCatalogFilters] encodeColumnFiltersToParams input:', JSON.stringify(columnFilters, null, 2));
   for (const [columnId, filter] of Object.entries(columnFilters)) {
     if (filter.values.length > 0) {
       // URLSearchParams.set() auto-encodes values, just join with separator
       // Using pipe separator to avoid conflicts with commas in values
-      const joinedValues = filter.values.join(CF_SEPARATOR);
-      console.log(`[useCatalogFilters] Setting cf_${columnId}_v = "${joinedValues}"`);
       params.set(
         `${CF_PREFIX}${columnId}${CF_VALUES_SUFFIX}`,
-        joinedValues
+        filter.values.join(CF_SEPARATOR)
       );
     }
   }
@@ -232,8 +229,6 @@ export function useCatalogFilters(shopId?: string) {
     // Get current state (from pending ref if available, otherwise from URL)
     const currentFilters = getCurrentFilters();
     const newFilters = { ...currentFilters, ...updates };
-    console.log('[useCatalogFilters] setFilters called with updates:', JSON.stringify(updates, null, 2));
-    console.log('[useCatalogFilters] newFilters.columnFilters:', JSON.stringify(newFilters.columnFilters, null, 2));
 
     // Reset to page 1 when filters change (except page and limit changes)
     if (!('page' in updates) && !('limit' in updates)) {
@@ -256,7 +251,6 @@ export function useCatalogFilters(shopId?: string) {
     encodeColumnFiltersToParams(newFilters.columnFilters, params);
 
     const queryString = params.toString();
-    console.log('[useCatalogFilters] Final URL query string:', queryString);
     router.push(`${pathname}${queryString ? `?${queryString}` : ''}`, { scroll: false });
   }, [getCurrentFilters, router, pathname]);
 

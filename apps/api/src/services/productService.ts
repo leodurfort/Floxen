@@ -367,8 +367,6 @@ function getComputedOrderBy(column: string, direction: string): string {
 }
 
 export async function listProducts(shopId: string, options: ListProductsOptions = {}) {
-  console.log('[Service listProducts] Called with options:', JSON.stringify(options, null, 2));
-
   const {
     page = 1,
     limit = 20,
@@ -387,12 +385,9 @@ export async function listProducts(shopId: string, options: ListProductsOptions 
                       sortType.type === 'computed' ||
                       requiresRawSqlFiltering(options);
 
-  console.log('[Service listProducts] needsRawSql:', needsRawSql, 'sortType:', sortType.type);
-
   if (needsRawSql) {
     // Use raw SQL WHERE clause for these queries
     const whereClause = buildRawWhereClause(shopId, parentIds, options);
-    console.log('[Service listProducts] Raw SQL WHERE clause:', whereClause);
     const direction = sortOrder.toUpperCase();
 
     // Build ORDER BY clause based on sort type

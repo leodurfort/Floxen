@@ -84,12 +84,8 @@ function parseColumnFilters(query: Record<string, unknown>): Record<string, { te
   const CF_VALUES_SUFFIX = '_v';
   const CF_SEPARATOR = '|';
 
-  console.log('[Backend parseColumnFilters] Raw query params:', JSON.stringify(query, null, 2));
-
   for (const [key, value] of Object.entries(query)) {
     if (!key.startsWith(CF_PREFIX) || typeof value !== 'string') continue;
-
-    console.log(`[Backend parseColumnFilters] Processing key="${key}" value="${value}"`);
 
     const withoutPrefix = key.slice(CF_PREFIX.length);
 
@@ -103,13 +99,10 @@ function parseColumnFilters(query: Record<string, unknown>): Record<string, { te
       // Support both pipe (new) and comma (legacy) separators
       // Express already URL-decodes query params, so no manual decoding needed
       const separator = value.includes(CF_SEPARATOR) ? CF_SEPARATOR : ',';
-      const parsedValues = value.split(separator).filter(Boolean);
-      console.log(`[Backend parseColumnFilters] Parsed columnId="${columnId}" values=`, parsedValues);
-      columnFilters[columnId].values = parsedValues;
+      columnFilters[columnId].values = value.split(separator).filter(Boolean);
     }
   }
 
-  console.log('[Backend parseColumnFilters] Final columnFilters:', JSON.stringify(columnFilters, null, 2));
   return Object.keys(columnFilters).length > 0 ? columnFilters : undefined;
 }
 

@@ -455,15 +455,12 @@ export async function listProducts(
     // Encode column filters: cf_{columnId}_t for text, cf_{columnId}_v for values
     // Using pipe | as separator (URLSearchParams auto-encodes, so no manual encoding needed)
     if (params.columnFilters) {
-      console.log('[API listProducts] Input columnFilters:', JSON.stringify(params.columnFilters, null, 2));
       for (const [columnId, filter] of Object.entries(params.columnFilters)) {
         if (filter.text) {
           searchParams.set(`cf_${columnId}_t`, filter.text);
         }
         if (filter.values && filter.values.length > 0) {
-          const joinedValues = filter.values.join('|');
-          console.log(`[API listProducts] Setting cf_${columnId}_v = "${joinedValues}"`);
-          searchParams.set(`cf_${columnId}_v`, joinedValues);
+          searchParams.set(`cf_${columnId}_v`, filter.values.join('|'));
         }
       }
     }
@@ -471,7 +468,6 @@ export async function listProducts(
 
   const queryString = searchParams.toString();
   const path = `/api/v1/shops/${shopId}/products${queryString ? `?${queryString}` : ''}`;
-  console.log('[API listProducts] Final URL path:', path);
 
   return requestWithAuth<ListProductsResult>(path);
 }
@@ -516,12 +512,9 @@ export async function getColumnValues(
     params.set('globalSearch', currentFilters.globalSearch);
   }
   if (currentFilters?.columnFilters) {
-    console.log(`[API getColumnValues] column=${column}, Input columnFilters:`, JSON.stringify(currentFilters.columnFilters, null, 2));
     for (const [columnId, filter] of Object.entries(currentFilters.columnFilters)) {
       if (filter.values && filter.values.length > 0) {
-        const joinedValues = filter.values.join('|');
-        console.log(`[API getColumnValues] Setting cf_${columnId}_v = "${joinedValues}"`);
-        params.set(`cf_${columnId}_v`, joinedValues);
+        params.set(`cf_${columnId}_v`, filter.values.join('|'));
       }
       if (filter.text) {
         params.set(`cf_${columnId}_t`, filter.text);
@@ -529,10 +522,9 @@ export async function getColumnValues(
     }
   }
 
-  const finalUrl = `/api/v1/shops/${shopId}/products/column-values?${params.toString()}`;
-  console.log('[API getColumnValues] Final URL:', finalUrl);
-
-  return requestWithAuth<GetColumnValuesResult>(finalUrl);
+  return requestWithAuth<GetColumnValuesResult>(
+    `/api/v1/shops/${shopId}/products/column-values?${params.toString()}`
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
