@@ -884,52 +884,52 @@ function CatalogPageContent() {
                 </tbody>
               </table>
           )}
+        </div>
 
-          {/* Pagination */}
-          {totalProducts > 0 && (
-            <div className="flex items-center justify-between pt-4">
-              <div className="text-sm text-gray-600">
-                Showing {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of{' '}
-                {totalProducts.toLocaleString()} products
+        {/* Pagination - Fixed footer, always visible */}
+        {totalProducts > 0 && (
+          <div className="flex-shrink-0 border-t border-gray-100 px-6 py-3 bg-white flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of{' '}
+              {totalProducts.toLocaleString()} products
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Per page:</span>
+                <select
+                  value={filters.limit}
+                  onChange={(e) => setFilters({ limit: Number(e.target.value), page: 1 })}
+                  className="px-2 py-1 bg-white text-gray-900 text-sm rounded border border-gray-300 focus:outline-none focus:border-[#FA7315]"
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Per page:</span>
-                  <select
-                    value={filters.limit}
-                    onChange={(e) => setFilters({ limit: Number(e.target.value), page: 1 })}
-                    className="px-2 py-1 bg-white text-gray-900 text-sm rounded border border-gray-300 focus:outline-none focus:border-[#FA7315]"
-                  >
-                    {PAGE_SIZE_OPTIONS.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setFilters({ page: filters.page - 1 })}
-                    disabled={filters.page <= 1}
-                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    ← Prev
-                  </button>
-                  <span className="px-3 py-1 text-sm text-gray-700">
-                    {filters.page} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setFilters({ page: filters.page + 1 })}
-                    disabled={filters.page >= totalPages}
-                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Next →
-                  </button>
-                </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setFilters({ page: filters.page - 1 })}
+                  disabled={filters.page <= 1}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  ← Prev
+                </button>
+                <span className="px-3 py-1 text-sm text-gray-700">
+                  {filters.page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setFilters({ page: filters.page + 1 })}
+                  disabled={filters.page >= totalPages}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next →
+                </button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Modals */}
