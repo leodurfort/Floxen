@@ -497,13 +497,13 @@ export interface CurrentFiltersForColumnValues {
 export async function getColumnValues(
   shopId: string,
   column: string,
-  limit: number = 100,
+  limit?: number,
   search?: string,
   currentFilters?: CurrentFiltersForColumnValues
 ): Promise<GetColumnValuesResult> {
   const params = new URLSearchParams();
   params.set('column', column);
-  params.set('limit', String(limit));
+  if (limit !== undefined) params.set('limit', String(limit));
   if (search) params.set('search', search);
 
   // Pass current filters for cascading filter support

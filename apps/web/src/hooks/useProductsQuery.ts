@@ -72,7 +72,7 @@ export function useColumnValuesQuery(
     queryKey: queryKeys.products.columnValues(shopId ?? '', columnId, filterKey),
     queryFn: async () => {
       if (!shopId) throw new Error('No store selected');
-      const result = await api.getColumnValues(shopId, columnId, 100, undefined, currentFilters);
+      const result = await api.getColumnValues(shopId, columnId, undefined, undefined, currentFilters);
       return result.values;
     },
     enabled: (options?.enabled ?? true) && hydrated && !!user && !!shopId && !!columnId,
