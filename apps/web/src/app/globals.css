@@ -284,11 +284,8 @@ textarea::placeholder {
   --tw-exit-scale: 0.95;
 }
 
-/* Catalog Page - Sticky Header */
+/* Catalog Page - Header Section (non-scrolling) */
 .catalog-sticky-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
   background: #FFFFFF;
   transition: box-shadow 0.2s ease;
 }
