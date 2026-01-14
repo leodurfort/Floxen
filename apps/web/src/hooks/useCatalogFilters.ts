@@ -157,6 +157,7 @@ export function useCatalogFilters(shopId?: string) {
   // Clear pending state when URL actually updates (searchParams changes)
   const searchParamsString = searchParams.toString();
   useEffect(() => {
+    console.log('[FILTER DEBUG] URL updated, clearing pendingFiltersRef. New URL params:', searchParamsString);
     pendingFiltersRef.current = null;
   }, [searchParamsString]);
 
@@ -232,6 +233,7 @@ export function useCatalogFilters(shopId?: string) {
 
     // Store as pending BEFORE router.push() - critical for cascading filters
     pendingFiltersRef.current = newFilters;
+    console.log('[FILTER DEBUG] setFilters - pendingFiltersRef updated:', JSON.stringify(newFilters.columnFilters));
 
     const params = new URLSearchParams();
 
@@ -246,7 +248,9 @@ export function useCatalogFilters(shopId?: string) {
     encodeColumnFiltersToParams(newFilters.columnFilters, params);
 
     const queryString = params.toString();
-    router.push(`${pathname}${queryString ? `?${queryString}` : ''}`, { scroll: false });
+    const newUrl = `${pathname}${queryString ? `?${queryString}` : ''}`;
+    console.log('[FILTER DEBUG] router.push URL:', newUrl);
+    router.push(newUrl, { scroll: false });
   }, [getCurrentFilters, router, pathname]);
 
   // Set sort directly
@@ -265,6 +269,13 @@ export function useCatalogFilters(shopId?: string) {
   // Set value filter for a column
   const setColumnValueFilter = useCallback((columnId: string, values: string[]) => {
     const currentFilters = getCurrentFilters();
+    console.log('[FILTER DEBUG] setColumnValueFilter called', {
+      columnId,
+      values,
+      pendingFiltersRef: pendingFiltersRef.current ? JSON.stringify(pendingFiltersRef.current.columnFilters) : 'null',
+      currentFilters: JSON.stringify(currentFilters.columnFilters),
+    });
+
     const currentColumnFilters = { ...currentFilters.columnFilters };
 
     if (values.length === 0) {
@@ -273,6 +284,7 @@ export function useCatalogFilters(shopId?: string) {
       currentColumnFilters[columnId] = { values };
     }
 
+    console.log('[FILTER DEBUG] Merged columnFilters:', JSON.stringify(currentColumnFilters));
     setFilters({ columnFilters: currentColumnFilters });
   }, [getCurrentFilters, setFilters]);
 
