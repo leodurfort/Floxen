@@ -453,14 +453,14 @@ export async function listProducts(
     if (params.search) searchParams.set('search', params.search);
 
     // Encode column filters: cf_{columnId}_t for text, cf_{columnId}_v for values
+    // Using pipe | as separator (URLSearchParams auto-encodes, so no manual encoding needed)
     if (params.columnFilters) {
       for (const [columnId, filter] of Object.entries(params.columnFilters)) {
         if (filter.text) {
           searchParams.set(`cf_${columnId}_t`, filter.text);
         }
         if (filter.values && filter.values.length > 0) {
-          // URL-encode each value before joining to handle commas and special characters
-          searchParams.set(`cf_${columnId}_v`, filter.values.map(v => encodeURIComponent(v)).join(','));
+          searchParams.set(`cf_${columnId}_v`, filter.values.join('|'));
         }
       }
     }
@@ -507,14 +507,14 @@ export async function getColumnValues(
   if (search) params.set('search', search);
 
   // Pass current filters for cascading filter support
+  // Using pipe | as separator (URLSearchParams auto-encodes, so no manual encoding needed)
   if (currentFilters?.globalSearch) {
     params.set('globalSearch', currentFilters.globalSearch);
   }
   if (currentFilters?.columnFilters) {
     for (const [columnId, filter] of Object.entries(currentFilters.columnFilters)) {
       if (filter.values && filter.values.length > 0) {
-        // URL-encode each value before joining to handle commas and special characters
-        params.set(`cf_${columnId}_v`, filter.values.map(v => encodeURIComponent(v)).join(','));
+        params.set(`cf_${columnId}_v`, filter.values.join('|'));
       }
       if (filter.text) {
         params.set(`cf_${columnId}_t`, filter.text);

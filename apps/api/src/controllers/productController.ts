@@ -74,13 +74,15 @@ type BulkUpdateOperation = z.infer<typeof bulkUpdateOperationSchema>;
 
 /**
  * Parse column filters from query parameters
- * Format: cf_{columnId}_t for text, cf_{columnId}_v for values (comma-separated, URL-encoded)
+ * Format: cf_{columnId}_t for text, cf_{columnId}_v for values (pipe-separated)
+ * Note: Express auto-decodes URL params, so no manual decoding needed
  */
 function parseColumnFilters(query: Record<string, unknown>): Record<string, { text?: string; values?: string[] }> | undefined {
   const columnFilters: Record<string, { text?: string; values?: string[] }> = {};
   const CF_PREFIX = 'cf_';
   const CF_TEXT_SUFFIX = '_t';
   const CF_VALUES_SUFFIX = '_v';
+  const CF_SEPARATOR = '|';
 
   for (const [key, value] of Object.entries(query)) {
     if (!key.startsWith(CF_PREFIX) || typeof value !== 'string') continue;
@@ -94,11 +96,12 @@ function parseColumnFilters(query: Record<string, unknown>): Record<string, { te
     } else if (withoutPrefix.endsWith(CF_VALUES_SUFFIX)) {
       const columnId = withoutPrefix.slice(0, -CF_VALUES_SUFFIX.length);
       if (!columnFilters[columnId]) columnFilters[columnId] = {};
-      // Decode each URL-encoded value to handle commas and special characters in filter values
+      // Support both pipe (new) and comma (legacy) separators
+      // Express already URL-decodes query params, so no manual decoding needed
+      const separator = value.includes(CF_SEPARATOR) ? CF_SEPARATOR : ',';
       columnFilters[columnId].values = value
-        .split(',')
-        .filter(Boolean)
-        .map(v => decodeURIComponent(v));
+        .split(separator)
+        .filter(Boolean);
     }
   }
 
