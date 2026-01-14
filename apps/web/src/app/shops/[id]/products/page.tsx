@@ -22,6 +22,7 @@ import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
 import { ProductTabs, type ProductTabId } from '@/components/catalog/ProductTabs';
 import { FeedPreviewModal } from '@/components/catalog/FeedPreviewModal';
+import { Tooltip } from '@/components/ui/Tooltip';
 import {
   COLUMN_MAP,
   formatColumnValue,
@@ -603,9 +604,16 @@ function CatalogPageContent() {
         );
 
       default: {
-        // Default rendering for other columns
+        // Default rendering for other columns with truncation and tooltip
         const value = formatColumnValue(productData, column.id);
-        return <span className="text-sm text-gray-600">{truncate(value, 50)}</span>;
+        const truncatedValue = truncate(value, 40);
+        const isTruncated = value && value.length > 40;
+
+        return (
+          <Tooltip content={isTruncated ? value : null} side="top" delayDuration={300}>
+            <span className="text-sm text-gray-600 block truncate max-w-full">{truncatedValue}</span>
+          </Tooltip>
+        );
       }
     }
   };
@@ -835,7 +843,7 @@ function CatalogPageContent() {
                         // Checkbox column - sticky left only
                         if (column.id === 'checkbox') {
                           return (
-                            <td key={column.id} className={`sticky left-0 z-[5] bg-white ${getColumnWidthClass('checkbox')} px-3 py-2 border-b border-gray-100`} onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className={`sticky left-0 z-[5] bg-white ${getColumnWidthClass('checkbox')} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -849,7 +857,7 @@ function CatalogPageContent() {
                         // Actions column
                         if (column.id === 'actions') {
                           return (
-                            <td key={column.id} className={`${getColumnWidthClass('actions')} px-3 py-2 border-b border-gray-100`} onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className={`${getColumnWidthClass('actions')} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
                               {renderCellValue(column, p)}
                             </td>
                           );
@@ -857,7 +865,7 @@ function CatalogPageContent() {
 
                         // Regular columns - clickable to navigate
                         return (
-                          <td key={column.id} className={`${getColumnWidthClass(column.id)} px-3 py-2 border-b border-gray-100`} onClick={() => handleRowClick(p.id)}>
+                          <td key={column.id} className={`${getColumnWidthClass(column.id)} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={() => handleRowClick(p.id)}>
                             {renderCellValue(column, p)}
                           </td>
                         );
