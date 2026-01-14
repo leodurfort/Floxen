@@ -284,72 +284,8 @@ textarea::placeholder {
   --tw-exit-scale: 0.95;
 }
 
-/* Catalog Page - Header Section (non-scrolling) */
-.catalog-sticky-header {
-  background: #FFFFFF;
-}
-
-/* Catalog Table with Sticky Header */
-.catalog-table-container {
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
+/* Catalog Table - minimal styling (sticky handled by Tailwind) */
 .catalog-table {
   border-collapse: separate;
   border-spacing: 0;
-}
-
-.catalog-table thead {
-  position: relative;
-  background: #F9FAFB;
-}
-
-.catalog-table thead tr {
-  position: relative;
-}
-
-.catalog-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: #F9FAFB;
-}
-
-/* Shadow on entire header row when scrolling (using pseudo-element) */
-.catalog-table.scrolled thead tr::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -8px;
-  height: 8px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.08), transparent);
-  pointer-events: none;
-}
-
-/* First column (checkbox) - sticky in both directions */
-.catalog-table thead th:first-child {
-  position: sticky;
-  top: 0;
-  left: 0;
-  z-index: 20;
-  background: #F9FAFB;
-}
-
-.catalog-table tbody td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 15;
-  background: #FFFFFF;
-}
-
-.catalog-table thead::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: #E5E7EB;
 }

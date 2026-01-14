@@ -98,9 +98,7 @@ function CatalogPageContent() {
   const [searchInput, setSearchInput] = useState('');
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Scroll tracking for sticky header shadow
-  const [isScrolled, setIsScrolled] = useState(false);
-  const stickyHeaderRef = useRef<HTMLDivElement>(null);
+  // Ref for scrollable table container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Use hooks
@@ -207,18 +205,6 @@ function CatalogPageContent() {
     }
   }, [filters.search, filters.columnFilters, selection]);
 
-  // Scroll detection for sticky header shadow
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      setIsScrolled(container.scrollTop > 0);
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Fetch item group count when exactly 1 product is selected
   useEffect(() => {
@@ -644,9 +630,9 @@ function CatalogPageContent() {
         <SyncStatusBanner shop={currentShop} />
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-clip flex flex-col max-h-[calc(100vh-120px)]">
-        {/* Sticky Header Section */}
-        <div ref={stickyHeaderRef} className={`catalog-sticky-header p-6 pb-4 space-y-4 flex-shrink-0 ${isScrolled ? 'scrolled' : ''}`}>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col max-h-[calc(100vh-120px)]">
+        {/* Fixed Header Section (not scrollable) */}
+        <div className="p-6 pb-4 space-y-4 flex-shrink-0 border-b border-gray-100">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -742,18 +728,18 @@ function CatalogPageContent() {
         </div>
 
         {/* Scrollable Table Section */}
-        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto px-6 pb-6">
-          {loading && <div className="text-gray-500">Loading products...</div>}
-          {!loading && !products.length && <div className="text-gray-500">No products found.</div>}
+        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto">
+          {loading && <div className="text-gray-500 p-6">Loading products...</div>}
+          {!loading && !products.length && <div className="text-gray-500 p-6">No products found.</div>}
           {!loading && products.length > 0 && (
-              <table className={`table catalog-table min-w-max border border-gray-200 ${isScrolled ? 'scrolled' : ''}`}>
+              <table className="catalog-table w-full">
                 <thead>
                 <tr>
                   {visibleColumnDefs.map((column) => {
-                    // Checkbox column - sticky left
+                    // Checkbox column - sticky both directions (top + left)
                     if (column.id === 'checkbox') {
                       return (
-                        <th key={column.id} className="w-12 bg-gray-50 sticky left-0 z-20">
+                        <th key={column.id} className="sticky top-0 left-0 z-20 w-12 bg-gray-50 border-b border-gray-200 px-4 py-3">
                           <input
                             type="checkbox"
                             checked={allOnPageSelected}
@@ -767,22 +753,22 @@ function CatalogPageContent() {
                       );
                     }
 
-                    // Actions column
+                    // Actions column - sticky top only
                     if (column.id === 'actions') {
                       return (
-                        <th key={column.id} className="w-20">
+                        <th key={column.id} className="sticky top-0 z-10 w-20 bg-gray-50 border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       );
                     }
 
-                    // Regular columns with filter dropdown
+                    // Regular columns with filter dropdown - sticky top only
                     const columnFilter = getColumnFilter(column.id);
                     const currentSort =
                       filters.sortBy === column.id ? { column: column.id, order: filters.sortOrder } : null;
 
                     return (
-                      <th key={column.id} className="min-w-[120px]">
+                      <th key={column.id} className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-4 py-3 min-w-[120px]">
                         <ColumnHeaderDropdown
                           columnId={column.id}
                           label={column.label}
@@ -814,10 +800,10 @@ function CatalogPageContent() {
                       className={`cursor-pointer hover:bg-gray-50 transition-colors ${isSelected ? 'bg-[#FA7315]/5' : ''}`}
                     >
                       {visibleColumnDefs.map((column) => {
-                        // Checkbox column - sticky left
+                        // Checkbox column - sticky left only
                         if (column.id === 'checkbox') {
                           return (
-                            <td key={column.id} className="bg-white sticky left-0 z-[15]" onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className="sticky left-0 z-[5] bg-white px-4 py-3 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -831,7 +817,7 @@ function CatalogPageContent() {
                         // Actions column
                         if (column.id === 'actions') {
                           return (
-                            <td key={column.id} onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className="px-4 py-3 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
                               {renderCellValue(column, p)}
                             </td>
                           );
@@ -839,7 +825,7 @@ function CatalogPageContent() {
 
                         // Regular columns - clickable to navigate
                         return (
-                          <td key={column.id} onClick={() => handleRowClick(p.id)}>
+                          <td key={column.id} className="px-4 py-3 border-b border-gray-100" onClick={() => handleRowClick(p.id)}>
                             {renderCellValue(column, p)}
                           </td>
                         );
