@@ -198,6 +198,10 @@ export function useUpdateShopMutation() {
 /**
  * Mutation hook for activating feed
  * Sets openaiEnabled=true, syncEnabled=true, triggers sync
+ *
+ * Note: No optimistic update here because activation can fail for valid
+ * business reasons (e.g., no products ready for feed). We wait for the
+ * actual API response to avoid UI flicker on error.
  */
 export function useActivateFeedMutation() {
   const queryClient = useQueryClient();
@@ -206,27 +210,7 @@ export function useActivateFeedMutation() {
     mutationFn: async (shopId: string) => {
       return api.activateFeed(shopId);
     },
-    onMutate: async (shopId) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.shops.all });
-      const previousShops = queryClient.getQueryData<Shop[]>(queryKeys.shops.all);
-
-      // Optimistic update
-      queryClient.setQueryData<Shop[]>(queryKeys.shops.all, (old) =>
-        old?.map((s) =>
-          s.id === shopId
-            ? { ...s, openaiEnabled: true, syncEnabled: true, syncStatus: 'SYNCING' as const }
-            : s
-        ) ?? []
-      );
-
-      return { previousShops };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousShops) {
-        queryClient.setQueryData(queryKeys.shops.all, context.previousShops);
-      }
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
     },
   });
