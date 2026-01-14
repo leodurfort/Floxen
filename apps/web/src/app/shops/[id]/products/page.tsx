@@ -372,6 +372,12 @@ function CatalogPageContent() {
     }
   };
 
+  // Handle clearing all filters - must clear both URL state AND local searchInput state
+  const handleClearFilters = useCallback(() => {
+    setSearchInput('');  // Clear local state immediately to prevent debounce from restoring old value
+    clearAllFilters();   // Clear URL state
+  }, [clearAllFilters]);
+
   // Open bulk edit modal and capture current filters
   const handleOpenBulkEdit = useCallback(() => {
     setBulkEditFilters({
@@ -733,7 +739,7 @@ function CatalogPageContent() {
           <div className="flex items-center gap-4 flex-wrap">
             <SearchFilter value={searchInput} onChange={setSearchInput} placeholder="Search products..." />
             <div className="flex-1" />
-            <ClearFiltersButton hasActiveFilters={hasActiveFilters} onClear={clearAllFilters} />
+            <ClearFiltersButton hasActiveFilters={hasActiveFilters} onClear={handleClearFilters} />
             <button
               onClick={() => setShowEditColumnsModal(true)}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
