@@ -189,19 +189,6 @@ export async function previewFeed(req: Request, res: Response) {
   }
 }
 
-export async function downloadFeed(req: Request, res: Response) {
-  try {
-    const products = await prisma.product.findMany({ where: { shopId: req.params.id } });
-    return res.json({
-      generatedAt: new Date().toISOString(),
-      count: products.length,
-      items: products,
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-}
-
 export async function latestFeed(req: Request, res: Response) {
   try {
     const snapshot = await prisma.feedSnapshot.findFirst({

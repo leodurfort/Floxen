@@ -322,12 +322,6 @@ export interface ActivateFeedResponse {
   validProductCount: number;
 }
 
-export interface ActivateFeedError {
-  error: string;
-  code: 'ALREADY_ACTIVATED' | 'INCOMPLETE_PROFILE' | 'NO_VALID_PRODUCTS' | 'SERVICE_UNAVAILABLE';
-  details?: string | string[];
-}
-
 export async function activateFeed(shopId: string) {
   return requestWithAuth<ActivateFeedResponse>(`/api/v1/shops/${shopId}/activate-feed`, {
     method: 'POST',
