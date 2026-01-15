@@ -27,11 +27,28 @@ export function useProductsQuery(shopId: string | undefined, params: ListProduct
   const { user, hydrated } = useAuth();
   const serializedFilters = serializeFilters(params);
 
+  console.log('[DEBUG] useProductsQuery hook called:', {
+    shopId,
+    params: JSON.stringify(params, null, 2),
+    serializedFilters: JSON.stringify(serializedFilters, null, 2),
+  });
+
   return useQuery({
     queryKey: queryKeys.products.list(shopId ?? '', serializedFilters),
     queryFn: async () => {
+      console.log('[DEBUG] queryFn executing - calling API with:', {
+        shopId,
+        params: JSON.stringify(params, null, 2),
+      });
       if (!shopId) throw new Error('No store selected');
-      return api.listProducts(shopId, params);
+      const result = await api.listProducts(shopId, params);
+      console.log('[DEBUG] API returned:', {
+        productsCount: result.products.length,
+        total: result.pagination.total,
+        firstProductId: result.products[0]?.id,
+        firstProductStatus: result.products[0]?.enable_search,
+      });
+      return result;
     },
     enabled: hydrated && !!user && !!shopId,
     staleTime: 30 * 1000, // 30 seconds

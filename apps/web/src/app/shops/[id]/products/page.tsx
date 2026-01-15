@@ -188,11 +188,7 @@ function CatalogPageContent() {
 
   // React Query hooks - these fix the original cache bug!
   // Products query with proper cache keying by shopId + filters
-  const {
-    data: productsData,
-    isLoading: loading,
-    error: productsError,
-  } = useProductsQuery(params?.id, {
+  const queryParams = {
     page: filters.page,
     limit: filters.limit,
     sortBy: filters.sortBy,
@@ -201,6 +197,31 @@ function CatalogPageContent() {
     columnFilters: Object.keys(filters.columnFilters).length > 0
       ? filters.columnFilters
       : undefined,
+  };
+
+  console.log('[DEBUG] useProductsQuery params:', {
+    shopId: params?.id,
+    queryParams: JSON.stringify(queryParams, null, 2),
+  });
+
+  const {
+    data: productsData,
+    isLoading: loading,
+    error: productsError,
+    isFetching,
+    dataUpdatedAt,
+  } = useProductsQuery(params?.id, queryParams);
+
+  console.log('[DEBUG] useProductsQuery result:', {
+    hasData: !!productsData,
+    isLoading: loading,
+    isFetching: isFetching,
+    dataUpdatedAt: new Date(dataUpdatedAt).toISOString(),
+    productsCount: productsData?.products?.length ?? 0,
+    totalProducts: productsData?.pagination.total ?? 0,
+    firstProductId: productsData?.products?.[0]?.id,
+    firstProductTitle: productsData?.products?.[0]?.title?.substring(0, 50),
+    firstProductStatus: productsData?.products?.[0]?.enable_search,
   });
 
   const products = productsData?.products ?? [];
