@@ -1,9 +1,13 @@
 import { Job } from 'bullmq';
+import { gzip } from 'zlib';
+import { promisify } from 'util';
 import { prisma } from '../lib/prisma';
-import { generateFeedPayload } from '../services/feedService';
+import { generateFeedPayload, toJsonl } from '../services/feedService';
 import { logger } from '../lib/logger';
-import { uploadJsonToStorage } from '../services/storage';
+import { uploadGzipToStorage } from '../services/storage';
 import { getParentProductIds } from '../services/productService';
+
+const gzipAsync = promisify(gzip);
 
 export async function feedGenerationProcessor(job: Job) {
   const { shopId } = job.data as { shopId: string };
@@ -22,11 +26,12 @@ export async function feedGenerationProcessor(job: Job) {
   });
 
   const payload = generateFeedPayload(shop, products);
-  const body = JSON.stringify(payload, null, 2);
+  const jsonl = toJsonl(payload.items);
+  const gzipped = await gzipAsync(Buffer.from(jsonl, 'utf-8'));
 
   try {
-    const key = `${shopId}/feed.json`;
-    const url = await uploadJsonToStorage(key, body);
+    const key = `${shopId}/feed.jsonl.gz`;
+    const url = await uploadGzipToStorage(key, gzipped);
 
     // Create new FeedSnapshot (keeps history for 7 days)
     await prisma.feedSnapshot.create({

@@ -41,19 +41,24 @@ export async function getFeedJson(req: Request, res: Response) {
       });
     }
 
-    logger.info('feed:json - Serving feed', {
+    const feedData = snapshot.feedData as any;
+    const items = feedData.items || [];
+
+    logger.info('feed:jsonl - Serving feed', {
       shopId,
       snapshotId: snapshot.id,
-      productCount: snapshot.productCount,
+      productCount: items.length,
       generatedAt: snapshot.generatedAt,
     });
 
-    res.setHeader('Content-Type', 'application/json');
+    const jsonl = items.map((item: any) => JSON.stringify(item)).join('\n');
+
+    res.setHeader('Content-Type', 'application/jsonl');
     res.setHeader('X-Feed-Generated-At', snapshot.generatedAt.toISOString());
-    res.setHeader('X-Feed-Product-Count', snapshot.productCount.toString());
+    res.setHeader('X-Feed-Product-Count', items.length.toString());
     res.setHeader('X-Feed-Snapshot-Id', snapshot.id);
 
-    return res.json(snapshot.feedData);
+    return res.send(jsonl);
   } catch (err: any) {
     logger.error('feed:json error', { shopId, error: err.message });
     return res.status(500).json({ error: 'Failed to retrieve feed' });

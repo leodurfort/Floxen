@@ -352,11 +352,12 @@ export interface FeedPreviewResponse {
 
 export async function getFeedPreview(
   shopId: string,
-  params?: { limit?: number; offset?: number }
+  params?: { limit?: number; offset?: number; download?: boolean }
 ) {
   const searchParams = new URLSearchParams();
   if (params?.limit) searchParams.set('limit', String(params.limit));
   if (params?.offset) searchParams.set('offset', String(params.offset));
+  if (params?.download) searchParams.set('download', 'true');
 
   const query = searchParams.toString();
   return requestWithAuth<FeedPreviewResponse>(

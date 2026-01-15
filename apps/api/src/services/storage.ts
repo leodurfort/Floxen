@@ -23,7 +23,10 @@ function createClient() {
   });
 }
 
-export async function uploadJsonToStorage(key: string, body: string) {
+/**
+ * Upload gzip-compressed content to S3 storage
+ */
+export async function uploadGzipToStorage(key: string, buffer: Buffer) {
   try {
     const client = createClient();
     if (!client) {
@@ -35,14 +38,15 @@ export async function uploadJsonToStorage(key: string, body: string) {
     const command = new PutObjectCommand({
       Bucket: env.s3.bucket,
       Key: key,
-      Body: body,
-      ContentType: 'application/json',
+      Body: buffer,
+      ContentType: 'application/jsonl',
+      ContentEncoding: 'gzip',
     });
 
-    logger.info('S3 upload started', {
+    logger.info('S3 gzip upload started', {
       bucket: env.s3.bucket,
       key,
-      size: body.length,
+      size: buffer.length,
     });
 
     await client.send(command);
@@ -50,7 +54,7 @@ export async function uploadJsonToStorage(key: string, body: string) {
     const endpoint = env.s3.endpoint.replace(/\/+$/, '');
     const url = `${endpoint}/${env.s3.bucket}/${key}`;
 
-    logger.info('S3 upload completed', {
+    logger.info('S3 gzip upload completed', {
       bucket: env.s3.bucket,
       key,
       url,
@@ -58,7 +62,7 @@ export async function uploadJsonToStorage(key: string, body: string) {
 
     return url;
   } catch (error) {
-    logger.error('S3 upload failed', {
+    logger.error('S3 gzip upload failed', {
       error: error as Error,
       key,
       bucket: env.s3.bucket,

@@ -16,6 +16,7 @@ const ITEMS_PER_PAGE = 20;
 export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalProps) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -65,18 +66,26 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
     }
   };
 
-  const handleDownloadJson = () => {
-    if (items.length === 0) return;
-    const jsonData = JSON.stringify({ items }, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `feed-${shopId}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownloadJsonl = async () => {
+    setDownloading(true);
+    try {
+      // Fetch all items for download
+      const data = await api.getFeedPreview(shopId, { download: true });
+      const jsonlData = data.items.map((item) => JSON.stringify(item)).join('\n');
+      const blob = new Blob([jsonlData], { type: 'application/jsonl' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `feed-${shopId}.jsonl`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -116,7 +125,7 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              Raw JSON
+              Raw JSONL
             </button>
           </div>
         )}
@@ -190,17 +199,18 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
             <div>
               <div className="flex justify-end mb-2">
                 <button
-                  onClick={handleDownloadJson}
-                  className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium"
+                  onClick={handleDownloadJsonl}
+                  disabled={downloading}
+                  className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Download JSON
+                  {downloading ? 'Preparing download...' : 'Download JSONL'}
                 </button>
               </div>
               <pre className="text-xs bg-gray-50 p-4 rounded-lg overflow-auto max-h-96">
-                {JSON.stringify({ items: items.slice(0, 5) }, null, 2)}
+                {items.slice(0, 5).map((item) => JSON.stringify(item)).join('\n')}
                 {items.length > 5 && (
                   <span className="text-gray-400">
-                    {'\n\n// ... and ' + (items.length - 5) + ' more items loaded'}
+                    {'\n\n// ... and ' + (items.length - 5) + ' more lines'}
                   </span>
                 )}
               </pre>

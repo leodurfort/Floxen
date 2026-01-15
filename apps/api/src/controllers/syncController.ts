@@ -122,8 +122,9 @@ export async function pushFeed(req: Request, res: Response) {
 
 export async function previewFeed(req: Request, res: Response) {
   const shopId = req.params.id;
-  const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-  const offset = parseInt(req.query.offset as string) || 0;
+  const download = req.query.download === 'true';
+  const limit = download ? undefined : Math.min(parseInt(req.query.limit as string) || 20, 100);
+  const offset = download ? undefined : parseInt(req.query.offset as string) || 0;
 
   try {
     const userId = getUserId(req);
@@ -153,11 +154,11 @@ export async function previewFeed(req: Request, res: Response) {
         feedEnableSearch: true,
       },
       skip: offset,
-      take: limit + 1, // Fetch one extra to determine hasMore
+      take: limit ? limit + 1 : undefined, // Fetch one extra to determine hasMore (only for pagination)
       orderBy: { wooProductId: 'asc' },
     });
 
-    const hasMore = products.length > limit;
+    const hasMore = limit ? products.length > limit : false;
     const productsToReturn = hasMore ? products.slice(0, limit) : products;
 
     // Generate feed WITHOUT validation for performance
@@ -173,13 +174,14 @@ export async function previewFeed(req: Request, res: Response) {
       limit,
       returned: feedPayload.items.length,
       hasMore,
+      download,
     });
 
     return res.json({
       items: feedPayload.items,
       hasMore,
-      offset,
-      limit,
+      offset: offset ?? 0,
+      limit: limit ?? feedPayload.items.length,
     });
   } catch (err: any) {
     logger.error('feed:preview error', { shopId, error: err.message });
