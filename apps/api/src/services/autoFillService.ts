@@ -111,6 +111,39 @@ export class AutoFillService {
   }
 
   /**
+   * Compute only the specified fields (for selective reprocessing).
+   * Fields are computed independently - no inter-field dependencies.
+   *
+   * @param fieldNames - Array of attribute names to compute
+   * @param wooProduct - WooCommerce product data
+   * @param productFlags - Product-level settings (enable_search, enable_checkout)
+   * @param productOverrides - Product-level field mapping overrides
+   * @returns Record containing only the computed fields (null values indicate field should be removed)
+   */
+  computeSelectedFields(
+    fieldNames: string[],
+    wooProduct: any,
+    productFlags?: {
+      enableSearch?: boolean;
+      enableCheckout?: boolean;
+    },
+    productOverrides?: ProductFieldOverrides
+  ): Record<string, any> {
+    const computed: Record<string, any> = {};
+    const fieldSet = new Set(fieldNames);
+
+    for (const spec of OPENAI_FEED_SPEC) {
+      if (!fieldSet.has(spec.attribute)) continue;
+
+      const value = this.fillField(spec, wooProduct, productFlags, productOverrides);
+      // Include the value even if null - caller needs to know to remove the field
+      computed[spec.attribute] = value;
+    }
+
+    return computed;
+  }
+
+  /**
    * Fill a single field based on its mapping spec
    */
   private fillField(

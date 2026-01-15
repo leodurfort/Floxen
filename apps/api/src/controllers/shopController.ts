@@ -548,6 +548,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
           shopId: id,
           reason: 'field_mappings_updated',
           fieldsToClclearOverrides,
+          changedFields: actuallyChangedAttributes,  // Enable selective reprocessing optimization
         }, {
           ...DEFAULT_JOB_OPTIONS,
           priority: JOB_PRIORITIES.REPROCESS,

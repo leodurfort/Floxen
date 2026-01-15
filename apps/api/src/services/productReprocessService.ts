@@ -13,6 +13,7 @@ interface ProductForReprocess {
   wooParentId: number | null;
   feedEnableSearch: boolean;
   productFieldOverrides: unknown;
+  openaiAutoFilled?: unknown;  // Optional - only needed for selective reprocessing
 }
 
 async function processProduct(
@@ -172,6 +173,178 @@ export async function reprocessAllProducts(
   });
 
   return { productCount: products.length, overridesCleared };
+}
+
+const SELECTIVE_BATCH_SIZE = 150;
+
+interface SelectiveReprocessResult extends ReprocessResult {
+  fieldsUpdated: string[];
+}
+
+/**
+ * Reprocess only changed fields for all products (optimized path).
+ * Falls back to full reprocessing if changedFields is empty.
+ *
+ * Performance: ~10-30 seconds for 15k products vs ~3 minutes for full reprocess.
+ */
+export async function reprocessChangedFields(
+  shopId: string,
+  changedFields: string[],
+  fieldsToClclearOverrides?: string[]
+): Promise<SelectiveReprocessResult> {
+  // Fallback: if no specific fields, do full reprocess
+  if (!changedFields || changedFields.length === 0) {
+    const result = await reprocessAllProducts(shopId, fieldsToClclearOverrides);
+    return { ...result, fieldsUpdated: [] };
+  }
+
+  const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+  if (!shop) throw new Error(`Shop not found: ${shopId}`);
+
+  // Fetch products WITH openaiAutoFilled for selective update
+  let products = await fetchProductsForSelectiveReprocess(shopId);
+  if (products.length === 0) {
+    logger.info('product-reprocess: selective - no products found', { shopId });
+    return { productCount: 0, overridesCleared: 0, fieldsUpdated: changedFields };
+  }
+
+  // Clear overrides first (existing logic)
+  let overridesCleared = 0;
+  const fieldsToClear = fieldsToClclearOverrides || [];
+  if (fieldsToClear.length > 0) {
+    overridesCleared = await batchClearOverrides(shopId, fieldsToClear, products);
+    // Refetch with updated overrides
+    products = await fetchProductsForSelectiveReprocess(shopId);
+  }
+
+  const autoFillService = await AutoFillService.create(shop);
+
+  // Process in batches for better performance and memory usage
+  let processedCount = 0;
+  for (let i = 0; i < products.length; i += SELECTIVE_BATCH_SIZE) {
+    const batch = products.slice(i, i + SELECTIVE_BATCH_SIZE);
+    const batchProcessed = await processSelectiveBatch(batch, autoFillService, shopId, changedFields);
+    processedCount += batchProcessed;
+
+    logger.debug('product-reprocess: selective batch completed', {
+      shopId,
+      batchStart: i,
+      batchEnd: Math.min(i + SELECTIVE_BATCH_SIZE, products.length),
+      batchProcessed,
+      totalProducts: products.length,
+    });
+  }
+
+  // Update timestamp to signal completion to frontend polling
+  await prisma.shop.update({
+    where: { id: shopId },
+    data: { productsReprocessedAt: new Date() },
+  });
+
+  logger.info('product-reprocess: selective completed', {
+    shopId,
+    productCount: products.length,
+    processedCount,
+    fieldsUpdated: changedFields,
+    overridesCleared,
+  });
+
+  return { productCount: products.length, overridesCleared, fieldsUpdated: changedFields };
+}
+
+/**
+ * Process a batch of products with selective field updates.
+ * Uses transaction for atomicity.
+ */
+async function processSelectiveBatch(
+  products: ProductForReprocess[],
+  autoFillService: AutoFillService,
+  shopId: string,
+  changedFields: string[]
+): Promise<number> {
+  const updates: Array<{
+    id: string;
+    openaiAutoFilled: any;
+    isValid: boolean;
+    validationErrors: any;
+  }> = [];
+
+  for (const product of products) {
+    const wooProduct = product.wooRawJson;
+    if (!wooProduct) continue;
+
+    const overrides = (product.productFieldOverrides as ProductFieldOverrides) || {};
+
+    // Compute only changed fields (not all 71)
+    const newValues = autoFillService.computeSelectedFields(
+      changedFields,
+      wooProduct,
+      { enableSearch: product.feedEnableSearch, enableCheckout: false },
+      overrides
+    );
+
+    // Get existing openaiAutoFilled (fetched with product)
+    const existing = (product.openaiAutoFilled as Record<string, any>) || {};
+
+    // Merge: new values override existing, null/undefined removes field
+    const merged = { ...existing };
+    for (const [key, value] of Object.entries(newValues)) {
+      if (value === null || value === undefined) {
+        delete merged[key];
+      } else {
+        merged[key] = value;
+      }
+    }
+
+    // Re-validate full product (validation may have cross-field dependencies)
+    const validation = validateProduct(merged, false, {
+      isVariation: !!product.wooParentId,
+      wooProductType: (wooProduct as any)?.type,
+    });
+
+    updates.push({
+      id: product.id,
+      openaiAutoFilled: merged,
+      isValid: validation.isValid,
+      validationErrors: validation.errors,
+    });
+  }
+
+  // Batch update using transaction for atomicity
+  if (updates.length > 0) {
+    await prisma.$transaction(
+      updates.map(({ id, openaiAutoFilled, isValid, validationErrors }) =>
+        prisma.product.update({
+          where: { id },
+          data: {
+            openaiAutoFilled,
+            isValid,
+            validationErrors,
+            updatedAt: new Date(),
+          },
+        })
+      )
+    );
+  }
+
+  return updates.length;
+}
+
+/**
+ * Fetch products for selective reprocessing (includes openaiAutoFilled).
+ */
+async function fetchProductsForSelectiveReprocess(shopId: string): Promise<ProductForReprocess[]> {
+  return prisma.product.findMany({
+    where: { shopId },
+    select: {
+      id: true,
+      wooRawJson: true,
+      wooParentId: true,
+      feedEnableSearch: true,
+      productFieldOverrides: true,
+      openaiAutoFilled: true,  // Need this for merging
+    },
+  });
 }
 
 /**
