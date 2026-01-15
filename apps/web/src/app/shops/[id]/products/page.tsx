@@ -220,8 +220,8 @@ function CatalogPageContent() {
     productsCount: productsData?.products?.length ?? 0,
     totalProducts: productsData?.pagination.total ?? 0,
     firstProductId: productsData?.products?.[0]?.id,
-    firstProductTitle: productsData?.products?.[0]?.title?.substring(0, 50),
-    firstProductStatus: productsData?.products?.[0]?.enable_search,
+    firstProductIsValid: productsData?.products?.[0]?.isValid,
+    firstProductFeedEnabled: productsData?.products?.[0]?.feedEnableSearch,
   });
 
   const products = productsData?.products ?? [];

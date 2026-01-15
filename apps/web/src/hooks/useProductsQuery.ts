@@ -46,7 +46,8 @@ export function useProductsQuery(shopId: string | undefined, params: ListProduct
         productsCount: result.products.length,
         total: result.pagination.total,
         firstProductId: result.products[0]?.id,
-        firstProductStatus: result.products[0]?.enable_search,
+        firstProductIsValid: result.products[0]?.isValid,
+        firstProductFeedEnabled: result.products[0]?.feedEnableSearch,
       });
       return result;
     },
