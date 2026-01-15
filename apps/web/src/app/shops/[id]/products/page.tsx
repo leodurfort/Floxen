@@ -131,29 +131,29 @@ function CatalogPageContent() {
       return 'all';
     }
 
-    // Check for "Ready for Feed" pattern: isValid=valid AND enable_search=Enabled
+    // Check for "Ready for Feed" pattern: isValid=true AND enable_search=true
     if (
       filterKeys.length === 2 &&
-      columnFilters.isValid?.values?.[0] === 'valid' &&
-      columnFilters.enable_search?.values?.[0] === 'Enabled'
+      columnFilters.isValid?.values?.[0] === 'true' &&
+      columnFilters.enable_search?.values?.[0] === 'true'
     ) {
       console.log('[DEBUG] → Returning: "inFeed" (Ready for Feed pattern matched)');
       return 'inFeed';
     }
 
-    // Check for "Needs Attention" pattern: isValid=invalid (only)
+    // Check for "Needs Attention" pattern: isValid=false (only)
     if (
       filterKeys.length === 1 &&
-      columnFilters.isValid?.values?.[0] === 'invalid'
+      columnFilters.isValid?.values?.[0] === 'false'
     ) {
       console.log('[DEBUG] → Returning: "needsAttention" (Needs Attention pattern matched)');
       return 'needsAttention';
     }
 
-    // Check for "Disabled" pattern: enable_search=Disabled (only)
+    // Check for "Disabled" pattern: enable_search=false (only)
     if (
       filterKeys.length === 1 &&
-      columnFilters.enable_search?.values?.[0] === 'Disabled'
+      columnFilters.enable_search?.values?.[0] === 'false'
     ) {
       console.log('[DEBUG] → Returning: "disabled" (Disabled pattern matched)');
       return 'disabled';
@@ -375,6 +375,7 @@ function CatalogPageContent() {
     console.log('[DEBUG] Current filters before change:', JSON.stringify(filters.columnFilters, null, 2));
 
     // Apply filters based on tab
+    // Using 'true'/'false' values to match dropdown checkbox values
     switch (tab) {
       case 'all':
         // Clear filters for "All" tab
@@ -384,33 +385,33 @@ function CatalogPageContent() {
         clearAllFilters();
         break;
       case 'inFeed':
-        // Valid AND enabled products
+        // Valid AND enabled products (isValid=true, enable_search=true)
         console.log('[DEBUG] Setting filters for "inFeed" tab');
         setFilters({
           page: 1,
           columnFilters: {
-            isValid: { values: ['valid'] },
-            enable_search: { values: ['Enabled'] },
+            isValid: { values: ['true'] },
+            enable_search: { values: ['true'] },
           },
         });
         break;
       case 'needsAttention':
-        // Invalid products
+        // Invalid products (isValid=false)
         console.log('[DEBUG] Setting filters for "needsAttention" tab');
         setFilters({
           page: 1,
           columnFilters: {
-            isValid: { values: ['invalid'] },
+            isValid: { values: ['false'] },
           },
         });
         break;
       case 'disabled':
-        // Disabled products
+        // Disabled products (enable_search=false)
         console.log('[DEBUG] Setting filters for "disabled" tab');
         setFilters({
           page: 1,
           columnFilters: {
-            enable_search: { values: ['Disabled'] },
+            enable_search: { values: ['false'] },
           },
         });
         break;
