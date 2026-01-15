@@ -117,17 +117,8 @@ function CatalogPageContent() {
   const deriveTabFromFilters = useCallback((columnFilters: typeof filters.columnFilters): ProductTabId => {
     const filterKeys = Object.keys(columnFilters);
 
-    console.log('[DEBUG] deriveTabFromFilters called:', {
-      columnFilters: JSON.stringify(columnFilters, null, 2),
-      filterKeys,
-      filterKeysLength: filterKeys.length,
-      isValid_value: columnFilters.isValid?.values?.[0],
-      enable_search_value: columnFilters.enable_search?.values?.[0],
-    });
-
     // No filters = "All Products" tab
     if (filterKeys.length === 0) {
-      console.log('[DEBUG] → Returning: "all" (no filters)');
       return 'all';
     }
 
@@ -137,7 +128,6 @@ function CatalogPageContent() {
       columnFilters.isValid?.values?.[0] === 'true' &&
       columnFilters.enable_search?.values?.[0] === 'true'
     ) {
-      console.log('[DEBUG] → Returning: "inFeed" (Ready for Feed pattern matched)');
       return 'inFeed';
     }
 
@@ -146,7 +136,6 @@ function CatalogPageContent() {
       filterKeys.length === 1 &&
       columnFilters.isValid?.values?.[0] === 'false'
     ) {
-      console.log('[DEBUG] → Returning: "needsAttention" (Needs Attention pattern matched)');
       return 'needsAttention';
     }
 
@@ -155,40 +144,30 @@ function CatalogPageContent() {
       filterKeys.length === 1 &&
       columnFilters.enable_search?.values?.[0] === 'false'
     ) {
-      console.log('[DEBUG] → Returning: "disabled" (Disabled pattern matched)');
       return 'disabled';
     }
 
     // Custom filters that don't match any tab preset - default to "All"
-    console.log('[DEBUG] → Returning: "all" (custom filters, no pattern match)');
     return 'all';
   }, []);
 
   // Active tab for product filtering (computed from column filters)
   // This ensures the UI always reflects the actual filters being applied
   const activeTab = useMemo<ProductTabId>(
-    () => {
-      const computed = deriveTabFromFilters(filters.columnFilters);
-      console.log('[DEBUG] activeTab recomputed:', computed);
-      return computed;
-    },
+    () => deriveTabFromFilters(filters.columnFilters),
     [filters.columnFilters, deriveTabFromFilters]
   );
-
-  // Debug: Log whenever filters change
-  useEffect(() => {
-    console.log('[DEBUG] filters.columnFilters changed:', {
-      columnFilters: JSON.stringify(filters.columnFilters, null, 2),
-      computedActiveTab: activeTab,
-    });
-  }, [filters.columnFilters, activeTab]);
 
   // Capture filters at modal open time to prevent stale filter issues
   const [bulkEditFilters, setBulkEditFilters] = useState<{ search: string; columnFilters: typeof filters.columnFilters } | null>(null);
 
   // React Query hooks - these fix the original cache bug!
   // Products query with proper cache keying by shopId + filters
-  const queryParams = {
+  const {
+    data: productsData,
+    isLoading: loading,
+    error: productsError,
+  } = useProductsQuery(params?.id, {
     page: filters.page,
     limit: filters.limit,
     sortBy: filters.sortBy,
@@ -197,31 +176,6 @@ function CatalogPageContent() {
     columnFilters: Object.keys(filters.columnFilters).length > 0
       ? filters.columnFilters
       : undefined,
-  };
-
-  console.log('[DEBUG] useProductsQuery params:', {
-    shopId: params?.id,
-    queryParams: JSON.stringify(queryParams, null, 2),
-  });
-
-  const {
-    data: productsData,
-    isLoading: loading,
-    error: productsError,
-    isFetching,
-    dataUpdatedAt,
-  } = useProductsQuery(params?.id, queryParams);
-
-  console.log('[DEBUG] useProductsQuery result:', {
-    hasData: !!productsData,
-    isLoading: loading,
-    isFetching: isFetching,
-    dataUpdatedAt: new Date(dataUpdatedAt).toISOString(),
-    productsCount: productsData?.products?.length ?? 0,
-    totalProducts: productsData?.pagination.total ?? 0,
-    firstProductId: productsData?.products?.[0]?.id,
-    firstProductIsValid: productsData?.products?.[0]?.isValid,
-    firstProductFeedEnabled: productsData?.products?.[0]?.feedEnableSearch,
   });
 
   const products = productsData?.products ?? [];
@@ -370,23 +324,17 @@ function CatalogPageContent() {
   // Note: activeTab is now computed from columnFilters, so we only need to set the filters
   // The tab will automatically highlight based on the filters applied
   const handleTabChange = (tab: ProductTabId) => {
-    console.log('[DEBUG] handleTabChange called with tab:', tab);
-    console.log('[DEBUG] Current activeTab before change:', activeTab);
-    console.log('[DEBUG] Current filters before change:', JSON.stringify(filters.columnFilters, null, 2));
-
     // Apply filters based on tab
     // Using 'true'/'false' values to match dropdown checkbox values
     switch (tab) {
       case 'all':
         // Clear filters for "All" tab
         // Must also clear searchInput to prevent debounce from restoring old value
-        console.log('[DEBUG] Clearing all filters for "all" tab');
         setSearchInput('');
         clearAllFilters();
         break;
       case 'inFeed':
         // Valid AND enabled products (isValid=true, enable_search=true)
-        console.log('[DEBUG] Setting filters for "inFeed" tab');
         setFilters({
           page: 1,
           columnFilters: {
@@ -397,7 +345,6 @@ function CatalogPageContent() {
         break;
       case 'needsAttention':
         // Invalid products (isValid=false)
-        console.log('[DEBUG] Setting filters for "needsAttention" tab');
         setFilters({
           page: 1,
           columnFilters: {
@@ -407,7 +354,6 @@ function CatalogPageContent() {
         break;
       case 'disabled':
         // Disabled products (enable_search=false)
-        console.log('[DEBUG] Setting filters for "disabled" tab');
         setFilters({
           page: 1,
           columnFilters: {
@@ -813,14 +759,6 @@ function CatalogPageContent() {
           </div>
 
           {/* Product Tabs */}
-          {(() => {
-            console.log('[DEBUG] Rendering ProductTabs with:', {
-              activeTab,
-              stats,
-              currentFilters: JSON.stringify(filters.columnFilters, null, 2),
-            });
-            return null;
-          })()}
           <ProductTabs
             activeTab={activeTab}
             onTabChange={handleTabChange}
