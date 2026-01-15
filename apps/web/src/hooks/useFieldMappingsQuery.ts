@@ -71,7 +71,14 @@ export function useUpdateFieldMappingsMutation(shopId: string | undefined) {
     },
     onSettled: () => {
       if (shopId) {
+        // Invalidate field mappings cache
         queryClient.invalidateQueries({ queryKey: queryKeys.fieldMappings.shop(shopId) });
+
+        // Invalidate products cache (immediate refresh for user navigating to catalog)
+        queryClient.invalidateQueries({ queryKey: ['products', shopId], exact: false });
+
+        // Invalidate shops cache to get fresh productsReprocessedAt for completion detection
+        queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
       }
     },
   });

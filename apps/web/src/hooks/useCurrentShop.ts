@@ -53,6 +53,26 @@ export function useCurrentShop() {
     prevSyncStatusRef.current = currentStatus ?? null;
   }, [currentShop?.syncStatus, currentShop?.id, queryClient]);
 
+  // Invalidate products cache when background reprocessing completes
+  const prevReprocessedAtRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const prevReprocessedAt = prevReprocessedAtRef.current;
+    const currentReprocessedAt = currentShop?.productsReprocessedAt ?? null;
+
+    // If productsReprocessedAt changed (not just initial load), invalidate products
+    if (
+      prevReprocessedAt !== null &&
+      currentReprocessedAt !== null &&
+      currentReprocessedAt !== prevReprocessedAt &&
+      currentShop?.id
+    ) {
+      queryClient.invalidateQueries({ queryKey: ['products', currentShop.id] });
+    }
+
+    prevReprocessedAtRef.current = currentReprocessedAt;
+  }, [currentShop?.productsReprocessedAt, currentShop?.id, queryClient]);
+
   return {
     currentShop,
     shopIdFromUrl,
