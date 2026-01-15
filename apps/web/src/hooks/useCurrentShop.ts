@@ -47,6 +47,14 @@ export function useCurrentShop() {
   const isReprocessingRecent = fieldMappingsUpdatedAt !== null &&
     Date.now() - fieldMappingsUpdatedAt < 60000;
 
+  // DEBUG: Log polling state
+  console.log('[useCurrentShop] polling state:', {
+    fieldMappingsUpdatedAt,
+    isReprocessingRecent,
+    isFirstSync,
+    timeRemaining: fieldMappingsUpdatedAt ? Math.max(0, 60000 - (Date.now() - fieldMappingsUpdatedAt)) : null,
+  });
+
   useShopsSyncPolling(isFirstSync || isReprocessingRecent);
 
   // Invalidate products cache when sync completes
