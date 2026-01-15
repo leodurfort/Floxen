@@ -175,7 +175,7 @@ export async function reprocessAllProducts(
   return { productCount: products.length, overridesCleared };
 }
 
-const SELECTIVE_BATCH_SIZE = 150;
+const SELECTIVE_BATCH_SIZE = 500;
 
 interface SelectiveReprocessResult extends ReprocessResult {
   fieldsUpdated: string[];
