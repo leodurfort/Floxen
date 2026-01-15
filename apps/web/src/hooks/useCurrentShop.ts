@@ -83,7 +83,7 @@ export function useCurrentShop() {
       willInvalidate: prevReprocessedAt !== null && currentReprocessedAt !== null && currentReprocessedAt !== prevReprocessedAt,
     });
 
-    // If productsReprocessedAt changed (not just initial load), invalidate products
+    // If productsReprocessedAt changed (not just initial load), invalidate products and columnValues
     if (
       prevReprocessedAt !== null &&
       currentReprocessedAt !== null &&
@@ -92,6 +92,7 @@ export function useCurrentShop() {
     ) {
       console.log('[useCurrentShop] INVALIDATING products cache due to reprocessedAt change');
       queryClient.invalidateQueries({ queryKey: ['products', currentShop.id] });
+      queryClient.invalidateQueries({ queryKey: ['columnValues', currentShop.id], exact: false });
     }
 
     prevReprocessedAtRef.current = currentReprocessedAt;
