@@ -537,40 +537,37 @@ export async function updateFieldMappings(req: Request, res: Response) {
       });
       logger.info('shops:field-mappings:updated-at', { shopId: id });
 
+      // Determine which fields need overrides cleared (if propagation mode is 'apply_all')
+      const fieldsToClclearOverrides =
+        propagationMode === 'apply_all' ? actuallyChangedAttributes : [];
+
       // Queue background job to reprocess all products with new mappings
+      // Include fields to clear overrides for - handled in ONE pass to avoid double processing
       if (syncQueue) {
         await syncQueue!.add('product-reprocess', {
           shopId: id,
           reason: 'field_mappings_updated',
+          fieldsToClclearOverrides,
         }, {
           ...DEFAULT_JOB_OPTIONS,
           priority: JOB_PRIORITIES.REPROCESS,
         });
-        logger.info('shops:field-mappings:queued-reprocess', { shopId: id });
+        logger.info('shops:field-mappings:queued-reprocess', {
+          shopId: id,
+          fieldsToClclearOverrides,
+          propagationMode,
+        });
+      } else if (fieldsToClclearOverrides.length > 0) {
+        // FALLBACK: Redis unavailable, clear overrides synchronously
+        logger.warn('shops:field-mappings:sync-fallback', { shopId: id });
+        for (const attr of fieldsToClclearOverrides) {
+          await clearOverridesForField(id, attr);
+        }
       }
     }
 
-    // Handle propagation mode: clear product overrides if 'apply_all'
-    let overridesCleared = 0;
-    if (propagationMode === 'apply_all' && actuallyChangedAttributes.length > 0) {
-      // Clear product-level overrides only for fields that actually changed
-      const changedAttributes = actuallyChangedAttributes;
-
-      for (const attribute of changedAttributes) {
-        const cleared = await clearOverridesForField(id, attribute);
-        overridesCleared += cleared;
-      }
-
-      logger.info('shops:field-mappings:cleared-overrides', {
-        shopId: id,
-        propagationMode,
-        changedFields: changedAttributes.length,
-        overridesCleared,
-      });
-    }
-
-    logger.info('shops:field-mappings:update', { shopId: id, userId: shop.userId, results, propagationMode, overridesCleared });
-    return res.json({ success: true, results, overridesCleared });
+    logger.info('shops:field-mappings:update', { shopId: id, userId: shop.userId, results, propagationMode });
+    return res.json({ success: true, results });
   } catch (err: any) {
     logger.error('shops:field-mappings:update error', err);
     return res.status(500).json({ error: err.message });

@@ -10,34 +10,45 @@ import { prisma } from '../lib/prisma';
  * Uses stored wooRawJson and re-runs AutoFillService + validation.
  *
  * Triggered when:
- * - Field mappings are updated
+ * - Field mappings are updated (may include fieldsToClclearOverrides)
  * - Shop settings change (sellerName, returnPolicy, etc.)
  */
 export async function productReprocessProcessor(job: Job) {
-  const { shopId, reason } = job.data as { shopId: string; reason?: string };
+  const { shopId, reason, fieldsToClclearOverrides } = job.data as {
+    shopId: string;
+    reason?: string;
+    fieldsToClclearOverrides?: string[];
+  };
 
   if (!shopId) {
     logger.warn('product-reprocess: missing shopId', { jobId: job.id });
     return;
   }
 
-  logger.info('product-reprocess: starting', { shopId, reason, jobId: job.id });
+  logger.info('product-reprocess: starting', {
+    shopId,
+    reason,
+    fieldsToClclearOverrides,
+    jobId: job.id,
+  });
 
   try {
-    const productCount = await reprocessAllProducts(shopId);
+    const result = await reprocessAllProducts(shopId, fieldsToClclearOverrides);
 
     logger.info('product-reprocess: completed', {
       shopId,
       reason,
-      productCount,
+      productCount: result.productCount,
+      overridesCleared: result.overridesCleared,
       jobId: job.id,
     });
 
-    return { shopId, productCount };
+    return { shopId, ...result };
   } catch (err) {
     logger.error('product-reprocess: failed', {
       shopId,
       reason,
+      fieldsToClclearOverrides,
       error: err instanceof Error ? err : new Error(String(err)),
       jobId: job.id,
     });

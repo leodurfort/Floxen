@@ -119,20 +119,39 @@ export async function clearOverridesForField(shopId: string, attribute: string):
   return updatedCount;
 }
 
-export async function reprocessAllProducts(shopId: string): Promise<number> {
+interface ReprocessResult {
+  productCount: number;
+  overridesCleared: number;
+}
+
+export async function reprocessAllProducts(
+  shopId: string,
+  fieldsToClclearOverrides?: string[]
+): Promise<ReprocessResult> {
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) throw new Error(`Shop not found: ${shopId}`);
 
-  const products = await fetchProductsForReprocess(shopId);
+  let products = await fetchProductsForReprocess(shopId);
 
   if (products.length === 0) {
     logger.info('Reprocessed all products for shop (none found)', { shopId, productCount: 0 });
-    return 0;
+    return { productCount: 0, overridesCleared: 0 };
+  }
+
+  let overridesCleared = 0;
+  const fieldsToClear = fieldsToClclearOverrides || [];
+
+  // BATCH clear overrides in one transaction (if needed)
+  if (fieldsToClear.length > 0) {
+    overridesCleared = await batchClearOverrides(shopId, fieldsToClear, products);
+    // Refetch products with updated overrides for correct reprocessing
+    products = await fetchProductsForReprocess(shopId);
   }
 
   const autoFillService = await AutoFillService.create(shop);
   let processedCount = 0;
 
+  // Single pass: reprocess all products
   for (const product of products) {
     const result = await processProduct(product as ProductForReprocess, autoFillService, shopId);
     if (result) processedCount++;
@@ -148,9 +167,60 @@ export async function reprocessAllProducts(shopId: string): Promise<number> {
     productCount: products.length,
     processedCount,
     skippedCount: products.length - processedCount,
+    overridesCleared,
+    fieldsCleared: fieldsToClear,
   });
 
-  return products.length;
+  return { productCount: products.length, overridesCleared };
+}
+
+/**
+ * Batch clear overrides for specified fields using a database transaction.
+ * Returns count of products that had overrides cleared.
+ */
+async function batchClearOverrides(
+  shopId: string,
+  fieldsToClear: string[],
+  products: Array<{ id: string; productFieldOverrides: unknown }>
+): Promise<number> {
+  // Build batch updates for products that have any of the fields to clear
+  const updates: Array<{ id: string; newOverrides: ProductFieldOverrides }> = [];
+
+  for (const product of products) {
+    const overrides = (product.productFieldOverrides as ProductFieldOverrides) || {};
+    const hasFieldsToClear = fieldsToClear.some(field => field in overrides);
+
+    if (hasFieldsToClear) {
+      const newOverrides = { ...overrides };
+      for (const field of fieldsToClear) {
+        delete newOverrides[field];
+      }
+      updates.push({ id: product.id, newOverrides });
+    }
+  }
+
+  if (updates.length === 0) {
+    logger.info('Batch clear overrides: none to clear', { shopId, fieldsToClear });
+    return 0;
+  }
+
+  // Execute batch update using transaction for atomicity
+  await prisma.$transaction(
+    updates.map(({ id, newOverrides }) =>
+      prisma.product.update({
+        where: { id },
+        data: { productFieldOverrides: newOverrides as any },
+      })
+    )
+  );
+
+  logger.info('Batch cleared overrides', {
+    shopId,
+    fieldsToClear,
+    productsUpdated: updates.length,
+  });
+
+  return updates.length;
 }
 
 async function fetchProductsForReprocess(shopId: string) {
