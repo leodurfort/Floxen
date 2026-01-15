@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useShopsQuery, useShopsSyncPolling } from './useShopsQuery';
+import { useSyncOperations } from '@/store/syncOperations';
 import type { Shop } from '@productsynch/shared';
 
 /**
@@ -40,7 +41,13 @@ export function useCurrentShop() {
 
   const isFirstSync = (currentShop?.syncStatus === 'SYNCING' || currentShop?.syncStatus === 'PENDING')
     && currentShop?.lastSyncAt === null;
-  useShopsSyncPolling(isFirstSync);
+
+  // Enable polling for 60 seconds after field mappings update to detect reprocessing completion
+  const fieldMappingsUpdatedAt = useSyncOperations((s) => s.fieldMappingsUpdatedAt);
+  const isReprocessingRecent = fieldMappingsUpdatedAt !== null &&
+    Date.now() - fieldMappingsUpdatedAt < 60000;
+
+  useShopsSyncPolling(isFirstSync || isReprocessingRecent);
 
   // Invalidate products cache when sync completes
   const queryClient = useQueryClient();

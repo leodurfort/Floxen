@@ -4,6 +4,7 @@ import * as api from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
 import { LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
 import type { ProductOverridesResponse } from '@/lib/api';
+import { useSyncOperations } from '@/store/syncOperations';
 
 export function useFieldMappingsQuery(shopId: string | undefined) {
   const { user, hydrated } = useAuth();
@@ -83,6 +84,9 @@ export function useUpdateFieldMappingsMutation(shopId: string | undefined) {
         // Invalidate shops cache to get fresh productsReprocessedAt for completion detection
         console.log('[useUpdateFieldMappingsMutation] Invalidating shops cache');
         queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
+
+        // Trigger 60-second polling to detect when background reprocessing completes
+        useSyncOperations.getState().setFieldMappingsUpdated();
       }
     },
   });
