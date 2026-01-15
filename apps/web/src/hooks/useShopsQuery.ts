@@ -24,21 +24,12 @@ export function useShopsSyncPolling(enabled: boolean) {
   const { user, hydrated } = useAuth();
   const queryClient = useQueryClient();
 
-  // DEBUG: Log when polling state changes
-  console.log('[useShopsSyncPolling] enabled:', enabled, 'hydrated:', hydrated, 'user:', !!user);
-
   return useQuery({
     queryKey: [...queryKeys.shops.all, 'polling'],
     queryFn: async () => {
-      console.log('[useShopsSyncPolling] Fetching shops...');
       const result = await api.listShops();
-      const shops = result.shops;
-      // Log productsReprocessedAt for debugging
-      shops.forEach((shop: Shop) => {
-        console.log('[useShopsSyncPolling] Shop:', shop.id, 'productsReprocessedAt:', shop.productsReprocessedAt);
-      });
-      queryClient.setQueryData(queryKeys.shops.all, shops);
-      return shops;
+      queryClient.setQueryData(queryKeys.shops.all, result.shops);
+      return result.shops;
     },
     enabled: hydrated && !!user && enabled,
     refetchInterval: enabled ? 3000 : false,
