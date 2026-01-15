@@ -85,6 +85,9 @@ export function useUpdateFieldMappingsMutation(shopId: string | undefined) {
         console.log('[useUpdateFieldMappingsMutation] Invalidating shops cache');
         queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
 
+        // Invalidate column filter values cache (fixes stale filter dropdowns after mapping changes)
+        queryClient.invalidateQueries({ queryKey: ['columnValues', shopId], exact: false });
+
         // Trigger 60-second polling to detect when background reprocessing completes
         useSyncOperations.getState().setFieldMappingsUpdated();
       }
