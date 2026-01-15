@@ -5,6 +5,29 @@ import { fetchStoreSettings } from './wooClient';
 import { logger } from '../lib/logger';
 import { deleteShopFiles } from './storage';
 
+async function verifyWooCommerceStore(storeUrl: string): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const url = storeUrl.replace(/\/$/, '') + '/wp-json/wc/v3/';
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'User-Agent': 'ProductSynch/1.0' },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    // 401 is OK - means WooCommerce exists but needs auth
+    if (response.ok || response.status === 401) {
+      return { valid: true };
+    }
+
+    return { valid: false, error: 'This URL does not appear to be a WooCommerce store' };
+  } catch (err) {
+    if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+      return { valid: false, error: 'Could not connect to store (timeout)' };
+    }
+    return { valid: false, error: 'Could not connect to store. Please check the URL.' };
+  }
+}
+
 export async function listShopsByUser(userId: string) {
   const shops = await prisma.shop.findMany({
     where: { userId },
@@ -43,6 +66,12 @@ export async function createShop(params: {
 
   if (existingShop) {
     throw new Error('This WooCommerce store is already connected to another account');
+  }
+
+  // Verify it's actually a WooCommerce store before creating record
+  const verification = await verifyWooCommerceStore(storeUrl);
+  if (!verification.valid) {
+    throw new Error(verification.error || 'Invalid WooCommerce store URL');
   }
 
   return prisma.shop.create({
