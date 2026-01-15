@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
+import { useEffect, useState, useCallback, Suspense, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { BulkUpdateOperation, CurrentFiltersForColumnValues, getItemGroupCount } from '@/lib/api';
 import { useAuth } from '@/store/auth';
@@ -89,9 +89,6 @@ function CatalogPageContent() {
   const [itemGroupCount, setItemGroupCount] = useState<number | null>(null);
   const [selectedProductItemGroupId, setSelectedProductItemGroupId] = useState<string | null>(null);
 
-  // Active tab for product filtering
-  const [activeTab, setActiveTab] = useState<ProductTabId>('all');
-
   // Column visibility
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
 
@@ -114,6 +111,52 @@ function CatalogPageContent() {
     clearAllFilters,
   } = useCatalogFilters(params?.id);
   const selection = useCatalogSelection();
+
+  // Helper function to derive active tab from column filters
+  // Tabs are now computed state - they reflect what filters are actually active
+  const deriveTabFromFilters = useCallback((columnFilters: typeof filters.columnFilters): ProductTabId => {
+    const filterKeys = Object.keys(columnFilters);
+
+    // No filters = "All Products" tab
+    if (filterKeys.length === 0) {
+      return 'all';
+    }
+
+    // Check for "Ready for Feed" pattern: isValid=valid AND enable_search=Enabled
+    if (
+      filterKeys.length === 2 &&
+      columnFilters.isValid?.values?.[0] === 'valid' &&
+      columnFilters.enable_search?.values?.[0] === 'Enabled'
+    ) {
+      return 'inFeed';
+    }
+
+    // Check for "Needs Attention" pattern: isValid=invalid (only)
+    if (
+      filterKeys.length === 1 &&
+      columnFilters.isValid?.values?.[0] === 'invalid'
+    ) {
+      return 'needsAttention';
+    }
+
+    // Check for "Disabled" pattern: enable_search=Disabled (only)
+    if (
+      filterKeys.length === 1 &&
+      columnFilters.enable_search?.values?.[0] === 'Disabled'
+    ) {
+      return 'disabled';
+    }
+
+    // Custom filters that don't match any tab preset - default to "All"
+    return 'all';
+  }, []);
+
+  // Active tab for product filtering (computed from column filters)
+  // This ensures the UI always reflects the actual filters being applied
+  const activeTab = useMemo<ProductTabId>(
+    () => deriveTabFromFilters(filters.columnFilters),
+    [filters.columnFilters, deriveTabFromFilters]
+  );
 
   // Capture filters at modal open time to prevent stale filter issues
   const [bulkEditFilters, setBulkEditFilters] = useState<{ search: string; columnFilters: typeof filters.columnFilters } | null>(null);
@@ -171,36 +214,6 @@ function CatalogPageContent() {
   useEffect(() => {
     setSearchInput(filters.search);
   }, [filters.search]);
-
-  // Sync activeTab with restored columnFilters on mount
-  useEffect(() => {
-    const cf = filters.columnFilters;
-
-    // Detect tab from columnFilter pattern
-    const isInFeedTab =
-      cf.isValid?.values?.[0] === 'valid' &&
-      cf.enable_search?.values?.[0] === 'Enabled' &&
-      Object.keys(cf).length === 2;
-
-    const isNeedsAttentionTab =
-      cf.isValid?.values?.[0] === 'invalid' &&
-      Object.keys(cf).length === 1;
-
-    const isDisabledTab =
-      cf.enable_search?.values?.[0] === 'Disabled' &&
-      Object.keys(cf).length === 1;
-
-    if (isInFeedTab) {
-      setActiveTab('inFeed');
-    } else if (isNeedsAttentionTab) {
-      setActiveTab('needsAttention');
-    } else if (isDisabledTab) {
-      setActiveTab('disabled');
-    } else if (Object.keys(cf).length === 0) {
-      setActiveTab('all');
-    }
-    // If none match, it's custom filters - keep 'all' as default
-  }, []); // Only run on mount
 
   // Debounce search input - update URL filter after 300ms of no typing
   useEffect(() => {
@@ -308,9 +321,9 @@ function CatalogPageContent() {
   };
 
   // Handle tab change - applies predefined column filters
+  // Note: activeTab is now computed from columnFilters, so we only need to set the filters
+  // The tab will automatically highlight based on the filters applied
   const handleTabChange = (tab: ProductTabId) => {
-    setActiveTab(tab);
-
     // Apply filters based on tab
     switch (tab) {
       case 'all':
