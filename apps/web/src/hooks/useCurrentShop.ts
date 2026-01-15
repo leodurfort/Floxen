@@ -25,7 +25,15 @@ export function useCurrentShop() {
     if (shops.length === 0) return null;
     if (shopIdFromUrl) {
       const shop = shops.find((s) => s.id === shopIdFromUrl);
-      if (shop) return shop;
+      if (shop) {
+        // DEBUG: Log shop data when it changes
+        console.log('[useCurrentShop] currentShop updated:', {
+          id: shop.id,
+          productsReprocessedAt: shop.productsReprocessedAt,
+          fieldMappingsUpdatedAt: shop.fieldMappingsUpdatedAt,
+        });
+        return shop;
+      }
     }
     return shops.find((s) => s.isConnected) ?? shops[0];
   }, [shops, shopIdFromUrl]);
@@ -60,6 +68,14 @@ export function useCurrentShop() {
     const prevReprocessedAt = prevReprocessedAtRef.current;
     const currentReprocessedAt = currentShop?.productsReprocessedAt ?? null;
 
+    // DEBUG: Log reprocessedAt changes
+    console.log('[useCurrentShop] productsReprocessedAt effect:', {
+      prevReprocessedAt,
+      currentReprocessedAt,
+      shopId: currentShop?.id,
+      willInvalidate: prevReprocessedAt !== null && currentReprocessedAt !== null && currentReprocessedAt !== prevReprocessedAt,
+    });
+
     // If productsReprocessedAt changed (not just initial load), invalidate products
     if (
       prevReprocessedAt !== null &&
@@ -67,6 +83,7 @@ export function useCurrentShop() {
       currentReprocessedAt !== prevReprocessedAt &&
       currentShop?.id
     ) {
+      console.log('[useCurrentShop] INVALIDATING products cache due to reprocessedAt change');
       queryClient.invalidateQueries({ queryKey: ['products', currentShop.id] });
     }
 

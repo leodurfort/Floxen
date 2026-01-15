@@ -70,14 +70,18 @@ export function useUpdateFieldMappingsMutation(shopId: string | undefined) {
       }
     },
     onSettled: () => {
+      console.log('[useUpdateFieldMappingsMutation] onSettled called, shopId:', shopId);
       if (shopId) {
         // Invalidate field mappings cache
+        console.log('[useUpdateFieldMappingsMutation] Invalidating fieldMappings cache');
         queryClient.invalidateQueries({ queryKey: queryKeys.fieldMappings.shop(shopId) });
 
         // Invalidate products cache (immediate refresh for user navigating to catalog)
+        console.log('[useUpdateFieldMappingsMutation] Invalidating products cache');
         queryClient.invalidateQueries({ queryKey: ['products', shopId], exact: false });
 
         // Invalidate shops cache to get fresh productsReprocessedAt for completion detection
+        console.log('[useUpdateFieldMappingsMutation] Invalidating shops cache');
         queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
       }
     },
