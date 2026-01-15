@@ -39,7 +39,7 @@ export function FeedActivationSuccessModal({
           <img
             src="/logos/woocommerce.png"
             alt="WooCommerce"
-            className="h-12 w-auto"
+            className="h-10 w-auto"
           />
 
           {/* Arrow */}
