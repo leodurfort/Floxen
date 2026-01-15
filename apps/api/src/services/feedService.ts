@@ -156,3 +156,10 @@ function logValidationSummary(shopId: string, stats: FeedValidationStats, itemsI
     }
   }
 }
+
+/**
+ * Convert array of items to JSONL format (one JSON object per line)
+ */
+export function toJsonl(items: Record<string, unknown>[]): string {
+  return items.map(item => JSON.stringify(item)).join('\n');
+}

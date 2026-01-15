@@ -122,6 +122,8 @@ export async function pushFeed(req: Request, res: Response) {
 
 export async function previewFeed(req: Request, res: Response) {
   const shopId = req.params.id;
+  const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+  const offset = parseInt(req.query.offset as string) || 0;
 
   try {
     const userId = getUserId(req);
@@ -134,40 +136,50 @@ export async function previewFeed(req: Request, res: Response) {
       return res.status(404).json({ error: 'Store not found' });
     }
 
-    const allProducts = await prisma.product.findMany({
-      where: { shopId },
+    // Fetch only valid, feed-enabled products with minimal fields
+    const products = await prisma.product.findMany({
+      where: {
+        shopId,
+        isValid: true,
+        feedEnableSearch: true,
+      },
+      select: {
+        id: true,
+        wooProductId: true,
+        wooTitle: true,
+        wooParentId: true,
+        openaiAutoFilled: true,
+        isValid: true,
+        feedEnableSearch: true,
+      },
+      skip: offset,
+      take: limit + 1, // Fetch one extra to determine hasMore
+      orderBy: { wooProductId: 'asc' },
     });
 
-    const totalProducts = allProducts.length;
-    const invalidCount = allProducts.filter(p => !p.isValid).length;
-    const disabledCount = allProducts.filter(p => !p.feedEnableSearch).length;
+    const hasMore = products.length > limit;
+    const productsToReturn = hasMore ? products.slice(0, limit) : products;
 
-    const feedPayload = generateFeedPayload(shop, allProducts, {
-      validateEntries: true,
+    // Generate feed WITHOUT validation for performance
+    const feedPayload = generateFeedPayload(shop, productsToReturn as any, {
+      validateEntries: false,
       skipInvalidEntries: true,
     });
 
     logger.info('feed:preview generated', {
       shopId,
       userId,
-      totalProducts,
-      includedInFeed: feedPayload.items.length,
-      invalidCount,
-      disabledCount,
+      offset,
+      limit,
+      returned: feedPayload.items.length,
+      hasMore,
     });
 
     return res.json({
-      preview: true,
-      generatedAt: feedPayload.generatedAt,
-      seller: feedPayload.seller,
       items: feedPayload.items,
-      stats: {
-        total: totalProducts,
-        included: feedPayload.items.length,
-        invalid: invalidCount,
-        disabled: disabledCount,
-        validationStats: feedPayload.validationStats,
-      },
+      hasMore,
+      offset,
+      limit,
     });
   } catch (err: any) {
     logger.error('feed:preview error', { shopId, error: err.message });

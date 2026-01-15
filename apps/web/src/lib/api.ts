@@ -344,32 +344,24 @@ export async function getProductStats(shopId: string) {
 }
 
 export interface FeedPreviewResponse {
-  preview: boolean;
-  generatedAt: string;
-  seller: {
-    id: string;
-    name: string | null;
-    url: string | null;
-    privacy_policy: string | null;
-    terms_of_service: string | null;
-  };
   items: Record<string, unknown>[];
-  stats: {
-    total: number;
-    included: number;
-    invalid: number;
-    disabled: number;
-    validationStats?: {
-      total: number;
-      valid: number;
-      invalid: number;
-      warnings: number;
-    };
-  };
+  hasMore: boolean;
+  offset: number;
+  limit: number;
 }
 
-export async function getFeedPreview(shopId: string) {
-  return requestWithAuth<FeedPreviewResponse>(`/api/v1/shops/${shopId}/sync/feed/preview`);
+export async function getFeedPreview(
+  shopId: string,
+  params?: { limit?: number; offset?: number }
+) {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set('limit', String(params.limit));
+  if (params?.offset) searchParams.set('offset', String(params.offset));
+
+  const query = searchParams.toString();
+  return requestWithAuth<FeedPreviewResponse>(
+    `/api/v1/shops/${shopId}/sync/feed/preview${query ? `?${query}` : ''}`
+  );
 }
 
 // Product Listing with Filters
