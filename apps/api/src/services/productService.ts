@@ -213,7 +213,11 @@ function buildWhereClause(
           // Boolean columns - only filter if exactly one value selected
           // (selecting both 'true' and 'false' means show all, so no filter needed)
           if (filter.values.length === 1) {
-            const boolValue = filter.values[0] === 'true';
+            // Map filter values to boolean:
+            // 'valid' / 'Enabled' / 'true' → true
+            // 'invalid' / 'Disabled' / 'false' → false
+            const value = filter.values[0].toLowerCase();
+            const boolValue = value === 'valid' || value === 'enabled' || value === 'true';
             andConditions.push({ [dbColumn]: boolValue });
           }
         }
@@ -289,13 +293,17 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
     // isValid column - only filter if exactly one value selected
     // (selecting both 'true' and 'false' means show all, so no filter needed)
     if (cf.isValid?.values?.length === 1) {
-      const boolValue = cf.isValid.values[0] === 'true';
+      // Map filter values: 'valid' / 'true' → true, 'invalid' / 'false' → false
+      const value = cf.isValid.values[0].toLowerCase();
+      const boolValue = value === 'valid' || value === 'true';
       whereConditions.push(`"is_valid" = ${boolValue}`);
     }
 
     // enable_search / feedEnableSearch column - only filter if exactly one value selected
     if (cf.enable_search?.values?.length === 1) {
-      const boolValue = cf.enable_search.values[0] === 'true';
+      // Map filter values: 'Enabled' / 'true' → true, 'Disabled' / 'false' → false
+      const value = cf.enable_search.values[0].toLowerCase();
+      const boolValue = value === 'enabled' || value === 'true';
       whereConditions.push(`"feed_enable_search" = ${boolValue}`);
     }
 
