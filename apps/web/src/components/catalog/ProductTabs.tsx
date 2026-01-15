@@ -8,19 +8,20 @@ interface ProductTabsProps {
   activeTab: ProductTabId;
   onTabChange: (tab: ProductTabId) => void;
   stats?: ProductStats;
+  isFeedActivated?: boolean;
 }
 
-const TABS: { id: ProductTabId; label: string; countKey: keyof ProductStats | 'all' }[] = [
-  { id: 'all', label: 'All Products', countKey: 'total' },
-  { id: 'inFeed', label: 'Ready for Feed', countKey: 'inFeed' },
-  { id: 'needsAttention', label: 'Needs Attention', countKey: 'needsAttention' },
-  { id: 'disabled', label: 'Disabled', countKey: 'disabled' },
-];
-
-export function ProductTabs({ activeTab, onTabChange, stats }: ProductTabsProps) {
+export function ProductTabs({ activeTab, onTabChange, stats, isFeedActivated }: ProductTabsProps) {
+  // Dynamic tabs - label changes based on feed activation state
+  const tabs: { id: ProductTabId; label: string; countKey: keyof ProductStats | 'all' }[] = [
+    { id: 'all', label: 'All Products', countKey: 'total' },
+    { id: 'inFeed', label: isFeedActivated ? 'In Feed' : 'Ready for Feed', countKey: 'inFeed' },
+    { id: 'needsAttention', label: 'Needs Attention', countKey: 'needsAttention' },
+    { id: 'disabled', label: 'Disabled', countKey: 'disabled' },
+  ];
   return (
     <div className="flex border-b border-gray-200 mb-4">
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const count = stats ? stats[tab.countKey as keyof ProductStats] : undefined;
         const isActive = activeTab === tab.id;
 

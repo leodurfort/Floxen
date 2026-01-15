@@ -19,6 +19,7 @@ export interface ListProductsOptions {
 // Columns stored directly in Product table - Prisma field names (camelCase)
 const DATABASE_COLUMNS: Record<string, string> = {
   'isValid': 'isValid',
+  'feedStatus': 'isValid', // feedStatus column maps to isValid for sorting
   'updatedAt': 'updatedAt',
   'feedEnableSearch': 'feedEnableSearch',
 };
@@ -26,6 +27,7 @@ const DATABASE_COLUMNS: Record<string, string> = {
 // Same columns but with actual PostgreSQL column names (snake_case) for raw SQL
 const DATABASE_COLUMNS_SQL: Record<string, string> = {
   'isValid': 'is_valid',
+  'feedStatus': 'is_valid', // feedStatus column maps to is_valid for sorting
   'updatedAt': 'updated_at',
   'feedEnableSearch': 'feed_enable_search',
 };

@@ -39,6 +39,24 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
     }
   }, [isOpen]);
 
+  const handleDownloadJson = () => {
+    if (!preview) return;
+    const jsonData = JSON.stringify(
+      { seller: preview.seller, items: preview.items },
+      null,
+      2
+    );
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `feed-${shopId}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -47,10 +65,10 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Feed Preview</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Your Feed</h2>
             {preview && (
               <p className="text-sm text-gray-500">
-                {preview.stats.included} of {preview.stats.total} products will be included
+                {preview.stats.included.toLocaleString()} products published
               </p>
             )}
           </div>
@@ -83,7 +101,7 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              JSON Preview
+              Raw JSON
             </button>
           </div>
         )}
@@ -92,7 +110,7 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
         <div className="flex-1 overflow-auto p-4">
           {loading && (
             <div className="flex items-center justify-center h-32">
-              <div className="text-gray-500">Generating preview...</div>
+              <div className="text-gray-500">Loading feed...</div>
             </div>
           )}
 
@@ -104,73 +122,42 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
 
           {preview && activeTab === 'products' && (
             <div>
-              {/* Empty state when no products */}
-              {preview.items.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No products ready for the feed.</p>
-                  <p className="text-sm mt-2">
-                    Make sure products are valid and have search enabled.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Products Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 px-3 font-medium text-gray-600">ID</th>
-                          <th className="text-left py-2 px-3 font-medium text-gray-600">Title</th>
-                          <th className="text-left py-2 px-3 font-medium text-gray-600">Price</th>
-                          <th className="text-left py-2 px-3 font-medium text-gray-600">Status</th>
+              {/* Products Table - shown even when empty */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 px-3 font-medium text-gray-600">ID</th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600">Title</th>
+                      <th className="text-left py-2 px-3 font-medium text-gray-600">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.items.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="py-8 text-center text-gray-500">
+                          0 products published
+                        </td>
+                      </tr>
+                    ) : (
+                      preview.items.slice(0, 20).map((item, index) => (
+                        <tr key={index} className="border-b border-gray-100">
+                          <td className="py-2 px-3 text-gray-600">{String(item.id || '-')}</td>
+                          <td className="py-2 px-3 text-gray-900 max-w-xs truncate">
+                            {String(item.title || '-')}
+                          </td>
+                          <td className="py-2 px-3 text-gray-600">{String(item.price || '-')}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {preview.items.slice(0, 20).map((item, index) => (
-                          <tr key={index} className="border-b border-gray-100">
-                            <td className="py-2 px-3 text-gray-600">{String(item.id || '-')}</td>
-                            <td className="py-2 px-3 text-gray-900 max-w-xs truncate">
-                              {String(item.title || '-')}
-                            </td>
-                            <td className="py-2 px-3 text-gray-600">{String(item.price || '-')}</td>
-                            <td className="py-2 px-3">
-                              <span className="text-green-600">Ready</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {preview.items.length > 20 && (
-                    <p className="mt-3 text-sm text-gray-500">
-                      ...and {preview.items.length - 20} more products
-                    </p>
-                  )}
-                </>
-              )}
-
-              {/* Excluded Products Summary - shown regardless of items count */}
-              {(preview.stats.invalid > 0 || preview.stats.disabled > 0) && (
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-700 mb-1">
-                    {preview.stats.total - preview.stats.included} products excluded:
-                  </p>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    {preview.stats.invalid > 0 && (
-                      <li>
-                        <span className="text-amber-600">{preview.stats.invalid}</span> have
-                        validation errors
-                      </li>
+                      ))
                     )}
-                    {preview.stats.disabled > 0 && (
-                      <li>
-                        <span className="text-gray-500">{preview.stats.disabled}</span> disabled by
-                        you
-                      </li>
-                    )}
-                  </ul>
-                </div>
+                  </tbody>
+                </table>
+              </div>
+
+              {preview.items.length > 20 && (
+                <p className="mt-3 text-sm text-gray-500">
+                  ...and {(preview.items.length - 20).toLocaleString()} more products
+                </p>
               )}
             </div>
           )}
@@ -179,14 +166,10 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
             <div>
               <div className="flex justify-end mb-2">
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      JSON.stringify({ seller: preview.seller, items: preview.items }, null, 2)
-                    );
-                  }}
-                  className="text-sm text-[#FA7315] hover:text-[#E5650F]"
+                  onClick={handleDownloadJson}
+                  className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium"
                 >
-                  Copy JSON
+                  Download JSON
                 </button>
               </div>
               <pre className="text-xs bg-gray-50 p-4 rounded-lg overflow-auto max-h-96">
@@ -197,7 +180,7 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
                 )}
                 {preview.items.length > 5 && (
                   <span className="text-gray-400">
-                    {'\n\n// ... and {' + (preview.items.length - 5) + '} more items'}
+                    {'\n\n// ... and ' + (preview.items.length - 5) + ' more items'}
                   </span>
                 )}
               </pre>

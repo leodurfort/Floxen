@@ -83,7 +83,7 @@ const DEFAULT_COLUMN_ORDER: string[] = [
   'title',           // OpenAI: Basic Product Data
   'enable_search',   // OpenAI: Flags
   'overrides',       // Custom: Override count
-  'isValid',         // Custom: Validation status
+  'feedStatus',      // Custom: Feed status (In Feed / Issues / Excluded)
   'updatedAt',       // Custom: Last modified
   'actions',
 ];
@@ -184,17 +184,16 @@ const CUSTOM_COLUMNS: ColumnDefinition[] = [
     },
   },
   {
-    id: 'isValid',
-    label: 'Valid',
+    id: 'feedStatus',
+    label: 'Feed Status',
     dataType: 'boolean',
     sortable: true,
-    filterable: true,
+    filterable: false,
     defaultVisible: true,
     category: 'Status',
     categoryOrder: CUSTOM_CATEGORY_ORDER,
-    supportedValues: ['true', 'false'],
     getValue: (product: ProductData) => product.isValid,
-    formatValue: (value) => (value ? 'Yes' : 'No'),
+    formatValue: (value) => (value ? 'Yes' : 'No'), // Default format, but renderCellValue handles display
   },
   {
     id: 'updatedAt',

@@ -22,6 +22,7 @@ import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
 import { ProductTabs, type ProductTabId } from '@/components/catalog/ProductTabs';
 import { FeedPreviewModal } from '@/components/catalog/FeedPreviewModal';
+import { FeedActivationSuccessModal } from '@/components/catalog/FeedActivationSuccessModal';
 import { Tooltip } from '@/components/ui/Tooltip';
 import {
   COLUMN_MAP,
@@ -79,6 +80,8 @@ function CatalogPageContent() {
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showEditColumnsModal, setShowEditColumnsModal] = useState(false);
   const [showFeedPreviewModal, setShowFeedPreviewModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [activatedProductCount, setActivatedProductCount] = useState(0);
   const [itemGroupCount, setItemGroupCount] = useState<number | null>(null);
   const [selectedProductItemGroupId, setSelectedProductItemGroupId] = useState<string | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
@@ -346,10 +349,9 @@ function CatalogPageContent() {
 
     activateFeedMutation.mutate(params.id, {
       onSuccess: (result) => {
-        setToast({
-          message: `Feed activated! ${result.validProductCount} products will be synced.`,
-          type: 'success',
-        });
+        // Show success modal instead of toast
+        setActivatedProductCount(result.validProductCount);
+        setShowSuccessModal(true);
       },
       onError: (err) => {
         const error = err as Error & { code?: string; details?: string | string[] };
@@ -559,31 +561,39 @@ function CatalogPageContent() {
         );
       }
 
-      case 'isValid': {
-        const validationCount = product.validationErrors ? Object.keys(product.validationErrors as object).length : 0;
-        if (product.isValid === false) {
-          return (
-            <div className="relative group">
-              <span className="text-amber-600 cursor-help">⚠️ {validationCount}</span>
-              <div className="absolute left-0 top-6 hidden group-hover:block z-20 w-80 p-3 bg-white border border-amber-200 rounded-lg shadow-xl text-xs">
-                <div className="font-semibold text-amber-700 mb-2">
-                  {validationCount} validation issue{validationCount !== 1 ? 's' : ''}
-                </div>
-                {product.validationErrors && (
-                  <ul className="space-y-1.5 max-h-48 overflow-y-auto">
-                    {Object.entries(product.validationErrors as object).map(([field, errors]) => (
-                      <li key={field} className="text-gray-700">
-                        <span className="text-gray-900 font-medium">{field}:</span>{' '}
-                        {Array.isArray(errors) ? errors.join(', ') : String(errors)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          );
+      case 'feedStatus': {
+        // Disabled by user takes priority
+        if (!product.feedEnableSearch) {
+          return <span className="text-gray-400">⊘ Excluded</span>;
         }
-        return <span className="text-green-600">✓</span>;
+        // Valid and enabled = In Feed
+        if (product.isValid) {
+          return <span className="text-green-600">✓ In Feed</span>;
+        }
+        // Invalid but enabled = show issues with tooltip
+        const validationCount = product.validationErrors
+          ? Object.keys(product.validationErrors as object).length
+          : 0;
+        return (
+          <div className="relative group">
+            <span className="text-amber-600 cursor-help">⚠️ {validationCount} issues</span>
+            <div className="absolute left-0 top-6 hidden group-hover:block z-20 w-80 p-3 bg-white border border-amber-200 rounded-lg shadow-xl text-xs">
+              <div className="font-semibold text-amber-700 mb-2">
+                {validationCount} validation issue{validationCount !== 1 ? 's' : ''}
+              </div>
+              {product.validationErrors && (
+                <ul className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {Object.entries(product.validationErrors as object).map(([field, errors]) => (
+                    <li key={field} className="text-gray-700">
+                      <span className="text-gray-900 font-medium">{field}:</span>{' '}
+                      {Array.isArray(errors) ? errors.join(', ') : String(errors)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        );
       }
 
       case 'updatedAt':
@@ -632,7 +642,7 @@ function CatalogPageContent() {
       link: 'min-w-[180px]',
       enable_search: 'w-28',
       overrides: 'w-24',
-      isValid: 'w-20',
+      feedStatus: 'w-24',
       updatedAt: 'w-32',
       gtin: 'w-28',
     };
@@ -689,7 +699,7 @@ function CatalogPageContent() {
                   onClick={() => setShowFeedPreviewModal(true)}
                   className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all text-sm"
                 >
-                  Preview Feed
+                  View Feed
                 </button>
               )}
             </div>
@@ -700,6 +710,7 @@ function CatalogPageContent() {
             activeTab={activeTab}
             onTabChange={handleTabChange}
             stats={stats}
+            isFeedActivated={currentShop?.openaiEnabled}
           />
 
           {/* Filters Bar */}
@@ -936,6 +947,13 @@ function CatalogPageContent() {
         isOpen={showFeedPreviewModal}
         onClose={() => setShowFeedPreviewModal(false)}
         shopId={params?.id || ''}
+      />
+
+      <FeedActivationSuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        onGoToDashboard={() => router.push('/dashboard')}
+        productCount={activatedProductCount}
       />
     </main>
   );
