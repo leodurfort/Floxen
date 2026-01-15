@@ -776,6 +776,20 @@ function CatalogPageContent() {
             >
               Edit Columns
             </button>
+            {/* Persistent Bulk Edit button - disabled state when no selection */}
+            {!hasSelection && (
+              <Tooltip content="Select products to bulk edit" side="bottom" delayDuration={200}>
+                <button
+                  disabled
+                  className="px-3 py-1.5 text-sm text-gray-400 border border-gray-200 rounded-lg cursor-not-allowed flex items-center gap-2 bg-gray-50"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Bulk Edit
+                </button>
+              </Tooltip>
+            )}
           </div>
 
           {error && <div className="text-sm text-red-700 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">{error}</div>}
