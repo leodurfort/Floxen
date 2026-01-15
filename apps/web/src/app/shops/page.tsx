@@ -44,18 +44,12 @@ export default function ShopsPage() {
   const [modalShop, setModalShop] = useState<Shop | null>(null);
   const [expandedAdvanced, setExpandedAdvanced] = useState<Record<string, boolean>>({});
   const prevSyncStatusesRef = useRef<Record<string, string>>({});
+  const oauthHandledRef = useRef(false);
 
   // URL query params
   const shopIdFromUrl = searchParams.get('shop');
-  const isOAuthRedirect = searchParams.get('connected') === 'true';
+  const isOAuthReturn = searchParams.get('oauth') === 'complete';
   const openProfileId = searchParams.get('openProfile');
-
-  useEffect(() => {
-    if (isOAuthRedirect && shopIdFromUrl) {
-      router.replace('/shops', { scroll: false });
-      setToast({ message: 'Store connected successfully! Syncing products...', type: 'success' });
-    }
-  }, [isOAuthRedirect, shopIdFromUrl, router]);
 
   useEffect(() => {
     if (openProfileId && shops.length > 0 && !modalShop) {
@@ -106,6 +100,25 @@ export default function ShopsPage() {
   const toggleSyncMutation = useToggleSyncMutation();
   const triggerSyncMutation = useTriggerSyncMutation();
   const updateShopMutation = useUpdateShopMutation();
+
+  // Handle OAuth return - check if connection succeeded or was denied
+  useEffect(() => {
+    if (isOAuthReturn && shopIdFromUrl && shops.length > 0 && !oauthHandledRef.current) {
+      oauthHandledRef.current = true;
+      router.replace('/shops', { scroll: false });
+
+      const shop = shops.find((s) => s.id === shopIdFromUrl);
+      if (shop?.isConnected) {
+        setToast({ message: 'Store connected successfully! Syncing products...', type: 'success' });
+      } else {
+        // OAuth was denied or failed - clean up orphaned shop
+        setToast({ message: 'Store connection was cancelled or denied.', type: 'error' });
+        if (shop) {
+          deleteShopMutation.mutate(shop.id);
+        }
+      }
+    }
+  }, [isOAuthReturn, shopIdFromUrl, shops, router, deleteShopMutation]);
 
   // Local state
   const [showConnectModal, setShowConnectModal] = useState(false);

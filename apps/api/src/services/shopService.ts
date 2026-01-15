@@ -173,7 +173,7 @@ export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string
   if (!env.webBaseUrl) {
     throw new Error('WEB_BASE_URL environment variable is required for OAuth');
   }
-  const returnUrl = `${env.webBaseUrl}/shops?shop=${shopId}&connected=true`;
+  const returnUrl = `${env.webBaseUrl}/shops?shop=${shopId}&oauth=complete`;
 
   const url = new URL('/wc-auth/v1/authorize', storeUrl);
   url.searchParams.set('app_name', 'ProductSynch');
