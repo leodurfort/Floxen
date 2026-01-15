@@ -172,6 +172,36 @@ function CatalogPageContent() {
     setSearchInput(filters.search);
   }, [filters.search]);
 
+  // Sync activeTab with restored columnFilters on mount
+  useEffect(() => {
+    const cf = filters.columnFilters;
+
+    // Detect tab from columnFilter pattern
+    const isInFeedTab =
+      cf.isValid?.values?.[0] === 'valid' &&
+      cf.enable_search?.values?.[0] === 'Enabled' &&
+      Object.keys(cf).length === 2;
+
+    const isNeedsAttentionTab =
+      cf.isValid?.values?.[0] === 'invalid' &&
+      Object.keys(cf).length === 1;
+
+    const isDisabledTab =
+      cf.enable_search?.values?.[0] === 'Disabled' &&
+      Object.keys(cf).length === 1;
+
+    if (isInFeedTab) {
+      setActiveTab('inFeed');
+    } else if (isNeedsAttentionTab) {
+      setActiveTab('needsAttention');
+    } else if (isDisabledTab) {
+      setActiveTab('disabled');
+    } else if (Object.keys(cf).length === 0) {
+      setActiveTab('all');
+    }
+    // If none match, it's custom filters - keep 'all' as default
+  }, []); // Only run on mount
+
   // Debounce search input - update URL filter after 300ms of no typing
   useEffect(() => {
     if (searchDebounceRef.current) {
