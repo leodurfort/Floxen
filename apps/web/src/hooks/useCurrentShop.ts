@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useShopsQuery, useShopsSyncPolling } from './useShopsQuery';
 import type { Shop } from '@productsynch/shared';
 
@@ -32,6 +33,25 @@ export function useCurrentShop() {
   const isFirstSync = (currentShop?.syncStatus === 'SYNCING' || currentShop?.syncStatus === 'PENDING')
     && currentShop?.lastSyncAt === null;
   useShopsSyncPolling(isFirstSync);
+
+  // Invalidate products cache when sync completes
+  const queryClient = useQueryClient();
+  const prevSyncStatusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const prevStatus = prevSyncStatusRef.current;
+    const currentStatus = currentShop?.syncStatus;
+
+    if (
+      (prevStatus === 'SYNCING' || prevStatus === 'PENDING') &&
+      currentStatus === 'COMPLETED' &&
+      currentShop?.id
+    ) {
+      queryClient.invalidateQueries({ queryKey: ['products', currentShop.id] });
+    }
+
+    prevSyncStatusRef.current = currentStatus ?? null;
+  }, [currentShop?.syncStatus, currentShop?.id, queryClient]);
 
   return {
     currentShop,
