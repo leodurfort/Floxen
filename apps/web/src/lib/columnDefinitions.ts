@@ -283,8 +283,14 @@ export function getStoredColumns(shopId: string): string[] {
   if (stored) {
     try {
       const columns = JSON.parse(stored) as string[];
-      const validColumns = columns.filter((id) => COLUMN_MAP.has(id));
+      // Migrate old column IDs: isValid -> feedStatus
+      const migratedColumns = columns.map((id) => (id === 'isValid' ? 'feedStatus' : id));
+      const validColumns = migratedColumns.filter((id) => COLUMN_MAP.has(id));
       if (validColumns.length > 0) {
+        // Save migrated columns back to localStorage
+        if (columns.includes('isValid')) {
+          saveStoredColumns(shopId, validColumns);
+        }
         return validColumns;
       }
     } catch {
