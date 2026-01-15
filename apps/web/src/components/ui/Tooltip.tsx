@@ -20,7 +20,6 @@ export function Tooltip({
   delayDuration = 0,
   maxWidth = 300,
 }: TooltipProps) {
-  // Don't render tooltip if no content
   if (!content) {
     return <>{children}</>;
   }
@@ -48,5 +47,22 @@ export function Tooltip({
   );
 }
 
-// Export provider for wrapping the app if needed
 export const TooltipProvider = TooltipPrimitive.Provider;
+
+// Shared StatusBadge component used in field mapping tables
+const STATUS_BADGE_STYLES = {
+  Required: 'bg-red-100 text-red-700 border-red-300',
+  Recommended: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  Optional: 'bg-blue-100 text-blue-700 border-blue-300',
+  Conditional: 'bg-purple-100 text-purple-700 border-purple-300',
+} as const;
+
+type RequirementStatus = keyof typeof STATUS_BADGE_STYLES;
+
+export function StatusBadge({ status }: { status: RequirementStatus }) {
+  return (
+    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded border ${STATUS_BADGE_STYLES[status]}`}>
+      {status}
+    </span>
+  );
+}

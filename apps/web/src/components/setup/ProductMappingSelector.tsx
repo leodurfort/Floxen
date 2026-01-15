@@ -1,25 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { OpenAIFieldSpec, validateStaticValue } from '@productsynch/shared';
 import { WooCommerceField, searchWooFields, getWooField } from '@/lib/wooCommerceFields';
+import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 
-// Helper to generate format hint from spec
 function getFormatHint(spec: OpenAIFieldSpec): string {
   const hints: string[] = [];
-
-  if (spec.supportedValues) {
-    hints.push(`Values: ${spec.supportedValues}`);
-  }
-
-  if (spec.validationRules && spec.validationRules.length > 0) {
-    hints.push(...spec.validationRules);
-  }
-
-  if (hints.length === 0 && spec.dataType) {
-    hints.push(`Type: ${spec.dataType}`);
-  }
-
+  if (spec.supportedValues) hints.push(`Values: ${spec.supportedValues}`);
+  if (spec.validationRules?.length) hints.push(...spec.validationRules);
+  if (hints.length === 0 && spec.dataType) hints.push(`Type: ${spec.dataType}`);
   return hints.join(' · ');
 }
 
@@ -63,36 +53,26 @@ export function ProductMappingSelector({
   allowStaticOverride,
   isLockedField,
 }: ProductMappingSelectorProps) {
-  // Dropdown state
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Static value input state
   const [isStaticExpanded, setIsStaticExpanded] = useState(false);
   const [draftStaticValue, setDraftStaticValue] = useState(staticValue || '');
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Sync draft when staticValue prop changes
   useEffect(() => {
     if (staticValue !== null) {
       setDraftStaticValue(staticValue);
     }
   }, [staticValue]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearchQuery('');
-        setIsStaticExpanded(false);
-        setValidationError(null);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside(dropdownRef, useCallback(() => {
+    setIsOpen(false);
+    setSearchQuery('');
+    setIsStaticExpanded(false);
+    setValidationError(null);
+  }, []), isOpen);
 
   // Filter fields based on search
   const filteredFields = useMemo(() => {

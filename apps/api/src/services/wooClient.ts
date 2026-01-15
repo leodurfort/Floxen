@@ -27,20 +27,31 @@ export function createWooClient(config: WooConfig) {
   });
 }
 
-export async function fetchAllProducts(api: WooCommerceRestApi) {
-  logger.info('woo:fetch all products start');
+async function fetchAllPaginated(
+  api: WooCommerceRestApi,
+  endpoint: string,
+  params: Record<string, any>,
+  logLabel: string
+): Promise<any[]> {
+  logger.info(`woo:fetch ${logLabel} start`);
   const all: any[] = [];
   let page = 1;
   const perPage = 100;
+
   while (true) {
-    const response = await api.get('products', { page, per_page: perPage, status: 'publish' });
+    const response = await api.get(endpoint, { ...params, page, per_page: perPage });
     all.push(...response.data);
     const totalPages = parseInt(response.headers['x-wp-totalpages'] || '1', 10);
     if (page >= totalPages) break;
-    page += 1;
+    page++;
   }
-  logger.info('woo:fetch all products complete', { count: all.length });
+
+  logger.info(`woo:fetch ${logLabel} complete`, { count: all.length });
   return all;
+}
+
+export async function fetchAllProducts(api: WooCommerceRestApi) {
+  return fetchAllPaginated(api, 'products', { status: 'publish' }, 'products');
 }
 
 export async function fetchStoreCurrency(api: WooCommerceRestApi) {
@@ -110,24 +121,8 @@ export async function fetchStoreSettings(api: WooCommerceRestApi, fallbackStoreU
 }
 
 export async function fetchProductVariations(api: WooCommerceRestApi, parentId: number) {
-  logger.info('woo:fetch variations start', { parentId });
-  const all: any[] = [];
-  let page = 1;
-  const perPage = 100;
-
   try {
-    while (true) {
-      const response = await api.get(`products/${parentId}/variations`, {
-        page,
-        per_page: perPage
-      });
-      all.push(...response.data);
-      const totalPages = parseInt(response.headers['x-wp-totalpages'] || '1', 10);
-      if (page >= totalPages) break;
-      page += 1;
-    }
-    logger.info('woo:fetch variations complete', { parentId, count: all.length });
-    return all;
+    return await fetchAllPaginated(api, `products/${parentId}/variations`, {}, `variations(${parentId})`);
   } catch (err) {
     logger.error('woo:fetch variations failed', {
       parentId,
@@ -282,38 +277,13 @@ export async function fetchVariationsParallel(
   return results;
 }
 
-/**
- * Fetch all product categories with parent relationships
- * Returns a map of category ID -> full category data including parent field
- */
 export async function fetchAllCategories(api: WooCommerceRestApi): Promise<Map<number, any>> {
-  logger.info('woo:fetch all categories start');
-  const all: any[] = [];
-  let page = 1;
-  const perPage = 100;
-
   try {
-    while (true) {
-      const response = await api.get('products/categories', {
-        page,
-        per_page: perPage,
-        hide_empty: false,
-      });
-      all.push(...response.data);
-      const totalPages = parseInt(response.headers['x-wp-totalpages'] || '1', 10);
-      if (page >= totalPages) break;
-      page += 1;
+    const all = await fetchAllPaginated(api, 'products/categories', { hide_empty: false }, 'categories');
+    const categoryMap = new Map<number, any>();
+    for (const cat of all) {
+      if (cat.id) categoryMap.set(cat.id, cat);
     }
-    logger.info('woo:fetch all categories complete', { count: all.length });
-
-    // Create a map for quick lookups
-    const categoryMap = new Map();
-    all.forEach(cat => {
-      if (cat.id) {
-        categoryMap.set(cat.id, cat);
-      }
-    });
-
     return categoryMap;
   } catch (err) {
     logger.error('woo:fetch all categories failed', {

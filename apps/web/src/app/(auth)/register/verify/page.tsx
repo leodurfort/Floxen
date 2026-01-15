@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRegistration } from '@/store/registration';
 import { CodeInput } from '@/components/auth/CodeInput';
@@ -15,14 +15,12 @@ export default function RegisterVerifyPage() {
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Redirect if no email in store
   useEffect(() => {
     if (!email) {
       router.push('/register');
     }
   }, [email, router]);
 
-  // Countdown timer for resend
   useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
@@ -30,31 +28,30 @@ export default function RegisterVerifyPage() {
     }
   }, [resendCooldown]);
 
-  // Auto-submit when code is complete
-  useEffect(() => {
-    if (code.length === 6) {
-      handleVerify();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code]);
-
-  async function handleVerify() {
-    if (code.length !== 6) return;
+  const handleVerify = useCallback(async (verifyCode: string) => {
+    if (verifyCode.length !== 6) return;
     setError('');
     setIsLoading(true);
 
     try {
-      await api.registerVerify({ email, code });
+      await api.registerVerify({ email, code: verifyCode });
       setVerified(true);
       setStep('password');
       router.push('/register/password');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid verification code');
-      setCode(''); // Clear code on error
+      setCode('');
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [email, setVerified, setStep, router]);
+
+  const handleCodeChange = useCallback((newCode: string) => {
+    setCode(newCode);
+    if (newCode.length === 6) {
+      handleVerify(newCode);
+    }
+  }, [handleVerify]);
 
   async function handleResend() {
     if (resendCooldown > 0) return;
@@ -90,7 +87,7 @@ export default function RegisterVerifyPage() {
         <div className="space-y-4">
           <CodeInput
             value={code}
-            onChange={setCode}
+            onChange={handleCodeChange}
             disabled={isLoading}
           />
 
@@ -101,7 +98,7 @@ export default function RegisterVerifyPage() {
           )}
 
           <button
-            onClick={handleVerify}
+            onClick={() => handleVerify(code)}
             className="btn btn--primary w-full py-3"
             disabled={isLoading || code.length !== 6}
           >

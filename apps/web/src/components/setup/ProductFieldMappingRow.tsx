@@ -13,11 +13,10 @@ import {
   isProductEditable,
 } from '@productsynch/shared';
 import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } from '@/lib/wooCommerceFields';
-import { Tooltip } from '@/components/ui/Tooltip';
+import { Tooltip, StatusBadge } from '@/components/ui/Tooltip';
 import { DescriptionPopover } from '@/components/ui/DescriptionPopover';
 import { ProductMappingSelector } from './ProductMappingSelector';
 
-// Validate resolved value against OpenAI spec
 function validateResolvedValue(
   attribute: string,
   value: any,
@@ -31,22 +30,6 @@ function validateResolvedValue(
   }
   const stringValue = typeof value === 'string' ? value : String(value);
   return validateStaticValue(attribute, stringValue);
-}
-
-// Status badge component
-function StatusBadge({ status }: { status: 'Required' | 'Recommended' | 'Optional' | 'Conditional' }) {
-  const styles = {
-    Required: 'bg-red-100 text-red-700 border-red-300',
-    Recommended: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-    Optional: 'bg-blue-100 text-blue-700 border-blue-300',
-    Conditional: 'bg-purple-100 text-purple-700 border-purple-300',
-  };
-
-  return (
-    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded border ${styles[status]}`}>
-      {status}
-    </span>
-  );
 }
 
 interface Props {
@@ -80,7 +63,6 @@ export function ProductFieldMappingRow({
   onEnableSearchChange,
   shopDefaultEnableSearch,
 }: Props) {
-  // Field characteristics
   const isEnableSearchField = spec.attribute === 'enable_search';
   const isDimensionOrWeightField = ['dimensions', 'length', 'width', 'height', 'weight'].includes(spec.attribute);
   const isLockedField = LOCKED_FIELD_SET.has(spec.attribute);
@@ -89,12 +71,10 @@ export function ProductFieldMappingRow({
   const lockedMappingValue = LOCKED_FIELD_MAPPINGS[spec.attribute];
   const hasOverride = productOverride !== null;
 
-  // Derived state from productOverride
   const isStaticMode = productOverride?.type === 'static';
   const isNoMappingMode = productOverride?.type === 'mapping' && productOverride.value === null;
   const staticValue = isStaticMode ? (productOverride.value || '') : '';
 
-  // Get current WooCommerce field value
   const getCurrentFieldValue = (): string | null => {
     if (productOverride?.type === 'mapping' && productOverride.value !== null) {
       return productOverride.value;
@@ -105,7 +85,6 @@ export function ProductFieldMappingRow({
     return shopMapping || spec.wooCommerceMapping?.field || null;
   };
 
-  // Compute preview
   const getEffectiveMapping = (): string | null => {
     if (productOverride?.type === 'static') return null;
     if (productOverride?.type === 'mapping') return productOverride.value;
@@ -122,7 +101,6 @@ export function ProductFieldMappingRow({
     : (apiPreviewValue ?? computedPreview);
   const formattedValue = formatFieldValue(previewValue);
 
-  // Validate resolved value
   const resolvedValueValidation = useMemo(() => {
     if (isStaticMode) return { isValid: true };
     if (isEnableSearchField || spec.isFeatureDisabled) return { isValid: true };
@@ -134,7 +112,6 @@ export function ProductFieldMappingRow({
     return validateResolvedValue(spec.attribute, previewValue, spec.requirement);
   }, [spec.attribute, spec.requirement, spec.isFeatureDisabled, previewValue, isStaticMode, isEnableSearchField, serverValidationErrors]);
 
-  // Preview display
   let previewDisplay = formattedValue || '';
   let previewStyle = 'text-gray-700';
 
@@ -152,7 +129,6 @@ export function ProductFieldMappingRow({
     previewStyle = 'text-gray-400';
   }
 
-  // Handler callbacks for ProductMappingSelector
   const handleFieldSelect = (field: string) => {
     const shopDefault = shopMapping || spec.wooCommerceMapping?.field || null;
     if (field === shopDefault) {
@@ -174,7 +150,6 @@ export function ProductFieldMappingRow({
     onOverrideChange(spec.attribute, null);
   };
 
-  // Read-only display text and tooltip
   const getReadOnlyDisplayText = () => {
     if (spec.isFeatureDisabled) return 'Feature coming soon';
     if (spec.isAutoPopulated) return 'Auto-populated';
@@ -220,13 +195,10 @@ export function ProductFieldMappingRow({
     <tr className={`border-b border-gray-200 align-top transition-colors ${
       hasOverride ? 'bg-[#FA7315]/5 hover:bg-[#FA7315]/10' : 'hover:bg-gray-50'
     }`}>
-      {/* Column 1: OpenAI Field */}
       <td className="py-4 px-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-gray-900 font-medium">{spec.attribute}</span>
-
-            {/* Dimension/Weight unit info */}
             {isDimensionOrWeightField && (
               <Tooltip
                 content={
@@ -240,8 +212,6 @@ export function ProductFieldMappingRow({
                 <span className="text-[#FA7315] cursor-help text-sm font-medium">i</span>
               </Tooltip>
             )}
-
-            {/* Conditional field info */}
             {spec.requirement === 'Conditional' && spec.dependencies && (
               <Tooltip
                 content={
@@ -256,8 +226,6 @@ export function ProductFieldMappingRow({
               </Tooltip>
             )}
           </div>
-
-          {/* Description with show more */}
           <DescriptionPopover
             description={spec.description}
             example={spec.example || null}
@@ -266,7 +234,6 @@ export function ProductFieldMappingRow({
         </div>
       </td>
 
-      {/* Column 2: Status */}
       <td className="py-4 px-4">
         <div className="flex flex-col gap-1">
           <StatusBadge status={spec.requirement} />
@@ -278,10 +245,8 @@ export function ProductFieldMappingRow({
         </div>
       </td>
 
-      {/* Column 3: Mapping Source */}
       <td className="py-4 px-4">
         {isEnableSearchField ? (
-          // enable_search uses feedEnableSearch column directly
           <div className="flex flex-col gap-2">
             <select
               value={feedEnableSearch ? 'true' : 'false'}
@@ -301,7 +266,6 @@ export function ProductFieldMappingRow({
             )}
           </div>
         ) : isReadOnly ? (
-          // Read-only field display
           <Tooltip content={getReadOnlyTooltipContent()} side="top">
             <div className="w-full px-4 py-2.5 bg-gray-50 rounded-lg border border-gray-200 flex items-center gap-2 cursor-help">
               <span className="text-gray-900 text-sm font-medium truncate">
@@ -311,7 +275,6 @@ export function ProductFieldMappingRow({
             </div>
           </Tooltip>
         ) : (
-          // Editable field - use ProductMappingSelector
           <ProductMappingSelector
             value={getCurrentFieldValue()}
             staticValue={staticValue}
@@ -332,7 +295,6 @@ export function ProductFieldMappingRow({
         )}
       </td>
 
-      {/* Column 4: Preview Value */}
       <td className="py-4 px-4 w-[265px] max-w-[265px]">
         <div className="flex flex-col gap-1">
           <Tooltip

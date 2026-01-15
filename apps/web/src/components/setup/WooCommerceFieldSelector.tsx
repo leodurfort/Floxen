@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { WooCommerceField, searchWooFields, getWooField } from '@/lib/wooCommerceFields';
+import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 
 interface Props {
-  value: string | null;           // Current selected field value
+  value: string | null;
   onChange: (value: string | null) => void;
-  openaiAttribute: string;        // For debugging/logging
-  requirement?: 'Required' | 'Recommended' | 'Optional' | 'Conditional';  // Field requirement level
-  fields: WooCommerceField[];     // WooCommerce fields passed from parent
-  loading: boolean;               // Loading state passed from parent
+  openaiAttribute: string;
+  requirement?: 'Required' | 'Recommended' | 'Optional' | 'Conditional';
+  fields: WooCommerceField[];
+  loading: boolean;
 }
 
 export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, requirement, fields, loading }: Props) {
@@ -22,17 +23,10 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
     .sort((a, b) => a.label.localeCompare(b.label));
   const selectedField = value ? getWooField(fields, value) : null;
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearchQuery('');
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside(dropdownRef, useCallback(() => {
+    setIsOpen(false);
+    setSearchQuery('');
+  }, []), isOpen);
 
   function handleSelect(field: WooCommerceField) {
     onChange(field.value);
@@ -46,7 +40,6 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
     setSearchQuery('');
   }
 
-  // Determine button text and styling
   let buttonText: string;
   let buttonClass: string;
   let borderClass: string;
@@ -59,35 +52,18 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
     buttonText = selectedField.label;
     buttonClass = 'text-gray-900';
     borderClass = 'border-gray-300';
-  } else if (value) {
-    // Field was set but no longer exists - treat as unmapped
-    // This can happen if a field was deleted or the field list changed
-    if (requirement === 'Required') {
-      buttonText = '⚠️ Not mapped';
-      buttonClass = 'text-amber-600';
-      borderClass = 'border-amber-300';
-    } else {
-      buttonText = 'Select WooCommerce field';
-      buttonClass = 'text-gray-500';
-      borderClass = 'border-gray-200';
-    }
+  } else if (requirement === 'Required') {
+    buttonText = '⚠️ Not mapped';
+    buttonClass = 'text-amber-600';
+    borderClass = 'border-amber-300';
   } else {
-    // No mapping set - show alert only for required fields
-    if (requirement === 'Required') {
-      buttonText = '⚠️ Not mapped';
-      buttonClass = 'text-amber-600';
-      borderClass = 'border-amber-300';
-    } else {
-      // Non-required fields show neutral placeholder
-      buttonText = 'Select WooCommerce field';
-      buttonClass = 'text-gray-500';
-      borderClass = 'border-gray-200';
-    }
+    buttonText = 'Select WooCommerce field';
+    buttonClass = 'text-gray-500';
+    borderClass = 'border-gray-200';
   }
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      {/* Trigger Button */}
       <button
         onClick={() => !loading && setIsOpen(!isOpen)}
         disabled={loading}
@@ -103,10 +79,8 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
         </svg>
       </button>
 
-      {/* Dropdown */}
       {isOpen && !loading && (
         <div className="absolute z-50 top-full left-0 w-full mt-2 bg-white rounded-lg border border-gray-200 shadow-xl max-h-[320px] overflow-hidden flex flex-col">
-          {/* Search Bar */}
           <div className="p-3 border-b border-gray-100">
             <input
               type="text"
@@ -118,9 +92,7 @@ export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, req
             />
           </div>
 
-          {/* Field List */}
           <div className="overflow-y-auto">
-            {/* Clear mapping option (only show when not searching and a field is currently selected) */}
             {!searchQuery && value && (
               <button
                 onClick={handleClear}

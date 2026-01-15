@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 
 interface FilterOption {
   value: string;
@@ -25,16 +26,7 @@ export function FilterDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside(dropdownRef, useCallback(() => setIsOpen(false), []), isOpen);
 
   const handleToggle = (value: string) => {
     if (multiple) {
@@ -122,7 +114,6 @@ export function FilterDropdown({
   );
 }
 
-// Boolean filter dropdown (All / Yes / No)
 interface BooleanFilterProps {
   label: string;
   value: boolean | undefined;
@@ -133,15 +124,7 @@ export function BooleanFilter({ label, value, onChange }: BooleanFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside(dropdownRef, useCallback(() => setIsOpen(false), []), isOpen);
 
   const hasSelection = value !== undefined;
 
@@ -195,7 +178,6 @@ export function BooleanFilter({ label, value, onChange }: BooleanFilterProps) {
   );
 }
 
-// Text search filter
 interface SearchFilterProps {
   value: string;
   onChange: (value: string) => void;

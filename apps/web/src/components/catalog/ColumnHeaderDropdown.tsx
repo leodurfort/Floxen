@@ -2,11 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useColumnValuesQuery } from '@/hooks/useProductsQuery';
+import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 import type { CurrentFiltersForColumnValues } from '@/lib/api';
-
-// ═══════════════════════════════════════════════════════════════════════════
-// TYPES
-// ═══════════════════════════════════════════════════════════════════════════
 
 export interface ColumnValue {
   value: string;
@@ -19,30 +16,17 @@ export interface ColumnHeaderDropdownProps {
   label: string;
   sortable?: boolean;
   filterable?: boolean;
-
-  // Current state
   currentSort: { column: string; order: 'asc' | 'desc' } | null;
   currentValueFilter: string[];
-
-  // React Query mode: provide shopId and currentFilters to fetch values automatically
-  // This fixes the cache bug - values are properly keyed by shopId + columnId + filters
   shopId?: string;
   currentFilters?: CurrentFiltersForColumnValues;
-
-  // Legacy mode: provide uniqueValues directly (for backwards compatibility)
   uniqueValues?: ColumnValue[];
   loadingValues?: boolean;
   onLoadValues?: () => void;
-
-  // Callbacks
   onSort: (order: 'asc' | 'desc' | null) => void;
   onValueFilter: (values: string[]) => void;
   onClearFilter: () => void;
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════
 
 export function ColumnHeaderDropdown({
   columnId,
@@ -61,12 +45,11 @@ export function ColumnHeaderDropdown({
   onClearFilter,
 }: ColumnHeaderDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchInput, setSearchInput] = useState(''); // Local search for filtering the list (not a filter itself)
-  const [pendingValues, setPendingValues] = useState<string[]>([]); // Pending checkbox selections
+  const [searchInput, setSearchInput] = useState('');
+  const [pendingValues, setPendingValues] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Use React Query when shopId is provided (fixes the cache bug!)
   const useReactQuery = !!shopId;
   const { data: queryValues, isLoading: queryLoading } = useColumnValuesQuery(
     shopId,
@@ -75,57 +58,32 @@ export function ColumnHeaderDropdown({
     { enabled: useReactQuery && isOpen && filterable }
   );
 
-  // Determine which values and loading state to use
   const uniqueValues: ColumnValue[] = useReactQuery ? (queryValues ?? []) : (legacyUniqueValues ?? []);
   const loadingValues = useReactQuery ? queryLoading : legacyLoadingValues;
 
-  // Check if this column is sorted
   const isSorted = currentSort?.column === columnId;
   const sortOrder = isSorted ? currentSort.order : null;
-
-  // Check if this column has active filters
   const hasActiveFilter = currentValueFilter.length > 0;
 
-  // Check if pending values differ from current (user has unapplied changes)
   const hasPendingChanges = isOpen && (
     pendingValues.length !== currentValueFilter.length ||
     !pendingValues.every(v => currentValueFilter.includes(v))
   );
 
-  // Initialize pending values when dropdown opens
   useEffect(() => {
     if (isOpen) {
       setPendingValues([...currentValueFilter]);
-      setSearchInput(''); // Reset search when opening
+      setSearchInput('');
     }
   }, [isOpen, currentValueFilter]);
 
-  // Load values when dropdown opens (legacy mode only)
   useEffect(() => {
     if (!useReactQuery && isOpen && filterable && onLoadValues && uniqueValues.length === 0 && !loadingValues) {
       onLoadValues();
     }
   }, [useReactQuery, isOpen, filterable, onLoadValues, uniqueValues.length, loadingValues]);
 
-  // Close on click outside (discards pending changes)
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-        // Pending changes are discarded automatically since we reset on next open
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
+  useClickOutside([dropdownRef, buttonRef], useCallback(() => setIsOpen(false), []), isOpen);
 
   // Toggle value in pending selection (does NOT apply immediately)
   const toggleValue = useCallback(

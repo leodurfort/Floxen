@@ -18,22 +18,19 @@ import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQ
 export default function ProductMappingPage() {
   const params = useParams<{ id: string; pid: string }>();
   const router = useRouter();
-  // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
 
-  // Local UI state
+  // UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // React Query hooks
   const {
     data: overridesData,
     isLoading: loading,
     error: loadError,
   } = useProductOverridesQuery(params?.id, params?.pid);
 
-  // Shop-level field mappings (single source of truth, auto-invalidates when shop mappings change)
   const {
     data: shopMappingsData,
     isLoading: shopMappingsLoading,
@@ -52,15 +49,10 @@ export default function ProductMappingPage() {
 
   const { data: wooFields = [], isLoading: wooFieldsLoading } = useWooFieldsQuery(params?.id);
 
-  // Mutation for updating product overrides
   const updateOverridesMutation = useUpdateProductOverridesMutation(params?.id, params?.pid);
-
-  // Mutation for updating feedEnableSearch (enable_search uses column, not overrides)
   const updateEnableSearchMutation = useUpdateFeedEnableSearchMutation(params?.id, params?.pid);
-
   const saving = updateOverridesMutation.isPending || updateEnableSearchMutation.isPending;
 
-  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (saveErrorTimeoutRef.current) {
@@ -69,19 +61,16 @@ export default function ProductMappingPage() {
     };
   }, []);
 
-  // Redirect if not logged in
   useEffect(() => {
     if (hydrated && !user) {
       router.push('/login');
     }
   }, [hydrated, user, router]);
 
-  // Handle override change using mutation
   const handleOverrideChange = useCallback(
     (attribute: string, override: ProductFieldOverride | null) => {
       setSaveError(null);
 
-      // Build new overrides
       const newOverrides = { ...productOverrides };
       if (override) {
         newOverrides[attribute] = override;
@@ -89,12 +78,10 @@ export default function ProductMappingPage() {
         delete newOverrides[attribute];
       }
 
-      // Use mutation (includes optimistic update and rollback)
       updateOverridesMutation.mutate(newOverrides, {
         onError: (err) => {
           const errorMessage = err instanceof Error ? err.message : 'Failed to save override';
           setSaveError(errorMessage);
-          // Auto-clear error after 5 seconds
           if (saveErrorTimeoutRef.current) {
             clearTimeout(saveErrorTimeoutRef.current);
           }
@@ -124,7 +111,6 @@ export default function ProductMappingPage() {
     [updateEnableSearchMutation]
   );
 
-  // Filter specs based on search (includes example field)
   const filteredSpecs = searchQuery
     ? OPENAI_FEED_SPEC.filter(
         (spec) =>
@@ -134,7 +120,6 @@ export default function ProductMappingPage() {
       )
     : OPENAI_FEED_SPEC;
 
-  // Group by category
   const categories = Object.entries(CATEGORY_CONFIG)
     .map(([id, config]) => ({
       id: id as OpenAIFieldCategory,
@@ -145,7 +130,6 @@ export default function ProductMappingPage() {
     .filter((cat) => cat.fields.length > 0)
     .sort((a, b) => a.order - b.order);
 
-  // Count overrides
   const overrideCount = Object.keys(productOverrides).length;
 
   if (loading || shopMappingsLoading) {

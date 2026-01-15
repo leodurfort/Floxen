@@ -7,7 +7,7 @@ interface BulkActionToolbarProps {
   selectAllMatching: boolean;
   selectAllGlobal: boolean;
   selectAllByItemGroupId: string | null;
-  selectAllByItemGroupCount: number | null; // Count stored in selection store (for display when in item group mode)
+  selectAllByItemGroupCount: number | null;
   hasActiveFilters: boolean;
   onSelectAllMatching: () => void;
   onSelectAllGlobal: () => void;
@@ -15,7 +15,6 @@ interface BulkActionToolbarProps {
   onClearSelection: () => void;
   onBulkEdit: () => void;
   isProcessing: boolean;
-  // Item group info for "Select similar products" feature (from local state, for the button)
   selectedProductItemGroupId: string | null;
   itemGroupCount: number | null;
 }
@@ -38,7 +37,6 @@ export function BulkActionToolbar({
   selectedProductItemGroupId,
   itemGroupCount,
 }: BulkActionToolbarProps) {
-  // Determine display count based on selection mode
   const displayCount = selectAllGlobal
     ? totalCatalogCount
     : selectAllMatching
@@ -47,9 +45,6 @@ export function BulkActionToolbar({
     ? selectAllByItemGroupCount
     : selectedCount;
 
-  // Show "Select all" button when:
-  // - Not already in a "select all" mode
-  // - Some products are selected but not all
   const showSelectAllButton =
     !selectAllMatching &&
     !selectAllGlobal &&
@@ -57,10 +52,6 @@ export function BulkActionToolbar({
     selectedCount > 0 &&
     selectedCount < (hasActiveFilters ? totalMatchingCount : totalCatalogCount);
 
-  // Show "Select similar products" button when:
-  // - Exactly 1 product is selected (not in any "select all" mode)
-  // - The selected product has an item_group_id
-  // - There are more than 1 products with the same item_group_id
   const showSelectSimilarButton =
     !selectAllMatching &&
     !selectAllGlobal &&
@@ -70,7 +61,6 @@ export function BulkActionToolbar({
     itemGroupCount !== null &&
     itemGroupCount > 1;
 
-  // Determine the target count and handler based on filters
   const selectAllTargetCount = hasActiveFilters ? totalMatchingCount : totalCatalogCount;
   const selectAllHandler = hasActiveFilters ? onSelectAllMatching : onSelectAllGlobal;
   const selectAllLabel = hasActiveFilters
@@ -84,7 +74,6 @@ export function BulkActionToolbar({
           {displayCount.toLocaleString()} product{displayCount !== 1 ? 's' : ''} selected
         </span>
 
-        {/* Show "Select all" button */}
         {showSelectAllButton && (
           <button
             onClick={selectAllHandler}
@@ -94,7 +83,6 @@ export function BulkActionToolbar({
           </button>
         )}
 
-        {/* Show "Select similar products" button */}
         {showSelectSimilarButton && (
           <button
             onClick={onSelectAllByItemGroup}
@@ -104,21 +92,18 @@ export function BulkActionToolbar({
           </button>
         )}
 
-        {/* Status message when all filtered products are selected */}
         {selectAllMatching && hasActiveFilters && (
           <span className="text-sm text-gray-600">
             All products matching current filters are selected
           </span>
         )}
 
-        {/* Status message when all products in catalog are selected */}
         {selectAllGlobal && (
           <span className="text-sm text-gray-600">
             All products in catalog are selected
           </span>
         )}
 
-        {/* Status message when all products in item group are selected */}
         {selectAllByItemGroupId && (
           <span className="text-sm text-gray-600">
             All similar products are selected

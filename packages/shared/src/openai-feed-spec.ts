@@ -1,24 +1,8 @@
 /**
- * OpenAI Product Feed Complete Specification
+ * OpenAI Product Feed Specification
  *
- * This file defines all 70 OpenAI feed attributes with complete metadata.
+ * Defines all 70 OpenAI feed attributes with complete metadata.
  * Based on ProductSynch Technical Specification V2.1
- *
- * Each field includes:
- * - attribute: field name in OpenAI feed
- * - dataType: expected data type
- * - supportedValues: valid values (for enums)
- * - description: what the field represents
- * - example: sample value
- * - requirement: Required/Recommended/Optional/Conditional
- * - dependencies: other fields that must be present
- * - validationRules: validation constraints
- * - wooCommerceMapping: how to extract from WooCommerce data
- * - isLocked: whether the field mapping is locked and cannot be customized by users
- * - isAutoPopulated: whether the field value is computed from other fields via a transform
- * - isShopManaged: whether the field value comes from shop-level settings
- * - isFeatureDisabled: whether the feature is not yet available
- * - category: UI grouping category
  */
 
 export interface OpenAIFieldSpec {
@@ -32,27 +16,26 @@ export interface OpenAIFieldSpec {
   validationRules: string[];
   wooCommerceMapping: WooCommerceMapping | null;
   isLocked: boolean;
-  isAutoPopulated?: boolean;   // Value is computed from other fields via transform (e.g., dimensions)
-  isShopManaged?: boolean;     // Value comes from shop-level settings (e.g., seller_name)
-  isFeatureDisabled?: boolean; // Feature not yet available (e.g., enable_checkout)
+  isAutoPopulated?: boolean;
+  isShopManaged?: boolean;
+  isFeatureDisabled?: boolean;
   category: OpenAIFieldCategory;
 }
 
-// Product-level field override types
 export type ProductOverrideType = 'mapping' | 'static';
 
 export interface ProductFieldOverride {
   type: ProductOverrideType;
-  value: string | null;  // null for mapping type means "no mapping" (exclude field)
+  value: string | null;
 }
 
 export type ProductFieldOverrides = Record<string, ProductFieldOverride>;
 
 export interface WooCommerceMapping {
-  field?: string;           // WooCommerce field path (e.g., "name", "price", "meta_data.gtin")
-  transform?: string;       // Transform function name
-  fallback?: string;        // Fallback field if primary is empty
-  shopField?: string;       // Shop-level field (e.g., "sellerName")
+  field?: string;
+  transform?: string;
+  fallback?: string;
+  shopField?: string;
 }
 
 export type OpenAIFieldCategory =
@@ -74,10 +57,7 @@ export type OpenAIFieldCategory =
 
 export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: OPENAI FLAGS
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === OPENAI FLAGS ===
   {
     attribute: 'enable_search',
     dataType: 'Enum',
@@ -87,7 +67,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     requirement: 'Required',
     dependencies: null,
     validationRules: ['Must be lowercase string "true" or "false"'],
-    wooCommerceMapping: null, // User setting only
+    wooCommerceMapping: null,
     isLocked: false,
     category: 'flags',
   },
@@ -100,16 +80,13 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     requirement: 'Required',
     dependencies: 'enable_search must be true',
     validationRules: ['Must be lowercase string "true" or "false"'],
-    wooCommerceMapping: null, // User setting only
+    wooCommerceMapping: null,
     isLocked: false,
-    isFeatureDisabled: true, // Feature not yet available
+    isFeatureDisabled: true,
     category: 'flags',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: BASIC PRODUCT DATA
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === BASIC PRODUCT DATA ===
   {
     attribute: 'id',
     dataType: 'String (alphanumeric)',
@@ -204,10 +181,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'basic_product_data',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: ITEM INFORMATION
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === ITEM INFORMATION ===
   {
     attribute: 'condition',
     dataType: 'Enum',
@@ -280,7 +254,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       transform: 'formatDimensions',
     },
     isLocked: false,
-    isAutoPopulated: true, // Auto-computed from length, width, height
+    isAutoPopulated: true,
     category: 'item_information',
   },
   {
@@ -361,10 +335,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'item_information',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: MEDIA
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === MEDIA ===
   {
     attribute: 'image_link',
     dataType: 'URL',
@@ -423,10 +394,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'media',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: PRICE & PROMOTIONS
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === PRICE & PROMOTIONS ===
   {
     attribute: 'price',
     dataType: 'Number + currency',
@@ -474,7 +442,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       transform: 'formatSaleDateRange',
     },
     isLocked: false,
-    isAutoPopulated: true, // Auto-combined from date_on_sale_from and date_on_sale_to
+    isAutoPopulated: true,
     category: 'price_promotions',
   },
   {
@@ -517,10 +485,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'price_promotions',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: AVAILABILITY & INVENTORY
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === AVAILABILITY & INVENTORY ===
   {
     attribute: 'availability',
     dataType: 'Enum',
@@ -606,10 +571,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'availability_inventory',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: VARIANTS
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === VARIANTS ===
   {
     attribute: 'item_group_id',
     dataType: 'String',
@@ -783,10 +745,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'variants',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: FULFILLMENT
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === FULFILLMENT ===
   {
     attribute: 'shipping',
     dataType: 'String',
@@ -814,10 +773,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'fulfillment',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: MERCHANT INFO
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === MERCHANT INFO ===
   {
     attribute: 'seller_name',
     dataType: 'String',
@@ -832,7 +788,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       fallback: 'shopName',
     },
     isLocked: false,
-    isShopManaged: true, // Value comes from shop settings
+    isShopManaged: true,
     category: 'merchant_info',
   },
   {
@@ -849,7 +805,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       fallback: 'wooStoreUrl',
     },
     isLocked: false,
-    isShopManaged: true, // Value comes from shop settings
+    isShopManaged: true,
     category: 'merchant_info',
   },
   {
@@ -865,7 +821,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'sellerPrivacyPolicy',
     },
     isLocked: false,
-    isShopManaged: true, // Value comes from shop settings
+    isShopManaged: true,
     category: 'merchant_info',
   },
   {
@@ -881,14 +837,11 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'sellerTos',
     },
     isLocked: false,
-    isShopManaged: true, // Value comes from shop settings
+    isShopManaged: true,
     category: 'merchant_info',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: RETURNS
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === RETURNS ===
   {
     attribute: 'return_policy',
     dataType: 'URL',
@@ -902,7 +855,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'returnPolicy',
     },
     isLocked: false,
-    isShopManaged: true, // Value comes from shop settings
+    isShopManaged: true,
     category: 'returns',
   },
   {
@@ -918,14 +871,11 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
       shopField: 'returnWindow',
     },
     isLocked: false,
-    isShopManaged: true, // Value comes from shop settings
+    isShopManaged: true,
     category: 'returns',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: PERFORMANCE SIGNALS
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === PERFORMANCE SIGNALS ===
   {
     attribute: 'popularity_score',
     dataType: 'Number',
@@ -953,10 +903,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'performance_signals',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: COMPLIANCE
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === COMPLIANCE ===
   {
     attribute: 'warning',
     dataType: 'String',
@@ -997,10 +944,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'compliance',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: REVIEWS AND Q&A
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === REVIEWS AND Q&A ===
   {
     attribute: 'product_review_count',
     dataType: 'Integer',
@@ -1084,10 +1028,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'reviews_qanda',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: RELATED PRODUCTS
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === RELATED PRODUCTS ===
   {
     attribute: 'related_product_id',
     dataType: 'String',
@@ -1119,10 +1060,7 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
     category: 'related_products',
   },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORY: GEO TAGGING
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  // === GEO TAGGING ===
   {
     attribute: 'geo_price',
     dataType: 'Number + currency',
@@ -1151,37 +1089,26 @@ export const OPENAI_FEED_SPEC: OpenAIFieldSpec[] = [
   },
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════
-// HELPER CONSTANTS
-// ═══════════════════════════════════════════════════════════════════════════
+// === HELPER CONSTANTS ===
 
-// Get required fields (17 fields)
 export const REQUIRED_FIELDS = OPENAI_FEED_SPEC.filter(f => f.requirement === 'Required');
-
-// Get all locked fields (11 fields) - these mappings cannot be customized by users
 export const LOCKED_FIELDS = OPENAI_FEED_SPEC.filter(f => f.isLocked);
 
-// Generate locked field mappings from spec (single source of truth)
 export const LOCKED_FIELD_MAPPINGS: Record<string, string> = LOCKED_FIELDS.reduce((acc, field) => {
-  // Only include fields that have a simple field mapping (not transform/fallback/shopField)
   if (field.wooCommerceMapping?.field && !field.wooCommerceMapping.shopField) {
     acc[field.attribute] = field.wooCommerceMapping.field;
   }
   return acc;
 }, {} as Record<string, string>);
 
-// Set of locked field attributes for quick lookup
 export const LOCKED_FIELD_SET = new Set(LOCKED_FIELDS.map(f => f.attribute));
 
-// Locked fields that allow static value overrides at product level
-// These are locked for WooCommerce mapping but can have manual static overrides
+/** Locked fields that allow static value overrides at product level */
 export const STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS = new Set(['title', 'description', 'product_category', 'brand']);
 
-// Get fields by category
 export const getFieldsByCategory = (category: OpenAIFieldCategory): OpenAIFieldSpec[] =>
   OPENAI_FEED_SPEC.filter(f => f.category === category);
 
-// Category display order and labels
 export const CATEGORY_CONFIG: Record<OpenAIFieldCategory, { label: string; order: number }> = {
   flags: { label: 'OpenAI Flags', order: 1 },
   basic_product_data: { label: 'Basic Product Data', order: 2 },
@@ -1200,7 +1127,6 @@ export const CATEGORY_CONFIG: Record<OpenAIFieldCategory, { label: string; order
   geo_tagging: { label: 'Geo Tagging', order: 15 },
 };
 
-// Field count stats
 export const FIELD_STATS = {
   total: OPENAI_FEED_SPEC.length,
   required: REQUIRED_FIELDS.length,
@@ -1211,48 +1137,19 @@ export const FIELD_STATS = {
   }, {} as Record<OpenAIFieldCategory, number>),
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PRODUCT-LEVEL EDITABILITY
-// ═══════════════════════════════════════════════════════════════════════════
+// === PRODUCT-LEVEL EDITABILITY ===
 
 /**
- * Determines if a field can be edited at the product level.
- * A field is NOT editable if any of these conditions are true:
- * - isFeatureDisabled: Feature not yet available (e.g., enable_checkout)
- * - isAutoPopulated: Value is computed from other fields (e.g., dimensions)
- * - isShopManaged: Value comes from shop-level settings (e.g., seller_name)
- * - Fully locked: isLocked=true AND not in STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS
- *
- * Note: enable_search is a special case - it's editable but handled separately
- * via toolbar buttons, so it's excluded from bulk edit field selection.
+ * Check if a field can be edited at the product level.
+ * Not editable if: disabled, auto-populated, shop-managed, or fully locked.
  */
 export function isProductEditable(spec: OpenAIFieldSpec): boolean {
-  // Feature disabled
   if (spec.isFeatureDisabled) return false;
-
-  // Auto-populated fields (value computed from other fields)
   if (spec.isAutoPopulated) return false;
-
-  // Shop-managed fields (value from shop settings)
   if (spec.isShopManaged) return false;
-
-  // Fully locked fields (locked mapping AND no static override allowed)
-  if (spec.isLocked && !STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute)) {
-    return false;
-  }
-
+  if (spec.isLocked && !STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(spec.attribute)) return false;
   return true;
 }
 
-/**
- * Get all fields that can be edited at the product level.
- * Excludes enable_checkout (feature disabled) and other non-editable fields.
- */
-export const PRODUCT_EDITABLE_FIELDS = OPENAI_FEED_SPEC.filter(spec => {
-  return isProductEditable(spec);
-});
-
-/**
- * Set of product-editable field attributes for quick lookup.
- */
+export const PRODUCT_EDITABLE_FIELDS = OPENAI_FEED_SPEC.filter(isProductEditable);
 export const PRODUCT_EDITABLE_FIELD_SET = new Set(PRODUCT_EDITABLE_FIELDS.map(f => f.attribute));

@@ -1,24 +1,13 @@
 import { create } from 'zustand';
 
 interface CatalogSelectionState {
-  // Selected product IDs (persists across pages within a session)
   selectedIds: Set<string>;
-
-  // "Select all matching" mode - when true, selection applies to ALL filtered products
   selectAllMatching: boolean;
-
-  // "Select all global" mode - when true, selection applies to ALL products in catalog (no filters)
   selectAllGlobal: boolean;
-
-  // "Select all by item group" mode - when set, selection applies to ALL products with this item_group_id
   selectAllByItemGroupId: string | null;
-  // Count of products in the selected item group (stored alongside selectAllByItemGroupId)
   selectAllByItemGroupCount: number | null;
-
-  // Shop ID to scope selection (clear selection when shop changes)
   currentShopId: string | null;
 
-  // Actions
   setShopId: (shopId: string) => void;
   toggleProduct: (id: string) => void;
   selectProducts: (ids: string[]) => void;
@@ -35,6 +24,13 @@ interface CatalogSelectionState {
   isGlobalSelectMode: () => boolean;
 }
 
+const CLEAR_GLOBAL_MODES = {
+  selectAllMatching: false,
+  selectAllGlobal: false,
+  selectAllByItemGroupId: null,
+  selectAllByItemGroupCount: null,
+} as const;
+
 export const useCatalogSelection = create<CatalogSelectionState>((set, get) => ({
   selectedIds: new Set(),
   selectAllMatching: false,
@@ -44,17 +40,8 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
   currentShopId: null,
 
   setShopId: (shopId) => {
-    const { currentShopId } = get();
-    if (currentShopId !== shopId) {
-      // Clear selection when shop changes
-      set({
-        currentShopId: shopId,
-        selectedIds: new Set(),
-        selectAllMatching: false,
-        selectAllGlobal: false,
-        selectAllByItemGroupId: null,
-        selectAllByItemGroupCount: null,
-      });
+    if (get().currentShopId !== shopId) {
+      set({ currentShopId: shopId, selectedIds: new Set(), ...CLEAR_GLOBAL_MODES });
     }
   },
 
@@ -65,36 +52,46 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
     } else {
       newSet.add(id);
     }
-    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null };
+    return { selectedIds: newSet, ...CLEAR_GLOBAL_MODES };
   }),
 
   selectProducts: (ids) => set((state) => {
     const newSet = new Set(state.selectedIds);
-    ids.forEach(id => newSet.add(id));
+    for (const id of ids) newSet.add(id);
     return { selectedIds: newSet };
   }),
 
   deselectProducts: (ids) => set((state) => {
     const newSet = new Set(state.selectedIds);
-    ids.forEach(id => newSet.delete(id));
-    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null };
+    for (const id of ids) newSet.delete(id);
+    return { selectedIds: newSet, ...CLEAR_GLOBAL_MODES };
   }),
 
   selectAllOnPage: (ids) => set((state) => {
     const newSet = new Set(state.selectedIds);
-    ids.forEach(id => newSet.add(id));
+    for (const id of ids) newSet.add(id);
     return { selectedIds: newSet };
   }),
 
   deselectAllOnPage: (ids) => set((state) => {
     const newSet = new Set(state.selectedIds);
-    ids.forEach(id => newSet.delete(id));
-    return { selectedIds: newSet, selectAllMatching: false, selectAllGlobal: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null };
+    for (const id of ids) newSet.delete(id);
+    return { selectedIds: newSet, ...CLEAR_GLOBAL_MODES };
   }),
 
-  setSelectAllMatching: (value) => set({ selectAllMatching: value, selectAllGlobal: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null }),
+  setSelectAllMatching: (value) => set({
+    selectAllMatching: value,
+    selectAllGlobal: false,
+    selectAllByItemGroupId: null,
+    selectAllByItemGroupCount: null,
+  }),
 
-  setSelectAllGlobal: (value) => set({ selectAllGlobal: value, selectAllMatching: false, selectAllByItemGroupId: null, selectAllByItemGroupCount: null }),
+  setSelectAllGlobal: (value) => set({
+    selectAllGlobal: value,
+    selectAllMatching: false,
+    selectAllByItemGroupId: null,
+    selectAllByItemGroupCount: null,
+  }),
 
   setSelectAllByItemGroupId: (itemGroupId, count) => set({
     selectAllByItemGroupId: itemGroupId,
@@ -103,19 +100,13 @@ export const useCatalogSelection = create<CatalogSelectionState>((set, get) => (
     selectAllGlobal: false,
   }),
 
-  clearSelection: () => set({
-    selectedIds: new Set(),
-    selectAllMatching: false,
-    selectAllGlobal: false,
-    selectAllByItemGroupId: null,
-    selectAllByItemGroupCount: null,
-  }),
+  clearSelection: () => set({ selectedIds: new Set(), ...CLEAR_GLOBAL_MODES }),
 
   isSelected: (id) => get().selectedIds.has(id),
-
   getSelectedCount: () => get().selectedIds.size,
-
   getSelectedIds: () => Array.from(get().selectedIds),
-
-  isGlobalSelectMode: () => get().selectAllGlobal || get().selectAllMatching || get().selectAllByItemGroupId !== null,
+  isGlobalSelectMode: () => {
+    const state = get();
+    return state.selectAllGlobal || state.selectAllMatching || state.selectAllByItemGroupId !== null;
+  },
 }));

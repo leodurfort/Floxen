@@ -1,10 +1,3 @@
-/**
- * Column Definitions for Product Catalog Table
- *
- * Defines all 76 columns (70 OpenAI attributes + 6 custom columns)
- * Used for dynamic column rendering, filtering, and sorting.
- */
-
 import {
   OPENAI_FEED_SPEC,
   CATEGORY_CONFIG,
@@ -12,7 +5,6 @@ import {
   type OpenAIFieldCategory,
 } from '@productsynch/shared';
 
-// Product type from API (simplified for column definitions)
 export interface ProductData {
   id: string;
   isValid: boolean;
@@ -40,21 +32,17 @@ export interface ColumnDefinition {
   formatValue?: (value: unknown) => string; // Format for display
 }
 
-// Custom column category order (show first)
 const CUSTOM_CATEGORY_ORDER = 0;
 
-// Helper to extract value from openaiAutoFilled
 function getOpenAIValue(product: ProductData, attribute: string): unknown {
   return product.openaiAutoFilled?.[attribute] ?? null;
 }
 
-// Helper to parse supported values from spec
 function parseSupportedValues(spec: OpenAIFieldSpec): string[] | undefined {
   if (!spec.supportedValues) return undefined;
   return spec.supportedValues.split(',').map((v) => v.trim().toLowerCase());
 }
 
-// Helper to determine data type from spec
 function getDataType(spec: OpenAIFieldSpec): ColumnDataType {
   const dt = spec.dataType.toLowerCase();
 
@@ -76,25 +64,18 @@ function getDataType(spec: OpenAIFieldSpec): ColumnDataType {
   return 'string';
 }
 
-// Helper to determine if column is sortable
 function isSortable(spec: OpenAIFieldSpec, dataType: ColumnDataType): boolean {
-  // Arrays and complex types are not sortable
   if (spec.dataType.toLowerCase().includes('array')) return false;
-  // Images are not sortable
   if (dataType === 'image') return false;
   return true;
 }
 
-// Helper to determine if column is filterable
 function isFilterable(spec: OpenAIFieldSpec): boolean {
-  // Arrays and complex JSON are not filterable
   if (spec.dataType.toLowerCase().includes('array')) return false;
   if (spec.attribute === 'raw_review_data') return false;
   return true;
 }
 
-// Default visible columns in exact display order
-// This order is used when user first loads the catalog
 const DEFAULT_COLUMN_ORDER: string[] = [
   'checkbox',        // Selection (always first)
   'id',              // OpenAI: Basic Product Data
@@ -104,13 +85,11 @@ const DEFAULT_COLUMN_ORDER: string[] = [
   'overrides',       // Custom: Override count
   'isValid',         // Custom: Validation status
   'updatedAt',       // Custom: Last modified
-  'actions',         // Actions (always last)
+  'actions',
 ];
 
-// Set for quick lookup of default visible columns
 const DEFAULT_VISIBLE_COLUMNS = new Set(DEFAULT_COLUMN_ORDER);
 
-// Generate column definitions from OpenAI spec
 function generateOpenAIColumns(): ColumnDefinition[] {
   return OPENAI_FEED_SPEC.map((spec) => {
     const dataType = getDataType(spec);
@@ -133,7 +112,6 @@ function generateOpenAIColumns(): ColumnDefinition[] {
   });
 }
 
-// Format attribute name to display label
 function formatLabel(attribute: string): string {
   return attribute
     .split('_')
@@ -141,7 +119,6 @@ function formatLabel(attribute: string): string {
     .join(' ');
 }
 
-// Get format function based on data type
 function getFormatFunction(dataType: ColumnDataType): ((value: unknown) => string) | undefined {
   switch (dataType) {
     case 'boolean':
@@ -176,7 +153,6 @@ function getFormatFunction(dataType: ColumnDataType): ((value: unknown) => strin
   }
 }
 
-// Custom column definitions
 const CUSTOM_COLUMNS: ColumnDefinition[] = [
   {
     id: 'checkbox',
@@ -245,24 +221,19 @@ const CUSTOM_COLUMNS: ColumnDefinition[] = [
   },
 ];
 
-// All column definitions (custom + OpenAI)
 export const ALL_COLUMNS: ColumnDefinition[] = [
   ...CUSTOM_COLUMNS,
   ...generateOpenAIColumns(),
 ];
 
-// Map of column ID to definition for quick lookup
 export const COLUMN_MAP: Map<string, ColumnDefinition> = new Map(
   ALL_COLUMNS.map((col) => [col.id, col])
 );
 
-// Get default visible column IDs in the correct display order
 export function getDefaultVisibleColumns(): string[] {
-  // Return default columns in their exact defined order
   return DEFAULT_COLUMN_ORDER.filter((id) => COLUMN_MAP.has(id));
 }
 
-// Get columns grouped by category
 export function getColumnsByCategory(): Map<string, ColumnDefinition[]> {
   const grouped = new Map<string, ColumnDefinition[]>();
 
@@ -283,14 +254,12 @@ export function getColumnsByCategory(): Map<string, ColumnDefinition[]> {
   return grouped;
 }
 
-// Get column value from product
 export function getColumnValue(product: ProductData, columnId: string): unknown {
   const col = COLUMN_MAP.get(columnId);
   if (!col) return null;
   return col.getValue(product);
 }
 
-// Format column value for display
 export function formatColumnValue(product: ProductData, columnId: string): string {
   const col = COLUMN_MAP.get(columnId);
   if (!col) return '-';
@@ -305,19 +274,16 @@ export function formatColumnValue(product: ProductData, columnId: string): strin
   return String(value);
 }
 
-// LocalStorage helpers
 const STORAGE_KEY_PREFIX = 'productsynch:catalog:columns:';
 
 export function getStoredColumns(shopId: string): string[] {
   if (typeof window === 'undefined') {
     return getDefaultVisibleColumns();
   }
-
   const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}${shopId}`);
   if (stored) {
     try {
       const columns = JSON.parse(stored) as string[];
-      // Validate that all stored columns still exist
       const validColumns = columns.filter((id) => COLUMN_MAP.has(id));
       if (validColumns.length > 0) {
         return validColumns;

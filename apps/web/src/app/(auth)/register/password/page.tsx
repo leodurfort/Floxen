@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRegistration } from '@/store/registration';
 import { useAuth } from '@/store/auth';
+import { getPasswordStrength } from '@/lib/validation';
 import * as api from '@/lib/api';
 
 export default function RegisterPasswordPage() {
@@ -24,7 +25,7 @@ export default function RegisterPasswordPage() {
     }
   }, [email, verified, router]);
 
-  const passwordStrength = getPasswordStrength(password);
+  const strength = getPasswordStrength(password);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,23 +98,20 @@ export default function RegisterPasswordPage() {
               </button>
             </div>
             {password && (
-              <div className="flex gap-1 mt-1">
-                {[1, 2, 3, 4].map((level) => (
-                  <div
-                    key={level}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
-                      passwordStrength >= level
-                        ? passwordStrength === 1
-                          ? 'bg-red-400'
-                          : passwordStrength === 2
-                            ? 'bg-yellow-400'
-                            : passwordStrength === 3
-                              ? 'bg-blue-400'
-                              : 'bg-green-400'
-                        : 'bg-gray-200'
-                    }`}
-                  />
-                ))}
+              <div className="space-y-2">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <div
+                      key={level}
+                      className={`h-1 flex-1 rounded-full transition-colors ${
+                        level <= strength.score ? strength.color : 'bg-gray-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Password strength: <span className="text-gray-700">{strength.label}</span>
+                </p>
               </div>
             )}
           </label>
@@ -135,14 +133,4 @@ export default function RegisterPasswordPage() {
       </div>
     </main>
   );
-}
-
-function getPasswordStrength(password: string): number {
-  if (!password) return 0;
-  let strength = 0;
-  if (password.length >= 8) strength++;
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-  if (/\d/.test(password)) strength++;
-  if (/[^a-zA-Z0-9]/.test(password)) strength++;
-  return strength;
 }

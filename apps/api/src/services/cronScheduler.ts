@@ -1,32 +1,15 @@
-/**
- * Cron Scheduler Service
- *
- * Manages all scheduled jobs for ProductSynch:
- * - Periodic sync (every 15 minutes)
- * - Feed generation (creates FeedSnapshot for OpenAI)
- * - Stuck sync recovery (every minute)
- * - Token cleanup (hourly)
- * - Health checks
- * - Analytics aggregation
- */
-
 import cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { syncFlowProducer, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 import { cleanupExpiredTokens } from './verificationService';
 
-// If a sync is stuck in SYNCING for longer than this, reset it to FAILED
-const STUCK_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const STUCK_SYNC_TIMEOUT_MS = 5 * 60 * 1000;
 
 export class CronScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
   private isRunning = false;
 
-  /**
-   * Schedule periodic sync every 15 minutes
-   * OpenAI accepts feed updates every 15 minutes (max frequency)
-   */
   schedulePeriodicSync() {
     const job = cron.schedule('*/15 * * * *', async () => {
       logger.info('Cron: Periodic sync triggered');
@@ -39,13 +22,7 @@ export class CronScheduler {
     logger.info('Cron: Periodic sync scheduled (every 15 minutes)');
   }
 
-  /**
-   * Trigger sync for all active shops
-   * Enqueues jobs for each shop with staggered delays to avoid thundering herd
-   * Uses BullMQ Flows to ensure feed-generation only runs if product-sync succeeds
-   */
   async triggerAllShopsSync() {
-    // Check Redis availability before attempting to queue jobs
     if (!isQueueAvailable() || !syncFlowProducer) {
       logger.error('Cron: Cannot trigger sync - Redis queue not available');
       return;
@@ -66,16 +43,12 @@ export class CronScheduler {
 
       logger.info(`Cron: Triggering sync for ${shops.length} shops`);
 
-      // Stagger jobs to avoid thundering herd
-      // Add 5 second delay between each shop
       for (let i = 0; i < shops.length; i++) {
         const shop = shops[i];
-        const delay = i * 5000; // 5 seconds per shop
+        const delay = i * 5000;
 
         setTimeout(async () => {
           try {
-            // Use BullMQ Flow to create dependent jobs:
-            // feed-generation (parent) only runs if product-sync (child) succeeds
             await syncFlowProducer!.add({
               name: 'feed-generation',
               queueName: 'sync',
@@ -111,10 +84,6 @@ export class CronScheduler {
     }
   }
 
-  /**
-   * Schedule stuck sync recovery check every minute
-   * Resets shops stuck in SYNCING state for too long
-   */
   scheduleStuckSyncRecovery() {
     const job = cron.schedule('* * * * *', async () => {
       await this.recoverStuckSyncs();
@@ -126,9 +95,6 @@ export class CronScheduler {
     logger.info('Cron: Stuck sync recovery scheduled (every minute)');
   }
 
-  /**
-   * Find and reset shops stuck in SYNCING state
-   */
   async recoverStuckSyncs() {
     try {
       const cutoffTime = new Date(Date.now() - STUCK_SYNC_TIMEOUT_MS);
@@ -148,7 +114,6 @@ export class CronScheduler {
         shopIds: stuckShops.map(s => s.id),
       });
 
-      // Reset each stuck shop
       for (const shop of stuckShops) {
         await prisma.shop.update({
           where: { id: shop.id },
@@ -168,10 +133,6 @@ export class CronScheduler {
     }
   }
 
-  /**
-   * Schedule expired token cleanup hourly
-   * Removes expired and used verification tokens
-   */
   scheduleTokenCleanup() {
     const job = cron.schedule('0 * * * *', async () => {
       logger.info('Cron: Token cleanup triggered');
@@ -193,9 +154,6 @@ export class CronScheduler {
     logger.info('Cron: Token cleanup scheduled (hourly)');
   }
 
-  /**
-   * Start all scheduled jobs
-   */
   start() {
     if (this.isRunning) {
       logger.warn('Cron: Scheduler already running');
@@ -206,7 +164,6 @@ export class CronScheduler {
     this.scheduleStuckSyncRecovery();
     this.scheduleTokenCleanup();
 
-    // Start all jobs
     this.jobs.forEach((job, name) => {
       job.start();
       logger.info(`Cron: Started job "${name}"`);
@@ -216,9 +173,6 @@ export class CronScheduler {
     logger.info('Cron: Scheduler started');
   }
 
-  /**
-   * Stop all scheduled jobs (for graceful shutdown)
-   */
   stop() {
     this.jobs.forEach((job, name) => {
       job.stop();
@@ -229,9 +183,6 @@ export class CronScheduler {
     logger.info('Cron: Scheduler stopped');
   }
 
-  /**
-   * Get status of all jobs
-   */
   getStatus() {
     const status: Record<string, boolean> = {};
     this.jobs.forEach((job, name) => {
@@ -243,9 +194,6 @@ export class CronScheduler {
     };
   }
 
-  /**
-   * Manually trigger a sync cycle (for testing or manual triggering)
-   */
   async triggerManualSync() {
     logger.info('Cron: Manual sync triggered');
     await this.triggerAllShopsSync();

@@ -1,26 +1,10 @@
 /**
- * Transforms Module
- *
- * Central export point for all transform functions and utilities.
- * This module consolidates WooCommerce -> OpenAI feed transformations
- * into a single, isomorphic package that works in both Node.js and browser.
+ * Transforms Module - WooCommerce -> OpenAI feed transformations
  */
 
-// Export types
 export * from './types';
-
-// Export the registry (main export)
 export { TRANSFORMS } from './registry';
-
-// Export helper functions
-export {
-  extractFieldValue,
-  extractNestedValue,
-  extractAttributeValue,
-  extractMetaValue,
-} from './helpers';
-
-// Export individual transform functions for direct use
+export { extractFieldValue, extractNestedValue, extractAttributeValue, extractMetaValue } from './helpers';
 export * from './functions/basic';
 export * from './functions/category';
 export * from './functions/id-generation';
@@ -30,7 +14,5 @@ export * from './functions/media';
 export * from './functions/product-data';
 export * from './functions/availability';
 export * from './functions/defaults';
-
-// Export validation layer
 export * from './validation';
 export * from './validators';

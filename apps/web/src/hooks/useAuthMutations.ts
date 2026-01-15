@@ -3,10 +3,6 @@ import { useRouter } from 'next/navigation';
 import * as api from '@/lib/api';
 import { useAuth } from '@/store/auth';
 
-/**
- * Mutation hook for user login
- * Sets auth session and redirects based on onboarding status
- */
 export function useLoginMutation() {
   const { setSession } = useAuth();
   const router = useRouter();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   CATEGORY_CONFIG,
   LOCKED_FIELD_SET,
@@ -11,7 +11,7 @@ import {
 } from '@productsynch/shared';
 import { BulkUpdateOperation } from '@/lib/api';
 import { searchWooFields } from '@/lib/wooCommerceFields';
-import { useWooFieldsQuery } from '@/hooks/useWooFieldsQuery';
+import { useWooFieldsQuery, useClickOutside } from '@/hooks/useWooFieldsQuery';
 
 interface BulkEditModalProps {
   isOpen: boolean;
@@ -35,14 +35,12 @@ export function BulkEditModal({
   const [staticValue, setStaticValue] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // WooCommerce field selector state - now using React Query
   const { data: wooFields = [], isLoading: wooFieldsLoading } = useWooFieldsQuery(isOpen ? shopId : undefined);
   const [selectedWooField, setSelectedWooField] = useState<string | null>(null);
   const [wooFieldSearch, setWooFieldSearch] = useState('');
   const [isWooDropdownOpen, setIsWooDropdownOpen] = useState(false);
   const wooDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setSelectedAttribute(null);
@@ -56,33 +54,20 @@ export function BulkEditModal({
     }
   }, [isOpen]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wooDropdownRef.current && !wooDropdownRef.current.contains(event.target as Node)) {
-        setIsWooDropdownOpen(false);
-        setWooFieldSearch('');
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside(wooDropdownRef, useCallback(() => {
+    setIsWooDropdownOpen(false);
+    setWooFieldSearch('');
+  }, []), isWooDropdownOpen);
 
-  // Filter WooCommerce fields based on search
   const filteredWooFields = useMemo(() => {
     const fields = wooFieldSearch ? searchWooFields(wooFields, wooFieldSearch) : wooFields;
     return fields.slice().sort((a, b) => a.label.localeCompare(b.label));
   }, [wooFields, wooFieldSearch]);
 
-  // Get available fields - use PRODUCT_EDITABLE_FIELDS from shared package
-  // This automatically excludes: auto-populated, shop-managed, feature-disabled, and fully locked fields
   const availableFields = PRODUCT_EDITABLE_FIELDS;
-
-  // Check if enable_search is selected (needs special dropdown UI)
   const isEnableSearchField = selectedAttribute === 'enable_search';
   const [enableSearchValue, setEnableSearchValue] = useState<'true' | 'false'>('true');
 
-  // Group by category
   const categories = useMemo(() => {
     const groups: { id: OpenAIFieldCategory; label: string; order: number; fields: OpenAIFieldSpec[] }[] = [];
 
@@ -107,7 +92,6 @@ export function BulkEditModal({
 
   const isLockedField = selectedAttribute ? LOCKED_FIELD_SET.has(selectedAttribute) : false;
 
-  // Validate static value on change
   useEffect(() => {
     if (overrideType === 'static' && selectedAttribute && staticValue) {
       const validation = validateStaticValue(selectedAttribute, staticValue);
@@ -117,7 +101,6 @@ export function BulkEditModal({
     }
   }, [overrideType, selectedAttribute, staticValue]);
 
-  // Get label for selected WooCommerce field
   const getSelectedWooFieldLabel = () => {
     if (!selectedWooField) return 'Select WooCommerce field...';
     const field = wooFields.find(f => f.value === selectedWooField);
@@ -129,7 +112,6 @@ export function BulkEditModal({
 
     let update: BulkUpdateOperation;
 
-    // Special handling for enable_search - use dedicated update type
     if (isEnableSearchField) {
       update = { type: 'enable_search', value: enableSearchValue === 'true' };
     } else if (overrideType === 'remove') {
@@ -146,32 +128,22 @@ export function BulkEditModal({
       }
       update = { type: 'static_override', attribute: selectedAttribute, value: staticValue };
     } else {
-      // mapping type - use selected WooCommerce field (can be null for "exclude")
       update = { type: 'field_mapping', attribute: selectedAttribute, wooField: selectedWooField };
     }
 
     await onSubmit(update);
   };
 
-  // Can submit when:
-  // - An attribute is selected
-  // - No validation errors
-  // - Not processing
-  // - For enable_search: always (uses dropdown)
-  // - For static: value is entered
-  // - For mapping: either a field is selected OR null is intentional (exclude)
   const canSubmit = selectedAttribute && !validationError && !isProcessing &&
-    (isEnableSearchField ||  // enable_search always has a valid value from dropdown
-     overrideType === 'remove' ||
+    (isEnableSearchField || overrideType === 'remove' ||
      (overrideType === 'static' && staticValue.trim()) ||
-     overrideType === 'mapping'); // mapping can be null (exclude) or a field
+     overrideType === 'mapping');
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl border border-gray-200 w-[600px] max-h-[80vh] overflow-hidden flex flex-col shadow-2xl">
-        {/* Header */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Bulk Edit Fields</h2>
@@ -190,10 +162,8 @@ export function BulkEditModal({
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-6 overflow-y-auto flex-1">
           <div className="space-y-6">
-            {/* Field Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Field to Update
@@ -226,7 +196,6 @@ export function BulkEditModal({
               </select>
             </div>
 
-            {/* Field Info */}
             {selectedSpec && (
               <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="text-sm text-gray-700">{selectedSpec.description}</p>
@@ -240,7 +209,6 @@ export function BulkEditModal({
               </div>
             )}
 
-            {/* enable_search - Special dropdown UI */}
             {isEnableSearchField && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -260,7 +228,6 @@ export function BulkEditModal({
               </div>
             )}
 
-            {/* Override Type - for non-enable_search fields */}
             {selectedAttribute && !isEnableSearchField && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -309,7 +276,6 @@ export function BulkEditModal({
               </div>
             )}
 
-            {/* Static Value Input */}
             {selectedAttribute && overrideType === 'static' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -334,14 +300,11 @@ export function BulkEditModal({
               </div>
             )}
 
-            {/* WooCommerce Field Selector */}
             {selectedAttribute && overrideType === 'mapping' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   WooCommerce Field Mapping
                 </label>
-
-                {/* Custom styled dropdown for WooCommerce fields */}
                 <div className="relative" ref={wooDropdownRef}>
                   <button
                     onClick={() => !wooFieldsLoading && setIsWooDropdownOpen(!isWooDropdownOpen)}
@@ -362,10 +325,8 @@ export function BulkEditModal({
                     </svg>
                   </button>
 
-                  {/* Dropdown Panel */}
                   {isWooDropdownOpen && !wooFieldsLoading && (
                     <div className="absolute z-50 top-full left-0 w-full mt-2 bg-white rounded-lg border border-gray-200 shadow-xl max-h-[280px] overflow-hidden flex flex-col">
-                      {/* Search Bar */}
                       <div className="p-3 border-b border-gray-100">
                         <input
                           type="text"
@@ -377,9 +338,7 @@ export function BulkEditModal({
                         />
                       </div>
 
-                      {/* Options List */}
                       <div className="overflow-y-auto">
-                        {/* "No mapping" option - exclude field */}
                         {!wooFieldSearch && (
                           <button
                             onClick={() => {
@@ -397,7 +356,6 @@ export function BulkEditModal({
                           </button>
                         )}
 
-                        {/* WooCommerce fields */}
                         {filteredWooFields.length > 0 ? (
                           filteredWooFields.map((field) => (
                             <button
@@ -427,7 +385,6 @@ export function BulkEditModal({
                   )}
                 </div>
 
-                {/* Info about the selected mapping */}
                 {selectedWooField === null && (
                   <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
                     <p className="text-sm text-amber-700">
@@ -445,7 +402,6 @@ export function BulkEditModal({
               </div>
             )}
 
-            {/* Remove Override Warning */}
             {selectedAttribute && overrideType === 'remove' && (
               <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
                 <p className="text-sm text-amber-700">
@@ -456,7 +412,6 @@ export function BulkEditModal({
           </div>
         </div>
 
-        {/* Footer */}
         <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
           <button
             onClick={onClose}

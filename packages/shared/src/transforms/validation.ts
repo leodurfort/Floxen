@@ -1,8 +1,7 @@
 /**
  * Feed Validation Layer
  *
- * Validates entire feed entries against OpenAI Product Feed specification.
- * Provides detailed error messages for debugging and quality assurance.
+ * Validates feed entries against OpenAI Product Feed specification.
  */
 
 import { OPENAI_FEED_SPEC, OpenAIFieldSpec } from '../openai-feed-spec';
@@ -24,54 +23,31 @@ import {
   type ValidationResult,
 } from './validators';
 
-/**
- * Validation error for a specific field
- */
 export interface FieldValidationError {
   field: string;
   error: string;
   severity: 'error' | 'warning';
 }
 
-/**
- * Complete validation result for a feed entry
- */
 export interface FeedValidationResult {
   valid: boolean;
   errors: FieldValidationError[];
   warnings: FieldValidationError[];
 }
 
-/**
- * Product context for conditional validation
- * Provides information about the product type that isn't available in the flat feed entry
- */
 export interface ProductValidationContext {
-  /** Whether this product is a variation (has a parent product) */
   isVariation?: boolean;
-  /** WooCommerce product type (simple, variable, grouped, external) */
   wooProductType?: 'simple' | 'variable' | 'grouped' | 'external' | string;
 }
 
-/**
- * Validation options
- */
 export interface ValidationOptions {
-  /** Skip validation for specific fields */
   skipFields?: string[];
-  /** Treat warnings as errors */
   strictMode?: boolean;
-  /** Validate optional fields */
   validateOptional?: boolean;
-  /** Feed-level enable_checkout setting (affects conditional requirements) */
   feedEnableCheckout?: boolean;
-  /** Product context for conditional validation (identifies variations, product type) */
   productContext?: ProductValidationContext;
 }
 
-/**
- * Check if a value exists (not null, undefined, empty string, or empty array)
- */
 function hasValue(value: any): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string' && value.trim() === '') return false;
@@ -79,9 +55,6 @@ function hasValue(value: any): boolean {
   return true;
 }
 
-/**
- * Check if a conditional requirement is met
- */
 function checkConditionalRequirement(
   spec: OpenAIFieldSpec,
   entry: Record<string, any>,
@@ -89,46 +62,20 @@ function checkConditionalRequirement(
   productContext?: ProductValidationContext
 ): boolean {
   const deps = spec.dependencies || '';
+  const { attribute } = spec;
 
-  // Checkout-related requirements (seller_privacy_policy, seller_tos)
-  if (deps.includes('enable_checkout')) {
-    return feedEnableCheckout;
-  }
-
-  // GTIN/MPN dependency: mpn required if gtin is not provided
-  if (spec.attribute === 'mpn' && deps.includes('gtin')) {
-    return !hasValue(entry['gtin']);
-  }
-
-  // Availability date required if availability = preorder
-  if (spec.attribute === 'availability_date' && deps.includes('availability')) {
-    return entry['availability'] === 'preorder';
-  }
-
-  // Item group ID required if product is a variation
-  // Requires productContext to properly identify variations
-  if (spec.attribute === 'item_group_id' && deps.includes('variants')) {
-    return productContext?.isVariation === true;
-  }
-
-  // Condition: optional field, not required by default
-  // Users can map it to a WooCommerce field if needed
-  if (spec.attribute === 'condition' && deps.includes('new')) {
-    return false;
-  }
+  if (deps.includes('enable_checkout')) return feedEnableCheckout;
+  if (attribute === 'mpn' && deps.includes('gtin')) return !hasValue(entry['gtin']);
+  if (attribute === 'availability_date' && deps.includes('availability')) return entry['availability'] === 'preorder';
+  if (attribute === 'item_group_id' && deps.includes('variants')) return productContext?.isVariation === true;
+  if (attribute === 'condition' && deps.includes('new')) return false;
 
   return false;
 }
 
-/**
- * Validate cross-field dependencies
- */
-function validateCrossFieldDependencies(
-  entry: Record<string, any>
-): FieldValidationError[] {
+function validateCrossFieldDependencies(entry: Record<string, any>): FieldValidationError[] {
   const errors: FieldValidationError[] = [];
 
-  // availability_date must be null when availability is not "preorder"
   if (hasValue(entry['availability_date']) && entry['availability'] !== 'preorder') {
     errors.push({
       field: 'availability_date',
@@ -137,24 +84,20 @@ function validateCrossFieldDependencies(
     });
   }
 
-  // sale_price must be <= price
   if (hasValue(entry['sale_price']) && hasValue(entry['price'])) {
-    const salePriceMatch = String(entry['sale_price']).match(/^(\d+(?:\.\d+)?)/);
-    const priceMatch = String(entry['price']).match(/^(\d+(?:\.\d+)?)/);
-    if (salePriceMatch && priceMatch) {
-      const salePrice = parseFloat(salePriceMatch[1]);
-      const price = parseFloat(priceMatch[1]);
-      if (salePrice > price) {
-        errors.push({
-          field: 'sale_price',
-          error: `sale_price (${salePrice}) must be less than or equal to price (${price})`,
-          severity: 'error',
-        });
-      }
+    const extractPrice = (val: string) => parseFloat(String(val).match(/^(\d+(?:\.\d+)?)/)?.[1] ?? '');
+    const salePrice = extractPrice(entry['sale_price']);
+    const price = extractPrice(entry['price']);
+
+    if (!isNaN(salePrice) && !isNaN(price) && salePrice > price) {
+      errors.push({
+        field: 'sale_price',
+        error: `sale_price (${salePrice}) must be less than or equal to price (${price})`,
+        severity: 'error',
+      });
     }
   }
 
-  // enable_checkout requires enable_search to be true
   if (entry['enable_checkout'] === 'true' && entry['enable_search'] !== 'true') {
     errors.push({
       field: 'enable_checkout',
@@ -166,6 +109,56 @@ function validateCrossFieldDependencies(
   return errors;
 }
 
+// Field validation lookup tables for cleaner code
+const BOOLEAN_FIELDS = new Set(['enable_search', 'enable_checkout']);
+const PRICE_FIELDS = new Set(['price', 'sale_price', 'geo_price']);
+const URL_FIELDS = new Set([
+  'link', 'seller_url', 'seller_privacy_policy', 'seller_tos',
+  'return_policy', 'image_link', 'video_link', 'model_3d_link', 'warning_url'
+]);
+const DATE_FIELDS = new Set(['availability_date', 'expiration_date', 'delivery_estimate']);
+const DIMENSION_FIELDS = new Set(['length', 'width', 'height']);
+const POSITIVE_NUMBER_FIELDS = new Set([
+  'inventory_quantity', 'return_window', 'product_review_count',
+  'store_review_count', 'age_restriction'
+]);
+const RATING_FIELDS = new Set(['popularity_score', 'product_review_rating', 'store_review_rating']);
+
+// Max length for string fields
+const STRING_LENGTH_LIMITS: Record<string, number> = {
+  title: 150,
+  description: 5000,
+  brand: 70,
+  seller_name: 70,
+  item_group_id: 70,
+  color: 40,
+  size: 20,
+  material: 100,
+};
+
+const ALPHANUMERIC_LENGTH_LIMITS: Record<string, number> = {
+  mpn: 70,
+  id: 100,
+};
+
+function validateDimensionWithUnit(value: any, attribute: string): ValidationResult {
+  if (value && typeof value === 'string' && !/\s/.test(value)) {
+    return { valid: false, error: `${attribute} must include unit (e.g., "10 mm")` };
+  }
+  return { valid: true };
+}
+
+function validateRating(value: any, attribute: string): ValidationResult {
+  const numValidation = validatePositiveNumber(value, attribute);
+  if (!numValidation.valid) return numValidation;
+
+  const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+  if (num > 5) {
+    return { valid: false, error: `${attribute} must be between 0 and 5 (current: ${num})` };
+  }
+  return { valid: true };
+}
+
 /**
  * Validate a single field value based on OpenAI spec
  */
@@ -175,172 +168,50 @@ function validateFieldValue(
 ): ValidationResult {
   const { attribute, requirement } = spec;
 
-  // Check required fields
   if (requirement === 'Required' && (value === null || value === undefined || value === '')) {
-    return {
-      valid: false,
-      error: `Required field "${attribute}" is missing`,
-    };
+    return { valid: false, error: `Required field "${attribute}" is missing` };
   }
 
-  // Skip validation if value is null/undefined for optional fields
   if (!value && requirement !== 'Required') {
     return { valid: true };
   }
 
-  // Field-specific validation based on attribute name
-  switch (attribute) {
-    // Boolean flags
-    case 'enable_search':
-    case 'enable_checkout':
-      return validateBooleanEnum(value, attribute);
+  // Lookup-based validation for cleaner code
+  if (BOOLEAN_FIELDS.has(attribute)) return validateBooleanEnum(value, attribute);
+  if (PRICE_FIELDS.has(attribute)) return validatePrice(value);
+  if (URL_FIELDS.has(attribute)) return validateUrl(value, attribute);
+  if (DATE_FIELDS.has(attribute)) return validateDate(value, attribute);
+  if (DIMENSION_FIELDS.has(attribute)) return validateDimensionWithUnit(value, attribute);
+  if (POSITIVE_NUMBER_FIELDS.has(attribute)) return validatePositiveNumber(value, attribute);
+  if (RATING_FIELDS.has(attribute)) return validateRating(value, attribute);
 
-    // Prices
-    case 'price':
-    case 'sale_price':
-    case 'geo_price':
-      return validatePrice(value);
-
-    // GTIN
-    case 'gtin':
-      return validateGtin(value);
-
-    // URLs
-    case 'link':
-    case 'seller_url':
-    case 'seller_privacy_policy':
-    case 'seller_tos':
-    case 'return_policy':
-    case 'image_link':
-    case 'video_link':
-    case 'model_3d_link':
-    case 'warning_url':
-      return validateUrl(value, attribute);
-
-    // Category
-    case 'product_category':
-      return validateCategoryPath(value);
-
-    // Availability
-    case 'availability':
-      return validateAvailability(value);
-
-    // Condition
-    case 'condition':
-      return validateCondition(value);
-
-    // Dimensions
-    case 'dimensions':
-      return validateDimensions(value);
-
-    // Individual dimensions with unit
-    case 'length':
-    case 'width':
-    case 'height':
-      if (value && typeof value === 'string' && !/\s/.test(value)) {
-        return {
-          valid: false,
-          error: `${attribute} must include unit (e.g., "10 mm")`,
-        };
-      }
-      return { valid: true };
-
-    // Weight
-    case 'weight':
-      return validateWeight(value);
-
-    // Dates
-    case 'availability_date':
-    case 'expiration_date':
-    case 'delivery_estimate':
-      return validateDate(value, attribute);
-
-    // Date ranges
-    case 'sale_price_effective_date':
-      return validateDateRange(value, attribute);
-
-    // String length validation
-    case 'title':
-      return validateStringLength(value, attribute, 150);
-    case 'description':
-      return validateStringLength(value, attribute, 5000);
-    case 'brand':
-    case 'seller_name':
-      return validateStringLength(value, attribute, 70);
-    case 'mpn':
-      return validateAlphanumericString(value, attribute, 70);
-    case 'item_group_id':
-      return validateStringLength(value, attribute, 70);
-    case 'color':
-      return validateStringLength(value, attribute, 40);
-    case 'size':
-      return validateStringLength(value, attribute, 20);
-    case 'material':
-      return validateStringLength(value, attribute, 100);
-    case 'id':
-      return validateAlphanumericString(value, attribute, 100);
-
-    // Positive numbers
-    case 'inventory_quantity':
-    case 'return_window':
-    case 'product_review_count':
-    case 'store_review_count':
-    case 'age_restriction':
-      return validatePositiveNumber(value, attribute);
-
-    // Numeric ranges (0-5)
-    case 'popularity_score':
-    case 'product_review_rating':
-    case 'store_review_rating':
-      const numValidation = validatePositiveNumber(value, attribute);
-      if (!numValidation.valid) return numValidation;
-
-      const num = typeof value === 'string' ? parseFloat(value) : Number(value);
-      if (num > 5) {
-        return {
-          valid: false,
-          error: `${attribute} must be between 0 and 5 (current: ${num})`,
-        };
-      }
-      return { valid: true };
-
-    // Arrays
-    case 'additional_image_link':
-      if (value && !Array.isArray(value)) {
-        return {
-          valid: false,
-          error: `${attribute} must be an array`,
-        };
-      }
-      return { valid: true };
-
-    default:
-      // No specific validation, just check it exists if required
-      return { valid: true };
+  // String length validation
+  if (STRING_LENGTH_LIMITS[attribute] !== undefined) {
+    return validateStringLength(value, attribute, STRING_LENGTH_LIMITS[attribute]);
   }
+  if (ALPHANUMERIC_LENGTH_LIMITS[attribute] !== undefined) {
+    return validateAlphanumericString(value, attribute, ALPHANUMERIC_LENGTH_LIMITS[attribute]);
+  }
+
+  // Special cases
+  if (attribute === 'gtin') return validateGtin(value);
+  if (attribute === 'product_category') return validateCategoryPath(value);
+  if (attribute === 'availability') return validateAvailability(value);
+  if (attribute === 'condition') return validateCondition(value);
+  if (attribute === 'dimensions') return validateDimensions(value);
+  if (attribute === 'weight') return validateWeight(value);
+  if (attribute === 'sale_price_effective_date') return validateDateRange(value, attribute);
+  if (attribute === 'additional_image_link') {
+    return value && !Array.isArray(value)
+      ? { valid: false, error: `${attribute} must be an array` }
+      : { valid: true };
+  }
+
+  return { valid: true };
 }
 
 /**
  * Validate an entire feed entry against OpenAI specification
- *
- * @param entry - The feed entry to validate (product data)
- * @param options - Validation options
- * @returns Validation result with errors and warnings
- *
- * @example
- * ```typescript
- * const entry = {
- *   id: "123",
- *   title: "Product Name",
- *   price: "79.99 USD",
- *   // ... other fields
- * };
- *
- * const result = validateFeedEntry(entry);
- * if (!result.valid) {
- *   console.error("Validation errors:", result.errors);
- * }
- * ```
  */
 export function validateFeedEntry(
   entry: Record<string, any>,
@@ -359,19 +230,11 @@ export function validateFeedEntry(
   for (const spec of OPENAI_FEED_SPEC) {
     const { attribute, requirement } = spec;
 
-    // Skip fields explicitly excluded
-    if (skipFields.includes(attribute)) {
-      continue;
-    }
-
-    // Skip optional fields if not validating them
-    if (!validateOptional && requirement === 'Optional') {
-      continue;
-    }
+    if (skipFields.includes(attribute)) continue;
+    if (!validateOptional && requirement === 'Optional') continue;
 
     const value = entry[attribute];
 
-    // Handle conditional requirements
     if (requirement === 'Conditional') {
       const conditionMet = checkConditionalRequirement(spec, entry, feedEnableCheckout, productContext);
       if (conditionMet && !hasValue(value)) {
@@ -381,13 +244,9 @@ export function validateFeedEntry(
           severity: 'error',
         });
       }
-      // Skip further validation if value is empty and condition not met
-      if (!hasValue(value)) {
-        continue;
-      }
+      if (!hasValue(value)) continue;
     }
 
-    // Handle recommended fields - add warning if missing
     if (requirement === 'Recommended' && !hasValue(value)) {
       warnings.push({
         field: attribute,
@@ -412,7 +271,6 @@ export function validateFeedEntry(
         warnings.push(error);
       }
     } else if (validation.error) {
-      // Valid but has warning (e.g., HTTP instead of HTTPS)
       warnings.push({
         field: attribute,
         error: validation.error,
@@ -421,11 +279,8 @@ export function validateFeedEntry(
     }
   }
 
-  // Add cross-field validation errors
-  const crossFieldErrors = validateCrossFieldDependencies(entry);
-  errors.push(...crossFieldErrors);
+  errors.push(...validateCrossFieldDependencies(entry));
 
-  // In strict mode, treat warnings as errors
   if (strictMode && warnings.length > 0) {
     errors.push(...warnings);
   }
@@ -438,23 +293,7 @@ export function validateFeedEntry(
 }
 
 /**
- * Validate multiple feed entries
- *
- * @param entries - Array of feed entries to validate
- * @param options - Validation options
- * @returns Map of entry index to validation result
- *
- * @example
- * ```typescript
- * const entries = [entry1, entry2, entry3];
- * const results = validateFeedEntries(entries);
- *
- * results.forEach((result, index) => {
- *   if (!result.valid) {
- *     console.error(`Entry ${index} has errors:`, result.errors);
- *   }
- * });
- * ```
+ * Validate multiple feed entries. Returns a map of index to result for entries with issues.
  */
 export function validateFeedEntries(
   entries: Array<Record<string, any>>,
@@ -473,10 +312,7 @@ export function validateFeedEntries(
 }
 
 /**
- * Get a summary of validation results
- *
- * @param results - Validation results from validateFeedEntries
- * @returns Summary statistics
+ * Get summary statistics from validation results
  */
 export function getValidationSummary(results: Map<number, FeedValidationResult>): {
   total: number;
@@ -498,18 +334,15 @@ export function getValidationSummary(results: Map<number, FeedValidationResult>)
     totalErrors += result.errors.length;
     totalWarnings += result.warnings.length;
 
-    // Count error types
     result.errors.forEach((error) => {
-      const count = errorCounts.get(error.error) || 0;
-      errorCounts.set(error.error, count + 1);
+      errorCounts.set(error.error, (errorCounts.get(error.error) || 0) + 1);
     });
   });
 
-  // Get most common errors
   const commonErrors = Array.from(errorCounts.entries())
     .map(([error, count]) => ({ error, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10); // Top 10 most common errors
+    .slice(0, 10);
 
   return {
     total: results.size,
@@ -521,10 +354,6 @@ export function getValidationSummary(results: Map<number, FeedValidationResult>)
   };
 }
 
-/**
- * API-compatible validation result format
- * Matches the format previously used by ValidationService
- */
 export interface ApiValidationResult {
   isValid: boolean;
   errors: Record<string, string[]>;
@@ -532,56 +361,26 @@ export interface ApiValidationResult {
 }
 
 /**
- * Convert FeedValidationResult to API-compatible format
- *
- * This converts the array-based error format to a Record grouped by field,
- * matching the format expected by the API and database storage.
- *
- * @param result - FeedValidationResult from validateFeedEntry
- * @returns API-compatible validation result
- *
- * @example
- * ```typescript
- * const feedResult = validateFeedEntry(entry, { feedEnableCheckout: true });
- * const apiResult = toApiValidationResult(feedResult);
- * // apiResult.errors = { title: ['Title is required'], price: ['Invalid price format'] }
- * ```
+ * Convert FeedValidationResult to API-compatible format (errors grouped by field)
  */
 export function toApiValidationResult(result: FeedValidationResult): ApiValidationResult {
-  const errors: Record<string, string[]> = {};
-  const warnings: Record<string, string[]> = {};
-
-  for (const error of result.errors) {
-    if (!errors[error.field]) {
-      errors[error.field] = [];
+  const groupByField = (items: FieldValidationError[]): Record<string, string[]> => {
+    const grouped: Record<string, string[]> = {};
+    for (const item of items) {
+      (grouped[item.field] ??= []).push(item.error);
     }
-    errors[error.field].push(error.error);
-  }
-
-  for (const warning of result.warnings) {
-    if (!warnings[warning.field]) {
-      warnings[warning.field] = [];
-    }
-    warnings[warning.field].push(warning.error);
-  }
+    return grouped;
+  };
 
   return {
     isValid: result.valid,
-    errors,
-    warnings,
+    errors: groupByField(result.errors),
+    warnings: groupByField(result.warnings),
   };
 }
 
 /**
- * Validate a product and return API-compatible result
- *
- * This is a convenience function that combines validateFeedEntry with
- * toApiValidationResult for direct use in API code.
- *
- * @param openaiAutoFilled - Auto-filled OpenAI field values
- * @param feedEnableCheckout - Whether checkout is enabled for this feed
- * @param productContext - Optional context about product type (variation, etc.)
- * @returns API-compatible validation result
+ * Validate a product and return API-compatible result (convenience wrapper)
  */
 export function validateProduct(
   openaiAutoFilled: Record<string, any>,

@@ -10,7 +10,6 @@ import { FeedHealthCard } from '@/components/dashboard/FeedHealthCard';
 
 export default function DashboardPage() {
   const router = useRouter();
-  // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
   const { data: shops = [], isLoading: loading } = useShopsQuery();
   const { currentShop } = useCurrentShop();

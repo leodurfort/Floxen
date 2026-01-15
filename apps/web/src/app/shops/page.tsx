@@ -21,39 +21,14 @@ import {
   useTriggerSyncMutation,
   useUpdateShopMutation,
 } from '@/hooks/useShopsQuery';
+import { isValidUrl, formatTimestamp } from '@/lib/validation';
 
-// Helper to check if shop profile is complete
 function isProfileComplete(shop: Shop): boolean {
   return Boolean(shop.sellerName && shop.returnPolicy && shop.returnWindow);
 }
 
-// Helper to check if shop is in first sync state (never synced before)
 function isFirstSync(shop: Shop): boolean {
   return (shop.syncStatus === 'SYNCING' || shop.syncStatus === 'PENDING') && shop.lastSyncAt === null;
-}
-
-// Validate URL
-function isValidUrl(value: string): boolean {
-  if (!value.trim()) return true;
-  try {
-    new URL(value.trim());
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// Format timestamp
-function formatTimestamp(date: string | null | undefined): string {
-  if (!date) return 'Never';
-  return new Date(date).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
 }
 
 export default function ShopsPage() {
@@ -62,26 +37,17 @@ export default function ShopsPage() {
   const queryClient = useQueryClient();
   const { user, hydrated } = useAuth();
 
-  // React Query hooks
   const { data: shops = [], isLoading: loading } = useShopsQuery();
 
-  // Toast state
+  // UI state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-
-  // Modal state
   const [modalShop, setModalShop] = useState<Shop | null>(null);
-
-  // Advanced settings expansion state (per shop)
   const [expandedAdvanced, setExpandedAdvanced] = useState<Record<string, boolean>>({});
-
-  // Track previous sync statuses to detect completion
   const prevSyncStatusesRef = useRef<Record<string, string>>({});
 
-  // Handle OAuth redirect: /shops?shop=abc123&connected=true
+  // URL query params
   const shopIdFromUrl = searchParams.get('shop');
   const isOAuthRedirect = searchParams.get('connected') === 'true';
-
-  // Handle openProfile query param: /shops?openProfile=shopId
   const openProfileId = searchParams.get('openProfile');
 
   useEffect(() => {
@@ -91,25 +57,21 @@ export default function ShopsPage() {
     }
   }, [isOAuthRedirect, shopIdFromUrl, router]);
 
-  // Auto-open modal when openProfile param is present
   useEffect(() => {
     if (openProfileId && shops.length > 0 && !modalShop) {
       const shopToOpen = shops.find(s => s.id === openProfileId);
       if (shopToOpen) {
         setModalShop(shopToOpen);
-        // Clean up URL
         router.replace('/shops', { scroll: false });
       }
     }
   }, [openProfileId, shops, modalShop, router]);
 
-  // Determine if we need polling
   const hasSyncingShops = shops.some(
     (shop) => shop.syncStatus === 'PENDING' || shop.syncStatus === 'SYNCING'
   );
   useShopsSyncPolling(hasSyncingShops);
 
-  // Detect sync completion and show toast
   useEffect(() => {
     if (shops.length === 0) return;
 

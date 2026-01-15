@@ -7,7 +7,6 @@ import { generateFeedPayload } from '../services/feedService';
 import { getUserId } from '../utils/request';
 
 export async function triggerSync(req: Request, res: Response) {
-  // Check Redis availability FIRST before modifying shop status
   if (!isQueueAvailable()) {
     logger.error('sync:trigger failed - Redis unavailable', { shopId: req.params.id });
     return res.status(503).json({
@@ -82,7 +81,6 @@ export async function getSyncHistory(req: Request, res: Response) {
 }
 
 export async function pushFeed(req: Request, res: Response) {
-  // Check Redis availability FIRST
   if (!isQueueAvailable()) {
     logger.error('feed:push failed - Redis unavailable', { shopId: req.params.id });
     return res.status(503).json({
@@ -95,7 +93,6 @@ export async function pushFeed(req: Request, res: Response) {
     const shop = await prisma.shop.findUnique({ where: { id: req.params.id } });
     if (!shop) return res.status(404).json({ error: 'Shop not found' });
 
-    // Block feed generation if sync is in progress to prevent inconsistent data
     if (shop.syncStatus === 'SYNCING') {
       logger.warn('feed:push blocked - sync in progress', { shopId: shop.id });
       return res.status(409).json({
@@ -123,18 +120,12 @@ export async function pushFeed(req: Request, res: Response) {
   }
 }
 
-/**
- * GET /api/v1/shops/:id/sync/feed/preview
- * Generates feed in-memory without saving snapshot
- * Returns the same structure as the actual feed for accurate preview
- */
 export async function previewFeed(req: Request, res: Response) {
   const shopId = req.params.id;
 
   try {
     const userId = getUserId(req);
 
-    // Get shop with ownership check
     const shop = await prisma.shop.findFirst({
       where: { id: shopId, userId },
     });
@@ -143,18 +134,14 @@ export async function previewFeed(req: Request, res: Response) {
       return res.status(404).json({ error: 'Store not found' });
     }
 
-    // Get all products for this shop
     const allProducts = await prisma.product.findMany({
       where: { shopId },
     });
 
-    // Get counts for stats
     const totalProducts = allProducts.length;
-    const validProducts = allProducts.filter(p => p.isValid && p.feedEnableSearch);
     const invalidCount = allProducts.filter(p => !p.isValid).length;
     const disabledCount = allProducts.filter(p => !p.feedEnableSearch).length;
 
-    // Generate feed payload in-memory (no snapshot saved)
     const feedPayload = generateFeedPayload(shop, allProducts, {
       validateEntries: true,
       skipInvalidEntries: true,

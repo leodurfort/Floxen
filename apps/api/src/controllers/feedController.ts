@@ -12,24 +12,26 @@ import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { OPENAI_FEED_SPEC } from '@productsynch/shared';
 
-/**
- * Get raw JSON feed for a shop (latest snapshot)
- * This is the endpoint OpenAI will fetch from
- */
+// Helper to get snapshot by ID or latest
+async function getSnapshot<T extends object>(
+  shopId: string,
+  snapshotId: string | undefined,
+  include?: T
+) {
+  const where = snapshotId ? { id: snapshotId, shopId } : { shopId };
+  return prisma.feedSnapshot.findFirst({
+    where,
+    orderBy: snapshotId ? undefined : { generatedAt: 'desc' },
+    include: include as any,
+  });
+}
+
 export async function getFeedJson(req: Request, res: Response) {
   const { shopId } = req.params;
   const { snapshot: snapshotId } = req.query;
 
   try {
-    // Get specific snapshot by ID or latest
-    const snapshot = snapshotId
-      ? await prisma.feedSnapshot.findFirst({
-          where: { id: snapshotId as string, shopId },
-        })
-      : await prisma.feedSnapshot.findFirst({
-          where: { shopId },
-          orderBy: { generatedAt: 'desc' },
-        });
+    const snapshot = await getSnapshot(shopId, snapshotId as string | undefined);
 
     if (!snapshot) {
       logger.warn('feed:json - No feed found', { shopId, snapshotId });
@@ -46,7 +48,6 @@ export async function getFeedJson(req: Request, res: Response) {
       generatedAt: snapshot.generatedAt,
     });
 
-    // Return the feed data directly (OpenAI format)
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('X-Feed-Generated-At', snapshot.generatedAt.toISOString());
     res.setHeader('X-Feed-Product-Count', snapshot.productCount.toString());
@@ -59,9 +60,6 @@ export async function getFeedJson(req: Request, res: Response) {
   }
 }
 
-/**
- * List available snapshots for a shop (past 7 days)
- */
 export async function listSnapshots(req: Request, res: Response) {
   const { shopId } = req.params;
 
@@ -87,16 +85,11 @@ export async function listSnapshots(req: Request, res: Response) {
   }
 }
 
-/**
- * Get HTML view of the feed for debugging
- * Supports ?snapshot=id to view specific snapshot
- */
 export async function getFeedHtml(req: Request, res: Response) {
   const { shopId } = req.params;
   const { snapshot: snapshotId } = req.query;
 
   try {
-    // Get all snapshots for the dropdown
     const allSnapshots = await prisma.feedSnapshot.findMany({
       where: { shopId },
       orderBy: { generatedAt: 'desc' },
@@ -107,21 +100,11 @@ export async function getFeedHtml(req: Request, res: Response) {
       },
     });
 
-    // Get specific snapshot by ID or latest
-    const snapshot = snapshotId
-      ? await prisma.feedSnapshot.findFirst({
-          where: { id: snapshotId as string, shopId },
-          include: {
-            shop: { select: { sellerName: true, wooStoreUrl: true } },
-          },
-        })
-      : await prisma.feedSnapshot.findFirst({
-          where: { shopId },
-          orderBy: { generatedAt: 'desc' },
-          include: {
-            shop: { select: { sellerName: true, wooStoreUrl: true } },
-          },
-        });
+    const snapshot = await getSnapshot(
+      shopId,
+      snapshotId as string | undefined,
+      { shop: { select: { sellerName: true, wooStoreUrl: true } } }
+    );
 
     if (!snapshot) {
       return res.status(404).send(`
@@ -167,10 +150,6 @@ export async function getFeedHtml(req: Request, res: Response) {
   }
 }
 
-/**
- * Build the HTML page for feed visualization
- * Shows all 70 OpenAI fields in spec order
- */
 function buildFeedHtml(
   snapshot: any,
   feedData: any,
@@ -179,14 +158,12 @@ function buildFeedHtml(
   shopId: string,
   allSnapshots: Array<{ id: string; productCount: number; generatedAt: Date }>
 ): string {
-  // Use all 70 fields from the spec in order
   const allFields = OPENAI_FEED_SPEC.map(spec => ({
     attribute: spec.attribute,
     requirement: spec.requirement,
     category: spec.category,
   }));
 
-  // Count filled vs null fields across all items
   const fieldStats = new Map<string, number>();
   allFields.forEach(f => fieldStats.set(f.attribute, 0));
   items.forEach(item => {
@@ -203,7 +180,6 @@ function buildFeedHtml(
     const cells = allFields.map(({ attribute: key }) => {
       let value = item[key];
 
-      // Format special values
       if (value === null || value === undefined) {
         return '<td class="cell-null">—</td>';
       }
@@ -211,12 +187,10 @@ function buildFeedHtml(
         value = JSON.stringify(value);
       }
 
-      // Truncate long values
       const displayValue = String(value).length > 80
         ? String(value).substring(0, 80) + '...'
         : String(value);
 
-      // Special styling for certain columns
       if (key === 'enable_search' || key === 'enable_checkout') {
         const isTrue = value === 'true' || value === true;
         return `<td class="cell-badge ${isTrue ? 'badge-green' : 'badge-gray'}">${value}</td>`;
@@ -232,8 +206,7 @@ function buildFeedHtml(
     return `<tr><td class="row-num">${idx + 1}</td>${cells}</tr>`;
   }).join('');
 
-  // Build headers with requirement badges
-  const tableHeaders = allFields.map(({ attribute, requirement, category }) => {
+  const tableHeaders = allFields.map(({ attribute, requirement }) => {
     const reqClass = requirement === 'Required' ? 'req-required' :
                      requirement === 'Recommended' ? 'req-recommended' :
                      requirement === 'Conditional' ? 'req-conditional' : 'req-optional';
@@ -539,9 +512,6 @@ function buildFeedHtml(
   `;
 }
 
-/**
- * Escape HTML special characters
- */
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {
     '&': '&amp;',

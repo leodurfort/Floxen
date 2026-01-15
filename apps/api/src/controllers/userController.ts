@@ -11,6 +11,42 @@ import {
 } from '../services/userService';
 import { createVerificationToken, verifyToken } from '../services/verificationService';
 
+// Helper to normalize error for logging
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+// User response shape for consistent API responses
+type UserResponse = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  surname: string | null;
+  emailVerified: boolean;
+  onboardingComplete: boolean;
+  subscriptionTier: string;
+};
+
+function formatUserResponse(user: {
+  id: string;
+  email: string;
+  firstName: string | null;
+  surname: string | null;
+  emailVerified: boolean;
+  onboardingComplete: boolean;
+  subscriptionTier: string;
+}): UserResponse {
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    surname: user.surname,
+    emailVerified: user.emailVerified,
+    onboardingComplete: user.onboardingComplete,
+    subscriptionTier: user.subscriptionTier,
+  };
+}
+
 // Validation schemas
 const updateProfileSchema = z.object({
   firstName: z.string().min(1, 'First name is required').optional(),
@@ -52,7 +88,7 @@ export async function getProfile(req: Request, res: Response) {
       createdAt: user.createdAt,
     });
   } catch (err) {
-    logger.error('getProfile: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('getProfile: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to get profile' });
   }
 }
@@ -75,20 +111,9 @@ export async function updateProfile(req: Request, res: Response) {
     });
 
     logger.info('updateProfile: success', { userId: getUserId(req) });
-    return res.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        surname: user.surname,
-        emailVerified: user.emailVerified,
-        onboardingComplete: user.onboardingComplete,
-        subscriptionTier: user.subscriptionTier,
-      },
-    });
+    return res.json({ success: true, user: formatUserResponse(user) });
   } catch (err) {
-    logger.error('updateProfile: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('updateProfile: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to update profile' });
   }
 }
@@ -110,20 +135,9 @@ export async function completeOnboardingHandler(req: Request, res: Response) {
     const updatedUser = await completeOnboarding(userId);
 
     logger.info('completeOnboarding: success', { userId });
-    return res.json({
-      success: true,
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        firstName: updatedUser.firstName,
-        surname: updatedUser.surname,
-        emailVerified: updatedUser.emailVerified,
-        onboardingComplete: updatedUser.onboardingComplete,
-        subscriptionTier: updatedUser.subscriptionTier,
-      },
-    });
+    return res.json({ success: true, user: formatUserResponse(updatedUser) });
   } catch (err) {
-    logger.error('completeOnboarding: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('completeOnboarding: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to complete onboarding' });
   }
 }
@@ -171,7 +185,7 @@ export async function changeEmail(req: Request, res: Response) {
       message: 'Verification code sent to your new email address',
     });
   } catch (err) {
-    logger.error('changeEmail: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('changeEmail: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to initiate email change' });
   }
 }
@@ -222,18 +236,10 @@ export async function changeEmailVerify(req: Request, res: Response) {
     return res.json({
       success: true,
       message: 'Email updated successfully',
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        firstName: updatedUser.firstName,
-        surname: updatedUser.surname,
-        emailVerified: updatedUser.emailVerified,
-        onboardingComplete: updatedUser.onboardingComplete,
-        subscriptionTier: updatedUser.subscriptionTier,
-      },
+      user: formatUserResponse(updatedUser),
     });
   } catch (err) {
-    logger.error('changeEmailVerify: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('changeEmailVerify: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to verify email change' });
   }
 }
@@ -270,7 +276,7 @@ export async function changePassword(req: Request, res: Response) {
       message: 'Password updated successfully',
     });
   } catch (err) {
-    logger.error('changePassword: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('changePassword: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to change password' });
   }
 }
@@ -381,7 +387,7 @@ export async function deleteAccount(req: Request, res: Response) {
       message: 'Account deleted successfully',
     });
   } catch (err) {
-    logger.error('deleteAccount: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('deleteAccount: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to delete account' });
   }
 }

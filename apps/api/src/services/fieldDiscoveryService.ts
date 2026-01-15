@@ -95,92 +95,18 @@ export class FieldDiscoveryService {
         productCount: products.length
       });
 
-      // Track discovered meta fields
       const metaFieldMap = new Map<string, { count: number; sample: any }>();
-      // Track discovered attribute fields
       const attributeFieldMap = new Map<string, { count: number; sample: any }>();
 
-      // Scan all products for meta_data AND attributes
       for (const product of products) {
-        // === SCAN META_DATA ===
-        if (product.meta_data && Array.isArray(product.meta_data)) {
-          for (const meta of product.meta_data) {
-            if (!meta.key || typeof meta.key !== 'string') {
-              continue;
-            }
-
-            // Skip internal WordPress/WooCommerce meta (starts with _)
-            // but include common ones that users might want to map
-            const key = meta.key;
-
-            // Skip system meta keys that are too technical
-            if (this.shouldSkipMetaKey(key)) {
-              continue;
-            }
-
-            // Track this field
-            if (metaFieldMap.has(key)) {
-              const existing = metaFieldMap.get(key)!;
-              existing.count++;
-            } else {
-              metaFieldMap.set(key, {
-                count: 1,
-                sample: meta.value,
-              });
-            }
-          }
-        }
-
-        // === SCAN ATTRIBUTES ===
-        if (product.attributes && Array.isArray(product.attributes)) {
-          for (const attr of product.attributes) {
-            if (!attr.name || typeof attr.name !== 'string') {
-              continue;
-            }
-
-            // Create field path like "attributes.Color"
-            const key = `attributes.${attr.name}`;
-
-            // Get the first option as sample value
-            const sampleValue = Array.isArray(attr.options) && attr.options.length > 0
-              ? attr.options.join(', ')  // Join multiple options
-              : null;
-
-            // Track this field
-            if (attributeFieldMap.has(key)) {
-              const existing = attributeFieldMap.get(key)!;
-              existing.count++;
-            } else {
-              attributeFieldMap.set(key, {
-                count: 1,
-                sample: sampleValue,
-              });
-            }
-          }
-        }
+        this.scanMetaData(product, metaFieldMap);
+        this.scanAttributes(product, attributeFieldMap);
       }
 
-      // Convert meta fields to discovered fields array
-      const metaFields = Array.from(metaFieldMap.entries()).map(([key, data]) => ({
-        key,
-        label: this.generateLabelFromKey(key),
-        occurrences: data.count,
-        sampleValue: data.sample,
-      }));
+      const metaFields = this.mapToDiscoveredFields(metaFieldMap, (key) => this.generateLabelFromKey(key));
+      const attributeFields = this.mapToDiscoveredFields(attributeFieldMap, (key) => `${key.split('.')[1]} (Attribute)`);
 
-      // Convert attribute fields to discovered fields array
-      const attributeFields = Array.from(attributeFieldMap.entries()).map(([key, data]) => ({
-        key,
-        label: `${key.split('.')[1]} (Attribute)`,
-        occurrences: data.count,
-        sampleValue: data.sample,
-      }));
-
-      // Combine both types of discovered fields
-      result.discovered = [...metaFields, ...attributeFields];
-
-      // Sort by occurrence count (most common first)
-      result.discovered.sort((a, b) => b.occurrences - a.occurrences);
+      result.discovered = [...metaFields, ...attributeFields].sort((a, b) => b.occurrences - a.occurrences);
 
       logger.info('Field discovery complete', {
         shopId,
@@ -292,41 +218,60 @@ export class FieldDiscoveryService {
       '_sale_price_dates_to',
     ];
 
-    if (systemFields.includes(key)) return true;
-
-    return false;
+    return systemFields.includes(key);
   }
 
-  /**
-   * Generate a human-readable label from meta key
-   */
   private static generateLabelFromKey(key: string): string {
-    // Remove leading underscore
-    let label = key.startsWith('_') ? key.substring(1) : key;
-
-    // Replace underscores with spaces
-    label = label.replace(/_/g, ' ');
-
-    // Capitalize words
-    label = label.replace(/\b\w/g, (char) => char.toUpperCase());
-
-    // Add "(Meta)" suffix
-    label = `${label} (Meta)`;
-
-    return label;
+    const label = (key.startsWith('_') ? key.substring(1) : key)
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, char => char.toUpperCase());
+    return `${label} (Meta)`;
   }
 
-  /**
-   * Get all fields for a shop (all global fields)
-   */
-  static async getShopFields(shopId: string): Promise<any[]> {
-    const fields = await prisma.wooCommerceField.findMany({
-      orderBy: [
-        { category: 'asc' },
-        { label: 'asc' },
-      ],
-    });
+  private static scanMetaData(product: any, fieldMap: Map<string, { count: number; sample: any }>): void {
+    if (!Array.isArray(product.meta_data)) return;
 
-    return fields;
+    for (const meta of product.meta_data) {
+      if (!meta.key || typeof meta.key !== 'string' || this.shouldSkipMetaKey(meta.key)) continue;
+      this.trackField(fieldMap, meta.key, meta.value);
+    }
+  }
+
+  private static scanAttributes(product: any, fieldMap: Map<string, { count: number; sample: any }>): void {
+    if (!Array.isArray(product.attributes)) return;
+
+    for (const attr of product.attributes) {
+      if (!attr.name || typeof attr.name !== 'string') continue;
+      const key = `attributes.${attr.name}`;
+      const sample = Array.isArray(attr.options) && attr.options.length > 0 ? attr.options.join(', ') : null;
+      this.trackField(fieldMap, key, sample);
+    }
+  }
+
+  private static trackField(fieldMap: Map<string, { count: number; sample: any }>, key: string, sample: any): void {
+    const existing = fieldMap.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      fieldMap.set(key, { count: 1, sample });
+    }
+  }
+
+  private static mapToDiscoveredFields(
+    fieldMap: Map<string, { count: number; sample: any }>,
+    labelFn: (key: string) => string
+  ): DiscoveredField[] {
+    return Array.from(fieldMap.entries()).map(([key, data]) => ({
+      key,
+      label: labelFn(key),
+      occurrences: data.count,
+      sampleValue: data.sample,
+    }));
+  }
+
+  static async getShopFields(shopId: string): Promise<any[]> {
+    return prisma.wooCommerceField.findMany({
+      orderBy: [{ category: 'asc' }, { label: 'asc' }],
+    });
   }
 }

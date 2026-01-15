@@ -2,15 +2,9 @@ import { Product, Shop } from '@prisma/client';
 import { validateFeedEntry, type FeedValidationResult, OPENAI_FEED_SPEC } from '@productsynch/shared';
 import { logger } from '../lib/logger';
 
-// Create a set of valid OpenAI field names for filtering
 const VALID_OPENAI_FIELDS = new Set(OPENAI_FEED_SPEC.map(spec => spec.attribute));
-
-// Ordered list of all 70 OpenAI field attributes (for consistent output)
 const ALL_OPENAI_FIELDS = OPENAI_FEED_SPEC.map(spec => spec.attribute);
 
-/**
- * Validation statistics for feed generation
- */
 export interface FeedValidationStats {
   total: number;
   valid: number;
@@ -22,27 +16,13 @@ export interface FeedValidationStats {
   }>;
 }
 
-/**
- * Generate complete OpenAI feed payload with all 70 attributes
- * Uses auto-filled values from WooCommerce data
- *
- * @param shop - Shop configuration
- * @param products - Products to include in feed
- * @param options - Generation options
- * @returns Feed payload with items and validation stats
- */
 export function generateFeedPayload(
   shop: Shop,
   products: Product[],
-  options: {
-    validateEntries?: boolean; // Enable validation (default: true in production)
-    skipInvalidEntries?: boolean; // Skip invalid entries instead of including them (default: true)
-  } = {}
+  options: { validateEntries?: boolean; skipInvalidEntries?: boolean } = {}
 ) {
-  const {
-    validateEntries = process.env.NODE_ENV === 'production',
-    skipInvalidEntries = true
-  } = options;
+  const validateEntries = options.validateEntries ?? process.env.NODE_ENV === 'production';
+  const skipInvalidEntries = options.skipInvalidEntries ?? true;
 
   const validationStats: FeedValidationStats = {
     total: 0,
@@ -53,53 +33,27 @@ export function generateFeedPayload(
   };
 
   const items = products
-    .filter(p => p.isValid && p.feedEnableSearch) // Only include valid products with search enabled
+    .filter(p => p.isValid && p.feedEnableSearch)
     .map((p) => {
-        // Get all auto-filled values from WooCommerce (includes all OpenAI fields)
         const autoFilled = (p.openaiAutoFilled as Record<string, any>) || {};
+        const completeItem = buildFeedItem(shop, p, autoFilled);
 
-        // Build complete feed item with ALL 70 fields
-        // Fields without values will be null (consistent structure for OpenAI)
-        const completeItem: Record<string, any> = {};
-
-        for (const field of ALL_OPENAI_FIELDS) {
-          // Special handling for certain fields
-          if (field === 'id') {
-            completeItem[field] = autoFilled.id || `${shop.id}-${p.wooProductId}`;
-          } else if (field === 'enable_search') {
-            // Use the resolved value from openaiAutoFilled (respects product overrides)
-            // Fall back to DB column if not present in autoFilled
-            completeItem[field] = autoFilled.enable_search ?? (p.feedEnableSearch ? 'true' : 'false');
-          } else if (field === 'enable_checkout') {
-            // enable_checkout is always false (feature not yet available)
-            completeItem[field] = 'false';
-          } else {
-            // Use auto-filled value or null
-            completeItem[field] = autoFilled[field] ?? null;
-          }
-        }
-
-        // Log any non-spec fields that were in autoFilled (for debugging)
         for (const key of Object.keys(autoFilled)) {
           if (!VALID_OPENAI_FIELDS.has(key)) {
             logger.warn('[FeedService] Skipping non-spec field', {
-              shopId: shop.id,
-              productId: p.wooProductId.toString(),
-              field: key,
+              shopId: shop.id, productId: p.wooProductId.toString(), field: key,
             });
           }
         }
 
-        // Return both item and product reference for accurate validation reporting
         return { item: completeItem, product: p };
       })
     .map(({ item, product }) => {
       validationStats.total++;
 
-      // Validate entry if enabled
       if (validateEntries) {
         const validation = validateFeedEntry(item, {
-          validateOptional: false, // Only validate required fields
+          validateOptional: false,
           productContext: {
             isVariation: !!(product as any).wooParentId,
             wooProductType: (product as any).wooRawJson?.type,
@@ -107,39 +61,17 @@ export function generateFeedPayload(
         });
 
         if (!validation.valid) {
-          validationStats.invalid++;
-          validationStats.invalidProducts.push({
-            productId: product.wooProductId,
-            errors: validation.errors.map(e => ({
-              field: e.field,
-              error: e.error,
-            })),
-          });
-
-          logger.error('[FeedService] Invalid product entry', {
-            shopId: shop.id,
-            productId: product.wooProductId.toString(),
-            productTitle: product.wooTitle,
-            errorCount: validation.errors.length,
-            errors: validation.errors,
-          });
-
-          // Skip invalid entries if configured
-          if (skipInvalidEntries) {
-            return null;
-          }
+          handleInvalidEntry(shop, product, validation, validationStats);
+          if (skipInvalidEntries) return null;
         } else {
           validationStats.valid++;
         }
 
-        // Log warnings but don't skip
         if (validation.warnings.length > 0) {
           validationStats.warnings++;
           logger.warn('[FeedService] Product entry has warnings', {
-            shopId: shop.id,
-            productId: product.wooProductId.toString(),
-            warningCount: validation.warnings.length,
-            warnings: validation.warnings,
+            shopId: shop.id, productId: product.wooProductId.toString(),
+            warningCount: validation.warnings.length, warnings: validation.warnings,
           });
         }
       } else {
@@ -150,37 +82,8 @@ export function generateFeedPayload(
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
-  // Log validation summary
   if (validateEntries) {
-    logger.info('[FeedService] Feed generation validation summary', {
-      shopId: shop.id,
-      total: validationStats.total,
-      valid: validationStats.valid,
-      invalid: validationStats.invalid,
-      warnings: validationStats.warnings,
-      itemsIncluded: items.length,
-    });
-
-    // Log most common errors if any
-    if (validationStats.invalidProducts.length > 0) {
-      const errorCounts = new Map<string, number>();
-      validationStats.invalidProducts.forEach(({ errors }) => {
-        errors.forEach(({ error }) => {
-          errorCounts.set(error, (errorCounts.get(error) || 0) + 1);
-        });
-      });
-
-      const topErrors = Array.from(errorCounts.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-
-      if (topErrors.length > 0) {
-        logger.warn('[FeedService] Most common validation errors', {
-          shopId: shop.id,
-          topErrors: topErrors.map(([error, count]) => ({ error, count })),
-        });
-      }
-    }
+    logValidationSummary(shop.id, validationStats, items.length);
   }
 
   return {
@@ -195,4 +98,61 @@ export function generateFeedPayload(
     items,
     validationStats: validateEntries ? validationStats : undefined,
   };
+}
+
+function buildFeedItem(shop: Shop, product: Product, autoFilled: Record<string, any>): Record<string, any> {
+  const item: Record<string, any> = {};
+  for (const field of ALL_OPENAI_FIELDS) {
+    if (field === 'id') {
+      item[field] = autoFilled.id || `${shop.id}-${product.wooProductId}`;
+    } else if (field === 'enable_search') {
+      item[field] = autoFilled.enable_search ?? (product.feedEnableSearch ? 'true' : 'false');
+    } else if (field === 'enable_checkout') {
+      item[field] = 'false';
+    } else {
+      item[field] = autoFilled[field] ?? null;
+    }
+  }
+  return item;
+}
+
+function handleInvalidEntry(
+  shop: Shop,
+  product: Product,
+  validation: FeedValidationResult,
+  stats: FeedValidationStats
+): void {
+  stats.invalid++;
+  stats.invalidProducts.push({
+    productId: product.wooProductId,
+    errors: validation.errors.map(e => ({ field: e.field, error: e.error })),
+  });
+  logger.error('[FeedService] Invalid product entry', {
+    shopId: shop.id, productId: product.wooProductId.toString(),
+    productTitle: product.wooTitle, errorCount: validation.errors.length, errors: validation.errors,
+  });
+}
+
+function logValidationSummary(shopId: string, stats: FeedValidationStats, itemsIncluded: number): void {
+  logger.info('[FeedService] Feed generation validation summary', {
+    shopId, total: stats.total, valid: stats.valid,
+    invalid: stats.invalid, warnings: stats.warnings, itemsIncluded,
+  });
+
+  if (stats.invalidProducts.length > 0) {
+    const errorCounts = new Map<string, number>();
+    stats.invalidProducts.forEach(({ errors }) => {
+      errors.forEach(({ error }) => errorCounts.set(error, (errorCounts.get(error) || 0) + 1));
+    });
+
+    const topErrors = Array.from(errorCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    if (topErrors.length > 0) {
+      logger.warn('[FeedService] Most common validation errors', {
+        shopId, topErrors: topErrors.map(([error, count]) => ({ error, count })),
+      });
+    }
+  }
 }

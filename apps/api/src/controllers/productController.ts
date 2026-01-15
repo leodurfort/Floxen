@@ -15,16 +15,99 @@ import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
 import { getUserId } from '../utils/request';
 
+// Helper to normalize error for logging
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+// Helper to get product overrides with type safety
+function getProductOverrides(product: { productFieldOverrides: unknown } | null): ProductFieldOverrides {
+  return (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+}
+
+// Helper to update enable_search override marker based on shop default
+async function updateEnableSearchOverride(
+  productId: string,
+  shopId: string,
+  newValue: boolean
+): Promise<void> {
+  const shop = await prisma.shop.findUnique({
+    where: { id: shopId },
+    select: { defaultEnableSearch: true },
+  });
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { productFieldOverrides: true },
+  });
+
+  const overrides = getProductOverrides(product);
+  const isCustomized = newValue !== shop?.defaultEnableSearch;
+
+  if (isCustomized) {
+    overrides['enable_search'] = { type: 'static', value: newValue ? 'true' : 'false' };
+  } else {
+    delete overrides['enable_search'];
+  }
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue },
+  });
+}
+
+// Helper to validate field editability
+function validateFieldEditability(attribute: string): { valid: boolean; error?: string } {
+  const spec = OPENAI_FEED_SPEC.find(s => s.attribute === attribute);
+  if (spec && !isProductEditable(spec)) {
+    const reason = spec.isFeatureDisabled ? 'feature not yet available'
+      : spec.isAutoPopulated ? 'auto-populated from other fields'
+      : spec.isShopManaged ? 'managed at shop level'
+      : 'not editable at product level';
+    return { valid: false, error: `Field "${attribute}" cannot be edited: ${reason}` };
+  }
+  return { valid: true };
+}
+
+// Helper to validate bulk update operation before processing
+function validateBulkOperation(update: BulkUpdateOperation): { valid: boolean; error?: string } {
+  if (update.type === 'enable_search') {
+    return { valid: true };
+  }
+
+  const editability = validateFieldEditability(update.attribute);
+  if (!editability.valid) {
+    return editability;
+  }
+
+  if (update.type === 'field_mapping' && LOCKED_FIELD_SET.has(update.attribute)) {
+    return { valid: false, error: `Custom mapping not allowed for locked field: ${update.attribute}` };
+  }
+
+  if (update.type === 'static_override') {
+    const isLockedField = LOCKED_FIELD_SET.has(update.attribute);
+    const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(update.attribute);
+
+    if (isLockedField && !allowsStaticOverride) {
+      return { valid: false, error: `Static override not allowed for locked field: ${update.attribute}` };
+    }
+
+    const validation = validateStaticValue(update.attribute, update.value);
+    if (!validation.isValid) {
+      return { valid: false, error: validation.error || 'Invalid static value' };
+    }
+  }
+
+  return { valid: true };
+}
+
 const updateProductSchema = z.object({
   manualTitle: z.string().optional(),
   manualDescription: z.string().optional(),
   feedEnableSearch: z.boolean().optional(),
-  // feedEnableCheckout is not allowed - it's always false (feature not yet available)
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// BULK UPDATE SCHEMA AND TYPES
-// ═══════════════════════════════════════════════════════════════════════════
+// Bulk update schema and types
 
 const columnFilterSchema = z.object({
   text: z.string().optional(),
@@ -72,11 +155,6 @@ const bulkUpdateSchema = z.object({
 
 type BulkUpdateOperation = z.infer<typeof bulkUpdateOperationSchema>;
 
-/**
- * Parse column filters from query parameters
- * Format: cf_{columnId}_t for text, cf_{columnId}_v for values (pipe-separated)
- * Note: Express auto-decodes URL params, so no manual decoding needed
- */
 function parseColumnFilters(query: Record<string, unknown>): Record<string, { text?: string; values?: string[] }> | undefined {
   const columnFilters: Record<string, { text?: string; values?: string[] }> = {};
   const CF_PREFIX = 'cf_';
@@ -96,8 +174,6 @@ function parseColumnFilters(query: Record<string, unknown>): Record<string, { te
     } else if (withoutPrefix.endsWith(CF_VALUES_SUFFIX)) {
       const columnId = withoutPrefix.slice(0, -CF_VALUES_SUFFIX.length);
       if (!columnFilters[columnId]) columnFilters[columnId] = {};
-      // Support both pipe (new) and comma (legacy) separators
-      // Express already URL-decodes query params, so no manual decoding needed
       const separator = value.includes(CF_SEPARATOR) ? CF_SEPARATOR : ',';
       columnFilters[columnId].values = value.split(separator).filter(Boolean);
     }
@@ -108,11 +184,8 @@ function parseColumnFilters(query: Record<string, unknown>): Record<string, { te
 
 export async function listProducts(req: Request, res: Response) {
   const { id } = req.params;
-
-  // Parse column filters from query params (cf_columnId_t, cf_columnId_v)
   const columnFilters = parseColumnFilters(req.query as Record<string, unknown>);
 
-  // Parse query parameters for filtering and sorting
   const options: ListProductsOptions = {
     page: Number(req.query.page || 1),
     limit: Number(req.query.limit || 20),
@@ -136,14 +209,14 @@ export async function listProducts(req: Request, res: Response) {
       },
     });
     return res.json(result);
-  } catch (err: any) {
+  } catch (err) {
     logger.error('Failed to list products', {
-      error: err,
+      error: toError(err),
       shopId: id,
       options,
       userId: getUserId(req),
     });
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: toError(err).message });
   }
 }
 
@@ -161,14 +234,14 @@ export async function getProduct(req: Request, res: Response) {
       productId: pid,
     });
     return res.json({ product });
-  } catch (err: any) {
+  } catch (err) {
     logger.error('Failed to get product', {
-      error: err,
+      error: toError(err),
       shopId: id,
       productId: pid,
       userId: getUserId(req),
     });
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: toError(err).message });
   }
 }
 
@@ -192,38 +265,8 @@ export async function updateProduct(req: Request, res: Response) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // If feedEnableSearch was updated, manage the marker in productFieldOverrides
     if (parse.data.feedEnableSearch !== undefined) {
-      // Get shop's default to compare
-      const shop = await prisma.shop.findUnique({
-        where: { id },
-        select: { defaultEnableSearch: true },
-      });
-
-      // Get current overrides
-      const currentProduct = await prisma.product.findUnique({
-        where: { id: pid },
-        select: { productFieldOverrides: true },
-      });
-      const overrides = (currentProduct?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
-
-      // Add or remove marker based on whether value differs from shop default
-      const isCustomized = parse.data.feedEnableSearch !== shop?.defaultEnableSearch;
-      if (isCustomized) {
-        // Add marker to track customization (for override count)
-        overrides['enable_search'] = { type: 'static', value: parse.data.feedEnableSearch ? 'true' : 'false' };
-      } else {
-        // Remove marker if back to shop default
-        delete overrides['enable_search'];
-      }
-
-      // Update overrides
-      await prisma.product.update({
-        where: { id: pid },
-        data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue },
-      });
-
-      // Reprocess to update openaiAutoFilled
+      await updateEnableSearchOverride(pid, id, parse.data.feedEnableSearch);
       await reprocessProduct(pid);
     }
 
@@ -234,7 +277,6 @@ export async function updateProduct(req: Request, res: Response) {
       userId: getUserId(req),
     });
 
-    // Fetch updated product to return fresh data (including reprocessed openaiAutoFilled)
     const updatedProduct = await prisma.product.findUnique({
       where: { id: pid },
     });
@@ -242,25 +284,18 @@ export async function updateProduct(req: Request, res: Response) {
     return res.json({ product: updatedProduct });
   } catch (err) {
     logger.error('Failed to update product', {
-      error: err instanceof Error ? err : new Error(String(err)),
+      error: toError(err),
       shopId: id,
       productId: pid,
       updateData: parse.data,
       userId: getUserId(req),
     });
-    return res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' });
+    return res.status(500).json({ error: toError(err).message });
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// BULK UPDATE ENDPOINT
-// ═══════════════════════════════════════════════════════════════════════════
-
 const BULK_UPDATE_CHUNK_SIZE = 100;
 
-/**
- * Apply a single bulk update operation to a product
- */
 async function applyBulkUpdateToProduct(
   productId: string,
   update: BulkUpdateOperation,
@@ -268,117 +303,56 @@ async function applyBulkUpdateToProduct(
 ): Promise<void> {
   switch (update.type) {
     case 'enable_search': {
-      // Update feedEnableSearch column
       await prisma.product.update({
         where: { id: productId },
         data: { feedEnableSearch: update.value, updatedAt: new Date() },
       });
-
-      // Get shop's default to compare
-      const shop = await prisma.shop.findUnique({
-        where: { id: shopId },
-        select: { defaultEnableSearch: true },
-      });
-
-      // Get current overrides
-      const product = await prisma.product.findUnique({
-        where: { id: productId },
-        select: { productFieldOverrides: true },
-      });
-      const overrides = (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
-
-      // Add or remove marker based on whether value differs from shop default
-      const isCustomized = update.value !== shop?.defaultEnableSearch;
-      if (isCustomized) {
-        overrides['enable_search'] = { type: 'static', value: update.value ? 'true' : 'false' };
-      } else {
-        delete overrides['enable_search'];
-      }
-
-      // Update overrides
-      await prisma.product.update({
-        where: { id: productId },
-        data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue },
-      });
-
-      // Reprocess to update openaiAutoFilled.enable_search for catalog display
+      await updateEnableSearchOverride(productId, shopId, update.value);
       await reprocessProduct(productId);
       break;
     }
 
     case 'field_mapping': {
-      // Validate: mapping not allowed for locked fields
-      if (LOCKED_FIELD_SET.has(update.attribute)) {
-        throw new Error(`Custom mapping not allowed for locked field: ${update.attribute}`);
-      }
-
-      // Get current overrides and merge
       const product = await prisma.product.findUnique({
         where: { id: productId },
         select: { productFieldOverrides: true },
       });
 
-      const overrides = (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
-      overrides[update.attribute] = {
-        type: 'mapping',
-        value: update.wooField,
-      };
+      const overrides = getProductOverrides(product);
+      overrides[update.attribute] = { type: 'mapping', value: update.wooField };
 
       await prisma.product.update({
         where: { id: productId },
         data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
       });
-
-      // Reprocess to update openaiAutoFilled
       await reprocessProduct(productId);
       break;
     }
 
     case 'static_override': {
-      // Validate: static override allowed if not locked OR in STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS
-      const isLockedField = LOCKED_FIELD_SET.has(update.attribute);
-      const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(update.attribute);
-
-      if (isLockedField && !allowsStaticOverride) {
-        throw new Error(`Static override not allowed for locked field: ${update.attribute}`);
-      }
-
-      // Validate the static value
-      const validation = validateStaticValue(update.attribute, update.value);
-      if (!validation.isValid) {
-        throw new Error(validation.error || 'Invalid value');
-      }
-
-      // Get current overrides and merge
       const product = await prisma.product.findUnique({
         where: { id: productId },
         select: { productFieldOverrides: true },
       });
 
-      const overrides = (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
-      overrides[update.attribute] = {
-        type: 'static',
-        value: update.value,
-      };
+      const overrides = getProductOverrides(product);
+      overrides[update.attribute] = { type: 'static', value: update.value };
 
       await prisma.product.update({
         where: { id: productId },
         data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
       });
-
-      // Reprocess to update openaiAutoFilled
       await reprocessProduct(productId);
       break;
     }
 
     case 'remove_override': {
-      // Get current overrides
       const product = await prisma.product.findUnique({
         where: { id: productId },
         select: { productFieldOverrides: true },
       });
 
-      const overrides = (product?.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+      const overrides = getProductOverrides(product);
 
       if (overrides[update.attribute]) {
         delete overrides[update.attribute];
@@ -387,8 +361,6 @@ async function applyBulkUpdateToProduct(
           where: { id: productId },
           data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
         });
-
-        // Reprocess to update openaiAutoFilled
         await reprocessProduct(productId);
       }
       break;
@@ -396,10 +368,6 @@ async function applyBulkUpdateToProduct(
   }
 }
 
-/**
- * POST /shops/:id/products/bulk-update
- * Bulk update products with chunked processing
- */
 export async function bulkUpdate(req: Request, res: Response) {
   const { id: shopId } = req.params;
 
@@ -415,58 +383,20 @@ export async function bulkUpdate(req: Request, res: Response) {
   const { selectionMode, productIds: selectedIds, filters, itemGroupId, update } = parse.data;
 
   try {
-    // Pre-validate update operation before processing any products
-    // Skip editability check for enable_search (handled by toolbar, always allowed)
-    if (update.type !== 'enable_search') {
-      const spec = OPENAI_FEED_SPEC.find(s => s.attribute === update.attribute);
-      if (spec && !isProductEditable(spec)) {
-        const reason = spec.isFeatureDisabled ? 'feature not yet available'
-          : spec.isAutoPopulated ? 'auto-populated from other fields'
-          : spec.isShopManaged ? 'managed at shop level'
-          : 'not editable at product level';
-        return res.status(400).json({
-          error: `Field "${update.attribute}" cannot be edited: ${reason}`,
-        });
-      }
+    const operationValidation = validateBulkOperation(update);
+    if (!operationValidation.valid) {
+      return res.status(400).json({ error: operationValidation.error });
     }
 
-    if (update.type === 'field_mapping' && LOCKED_FIELD_SET.has(update.attribute)) {
-      return res.status(400).json({
-        error: `Custom mapping not allowed for locked field: ${update.attribute}`,
-      });
-    }
-
-    if (update.type === 'static_override') {
-      const isLockedField = LOCKED_FIELD_SET.has(update.attribute);
-      const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(update.attribute);
-
-      if (isLockedField && !allowsStaticOverride) {
-        return res.status(400).json({
-          error: `Static override not allowed for locked field: ${update.attribute}`,
-        });
-      }
-
-      const validation = validateStaticValue(update.attribute, update.value);
-      if (!validation.isValid) {
-        return res.status(400).json({
-          error: validation.error || 'Invalid static value',
-        });
-      }
-    }
-
-    // Resolve product IDs based on selection mode
     let productIdsToUpdate: string[];
 
     if (selectionMode === 'selected') {
       productIdsToUpdate = selectedIds!;
     } else if (selectionMode === 'all') {
-      // All mode: get all products in the shop (no filters)
       productIdsToUpdate = await getFilteredProductIds(shopId, {});
     } else if (selectionMode === 'itemGroup') {
-      // Item group mode: get all products with the same item_group_id
       productIdsToUpdate = await getProductIdsByItemGroupId(shopId, itemGroupId!);
     } else {
-      // Filtered mode: get all products matching filters
       productIdsToUpdate = await getFilteredProductIds(shopId, filters || {});
     }
 
@@ -484,14 +414,12 @@ export async function bulkUpdate(req: Request, res: Response) {
       userId: getUserId(req),
     });
 
-    // Process in chunks
     const errors: Array<{ productId: string; error: string }> = [];
     let processedCount = 0;
 
     for (let i = 0; i < productIdsToUpdate.length; i += BULK_UPDATE_CHUNK_SIZE) {
       const chunk = productIdsToUpdate.slice(i, i + BULK_UPDATE_CHUNK_SIZE);
 
-      // Process chunk in parallel - wrap each in try/catch to preserve productId on error
       const results = await Promise.all(
         chunk.map(async (productId) => {
           try {
@@ -536,22 +464,16 @@ export async function bulkUpdate(req: Request, res: Response) {
     });
   } catch (err) {
     logger.error('products:bulk-update error', {
-      error: err instanceof Error ? err : new Error(String(err)),
+      error: toError(err),
       shopId,
       selectionMode,
       updateType: update.type,
       userId: getUserId(req),
     });
-    res.status(500).json({
-      error: err instanceof Error ? err.message : 'Bulk update failed',
-    });
+    res.status(500).json({ error: toError(err).message });
   }
 }
 
-/**
- * GET /shops/:id/products/item-group-count/:itemGroupId
- * Get count of products that share the same item_group_id
- */
 export async function getItemGroupCount(req: Request, res: Response) {
   const { id: shopId, itemGroupId } = req.params;
 
@@ -571,7 +493,7 @@ export async function getItemGroupCount(req: Request, res: Response) {
     res.json({ itemGroupId, count });
   } catch (err) {
     logger.error('Failed to get item group count', {
-      error: err instanceof Error ? err : new Error(String(err)),
+      error: toError(err),
       shopId,
       itemGroupId,
       userId: getUserId(req),
@@ -580,11 +502,6 @@ export async function getItemGroupCount(req: Request, res: Response) {
   }
 }
 
-/**
- * GET /shops/:id/products/column-values
- * Get unique values for a column to populate filter dropdown.
- * Supports cascading filters: pass current filters to get contextual values.
- */
 export async function getColumnValues(req: Request, res: Response) {
   const { id: shopId } = req.params;
   const column = req.query.column as string;
@@ -595,7 +512,6 @@ export async function getColumnValues(req: Request, res: Response) {
     return res.status(400).json({ error: 'column query parameter is required' });
   }
 
-  // Parse current filters for cascading filter support
   const columnFilters = parseColumnFilters(req.query as Record<string, unknown>);
   const currentFilters: ListProductsOptions | undefined = columnFilters
     ? {
@@ -620,7 +536,7 @@ export async function getColumnValues(req: Request, res: Response) {
     res.json(result);
   } catch (err) {
     logger.error('Failed to get column values', {
-      error: err instanceof Error ? err : new Error(String(err)),
+      error: toError(err),
       shopId,
       column,
       userId: getUserId(req),
@@ -629,14 +545,10 @@ export async function getColumnValues(req: Request, res: Response) {
   }
 }
 
-/**
- * Get product WooCommerce raw data for field mapping preview
- */
 export async function getProductWooData(req: Request, res: Response) {
   const { id: shopId, pid: productId } = req.params;
 
   try {
-    // Fetch product with WooCommerce raw JSON
     const product = await prisma.product.findFirst({
       where: { shopId, id: productId },
       select: { wooRawJson: true },
@@ -647,7 +559,6 @@ export async function getProductWooData(req: Request, res: Response) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Fetch shop data for units and currency
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
       select: {
@@ -676,32 +587,26 @@ export async function getProductWooData(req: Request, res: Response) {
     });
   } catch (err) {
     logger.error('Failed to get product WooCommerce data', {
-      error: err instanceof Error ? err : new Error(String(err)),
+      error: toError(err),
       shopId,
       productId,
       userId: getUserId(req),
     });
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to fetch product data' });
+    res.status(500).json({ error: toError(err).message });
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PRODUCT FIELD OVERRIDE ENDPOINTS
-// ═══════════════════════════════════════════════════════════════════════════
+// Product field override schema
 
 const productOverrideSchema = z.object({
   type: z.enum(['mapping', 'static']),
-  value: z.string().nullable(),  // null for mapping type means "no mapping" (exclude field)
+  value: z.string().nullable(),
 });
 
 const updateOverridesSchema = z.object({
   overrides: z.record(z.string(), productOverrideSchema),
 });
 
-/**
- * GET /shops/:shopId/products/:productId/field-overrides
- * Get product field overrides along with resolved values
- */
 export async function getProductFieldOverrides(req: Request, res: Response) {
   const { id: shopId, pid: productId } = req.params;
 
@@ -724,13 +629,12 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Get shop to retrieve defaultEnableSearch
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
       select: { defaultEnableSearch: true },
     });
 
-    const productOverrides = (product.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+    const productOverrides = getProductOverrides(product);
 
     logger.info('Product field overrides retrieved', {
       shopId,
@@ -738,7 +642,6 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
       overrideCount: Object.keys(productOverrides).length,
     });
 
-    // Use OpenAI title with fallback to wooTitle
     const openaiData = product.openaiAutoFilled as Record<string, unknown> | null;
     const productTitle = (openaiData?.title as string) || product.wooTitle;
 
@@ -755,7 +658,7 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
     });
   } catch (err) {
     logger.error('Failed to get product field overrides', {
-      error: err instanceof Error ? err : new Error(String(err)),
+      error: toError(err),
       shopId,
       productId,
     });
@@ -763,10 +666,6 @@ export async function getProductFieldOverrides(req: Request, res: Response) {
   }
 }
 
-/**
- * PUT /shops/:shopId/products/:productId/field-overrides
- * Update product field overrides
- */
 export async function updateProductFieldOverrides(req: Request, res: Response) {
   const { id: shopId, pid: productId } = req.params;
 
@@ -778,7 +677,6 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
   const { overrides } = parse.data;
 
   try {
-    // Verify product exists
     const product = await prisma.product.findFirst({
       where: { shopId, id: productId },
       select: { id: true },
@@ -788,31 +686,23 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Validate each override
     const validationErrors: Record<string, string> = {};
 
     for (const [attribute, override] of Object.entries(overrides)) {
-      // enable_search cannot be stored in overrides - it uses the feedEnableSearch column only
       if (attribute === 'enable_search') {
         validationErrors[attribute] = 'enable_search must be updated via the product endpoint, not overrides';
         continue;
       }
 
-      // Check if field is editable at product level
-      const spec = OPENAI_FEED_SPEC.find(s => s.attribute === attribute);
-      if (spec && !isProductEditable(spec)) {
-        const reason = spec.isFeatureDisabled ? 'feature not yet available'
-          : spec.isAutoPopulated ? 'auto-populated from other fields'
-          : spec.isShopManaged ? 'managed at shop level'
-          : 'not editable at product level';
-        validationErrors[attribute] = `Cannot edit: ${reason}`;
+      const editability = validateFieldEditability(attribute);
+      if (!editability.valid) {
+        validationErrors[attribute] = editability.error!.replace(/^Field "\w+" cannot be edited: /, 'Cannot edit: ');
         continue;
       }
 
       const isLockedField = LOCKED_FIELD_SET.has(attribute);
       const allowsStaticOverride = STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS.has(attribute);
 
-      // Check if field allows this type of override
       if (override.type === 'mapping' && isLockedField) {
         validationErrors[attribute] = 'Custom mapping not allowed for locked fields';
         continue;
@@ -823,7 +713,6 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
         continue;
       }
 
-      // Validate static values (null not allowed for static type)
       if (override.type === 'static') {
         if (override.value === null) {
           validationErrors[attribute] = 'Static value cannot be null';
@@ -837,10 +726,7 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
     }
 
     if (Object.keys(validationErrors).length > 0) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        validationErrors,
-      });
+      return res.status(400).json({ error: 'Validation failed', validationErrors });
     }
 
     // Update product overrides
@@ -851,10 +737,8 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
       },
     });
 
-    // Reprocess product to update openaiAutoFilled
     await reprocessProduct(productId);
 
-    // Fetch updated product
     const updatedProduct = await prisma.product.findUnique({
       where: { id: productId },
       select: {
@@ -867,7 +751,6 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
       },
     });
 
-    // Get shop to retrieve defaultEnableSearch
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
       select: { defaultEnableSearch: true },
@@ -891,7 +774,7 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
     });
   } catch (err) {
     logger.error('Failed to update product field overrides', {
-      error: err instanceof Error ? err : new Error(String(err)),
+      error: toError(err),
       shopId,
       productId,
     });
@@ -899,15 +782,10 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
   }
 }
 
-/**
- * DELETE /shops/:shopId/products/:productId/field-overrides/:attribute
- * Reset a single field to shop default
- */
 export async function deleteProductFieldOverride(req: Request, res: Response) {
   const { id: shopId, pid: productId, attribute } = req.params;
 
   try {
-    // Verify product exists
     const product = await prisma.product.findFirst({
       where: { shopId, id: productId },
       select: {
@@ -920,26 +798,21 @@ export async function deleteProductFieldOverride(req: Request, res: Response) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const overrides = (product.productFieldOverrides as unknown as ProductFieldOverrides) || {};
+    const overrides = getProductOverrides(product);
 
     if (!overrides[attribute]) {
       return res.status(404).json({ error: 'No override found for this field' });
     }
 
-    // Remove the override
     delete overrides[attribute];
 
     await prisma.product.update({
       where: { id: productId },
-      data: {
-        productFieldOverrides: overrides as any,
-      },
+      data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue },
     });
 
-    // Reprocess product
     await reprocessProduct(productId);
 
-    // Fetch updated product
     const updatedProduct = await prisma.product.findUnique({
       where: { id: productId },
       select: {
@@ -961,7 +834,7 @@ export async function deleteProductFieldOverride(req: Request, res: Response) {
     });
   } catch (err) {
     logger.error('Failed to delete product field override', {
-      error: err instanceof Error ? err : new Error(String(err)),
+      error: toError(err),
       shopId,
       productId,
       attribute,

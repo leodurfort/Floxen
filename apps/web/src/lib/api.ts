@@ -5,22 +5,13 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-productio
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TOKEN MANAGEMENT - Single source of truth is localStorage
-// ═══════════════════════════════════════════════════════════════════════════
+// Token Management - Single source of truth is localStorage
 
-/**
- * Get the current access token from localStorage
- * Returns null on server-side or if not authenticated
- */
 function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('productsynch.access');
 }
 
-/**
- * Clear all auth data and redirect to login
- */
 function clearAuthAndRedirect(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('productsynch.user');
@@ -30,11 +21,7 @@ function clearAuthAndRedirect(): void {
   }
 }
 
-/**
- * Refresh the access token using the refresh token
- */
 async function refreshAccessToken(): Promise<string> {
-  // Prevent multiple simultaneous refresh attempts
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }
@@ -64,7 +51,6 @@ async function refreshAccessToken(): Promise<string> {
       const data = await response.json();
       const newAccessToken = data.tokens.accessToken;
 
-      // Update localStorage with new tokens
       if (typeof window !== 'undefined') {
         localStorage.setItem('productsynch.access', newAccessToken);
         if (data.tokens.refreshToken) {
@@ -82,13 +68,8 @@ async function refreshAccessToken(): Promise<string> {
   return refreshPromise;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// REQUEST HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
+// Request Helpers
 
-/**
- * Make an unauthenticated request (for login/register)
- */
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -107,10 +88,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
-/**
- * Make an authenticated request
- * Automatically includes auth header and handles token refresh on 401
- */
 async function requestWithAuth<T>(path: string, options: RequestInit = {}, retryCount = 0): Promise<T> {
   const token = getAccessToken();
 
@@ -133,13 +110,9 @@ async function requestWithAuth<T>(path: string, options: RequestInit = {}, retry
   if (res.status === 401 && retryCount === 0) {
     try {
       const newAccessToken = await refreshAccessToken();
-
-      // Retry the original request with new token
       headers.Authorization = `Bearer ${newAccessToken}`;
-
       return requestWithAuth<T>(path, { ...options, headers }, retryCount + 1);
     } catch {
-      // Refresh failed - clear auth and redirect to login
       clearAuthAndRedirect();
       throw new Error('Session expired. Please log in again.');
     }
@@ -153,9 +126,7 @@ async function requestWithAuth<T>(path: string, options: RequestInit = {}, retry
   return res.json();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// AUTH ENDPOINTS (unauthenticated)
-// ═══════════════════════════════════════════════════════════════════════════
+// Auth Endpoints (unauthenticated)
 
 export async function login(payload: { email: string; password: string }) {
   return request<{ user: User; tokens: { accessToken: string; refreshToken: string } }>('/api/v1/auth/login', {
@@ -164,9 +135,7 @@ export async function login(payload: { email: string; password: string }) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// MULTI-STEP REGISTRATION FLOW
-// ═══════════════════════════════════════════════════════════════════════════
+// Multi-step Registration Flow
 
 export async function registerStart(payload: { email: string }) {
   return request<{ success: boolean; message: string }>('/api/v1/auth/register/start', {
@@ -211,9 +180,7 @@ export async function registerComplete(payload: { email: string; firstName: stri
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// FORGOT PASSWORD FLOW
-// ═══════════════════════════════════════════════════════════════════════════
+// Forgot Password Flow
 
 export async function forgotPassword(payload: { email: string }) {
   return request<{ success: boolean; message: string }>('/api/v1/auth/forgot-password', {
@@ -241,9 +208,7 @@ export async function forgotPasswordReset(payload: { email: string; code: string
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// USER PROFILE
-// ═══════════════════════════════════════════════════════════════════════════
+// User Profile
 
 export async function getProfile() {
   return requestWithAuth<User>('/api/v1/users/me');
@@ -291,9 +256,7 @@ export async function completeOnboarding() {
   }>('/api/v1/users/me/complete-onboarding', { method: 'POST' });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SHOPS
-// ═══════════════════════════════════════════════════════════════════════════
+// Shops
 
 export async function listShops() {
   return requestWithAuth<{ shops: Shop[] }>('/api/v1/shops');
@@ -351,9 +314,7 @@ export async function latestFeed(shopId: string) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// FEED ACTIVATION & STATS
-// ═══════════════════════════════════════════════════════════════════════════
+// Feed Activation and Stats
 
 export interface ActivateFeedResponse {
   shop: Shop;
@@ -411,13 +372,23 @@ export async function getFeedPreview(shopId: string) {
   return requestWithAuth<FeedPreviewResponse>(`/api/v1/shops/${shopId}/sync/feed/preview`);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PRODUCT LISTING WITH FILTERS
-// ═══════════════════════════════════════════════════════════════════════════
+// Product Listing with Filters
 
 export interface ColumnFilter {
-  text?: string;      // Text search within column
-  values?: string[];  // Selected checkbox values
+  text?: string;
+  values?: string[];
+}
+
+// Helper to encode column filters into URLSearchParams (pipe-separated values)
+function encodeColumnFilters(params: URLSearchParams, columnFilters: Record<string, ColumnFilter>): void {
+  for (const [columnId, filter] of Object.entries(columnFilters)) {
+    if (filter.text) {
+      params.set(`cf_${columnId}_t`, filter.text);
+    }
+    if (filter.values && filter.values.length > 0) {
+      params.set(`cf_${columnId}_v`, filter.values.join('|'));
+    }
+  }
 }
 
 export interface ListProductsParams {
@@ -451,18 +422,8 @@ export async function listProducts(
     if (params.sortBy) searchParams.set('sortBy', params.sortBy);
     if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
     if (params.search) searchParams.set('search', params.search);
-
-    // Encode column filters: cf_{columnId}_t for text, cf_{columnId}_v for values
-    // Using pipe | as separator (URLSearchParams auto-encodes, so no manual encoding needed)
     if (params.columnFilters) {
-      for (const [columnId, filter] of Object.entries(params.columnFilters)) {
-        if (filter.text) {
-          searchParams.set(`cf_${columnId}_t`, filter.text);
-        }
-        if (filter.values && filter.values.length > 0) {
-          searchParams.set(`cf_${columnId}_v`, filter.values.join('|'));
-        }
-      }
+      encodeColumnFilters(searchParams, params.columnFilters);
     }
   }
 
@@ -472,9 +433,7 @@ export async function listProducts(
   return requestWithAuth<ListProductsResult>(path);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// COLUMN VALUES FOR FILTERING
-// ═══════════════════════════════════════════════════════════════════════════
+// Column Values for Filtering
 
 export interface ColumnValueResult {
   value: string;
@@ -505,21 +464,11 @@ export async function getColumnValues(
   params.set('column', column);
   if (limit !== undefined) params.set('limit', String(limit));
   if (search) params.set('search', search);
-
-  // Pass current filters for cascading filter support
-  // Using pipe | as separator (URLSearchParams auto-encodes, so no manual encoding needed)
   if (currentFilters?.globalSearch) {
     params.set('globalSearch', currentFilters.globalSearch);
   }
   if (currentFilters?.columnFilters) {
-    for (const [columnId, filter] of Object.entries(currentFilters.columnFilters)) {
-      if (filter.values && filter.values.length > 0) {
-        params.set(`cf_${columnId}_v`, filter.values.join('|'));
-      }
-      if (filter.text) {
-        params.set(`cf_${columnId}_t`, filter.text);
-      }
-    }
+    encodeColumnFilters(params, currentFilters.columnFilters);
   }
 
   return requestWithAuth<GetColumnValuesResult>(
@@ -527,9 +476,7 @@ export async function getColumnValues(
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// BULK UPDATE
-// ═══════════════════════════════════════════════════════════════════════════
+// Bulk Update
 
 export interface BulkUpdateFilters {
   search?: string;
@@ -572,9 +519,6 @@ export async function bulkUpdateProducts(
   );
 }
 
-/**
- * Get count of products that share the same item_group_id
- */
 export async function getItemGroupCount(
   shopId: string,
   itemGroupId: string
@@ -584,9 +528,7 @@ export async function getItemGroupCount(
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// FEED REFRESH (special handling for 409)
-// ═══════════════════════════════════════════════════════════════════════════
+// Feed Refresh (special handling for 409 conflict)
 
 export interface RefreshFeedResponse {
   shopId: string;
@@ -602,11 +544,6 @@ export interface RefreshFeedError {
   lastSyncAt: string | null;
 }
 
-/**
- * Refresh the OpenAI feed for a shop
- * Regenerates the FeedSnapshot with current product data
- * Returns 409 if sync is in progress
- */
 export async function refreshFeed(shopId: string, retryCount = 0): Promise<RefreshFeedResponse> {
   const token = getAccessToken();
 
@@ -647,13 +584,8 @@ export async function refreshFeed(shopId: string, retryCount = 0): Promise<Refre
   return res.json();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// FIELD MAPPINGS
-// ═══════════════════════════════════════════════════════════════════════════
+// Field Mappings
 
-/**
- * Get field mappings for a shop
- */
 export async function getFieldMappings(shopId: string) {
   return requestWithAuth<{
     mappings: Record<string, string | null>;
@@ -662,9 +594,6 @@ export async function getFieldMappings(shopId: string) {
   }>(`/api/v1/shops/${shopId}/field-mappings`);
 }
 
-/**
- * Update field mappings for a shop
- */
 export async function updateFieldMappings(
   shopId: string,
   mappings: Record<string, string | null>,
@@ -679,9 +608,7 @@ export async function updateFieldMappings(
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PRODUCT FIELD OVERRIDES
-// ═══════════════════════════════════════════════════════════════════════════
+// Product Field Overrides
 
 export interface ProductOverridesResponse {
   productId: string;
@@ -695,18 +622,12 @@ export interface ProductOverridesResponse {
   validationErrors?: Record<string, string[]> | null;
 }
 
-/**
- * Get product-level field overrides
- */
 export async function getProductOverrides(shopId: string, productId: string) {
   return requestWithAuth<ProductOverridesResponse>(
     `/api/v1/shops/${shopId}/products/${productId}/field-overrides`
   );
 }
 
-/**
- * Update product-level field overrides
- */
 export async function updateProductOverrides(
   shopId: string,
   productId: string,
@@ -721,9 +642,6 @@ export async function updateProductOverrides(
   );
 }
 
-/**
- * Update product properties (feedEnableSearch, etc.)
- */
 export async function updateProduct(
   shopId: string,
   productId: string,
@@ -738,22 +656,14 @@ export async function updateProduct(
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// WOOCOMMERCE
-// ═══════════════════════════════════════════════════════════════════════════
+// WooCommerce
 
-/**
- * Get WooCommerce fields available for mapping
- */
 export async function getWooFields(shopId: string) {
   return requestWithAuth<{ fields: Array<{ value: string; label: string; category: string; description?: string }> }>(
     `/api/v1/shops/${shopId}/woo-fields`
   );
 }
 
-/**
- * Get WooCommerce data for a specific product (for preview)
- */
 export async function getProductWooData(shopId: string, productId: string) {
   return requestWithAuth<{ wooData: Record<string, unknown>; shopData: Record<string, unknown> }>(
     `/api/v1/shops/${shopId}/products/${productId}/woo-data`

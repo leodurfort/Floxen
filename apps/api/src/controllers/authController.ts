@@ -21,6 +21,16 @@ import {
 } from '../services/verificationService';
 import { logger } from '../lib/logger';
 
+// Helper to normalize email
+function normalizeEmail(email: string): string {
+  return email.toLowerCase().trim();
+}
+
+// Helper to normalize error for logging
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
@@ -30,7 +40,6 @@ const refreshSchema = z.object({
   refreshToken: z.string(),
 });
 
-// New multi-step registration schemas
 const registerStartSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
 });
@@ -133,7 +142,7 @@ export async function refresh(req: Request, res: Response) {
     logger.info('refresh: success', { userId: user.id });
     return res.json({ tokens });
   } catch (err) {
-    logger.error('refresh: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('refresh: error', { error: toError(err) });
     return res.status(401).json({ error: 'Invalid refresh token' });
   }
 }
@@ -150,18 +159,13 @@ export async function me(req: Request, res: Response) {
     logger.info('me: fetched', { userId: user.id });
     return res.json({ user });
   } catch (err) {
-    logger.error('me: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('me: error', { error: toError(err) });
     res.status(500).json({ error: 'Internal error' });
   }
 }
 
-// ============================================================================
-// New Multi-Step Registration Flow
-// ============================================================================
+// Multi-Step Registration Flow
 
-/**
- * Step 1: Start registration - check email and send verification code
- */
 export async function registerStart(req: Request, res: Response) {
   const parse = registerStartSchema.safeParse(req.body);
   if (!parse.success) {
@@ -169,7 +173,7 @@ export async function registerStart(req: Request, res: Response) {
   }
 
   const { email } = parse.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
     // Check if email already exists
@@ -194,14 +198,14 @@ export async function registerStart(req: Request, res: Response) {
     // Send verification code
     const result = await createVerificationToken(normalizedEmail, 'EMAIL_VERIFICATION');
     if (!result.success) {
-      logger.error('registerStart: failed to send verification', { error: new Error(result.error || 'Unknown error') });
+      logger.error('registerStart: failed to send verification', { error: toError(result.error || 'Unknown error') });
       return res.status(500).json({ error: 'Failed to send verification email. Please try again.' });
     }
 
     logger.info('registerStart: verification code sent', { email: normalizedEmail });
     return res.json({ success: true, message: 'Verification code sent to your email.' });
   } catch (err) {
-    logger.error('registerStart: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('registerStart: error', { error: toError(err) });
     return res.status(500).json({ error: 'An error occurred. Please try again.' });
   }
 }
@@ -216,7 +220,7 @@ export async function registerVerify(req: Request, res: Response) {
   }
 
   const { email, code } = parse.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
     const result = await verifyToken(normalizedEmail, code, 'EMAIL_VERIFICATION');
@@ -227,7 +231,7 @@ export async function registerVerify(req: Request, res: Response) {
     logger.info('registerVerify: email verified', { email: normalizedEmail });
     return res.json({ success: true, message: 'Email verified successfully.' });
   } catch (err) {
-    logger.error('registerVerify: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('registerVerify: error', { error: toError(err) });
     return res.status(500).json({ error: 'Verification failed. Please try again.' });
   }
 }
@@ -242,7 +246,7 @@ export async function registerResend(req: Request, res: Response) {
   }
 
   const { email } = parse.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
     // Check rate limit (stricter for resend - 3 per hour)
@@ -261,7 +265,7 @@ export async function registerResend(req: Request, res: Response) {
     logger.info('registerResend: verification code resent', { email: normalizedEmail });
     return res.json({ success: true, message: 'Verification code resent.' });
   } catch (err) {
-    logger.error('registerResend: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('registerResend: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to resend code. Please try again.' });
   }
 }
@@ -276,7 +280,7 @@ export async function registerPassword(req: Request, res: Response) {
   }
 
   const { email, password } = parse.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
     // Check if user already exists
@@ -313,7 +317,7 @@ export async function registerPassword(req: Request, res: Response) {
       tokens,
     });
   } catch (err) {
-    logger.error('registerPassword: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('registerPassword: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to create account. Please try again.' });
   }
 }
@@ -328,7 +332,7 @@ export async function registerComplete(req: Request, res: Response) {
   }
 
   const { email, firstName, surname } = parse.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
     const user = await findUserByEmail(normalizedEmail);
@@ -362,18 +366,13 @@ export async function registerComplete(req: Request, res: Response) {
       tokens,
     });
   } catch (err) {
-    logger.error('registerComplete: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('registerComplete: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to complete registration. Please try again.' });
   }
 }
 
-// ============================================================================
 // Forgot Password Flow
-// ============================================================================
 
-/**
- * Request password reset - send code to email
- */
 export async function forgotPassword(req: Request, res: Response) {
   const parse = forgotPasswordSchema.safeParse(req.body);
   if (!parse.success) {
@@ -381,7 +380,7 @@ export async function forgotPassword(req: Request, res: Response) {
   }
 
   const { email } = parse.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
     // Don't reveal if email exists or not
@@ -406,7 +405,7 @@ export async function forgotPassword(req: Request, res: Response) {
     // Always return success to not reveal if email exists
     return res.json({ success: true, message: 'If your email is registered, you will receive a reset code.' });
   } catch (err) {
-    logger.error('forgotPassword: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('forgotPassword: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to process request. Please try again.' });
   }
 }
@@ -421,7 +420,7 @@ export async function forgotPasswordVerify(req: Request, res: Response) {
   }
 
   const { email, code } = parse.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
     // Just verify the code is valid, don't consume it yet (consume=false)
@@ -433,7 +432,7 @@ export async function forgotPasswordVerify(req: Request, res: Response) {
     logger.info('forgotPasswordVerify: code verified', { email: normalizedEmail });
     return res.json({ success: true, message: 'Code verified. You can now reset your password.' });
   } catch (err) {
-    logger.error('forgotPasswordVerify: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('forgotPasswordVerify: error', { error: toError(err) });
     return res.status(500).json({ error: 'Verification failed. Please try again.' });
   }
 }
@@ -448,7 +447,7 @@ export async function forgotPasswordReset(req: Request, res: Response) {
   }
 
   const { email, code, password } = parse.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
     const user = await findUserByEmail(normalizedEmail);
@@ -482,7 +481,7 @@ export async function forgotPasswordReset(req: Request, res: Response) {
       tokens,
     });
   } catch (err) {
-    logger.error('forgotPasswordReset: error', { error: err instanceof Error ? err : new Error(String(err)) });
+    logger.error('forgotPasswordReset: error', { error: toError(err) });
     return res.status(500).json({ error: 'Failed to reset password. Please try again.' });
   }
 }

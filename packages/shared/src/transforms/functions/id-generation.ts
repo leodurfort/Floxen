@@ -1,25 +1,12 @@
 /**
  * ID Generation Transform Functions
- *
- * Functions for generating stable, unique IDs for products, variants, and offers.
  */
 
 import type { TransformFunction } from '../types';
+import { extractFieldValue } from '../helpers';
 
 /**
- * Generate stable product ID
- *
- * Combines shop ID, WooCommerce product ID, and SKU for uniqueness.
- * Must remain stable over time for OpenAI feed consistency.
- *
- * @param _ - Unused (ID is generated, not extracted)
- * @param wooProduct - WooCommerce product object
- * @param shop - Shop configuration object
- * @returns Stable product ID
- *
- * @example
- * // With SKU: "shop123-456-SKU789"
- * // Without SKU: "shop123-456"
+ * Generate stable product ID: shop-wooId[-sku]
  */
 export const generateStableId: TransformFunction = (_, wooProduct, shop) => {
   const sku = wooProduct.sku || '';
@@ -27,83 +14,33 @@ export const generateStableId: TransformFunction = (_, wooProduct, shop) => {
 };
 
 /**
- * Generate item group ID for variants
- *
- * Groups all variants of a product together.
- * Variants share the same item_group_id but have different IDs.
- *
- * @param parentId - WooCommerce parent product ID (for variants)
- * @param wooProduct - WooCommerce product object
- * @param shop - Shop configuration object
- * @returns Item group ID
- *
- * @example
- * // For variant: "shop123-789" (uses parent ID)
- * // For simple product: "shop123-456" (uses own ID)
+ * Generate item group ID for variants (uses parent ID) or simple products (uses own ID)
  */
 export const generateGroupId: TransformFunction = (parentId, wooProduct, shop) => {
-  if (parentId && parentId > 0) {
-    // This is a variant, use parent ID
-    return `${shop.id}-${parentId}`;
-  }
-  // Simple product, use its own ID
-  return `${shop.id}-${wooProduct.id}`;
+  return parentId && parentId > 0
+    ? `${shop.id}-${parentId}`
+    : `${shop.id}-${wooProduct.id}`;
 };
 
 /**
- * Generate offer ID (unique per variant)
- *
- * Creates unique offer ID by combining SKU with color/size attributes.
- * Used to distinguish different variants with the same base SKU.
- *
- * @param sku - Product SKU
- * @param wooProduct - WooCommerce product object
- * @param shop - Shop configuration object (unused but required for signature)
- * @returns Offer ID
- *
- * @example
- * // "SKU789-Blue-Large"
- * // "SKU789-Red"
- * // "prod-456" (fallback if no SKU)
+ * Generate offer ID: sku[-color][-size]
  */
-export const generateOfferId: TransformFunction = (sku, wooProduct, shop) => {
+export const generateOfferId: TransformFunction = (sku, wooProduct) => {
   const baseSku = sku || `prod-${wooProduct.id}`;
+  const color = extractFieldValue(wooProduct, 'attributes.color');
+  const size = extractFieldValue(wooProduct, 'attributes.size');
 
-  // Helper to get attribute value - handles both parent format (options array) and variation format (option string)
-  const getAttrValue = (attrName: string): string | undefined => {
-    const attr = wooProduct.attributes?.find((a: any) => a.name.toLowerCase() === attrName);
-    if (!attr) return undefined;
-    // Variation format: single option string
-    if (attr.option !== undefined && attr.option !== null) return attr.option;
-    // Parent format: options array
-    if (Array.isArray(attr.options) && attr.options.length > 0) return attr.options[0];
-    return undefined;
-  };
-
-  const color = getAttrValue('color');
-  const size = getAttrValue('size');
-
-  let offerId = `${baseSku}`;
+  let offerId = baseSku;
   if (color) offerId += `-${color}`;
   if (size) offerId += `-${size}`;
-
   return offerId;
 };
 
 /**
- * Format related product IDs
- *
- * Converts WooCommerce product IDs array to comma-separated string.
- *
- * @param relatedIds - Array of WooCommerce product IDs
- * @returns Comma-separated product IDs
- *
- * @example
- * // Input: [123, 456, 789]
- * // Output: "123,456,789"
+ * Format related product IDs as comma-separated string
  */
 export const formatRelatedIds: TransformFunction = (relatedIds) => {
-  if (!Array.isArray(relatedIds) || relatedIds.length === 0) return null;
-
-  return relatedIds.join(',');
+  return Array.isArray(relatedIds) && relatedIds.length > 0
+    ? relatedIds.join(',')
+    : null;
 };

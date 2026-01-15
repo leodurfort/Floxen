@@ -71,32 +71,19 @@ function truncate(text: string | null | undefined, maxLength: number): string {
 function CatalogPageContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
-
-  // Get current shop for banner
   const { currentShop } = useCurrentShop();
 
-  // Toast state
+  // UI state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-
-  // Modal states
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showEditColumnsModal, setShowEditColumnsModal] = useState(false);
   const [showFeedPreviewModal, setShowFeedPreviewModal] = useState(false);
-
-  // Item group count state for "Select similar products" feature
   const [itemGroupCount, setItemGroupCount] = useState<number | null>(null);
   const [selectedProductItemGroupId, setSelectedProductItemGroupId] = useState<string | null>(null);
-
-  // Column visibility
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
-
-  // Local search input state for debouncing
   const [searchInput, setSearchInput] = useState('');
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Ref for scrollable table container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Use hooks
@@ -320,21 +307,13 @@ function CatalogPageContent() {
     return `${diffDays}d ago`;
   };
 
-  // Handle tab change - applies predefined column filters
-  // Note: activeTab is now computed from columnFilters, so we only need to set the filters
-  // The tab will automatically highlight based on the filters applied
   const handleTabChange = (tab: ProductTabId) => {
-    // Apply filters based on tab
-    // Using 'true'/'false' values to match dropdown checkbox values
     switch (tab) {
       case 'all':
-        // Clear filters for "All" tab
-        // Must also clear searchInput to prevent debounce from restoring old value
         setSearchInput('');
         clearAllFilters();
         break;
       case 'inFeed':
-        // Valid AND enabled products (isValid=true, enable_search=true)
         setFilters({
           page: 1,
           columnFilters: {
@@ -344,7 +323,6 @@ function CatalogPageContent() {
         });
         break;
       case 'needsAttention':
-        // Invalid products (isValid=false)
         setFilters({
           page: 1,
           columnFilters: {
@@ -353,7 +331,6 @@ function CatalogPageContent() {
         });
         break;
       case 'disabled':
-        // Disabled products (enable_search=false)
         setFilters({
           page: 1,
           columnFilters: {
@@ -364,7 +341,6 @@ function CatalogPageContent() {
     }
   };
 
-  // Handle activate feed
   const handleActivateFeed = () => {
     if (!params?.id) return;
 
@@ -379,7 +355,6 @@ function CatalogPageContent() {
         const error = err as Error & { code?: string; details?: string | string[] };
         let message = error.message || 'Failed to activate feed';
 
-        // Add details if available
         if (error.details) {
           if (Array.isArray(error.details)) {
             message = error.details.join('\n');
@@ -393,7 +368,6 @@ function CatalogPageContent() {
     });
   };
 
-  // Selection handlers
   const handleToggleAll = () => {
     const pageIds = products.map((p) => p.id);
     const allSelected = pageIds.every((id) => selection.isSelected(id));
@@ -418,13 +392,11 @@ function CatalogPageContent() {
     }
   };
 
-  // Handle clearing all filters - must clear both URL state AND local searchInput state
   const handleClearFilters = useCallback(() => {
-    setSearchInput('');  // Clear local state immediately to prevent debounce from restoring old value
-    clearAllFilters();   // Clear URL state
+    setSearchInput('');
+    clearAllFilters();
   }, [clearAllFilters]);
 
-  // Open bulk edit modal and capture current filters
   const handleOpenBulkEdit = useCallback(() => {
     setBulkEditFilters({
       search: filters.search,
@@ -433,11 +405,8 @@ function CatalogPageContent() {
     setShowBulkEditModal(true);
   }, [filters.search, filters.columnFilters]);
 
-  // Bulk action handlers using mutation
-  // Uses captured bulkEditFilters to prevent stale filter issues
   const handleBulkUpdate = useCallback(
     async (update: BulkUpdateOperation): Promise<void> => {
-      // Use captured filters from when modal was opened
       const filtersToUse = bulkEditFilters ?? { search: filters.search, columnFilters: filters.columnFilters };
       const apiFilters = {
         search: filtersToUse.search || undefined,
@@ -446,11 +415,6 @@ function CatalogPageContent() {
           : undefined,
       };
 
-      // Determine selection mode:
-      // - 'all' for global select (no filters, all products)
-      // - 'filtered' for select all matching (with filters)
-      // - 'itemGroup' for select all by item group
-      // - 'selected' for individual product selection
       const selectionMode = selection.selectAllGlobal
         ? 'all'
         : selection.selectAllMatching
@@ -477,7 +441,6 @@ function CatalogPageContent() {
                 message: `Updated ${result.processedProducts} products${result.failedProducts > 0 ? ` (${result.failedProducts} failed)` : ''}`,
                 type: result.failedProducts > 0 ? 'error' : 'success',
               });
-              // React Query automatically invalidates the products cache
               resolve();
             },
             onError: (err) => {
@@ -485,7 +448,7 @@ function CatalogPageContent() {
                 message: err.message || 'Bulk update failed',
                 type: 'error',
               });
-              resolve(); // Resolve even on error to close the modal
+              resolve();
             },
           }
         );
@@ -494,7 +457,6 @@ function CatalogPageContent() {
     [selection, filters.search, filters.columnFilters, bulkEditFilters, bulkUpdateMutation]
   );
 
-  // Column visibility
   const handleSaveColumns = (columns: string[]) => {
     setVisibleColumns(columns);
     if (params?.id) {
@@ -502,39 +464,33 @@ function CatalogPageContent() {
     }
   };
 
-  // Get visible column definitions with guaranteed order:
-  // - checkbox always first (for sticky left behavior)
-  // - actions always last
-  const visibleColumnDefs = (() => {
+  // Ensure checkbox column is first, actions column is last
+  const visibleColumnDefs = useMemo(() => {
     const cols = visibleColumns
       .map((id) => COLUMN_MAP.get(id))
       .filter((col): col is ColumnDefinition => col !== undefined);
 
-    // Extract special columns
     const checkboxCol = cols.find(c => c.id === 'checkbox');
     const actionsCol = cols.find(c => c.id === 'actions');
     const otherCols = cols.filter(c => c.id !== 'checkbox' && c.id !== 'actions');
 
-    // Rebuild with correct order: checkbox first, actions last
     const result: ColumnDefinition[] = [];
     if (checkboxCol) result.push(checkboxCol);
     result.push(...otherCols);
     if (actionsCol) result.push(actionsCol);
     return result;
-  })();
+  }, [visibleColumns]);
 
-  // Calculate selection state
+  // Selection state calculations
   const pageIds = products.map((p) => p.id);
   const selectedOnPage = pageIds.filter((id) => selection.isSelected(id)).length;
   const isGlobalMode = selection.selectAllMatching || selection.selectAllGlobal || selection.selectAllByItemGroupId !== null;
   const allOnPageSelected = isGlobalMode || (pageIds.length > 0 && selectedOnPage === pageIds.length);
   const someOnPageSelected = !isGlobalMode && selectedOnPage > 0 && selectedOnPage < pageIds.length;
   const hasSelection = selection.getSelectedCount() > 0 || isGlobalMode;
-
-  // Total catalog count from stats (for global select all)
   const totalCatalogCount = stats?.total ?? 0;
+  const totalPages = Math.ceil(totalProducts / filters.limit) || 1;
 
-  // Display count depends on selection mode
   const displayedSelectionCount = selection.selectAllGlobal
     ? totalCatalogCount
     : selection.selectAllMatching
@@ -543,17 +499,12 @@ function CatalogPageContent() {
     ? selection.selectAllByItemGroupCount
     : selection.getSelectedCount();
 
-  // Pagination
-  const totalPages = Math.ceil(totalProducts / filters.limit) || 1;
-
-  // Render cell value based on column definition
   const renderCellValue = (column: ColumnDefinition, product: CatalogProduct) => {
     const productData = product as unknown as ProductData;
 
-    // Special rendering for certain columns
     switch (column.id) {
       case 'checkbox':
-        return null; // Handled separately
+        return null;
 
       case 'actions':
         return (
@@ -670,36 +621,22 @@ function CatalogPageContent() {
     }
   };
 
-  // Get column width class based on column ID
-  const getColumnWidthClass = (columnId: string): string => {
-    switch (columnId) {
-      case 'checkbox':
-        return 'w-12';
-      case 'actions':
-        return 'w-16';
-      case 'id':
-        return 'w-20';
-      case 'image_link':
-        return 'w-20';
-      case 'title':
-        return 'min-w-[200px]';
-      case 'description':
-        return 'min-w-[280px]';
-      case 'link':
-        return 'min-w-[180px]';
-      case 'enable_search':
-        return 'w-28';
-      case 'overrides':
-        return 'w-24';
-      case 'isValid':
-        return 'w-20';
-      case 'updatedAt':
-        return 'w-32';
-      case 'gtin':
-        return 'w-28';
-      default:
-        return 'min-w-[100px]';
-    }
+  const getColumnWidth = (columnId: string): string => {
+    const widths: Record<string, string> = {
+      checkbox: 'w-12',
+      actions: 'w-16',
+      id: 'w-20',
+      image_link: 'w-20',
+      title: 'min-w-[200px]',
+      description: 'min-w-[280px]',
+      link: 'min-w-[180px]',
+      enable_search: 'w-28',
+      overrides: 'w-24',
+      isValid: 'w-20',
+      updatedAt: 'w-32',
+      gtin: 'w-28',
+    };
+    return widths[columnId] ?? 'min-w-[100px]';
   };
 
   if (!hydrated) {
@@ -829,7 +766,7 @@ function CatalogPageContent() {
                     // Checkbox column - sticky both directions (top + left)
                     if (column.id === 'checkbox') {
                       return (
-                        <th key={column.id} className={`sticky top-0 left-0 z-20 ${getColumnWidthClass('checkbox')} bg-gray-50 border-b border-gray-200 px-3 py-2`}>
+                        <th key={column.id} className={`sticky top-0 left-0 z-20 ${getColumnWidth('checkbox')} bg-gray-50 border-b border-gray-200 px-3 py-2`}>
                           <input
                             type="checkbox"
                             checked={allOnPageSelected}
@@ -846,7 +783,7 @@ function CatalogPageContent() {
                     // Actions column - sticky top only
                     if (column.id === 'actions') {
                       return (
-                        <th key={column.id} className={`sticky top-0 z-10 ${getColumnWidthClass('actions')} bg-gray-50 border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider`}>
+                        <th key={column.id} className={`sticky top-0 z-10 ${getColumnWidth('actions')} bg-gray-50 border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider`}>
                           Actions
                         </th>
                       );
@@ -858,7 +795,7 @@ function CatalogPageContent() {
                       filters.sortBy === column.id ? { column: column.id, order: filters.sortOrder } : null;
 
                     return (
-                      <th key={column.id} className={`sticky top-0 z-10 ${getColumnWidthClass(column.id)} bg-gray-50 border-b border-gray-200 px-3 py-2`}>
+                      <th key={column.id} className={`sticky top-0 z-10 ${getColumnWidth(column.id)} bg-gray-50 border-b border-gray-200 px-3 py-2`}>
                         <ColumnHeaderDropdown
                           columnId={column.id}
                           label={column.label}
@@ -893,7 +830,7 @@ function CatalogPageContent() {
                         // Checkbox column - sticky left only
                         if (column.id === 'checkbox') {
                           return (
-                            <td key={column.id} className={`sticky left-0 z-[5] bg-white ${getColumnWidthClass('checkbox')} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className={`sticky left-0 z-[5] bg-white ${getColumnWidth('checkbox')} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -907,7 +844,7 @@ function CatalogPageContent() {
                         // Actions column
                         if (column.id === 'actions') {
                           return (
-                            <td key={column.id} className={`${getColumnWidthClass('actions')} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
+                            <td key={column.id} className={`${getColumnWidth('actions')} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
                               {renderCellValue(column, p)}
                             </td>
                           );
@@ -915,7 +852,7 @@ function CatalogPageContent() {
 
                         // Regular columns - clickable to navigate
                         return (
-                          <td key={column.id} className={`${getColumnWidthClass(column.id)} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={() => handleRowClick(p.id)}>
+                          <td key={column.id} className={`${getColumnWidth(column.id)} px-3 py-2 border-b border-gray-100 whitespace-nowrap`} onClick={() => handleRowClick(p.id)}>
                             {renderCellValue(column, p)}
                           </td>
                         );

@@ -7,7 +7,6 @@ import { useAuth } from '@/store/auth';
 import { useCreateShopMutation } from '@/hooks/useShopsQuery';
 
 export default function NewShopPage() {
-  // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
   const router = useRouter();
   const [storeUrl, setStoreUrl] = useState('');

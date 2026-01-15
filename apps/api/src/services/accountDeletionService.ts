@@ -4,9 +4,6 @@ import { getDeletionScheduledEmailHtml, getDeletionCancelledEmailHtml } from './
 
 const DELETION_GRACE_PERIOD_DAYS = 30;
 
-/**
- * Schedule account deletion with 30-day grace period
- */
 export async function scheduleAccountDeletion(userId: string): Promise<{
   success: boolean;
   scheduledFor?: Date;
@@ -78,9 +75,6 @@ export async function scheduleAccountDeletion(userId: string): Promise<{
   }
 }
 
-/**
- * Cancel scheduled account deletion
- */
 export async function cancelAccountDeletion(userId: string): Promise<{
   success: boolean;
   error?: string;
@@ -122,9 +116,6 @@ export async function cancelAccountDeletion(userId: string): Promise<{
   }
 }
 
-/**
- * Get pending deletion info for a user
- */
 export async function getPendingDeletion(userId: string): Promise<{
   scheduled: boolean;
   scheduledFor?: Date;
@@ -145,10 +136,6 @@ export async function getPendingDeletion(userId: string): Promise<{
   };
 }
 
-/**
- * Execute account deletions that are past their grace period
- * This should be called by a scheduled job
- */
 export async function executeScheduledDeletions(): Promise<number> {
   const now = new Date();
 

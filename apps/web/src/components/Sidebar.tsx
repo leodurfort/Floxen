@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { useCurrentShop } from '@/hooks/useCurrentShop';
+import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 import type { Shop } from '@productsynch/shared';
 
 export function Sidebar() {
@@ -12,7 +13,6 @@ export function Sidebar() {
   const router = useRouter();
   const { user, clear } = useAuth();
 
-  // URL-first shop selection - derives current shop from URL
   const { currentShop, shops } = useCurrentShop();
 
   const [showShopDropdown, setShowShopDropdown] = useState(false);
@@ -21,22 +21,8 @@ export function Sidebar() {
   const shopDropdownRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-
-      if (showShopDropdown && shopDropdownRef.current && !shopDropdownRef.current.contains(target)) {
-        setShowShopDropdown(false);
-      }
-      if (showAccountMenu && accountMenuRef.current && !accountMenuRef.current.contains(target)) {
-        setShowAccountMenu(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showShopDropdown, showAccountMenu]);
+  useClickOutside(shopDropdownRef, useCallback(() => setShowShopDropdown(false), []), showShopDropdown);
+  useClickOutside(accountMenuRef, useCallback(() => setShowAccountMenu(false), []), showAccountMenu);
 
   function handleShopChange(shop: Shop) {
     // Just navigate - the URL becomes the source of truth

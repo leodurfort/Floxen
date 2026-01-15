@@ -10,10 +10,6 @@ import {
   type ColumnDefinition,
 } from '@/lib/columnDefinitions';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TYPES
-// ═══════════════════════════════════════════════════════════════════════════
-
 interface EditColumnsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -21,10 +17,6 @@ interface EditColumnsModalProps {
   visibleColumns: string[];
   onSave: (columns: string[]) => void;
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════
 
 export function EditColumnsModal({
   isOpen,
@@ -61,19 +53,15 @@ export function EditColumnsModal({
     return filtered;
   }, [columnsByCategory, searchQuery]);
 
-  // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
       setSelectedColumns(new Set(visibleColumns));
       setSearchQuery('');
-      // Expand all categories by default
       setExpandedCategories(new Set(Array.from(columnsByCategory.keys())));
     }
   }, [isOpen, visibleColumns, columnsByCategory]);
 
-  // Toggle single column
   const toggleColumn = (columnId: string) => {
-    // Don't allow toggling always-visible columns
     if (columnId === 'checkbox' || columnId === 'actions') return;
 
     setSelectedColumns((prev) => {
@@ -87,7 +75,6 @@ export function EditColumnsModal({
     });
   };
 
-  // Toggle category expansion
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) => {
       const newSet = new Set(prev);
@@ -100,7 +87,6 @@ export function EditColumnsModal({
     });
   };
 
-  // Select all columns in a category
   const selectAllInCategory = (category: string) => {
     const columns = columnsByCategory.get(category) || [];
     setSelectedColumns((prev) => {
@@ -114,7 +100,6 @@ export function EditColumnsModal({
     });
   };
 
-  // Deselect all columns in a category
   const deselectAllInCategory = (category: string) => {
     const columns = columnsByCategory.get(category) || [];
     setSelectedColumns((prev) => {
@@ -128,7 +113,6 @@ export function EditColumnsModal({
     });
   };
 
-  // Check if all columns in category are selected
   const isCategoryFullySelected = (category: string): boolean => {
     const columns = columnsByCategory.get(category) || [];
     return columns.every(
@@ -136,7 +120,6 @@ export function EditColumnsModal({
     );
   };
 
-  // Check if any column in category is selected
   const isCategoryPartiallySelected = (category: string): boolean => {
     const columns = columnsByCategory.get(category) || [];
     const selectableColumns = columns.filter(
@@ -146,7 +129,6 @@ export function EditColumnsModal({
     return selectedCount > 0 && selectedCount < selectableColumns.length;
   };
 
-  // Handle save
   const handleSave = () => {
     const columnsArray = Array.from(selectedColumns);
     saveStoredColumns(shopId, columnsArray);
@@ -154,12 +136,10 @@ export function EditColumnsModal({
     onClose();
   };
 
-  // Reset to default
   const handleReset = () => {
     setSelectedColumns(new Set(getDefaultVisibleColumns()));
   };
 
-  // Count selected columns
   const selectedCount = selectedColumns.size;
   const totalCount = ALL_COLUMNS.filter(
     (col) => col.id !== 'checkbox' && col.id !== 'actions'

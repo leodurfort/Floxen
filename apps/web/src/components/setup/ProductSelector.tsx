@@ -1,12 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { CatalogProduct } from '@productsynch/shared';
+import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 
 interface Props {
   products: CatalogProduct[];
-  value: string | null;  // Selected product ID
+  value: string | null;
   onChange: (productId: string) => void;
+}
+
+function getProductName(product: CatalogProduct): string {
+  const openaiTitle = product.openaiAutoFilled?.title as string | undefined;
+  return openaiTitle || `Product ${product.id}`;
 }
 
 export function ProductSelector({ products, value, onChange }: Props) {
@@ -14,33 +20,17 @@ export function ProductSelector({ products, value, onChange }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const getProductName = (product: CatalogProduct): string => {
-    const openaiTitle = product.openaiAutoFilled?.title as string | undefined;
-    return openaiTitle || `Product ${product.id}`;
-  };
-
-  // Filter and sort products alphabetically (A to Z)
   const filteredProducts = (searchQuery
-    ? products.filter((p) => {
-        const name = getProductName(p);
-        return name.toLowerCase().includes(searchQuery.toLowerCase());
-      })
+    ? products.filter((p) => getProductName(p).toLowerCase().includes(searchQuery.toLowerCase()))
     : products
   ).slice().sort((a, b) => getProductName(a).localeCompare(getProductName(b)));
 
   const selectedProduct = products.find((p) => p.id === value);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearchQuery('');
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useClickOutside(dropdownRef, useCallback(() => {
+    setIsOpen(false);
+    setSearchQuery('');
+  }, []), isOpen);
 
   function handleSelect(product: CatalogProduct) {
     onChange(product.id);
@@ -50,7 +40,6 @@ export function ProductSelector({ products, value, onChange }: Props) {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-4 py-2 text-left bg-white hover:bg-gray-50 rounded-lg border border-[#FA7315] transition-colors flex items-center justify-between"
@@ -63,10 +52,8 @@ export function ProductSelector({ products, value, onChange }: Props) {
         </svg>
       </button>
 
-      {/* Dropdown */}
       {isOpen && (
         <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-lg border border-gray-200 shadow-xl max-h-[320px] overflow-hidden flex flex-col">
-          {/* Search Bar */}
           <div className="p-3 border-b border-gray-100">
             <input
               type="text"
@@ -78,7 +65,6 @@ export function ProductSelector({ products, value, onChange }: Props) {
             />
           </div>
 
-          {/* Product List */}
           <div className="overflow-y-auto">
             {filteredProducts.length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">No products found</div>

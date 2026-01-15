@@ -26,9 +26,7 @@ interface ProductFieldMappingTableProps {
   feedEnableSearch?: boolean;
   shopDefaultEnableSearch?: boolean;
   validationErrors?: Record<string, string[]>;
-  // Toolbar
   searchElement?: ReactNode;
-  // Empty state
   emptyMessage?: ReactNode;
 }
 
@@ -51,11 +49,9 @@ export function ProductFieldMappingTable({
 }: ProductFieldMappingTableProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      {/* Scrollable table container */}
       <div className="overflow-auto max-h-[calc(100vh-280px)]">
         <table className="w-full field-mapping-table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>
-            {/* Toolbar Row - sticky at top */}
             {searchElement && (
               <tr className="toolbar-row">
                 <th
@@ -66,7 +62,6 @@ export function ProductFieldMappingTable({
                 </th>
               </tr>
             )}
-            {/* Column Headers - sticky below toolbar */}
             <tr className="column-headers">
               <th
                 className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wide w-[30%] min-w-[250px] sticky z-20 bg-gray-50 border-b border-gray-200"
@@ -99,7 +94,6 @@ export function ProductFieldMappingTable({
             {categories.length > 0 ? (
               categories.map((category) => (
                 <Fragment key={category.id}>
-                  {/* Section Header Row - Sticky below toolbar + column headers */}
                   <tr className="section-header">
                     <td
                       colSpan={4}
@@ -116,8 +110,6 @@ export function ProductFieldMappingTable({
                       </div>
                     </td>
                   </tr>
-
-                  {/* Field Rows */}
                   {category.fields.map((spec) => (
                     <ProductFieldMappingRow
                       key={spec.attribute}
@@ -152,55 +144,37 @@ export function ProductFieldMappingTable({
   );
 }
 
-// Loading skeleton for the table
 export function ProductFieldMappingTableSkeleton() {
   const skeletonRows = 8;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div className="animate-pulse">
-        {/* Toolbar skeleton */}
         <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4">
           <div className="h-8 bg-gray-200 rounded w-64" />
         </div>
-
-        {/* Header skeleton */}
         <div className="h-12 bg-gray-50 border-b border-gray-200 flex items-center px-4 gap-4">
           <div className="h-3 bg-gray-200 rounded w-[30%] min-w-[200px]" />
           <div className="h-3 bg-gray-200 rounded w-[120px]" />
           <div className="h-3 bg-gray-200 rounded w-[280px]" />
           <div className="h-3 bg-gray-200 rounded w-[265px]" />
         </div>
-
-        {/* Section header skeleton */}
         <div className="h-10 bg-gray-100 border-b border-gray-200 flex items-center px-4">
           <div className="h-4 bg-gray-200 rounded w-32" />
         </div>
-
-        {/* Row skeletons */}
         {[...Array(skeletonRows)].map((_, i) => (
-          <div
-            key={i}
-            className="h-24 border-b border-gray-200 p-4 flex gap-4 items-start"
-          >
-            {/* OpenAI Field column */}
+          <div key={i} className="h-24 border-b border-gray-200 p-4 flex gap-4 items-start">
             <div className="w-[30%] min-w-[200px] space-y-2">
               <div className="h-4 bg-gray-200 rounded w-24" />
               <div className="h-3 bg-gray-200 rounded w-full" />
               <div className="h-3 bg-gray-200 rounded w-3/4" />
             </div>
-
-            {/* Status column */}
             <div className="w-[120px]">
               <div className="h-6 bg-gray-200 rounded w-20" />
             </div>
-
-            {/* Mapping Source column */}
             <div className="w-[280px]">
               <div className="h-10 bg-gray-200 rounded w-full" />
             </div>
-
-            {/* Preview Value column */}
             <div className="w-[265px]">
               <div className="h-10 bg-gray-200 rounded w-3/4" />
             </div>

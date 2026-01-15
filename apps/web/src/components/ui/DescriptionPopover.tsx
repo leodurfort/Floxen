@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 
 interface DescriptionPopoverProps {
   description: string;
@@ -24,41 +25,18 @@ export function DescriptionPopover({
     ? description.slice(0, maxLength).trim() + '...'
     : description;
 
-  // Close popover when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
+  useClickOutside([popoverRef, triggerRef], useCallback(() => setIsOpen(false), []), isOpen);
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
-  // Close on escape key
   useEffect(() => {
+    if (!isOpen) return;
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
+      if (event.key === 'Escape') setIsOpen(false);
     }
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
-    }
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen]);
 
   if (!isTruncated && !example && !values) {
-    // No need for popover - just show description
     return (
       <div>
         <p className="text-sm text-gray-600">{description}</p>
@@ -87,7 +65,6 @@ export function DescriptionPopover({
         )}
       </p>
 
-      {/* Show example/values inline when not truncated but they exist */}
       {!isTruncated && (
         <>
           {example && (
@@ -99,32 +76,24 @@ export function DescriptionPopover({
         </>
       )}
 
-      {/* Show popover with full content when truncated and clicked */}
       {isOpen && isTruncated && (
         <div
           ref={popoverRef}
           className="absolute left-0 top-full mt-2 z-50 w-80 p-4 bg-white border border-gray-200 rounded-lg shadow-xl"
         >
-          {/* Full description */}
           <p className="text-sm text-gray-700">{description}</p>
-
-          {/* Example */}
           {example && (
             <div className="mt-3 pt-3 border-t border-gray-100">
               <span className="text-xs font-medium text-gray-500">Example:</span>
               <p className="text-xs text-gray-600 mt-0.5">{example}</p>
             </div>
           )}
-
-          {/* Values */}
           {values && (
             <div className="mt-3 pt-3 border-t border-gray-100">
               <span className="text-xs font-medium text-gray-500">Values:</span>
               <p className="text-xs text-gray-600 mt-0.5">{values}</p>
             </div>
           )}
-
-          {/* Close button */}
           <button
             onClick={() => setIsOpen(false)}
             className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"

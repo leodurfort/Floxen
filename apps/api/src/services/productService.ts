@@ -2,10 +2,6 @@ import { prisma } from '../lib/prisma';
 import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// LIST PRODUCTS OPTIONS
-// ═══════════════════════════════════════════════════════════════════════════
-
 export interface ColumnFilter {
   text?: string;      // Text search within column
   values?: string[];  // Selected checkbox values
@@ -19,10 +15,6 @@ export interface ListProductsOptions {
   search?: string;
   columnFilters?: Record<string, ColumnFilter>;
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// COLUMN CONFIGURATION (used for both sorting and filtering)
-// ═══════════════════════════════════════════════════════════════════════════
 
 // Columns stored directly in Product table - Prisma field names (camelCase)
 const DATABASE_COLUMNS: Record<string, string> = {
@@ -119,10 +111,6 @@ const OPENAI_COLUMNS = new Set([
   'mobile_link_template', 'disclosure_date', 'quantity_limit', 'store_code',
 ]);
 
-/**
- * Get IDs of parent variable products (products that have variations).
- * These are identified by finding all distinct wooParentId values from products that have a parent.
- */
 export async function getParentProductIds(shopId: string): Promise<number[]> {
   const parentProductIds = await prisma.product.findMany({
     where: {
@@ -136,10 +124,6 @@ export async function getParentProductIds(shopId: string): Promise<number[]> {
   return parentProductIds.map(p => p.wooParentId).filter((id): id is number => id !== null);
 }
 
-/**
- * Map column filter to database column name
- * Returns null if the column doesn't have a direct database mapping
- */
 function getDbColumnForFilter(columnId: string): string | null {
   // Direct database column mappings
   const dbMappings: Record<string, string> = {
@@ -151,41 +135,21 @@ function getDbColumnForFilter(columnId: string): string | null {
   return dbMappings[columnId] || null;
 }
 
-/**
- * Check if query requires raw SQL (can't be handled by Prisma)
- * This includes: computed columns (overrides), OpenAI JSON columns, global search
- */
 function requiresRawSqlFiltering(options: ListProductsOptions): boolean {
-  // Global search requires raw SQL for case-insensitive JSON search on OpenAI attributes
   if (options.search?.trim()) return true;
+  if (!options.columnFilters) return false;
 
-  const columnFilters = options.columnFilters;
-  if (!columnFilters) return false;
-
-  // Database columns that can be filtered with Prisma (no raw SQL needed)
   const PRISMA_FILTERABLE_COLUMNS = new Set(['isValid', 'feedEnableSearch', 'enable_search']);
 
-  for (const columnId of Object.keys(columnFilters)) {
-    const filter = columnFilters[columnId];
+  for (const [columnId, filter] of Object.entries(options.columnFilters)) {
     if (!filter.values?.length && !filter.text) continue;
-
-    // Computed columns require raw SQL
     if (COMPUTED_SORT_COLUMNS.has(columnId)) return true;
-
-    // Any column not in PRISMA_FILTERABLE_COLUMNS is assumed to be an OpenAI JSON column
-    // and requires raw SQL for filtering
     if (!PRISMA_FILTERABLE_COLUMNS.has(columnId)) return true;
   }
 
   return false;
 }
 
-/**
- * Build Prisma WHERE clause from filter options
- * NOTE: This is only used when requiresRawSqlFiltering() returns false,
- * which means no search term and only simple database column filters.
- * Global search always uses raw SQL path for OpenAI JSON queries.
- */
 function buildWhereClause(
   shopId: string,
   parentIds: number[],
@@ -200,29 +164,16 @@ function buildWhereClause(
 
   const andConditions: Prisma.ProductWhereInput[] = [];
 
-  // Process column filters (only simple database columns)
   if (columnFilters) {
     for (const [columnId, filter] of Object.entries(columnFilters)) {
-      if (!filter.values?.length && !filter.text) continue;
+      if (!filter.values?.length) continue;
 
       const dbColumn = getDbColumnForFilter(columnId);
+      const isBooleanColumn = columnId === 'isValid' || columnId === 'feedEnableSearch' || columnId === 'enable_search';
 
-      // Handle value filters (checkbox selections)
-      if (filter.values?.length) {
-        if ((columnId === 'isValid' || columnId === 'feedEnableSearch' || columnId === 'enable_search') && dbColumn) {
-          // Boolean columns - only filter if exactly one value selected
-          // (selecting both 'true' and 'false' means show all, so no filter needed)
-          if (filter.values.length === 1) {
-            // Map filter values to boolean:
-            // 'valid' / 'Enabled' / 'true' → true
-            // 'invalid' / 'Disabled' / 'false' → false
-            const value = filter.values[0].toLowerCase();
-            const boolValue = value === 'valid' || value === 'enabled' || value === 'true';
-            andConditions.push({ [dbColumn]: boolValue });
-          }
-        }
-        // Note: overrides and OpenAI JSON column filters (including availability)
-        // are handled in raw SQL path (requiresRawSqlFiltering returns true for these)
+      if (isBooleanColumn && dbColumn && filter.values.length === 1) {
+        const boolValue = parseBooleanFilterValue(filter.values[0]);
+        andConditions.push({ [dbColumn]: boolValue });
       }
     }
   }
@@ -234,83 +185,51 @@ function buildWhereClause(
   return where;
 }
 
+function parseBooleanFilterValue(value: string): boolean {
+  const lower = value.toLowerCase();
+  return lower === 'valid' || lower === 'enabled' || lower === 'true';
+}
+
 type SortType =
   | { type: 'prisma'; orderBy: Prisma.ProductOrderByWithRelationInput }
   | { type: 'json'; attribute: string; order: 'asc' | 'desc' }
   | { type: 'computed'; column: string; order: 'asc' | 'desc' };
 
-/**
- * Build the orderBy clause for a given column
- * Supports database columns, OpenAI JSON attributes, and computed columns
- */
 function buildOrderByClause(sortBy: string, sortOrder: 'asc' | 'desc'): SortType {
-  // Check if it's a database column
   const dbColumn = DATABASE_COLUMNS[sortBy];
-  if (dbColumn) {
-    return { type: 'prisma', orderBy: { [dbColumn]: sortOrder } };
-  }
-
-  // Check if it's a computed column
-  if (COMPUTED_SORT_COLUMNS.has(sortBy)) {
-    return { type: 'computed', column: sortBy, order: sortOrder };
-  }
-
-  // Check if it's an OpenAI JSON attribute
-  if (OPENAI_COLUMNS.has(sortBy)) {
-    return { type: 'json', attribute: sortBy, order: sortOrder };
-  }
-
-  // Default to updatedAt
+  if (dbColumn) return { type: 'prisma', orderBy: { [dbColumn]: sortOrder } };
+  if (COMPUTED_SORT_COLUMNS.has(sortBy)) return { type: 'computed', column: sortBy, order: sortOrder };
+  if (OPENAI_COLUMNS.has(sortBy)) return { type: 'json', attribute: sortBy, order: sortOrder };
   return { type: 'prisma', orderBy: { updatedAt: sortOrder } };
 }
 
-/**
- * Escape a string for safe SQL interpolation (prevent SQL injection)
- */
 function escapeSqlString(value: string): string {
   return value.replace(/'/g, "''").replace(/\\/g, '\\\\');
 }
 
-/**
- * Build raw SQL WHERE clause for complex queries
- * NOTE: Uses actual PostgreSQL column names (snake_case) not Prisma field names (camelCase)
- */
 function buildRawWhereClause(shopId: string, parentIds: number[], options: ListProductsOptions): string {
   const whereConditions: string[] = [
     `"shop_id" = '${escapeSqlString(shopId)}'`,
     `"woo_product_id" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})`,
   ];
 
-  // Global text search on OpenAI attributes (title, sku)
   if (options.search?.trim()) {
     const searchEscaped = escapeSqlString(options.search.trim());
     whereConditions.push(`("openai_auto_filled"->>'title' ILIKE '%${searchEscaped}%' OR "openai_auto_filled"->>'sku' ILIKE '%${searchEscaped}%')`);
   }
 
-  // Process column filters
   const cf = options.columnFilters;
   if (cf) {
-    // isValid column - only filter if exactly one value selected
-    // (selecting both 'true' and 'false' means show all, so no filter needed)
     if (cf.isValid?.values?.length === 1) {
-      // Map filter values: 'valid' / 'true' → true, 'invalid' / 'false' → false
-      const value = cf.isValid.values[0].toLowerCase();
-      const boolValue = value === 'valid' || value === 'true';
-      whereConditions.push(`"is_valid" = ${boolValue}`);
+      whereConditions.push(`"is_valid" = ${parseBooleanFilterValue(cf.isValid.values[0])}`);
     }
 
-    // enable_search / feedEnableSearch column - only filter if exactly one value selected
     if (cf.enable_search?.values?.length === 1) {
-      // Map filter values: 'Enabled' / 'true' → true, 'Disabled' / 'false' → false
-      const value = cf.enable_search.values[0].toLowerCase();
-      const boolValue = value === 'enabled' || value === 'true';
-      whereConditions.push(`"feed_enable_search" = ${boolValue}`);
+      whereConditions.push(`"feed_enable_search" = ${parseBooleanFilterValue(cf.enable_search.values[0])}`);
     }
 
-    // overrides column - filter by exact override count
     if (cf.overrides?.values?.length) {
       const counts = cf.overrides.values.map(v => `'${escapeSqlString(v)}'`).join(',');
-      // Compute override count and match against selected values
       whereConditions.push(`(
         CASE
           WHEN "product_field_overrides" IS NULL OR "product_field_overrides" = '{}'::jsonb THEN '0'
@@ -319,59 +238,39 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
       ) IN (${counts})`);
     }
 
-    // Handle OpenAI JSON column filters (text and value filters)
-    // Any column not in the special handled list is treated as an OpenAI JSON attribute
     for (const [columnId, filter] of Object.entries(cf)) {
-      // Skip already handled columns (database columns and computed columns)
-      if (['isValid', 'enable_search', 'overrides'].includes(columnId)) {
-        continue;
-      }
+      if (['isValid', 'enable_search', 'overrides'].includes(columnId)) continue;
+      if (!filter.values?.length) continue;
 
-      // Value filter on OpenAI JSON attribute
-      // Note: We no longer check OPENAI_COLUMNS whitelist - any column can be filtered
-      if (filter.values?.length) {
-        const hasEmpty = filter.values.includes('__empty__');
-        const nonEmptyValues = filter.values.filter(v => v !== '__empty__');
-        const safeColumnId = escapeSqlString(columnId);
-
-        if (hasEmpty && nonEmptyValues.length > 0) {
-          // Filter for empty OR specific values
-          const values = nonEmptyValues.map(v => `'${escapeSqlString(v)}'`).join(',');
-          whereConditions.push(`(
-            "openai_auto_filled"->>'${safeColumnId}' IS NULL
-            OR "openai_auto_filled"->>'${safeColumnId}' = ''
-            OR "openai_auto_filled"->>'${safeColumnId}' IN (${values})
-          )`);
-        } else if (hasEmpty) {
-          // Filter for empty only
-          whereConditions.push(`(
-            "openai_auto_filled"->>'${safeColumnId}' IS NULL
-            OR "openai_auto_filled"->>'${safeColumnId}' = ''
-          )`);
-        } else {
-          // Filter for specific values only
-          const values = filter.values.map(v => `'${escapeSqlString(v)}'`).join(',');
-          whereConditions.push(`"openai_auto_filled"->>'${safeColumnId}' IN (${values})`);
-        }
-      }
+      whereConditions.push(buildJsonFilterCondition(columnId, filter.values));
     }
   }
 
   return whereConditions.join(' AND ');
 }
 
-/**
- * Get ORDER BY SQL for computed columns
- * NOTE: Uses actual PostgreSQL column names (snake_case)
- */
-function getComputedOrderBy(column: string, direction: string): string {
-  switch (column) {
-    case 'overrides':
-      // Sort by count of keys in product_field_overrides JSON
-      return `COALESCE(jsonb_array_length(jsonb_path_query_array("product_field_overrides", '$.*')), 0) ${direction}`;
-    default:
-      return `"updated_at" ${direction}`;
+function buildJsonFilterCondition(columnId: string, values: string[]): string {
+  const safeColumnId = escapeSqlString(columnId);
+  const hasEmpty = values.includes('__empty__');
+  const nonEmptyValues = values.filter(v => v !== '__empty__');
+  const jsonPath = `"openai_auto_filled"->>'${safeColumnId}'`;
+
+  if (hasEmpty && nonEmptyValues.length > 0) {
+    const valuesStr = nonEmptyValues.map(v => `'${escapeSqlString(v)}'`).join(',');
+    return `(${jsonPath} IS NULL OR ${jsonPath} = '' OR ${jsonPath} IN (${valuesStr}))`;
   }
+  if (hasEmpty) {
+    return `(${jsonPath} IS NULL OR ${jsonPath} = '')`;
+  }
+  const valuesStr = values.map(v => `'${escapeSqlString(v)}'`).join(',');
+  return `${jsonPath} IN (${valuesStr})`;
+}
+
+function getComputedOrderBy(column: string, direction: string): string {
+  if (column === 'overrides') {
+    return `COALESCE(jsonb_array_length(jsonb_path_query_array("product_field_overrides", '$.*')), 0) ${direction}`;
+  }
+  return `"updated_at" ${direction}`;
 }
 
 export async function listProducts(shopId: string, options: ListProductsOptions = {}) {
@@ -511,10 +410,6 @@ export function checksum(data: unknown) {
   return crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// COLUMN VALUES FOR FILTERING
-// ═══════════════════════════════════════════════════════════════════════════
-
 export interface ColumnValueResult {
   value: string;
   label: string;
@@ -528,9 +423,6 @@ export interface GetColumnValuesResult {
   truncated: boolean;
 }
 
-/**
- * Check if there are any active filters in the options
- */
 function hasActiveFilters(options: ListProductsOptions): boolean {
   if (options.search?.trim()) return true;
   if (!options.columnFilters) return false;
@@ -539,11 +431,6 @@ function hasActiveFilters(options: ListProductsOptions): boolean {
   );
 }
 
-/**
- * Get unique values for a column to populate filter dropdown.
- * Supports cascading filters: pass currentFilters to get values based on already filtered products.
- * The column being queried is automatically excluded from currentFilters (self-exclusion).
- */
 export async function getColumnValues(
   shopId: string,
   column: string,
@@ -552,42 +439,29 @@ export async function getColumnValues(
   currentFilters?: ListProductsOptions
 ): Promise<GetColumnValuesResult> {
   const parentIds = await getParentProductIds(shopId);
+  const filtersExcludingSelf = excludeColumnFromFilters(column, currentFilters);
 
-  // Remove the current column from filters (self-exclusion)
-  // This allows users to change their selection without clearing first
-  const filtersExcludingSelf: ListProductsOptions | undefined = currentFilters
-    ? {
-        ...currentFilters,
-        columnFilters: currentFilters.columnFilters
-          ? Object.fromEntries(
-              Object.entries(currentFilters.columnFilters).filter(([key]) => key !== column)
-            )
-          : undefined,
-      }
-    : undefined;
-
-  // Check if it's a database column
   if (DATABASE_COLUMNS[column]) {
     return getDatabaseColumnValues(shopId, parentIds, column, limit, search, filtersExcludingSelf);
   }
-
-  // Check if it's a computed column
   if (COMPUTED_SORT_COLUMNS.has(column)) {
     return getComputedColumnValues(shopId, parentIds, column, limit, search, filtersExcludingSelf);
   }
-
-  // Check if it's an OpenAI attribute
-  if (OPENAI_COLUMNS.has(column)) {
-    return getOpenAIColumnValues(shopId, parentIds, column, limit, search, filtersExcludingSelf);
-  }
-
-  // Default: try as OpenAI attribute
   return getOpenAIColumnValues(shopId, parentIds, column, limit, search, filtersExcludingSelf);
 }
 
-/**
- * Get unique values for a computed column (like overrides count)
- */
+function excludeColumnFromFilters(column: string, filters?: ListProductsOptions): ListProductsOptions | undefined {
+  if (!filters) return undefined;
+  return {
+    ...filters,
+    columnFilters: filters.columnFilters
+      ? Object.fromEntries(Object.entries(filters.columnFilters).filter(([key]) => key !== column))
+      : undefined,
+  };
+}
+
+const EMPTY_VALUE_KEY = '__empty__';
+
 async function getComputedColumnValues(
   shopId: string,
   parentIds: number[],
@@ -596,75 +470,25 @@ async function getComputedColumnValues(
   search?: string,
   currentFilters?: ListProductsOptions
 ): Promise<GetColumnValuesResult> {
-  if (column === 'overrides') {
-    // Apply cascading filters if provided
-    let products: { productFieldOverrides: unknown }[];
-
-    if (currentFilters && hasActiveFilters(currentFilters)) {
-      // Use raw SQL to get filtered products with only the column we need
-      const whereClause = buildRawWhereClause(shopId, parentIds, currentFilters);
-      const rawProducts = await prisma.$queryRawUnsafe<{ product_field_overrides: unknown }[]>(`
-        SELECT "product_field_overrides" FROM "Product"
-        WHERE ${whereClause}
-      `);
-      // Transform snake_case to camelCase
-      products = rawProducts.map(p => ({ productFieldOverrides: p.product_field_overrides }));
-    } else {
-      // No filters, use simple Prisma query
-      products = await prisma.product.findMany({
-        where: {
-          shopId,
-          wooProductId: { notIn: parentIds },
-        },
-        select: {
-          productFieldOverrides: true,
-        },
-      });
-    }
-
-    const valueCounts = new Map<string, number>();
-    for (const product of products) {
-      const overrides = product.productFieldOverrides as Record<string, unknown> | null;
-      const count = overrides ? Object.keys(overrides).length : 0;
-      const value = String(count);
-      valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
-    }
-
-    let values = Array.from(valueCounts.entries())
-      .map(([value, count]) => ({
-        value,
-        label: value === '0' ? 'No overrides' : `${value} override${value === '1' ? '' : 's'}`,
-        count,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-
-    if (search?.trim()) {
-      const searchLower = search.toLowerCase();
-      values = values.filter(
-        v => v.value.includes(searchLower) || v.label.toLowerCase().includes(searchLower)
-      );
-    }
-
-    return {
-      column,
-      values: values.slice(0, limit),
-      totalDistinct: values.length,
-      truncated: values.length > limit,
-    };
+  if (column !== 'overrides') {
+    return { column, values: [], totalDistinct: 0, truncated: false };
   }
 
-  // Fallback for unknown computed columns
-  return {
-    column,
-    values: [],
-    totalDistinct: 0,
-    truncated: false,
-  };
+  const products = await fetchProductsForColumnValues(
+    shopId, parentIds, currentFilters, 'product_field_overrides', 'productFieldOverrides'
+  );
+
+  const valueCounts = countValues(products, (p) => {
+    const overrides = p.productFieldOverrides as Record<string, unknown> | null;
+    return String(overrides ? Object.keys(overrides).length : 0);
+  });
+
+  const formatOverrideLabel = (value: string) =>
+    value === '0' ? 'No overrides' : `${value} override${value === '1' ? '' : 's'}`;
+
+  return buildColumnValuesResult(column, valueCounts, limit, search, formatOverrideLabel);
 }
 
-/**
- * Get unique values for a database column
- */
 async function getDatabaseColumnValues(
   shopId: string,
   parentIds: number[],
@@ -676,77 +500,18 @@ async function getDatabaseColumnValues(
   const dbColumn = DATABASE_COLUMNS[column] || column;
   const dbColumnSql = DATABASE_COLUMNS_SQL[column] || column;
 
-  // Fetch all values and count in memory
-  let products: { value: unknown }[];
+  const products = await fetchProductsForColumnValues(
+    shopId, parentIds, currentFilters, dbColumnSql, dbColumn
+  );
 
-  if (currentFilters && hasActiveFilters(currentFilters)) {
-    // Apply cascading filters using raw SQL
-    const whereClause = buildRawWhereClause(shopId, parentIds, currentFilters);
-    const rawProducts = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(`
-      SELECT "${dbColumnSql}" as value FROM "Product"
-      WHERE ${whereClause}
-    `);
-    products = rawProducts.map(p => ({ value: p.value }));
-  } else {
-    // No filters, use simple Prisma query
-    const prismaProducts = await prisma.product.findMany({
-      where: {
-        shopId,
-        wooProductId: { notIn: parentIds },
-      },
-      select: {
-        [dbColumn]: true,
-      },
-    });
-    products = prismaProducts.map(p => ({ value: (p as Record<string, unknown>)[dbColumn] }));
-  }
+  const valueCounts = countValues(products, (p) => {
+    const rawValue = (p as Record<string, unknown>)[dbColumn];
+    return normalizeValueForCounting(rawValue);
+  });
 
-  // Count occurrences (including empty/null values)
-  const valueCounts = new Map<string, number>();
-  const EMPTY_VALUE_KEY = '__empty__';
-
-  for (const product of products) {
-    const rawValue = product.value;
-    if (rawValue === null || rawValue === undefined || rawValue === '') {
-      valueCounts.set(EMPTY_VALUE_KEY, (valueCounts.get(EMPTY_VALUE_KEY) || 0) + 1);
-    } else {
-      const value = String(rawValue);
-      valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
-    }
-  }
-
-  // Convert to array and sort alphabetically by label
-  let values = Array.from(valueCounts.entries())
-    .map(([value, count]) => ({
-      value,
-      label: formatValueLabel(value, column),
-      count,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-
-  // Filter by search if provided
-  if (search && search.trim()) {
-    const searchLower = search.toLowerCase();
-    values = values.filter(
-      v => v.value.toLowerCase().includes(searchLower) ||
-           v.label.toLowerCase().includes(searchLower)
-    );
-  }
-
-  const totalDistinct = values.length;
-  const truncated = values.length > limit;
-
-  return {
-    column,
-    values: values.slice(0, limit),
-    totalDistinct,
-    truncated,
-  };
+  return buildColumnValuesResult(column, valueCounts, limit, search, (v) => formatValueLabel(v, column));
 }
 
-/**
- * Get unique values for an OpenAI attribute from openaiAutoFilled JSON
- */
 async function getOpenAIColumnValues(
   shopId: string,
   parentIds: number[],
@@ -755,139 +520,116 @@ async function getOpenAIColumnValues(
   search?: string,
   currentFilters?: ListProductsOptions
 ): Promise<GetColumnValuesResult> {
-  // Fetch openaiAutoFilled for products (filtered if cascading filters active)
-  let products: { openaiAutoFilled: unknown }[];
+  const products = await fetchProductsForColumnValues(
+    shopId, parentIds, currentFilters, 'openai_auto_filled', 'openaiAutoFilled'
+  );
 
+  const valueCounts = countValues(products, (p) => {
+    const openai = p.openaiAutoFilled as Record<string, unknown> | null;
+    if (!openai) return EMPTY_VALUE_KEY;
+    return normalizeValueForCounting(openai[column]);
+  });
+
+  return buildColumnValuesResult(column, valueCounts, limit, search, (v) => formatValueLabel(v, column));
+}
+
+async function fetchProductsForColumnValues(
+  shopId: string,
+  parentIds: number[],
+  currentFilters: ListProductsOptions | undefined,
+  sqlColumn: string,
+  prismaColumn: string
+): Promise<Record<string, unknown>[]> {
   if (currentFilters && hasActiveFilters(currentFilters)) {
-    // Apply cascading filters using raw SQL
     const whereClause = buildRawWhereClause(shopId, parentIds, currentFilters);
-    const rawProducts = await prisma.$queryRawUnsafe<{ openai_auto_filled: unknown }[]>(`
-      SELECT "openai_auto_filled" FROM "Product"
-      WHERE ${whereClause}
+    const rawProducts = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(`
+      SELECT "${sqlColumn}" FROM "Product" WHERE ${whereClause}
     `);
-    products = rawProducts.map(p => ({ openaiAutoFilled: p.openai_auto_filled }));
-  } else {
-    // No filters, use simple Prisma query
-    products = await prisma.product.findMany({
-      where: {
-        shopId,
-        wooProductId: { notIn: parentIds },
-      },
-      select: {
-        openaiAutoFilled: true,
-      },
-    });
+    return rawProducts.map(p => ({ [prismaColumn]: p[sqlColumn] }));
   }
 
-  // Extract values from JSON (including empty/null values)
-  const valueCounts = new Map<string, number>();
-  const EMPTY_VALUE_KEY = '__empty__';
+  return prisma.product.findMany({
+    where: { shopId, wooProductId: { notIn: parentIds } },
+    select: { [prismaColumn]: true },
+  });
+}
 
-  for (const product of products) {
-    const openai = product.openaiAutoFilled as Record<string, unknown> | null;
-
-    // Check if value is empty/null/undefined
-    if (!openai) {
-      valueCounts.set(EMPTY_VALUE_KEY, (valueCounts.get(EMPTY_VALUE_KEY) || 0) + 1);
-      continue;
-    }
-
-    const rawValue = openai[column];
-    if (rawValue === null || rawValue === undefined || rawValue === '') {
-      valueCounts.set(EMPTY_VALUE_KEY, (valueCounts.get(EMPTY_VALUE_KEY) || 0) + 1);
-      continue;
-    }
-
-    const value = String(rawValue);
-    valueCounts.set(value, (valueCounts.get(value) || 0) + 1);
+function normalizeValueForCounting(rawValue: unknown): string {
+  if (rawValue === null || rawValue === undefined || rawValue === '') {
+    return EMPTY_VALUE_KEY;
   }
+  return String(rawValue);
+}
 
-  // Convert to array and sort alphabetically by label
+function countValues<T>(items: T[], extractor: (item: T) => string): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const value = extractor(item);
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  return counts;
+}
+
+function buildColumnValuesResult(
+  column: string,
+  valueCounts: Map<string, number>,
+  limit: number,
+  search: string | undefined,
+  labelFormatter: (value: string) => string
+): GetColumnValuesResult {
   let values = Array.from(valueCounts.entries())
-    .map(([value, count]) => ({
-      value,
-      label: formatValueLabel(value, column),
-      count,
-    }))
+    .map(([value, count]) => ({ value, label: labelFormatter(value), count }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  // Filter by search if provided
-  if (search && search.trim()) {
+  if (search?.trim()) {
     const searchLower = search.toLowerCase();
     values = values.filter(
-      v => v.value.toLowerCase().includes(searchLower) ||
-           v.label.toLowerCase().includes(searchLower)
+      v => v.value.toLowerCase().includes(searchLower) || v.label.toLowerCase().includes(searchLower)
     );
   }
-
-  const totalDistinct = values.length;
-  const truncated = values.length > limit;
 
   return {
     column,
     values: values.slice(0, limit),
-    totalDistinct,
-    truncated,
+    totalDistinct: values.length,
+    truncated: values.length > limit,
   };
 }
 
-/**
- * Format value for display label
- */
 function formatValueLabel(value: string, column: string): string {
-  // Empty/null values
-  if (value === '__empty__') return '(Empty)';
-
-  // Boolean values
+  if (value === EMPTY_VALUE_KEY) return '(Empty)';
   if (value === 'true') return 'Yes';
   if (value === 'false') return 'No';
 
-  // Enum values - capitalize
   if (['availability', 'condition', 'gender', 'age_group'].includes(column)) {
     return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase().replace(/_/g, ' ');
   }
-
   return value;
 }
 
-/**
- * Count products that share the same item_group_id
- * Used for "Select similar products" feature
- */
-export async function countProductsByItemGroupId(
-  shopId: string,
-  itemGroupId: string
-): Promise<number> {
-  const parentIds = await getParentProductIds(shopId);
-
-  const result = await prisma.$queryRawUnsafe<{ count: bigint }[]>(`
-    SELECT COUNT(*) as count FROM "Product"
-    WHERE "shop_id" = '${escapeSqlString(shopId)}'
-    AND "woo_product_id" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})
-    AND "openai_auto_filled"->>'item_group_id' = '${escapeSqlString(itemGroupId)}'
-  `);
-
+export async function countProductsByItemGroupId(shopId: string, itemGroupId: string): Promise<number> {
+  const whereClause = await buildItemGroupWhereClause(shopId, itemGroupId);
+  const result = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
+    `SELECT COUNT(*) as count FROM "Product" WHERE ${whereClause}`
+  );
   return Number(result[0]?.count || 0);
 }
 
-/**
- * Get product IDs that share the same item_group_id
- * Used for bulk operations on product groups
- */
-export async function getProductIdsByItemGroupId(
-  shopId: string,
-  itemGroupId: string
-): Promise<string[]> {
-  const parentIds = await getParentProductIds(shopId);
-
-  const products = await prisma.$queryRawUnsafe<{ id: string }[]>(`
-    SELECT "id" FROM "Product"
-    WHERE "shop_id" = '${escapeSqlString(shopId)}'
-    AND "woo_product_id" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})
-    AND "openai_auto_filled"->>'item_group_id' = '${escapeSqlString(itemGroupId)}'
-  `);
-
+export async function getProductIdsByItemGroupId(shopId: string, itemGroupId: string): Promise<string[]> {
+  const whereClause = await buildItemGroupWhereClause(shopId, itemGroupId);
+  const products = await prisma.$queryRawUnsafe<{ id: string }[]>(
+    `SELECT "id" FROM "Product" WHERE ${whereClause}`
+  );
   return products.map(p => p.id);
+}
+
+async function buildItemGroupWhereClause(shopId: string, itemGroupId: string): Promise<string> {
+  const parentIds = await getParentProductIds(shopId);
+  return [
+    `"shop_id" = '${escapeSqlString(shopId)}'`,
+    `"woo_product_id" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})`,
+    `"openai_auto_filled"->>'item_group_id' = '${escapeSqlString(itemGroupId)}'`
+  ].join(' AND ');
 }
 
 export function transformWooProduct(woo: any) {
@@ -913,207 +655,136 @@ export function transformWooProduct(woo: any) {
 }
 
 /**
- * Merges parent variable product data with variation data
- *
- * PARENT FALLBACK STRATEGY:
- * - All parent fields are used as base/default values
- * - Variation fields override ONLY if they have a non-null/non-empty value
- * - If a variation field is null/empty, the parent's value is used automatically
- *
- * SPECIAL CASES:
- * - ID, SKU, stock: Always from variation (variations have independent values)
- * - Images: Variation image as primary, parent images as additional
- * - Attributes: Merged (parent attributes + variation-specific color/size)
- * - Meta data: Merged (variation meta overrides parent for same key)
- * - Categories, Tags, Brands: Always inherited from parent (variations don't have these)
- *
- * This ensures that variations never have missing data - any null field
- * automatically falls back to the parent product's value.
+ * Merges parent variable product data with variation data.
+ * Parent fields serve as defaults; variation fields override when non-empty.
  */
 export function mergeParentAndVariation(parent: any, variation: any) {
-  // Get variation attributes as key-value pairs
-  const varAttrs = variation.attributes?.reduce((acc: any, attr: any) => {
-    acc[attr.name.toLowerCase()] = attr.option;
-    return acc;
-  }, {}) || {};
+  const varAttrs = extractVariationAttributes(variation);
+  const mergedImages = mergeImages(parent, variation);
+  const dimensions = mergeDimensions(parent, variation);
+  const mergedAttributes = mergeAttributes(parent, variation, varAttrs);
 
-  // Merge images: variation image as primary, parent images as additional
-  const variationImage = variation.image?.src ? [variation.image] : [];
-  const parentImages = parent.images || [];
-  const mergedImages = [...variationImage, ...parentImages];
-
-  // Weight and dimensions: use variation if different from parent, otherwise use parent
-  const weight = (variation.weight && variation.weight !== parent.weight) ? variation.weight : parent.weight;
-  const dimensions = {
-    length: (variation.dimensions?.length && variation.dimensions.length !== parent.dimensions?.length)
-      ? variation.dimensions.length
-      : parent.dimensions?.length || '',
-    width: (variation.dimensions?.width && variation.dimensions.width !== parent.dimensions?.width)
-      ? variation.dimensions.width
-      : parent.dimensions?.width || '',
-    height: (variation.dimensions?.height && variation.dimensions.height !== parent.dimensions?.height)
-      ? variation.dimensions.height
-      : parent.dimensions?.height || ''
-  };
-
-  // Price: use variation price if provided, otherwise fallback to parent
-  const price = variation.price ? variation.price : parent.price || '';
-  const regularPrice = variation.regular_price ? variation.regular_price : parent.regular_price || '';
-  const salePrice = variation.sale_price ? variation.sale_price : parent.sale_price || '';
-
-  // Build attributes array: convert parent attributes to variation format
-  // Parent attributes have "options" array, variations need "option" string
-  const mergedAttributes: any[] = [];
-
-  // Start with parent attributes, but convert to variation format
-  (parent.attributes || []).forEach((attr: any) => {
-    const attrName = attr.name.toLowerCase();
-
-    // Skip color and size - we'll add these from variation
-    if (attrName === 'color' || attrName === 'colour' || attrName === 'size') {
-      return;
-    }
-
-    // Convert parent's "options" array to variation's "option" string
-    // BUT: use variation's specific value if it exists (fixes variant-level attribute override)
-    if (Array.isArray(attr.options) && attr.options.length > 0) {
-      // Check if variation has a specific value for this attribute
-      const variationValue = varAttrs[attrName];
-
-      const converted = {
-        id: attr.id || 0,
-        name: attr.name,
-        option: variationValue || (attr.options.length === 1 ? attr.options[0] : attr.options.join(', '))
-      };
-      mergedAttributes.push(converted);
-    }
-  });
-
-  // Track which attributes we've already added from parent
-  const addedAttrNames = new Set(mergedAttributes.map((a: any) => a.name.toLowerCase()));
-
-  // Add color attribute if found in variation
-  if (varAttrs.color || varAttrs.colour) {
-    mergedAttributes.push({
-      id: 0,
-      name: 'Color',
-      option: varAttrs.color || varAttrs.colour
-    });
-    addedAttrNames.add('color');
-    addedAttrNames.add('colour');
-  }
-
-  // Add size attribute if found in variation
-  if (varAttrs.size) {
-    mergedAttributes.push({
-      id: 0,
-      name: 'Size',
-      option: varAttrs.size
-    });
-    addedAttrNames.add('size');
-  }
-
-  // Add any remaining variation-only attributes not already covered by parent or color/size
-  Object.entries(varAttrs).forEach(([attrName, attrValue]) => {
-    if (!addedAttrNames.has(attrName) && attrValue) {
-      // Find original attribute name casing from variation
-      const originalAttr = variation.attributes?.find((a: any) => a.name.toLowerCase() === attrName);
-      mergedAttributes.push({
-        id: originalAttr?.id || 0,
-        name: originalAttr?.name || attrName.charAt(0).toUpperCase() + attrName.slice(1),
-        option: attrValue as string
-      });
-      addedAttrNames.add(attrName);
-    }
-  });
-
-  // COMPREHENSIVE PARENT FALLBACK STRATEGY:
-  // 1. Start with all parent fields as base
-  // 2. Override with variation fields that have values (not null/empty)
-  // 3. Special handling for arrays and objects that need merging (images, attributes, meta_data)
-
-  // Helper function to check if a value is "empty"
-  const isEmpty = (val: any): boolean => {
-    if (val === null || val === undefined) return true;
-    if (typeof val === 'string' && val.trim() === '') return true;
-    if (Array.isArray(val) && val.length === 0) return true;
-    return false;
-  };
-
-  // Start with parent as base (shallow copy)
   const merged: any = { ...parent };
 
-  // Override with variation fields (skip empty values - they should fallback to parent)
-  Object.keys(variation).forEach(key => {
-    const varValue = variation[key];
-
-    // Skip arrays and objects - we'll handle these specially
-    if (typeof varValue === 'object' && varValue !== null) {
-      return;
+  // Override with non-empty variation primitive fields
+  for (const [key, value] of Object.entries(variation)) {
+    if (typeof value !== 'object' && !isEmpty(value)) {
+      merged[key] = value;
     }
+  }
 
-    // Only override if variation has a non-empty value
-    if (!isEmpty(varValue)) {
-      merged[key] = varValue;
-    }
+  // Apply special field handling
+  Object.assign(merged, {
+    id: variation.id,
+    parent_id: parent.id,
+    sku: variation.sku || parent.sku || '',
+    permalink: variation.permalink || parent.permalink,
+    stock_status: variation.stock_status || '',
+    stock_quantity: variation.stock_quantity ?? null,
+    manage_stock: variation.manage_stock ?? parent.manage_stock ?? false,
+    price: variation.price || parent.price || '',
+    regular_price: variation.regular_price || parent.regular_price || '',
+    sale_price: variation.sale_price || parent.sale_price || '',
+    weight: mergeWithFallback(variation.weight, parent.weight) || '',
+    dimensions,
+    images: mergedImages,
+    attributes: mergedAttributes,
+    meta_data: mergeMetaData(parent, variation),
+    categories: parent.categories || [],
+    tags: parent.tags || [],
+    brands: parent.brands || [],
+    date_modified: variation.date_modified || parent.date_modified,
+    name: parent.name && variation.name ? `${parent.name} - ${variation.name}` : merged.name,
   });
 
-  // SPECIAL HANDLING FOR SPECIFIC FIELDS:
+  return transformWooProduct(merged);
+}
 
-  // ID: Always use variation ID
-  merged.id = variation.id;
-  merged.parent_id = parent.id;
+function isEmpty(val: any): boolean {
+  if (val === null || val === undefined) return true;
+  if (typeof val === 'string' && val.trim() === '') return true;
+  if (Array.isArray(val) && val.length === 0) return true;
+  return false;
+}
 
-  // SKU: Use variation SKU, fallback to parent SKU
-  merged.sku = variation.sku || parent.sku || '';
+function mergeWithFallback(variationVal: any, parentVal: any): any {
+  return (variationVal && variationVal !== parentVal) ? variationVal : parentVal;
+}
 
-  // Permalink: Use variation permalink or parent
-  merged.permalink = variation.permalink || parent.permalink;
+function extractVariationAttributes(variation: any): Record<string, string> {
+  return (variation.attributes || []).reduce((acc: Record<string, string>, attr: any) => {
+    acc[attr.name.toLowerCase()] = attr.option;
+    return acc;
+  }, {});
+}
 
-  // Stock: Use variation's stock data (variations have independent stock)
-  merged.stock_status = variation.stock_status || '';
-  merged.stock_quantity = variation.stock_quantity !== null ? variation.stock_quantity : null;
-  merged.manage_stock = variation.manage_stock ?? parent.manage_stock ?? false;
+function mergeImages(parent: any, variation: any): any[] {
+  const variationImage = variation.image?.src ? [variation.image] : [];
+  return [...variationImage, ...(parent.images || [])];
+}
 
-  // Pricing: Use variation price or parent fallback
-  merged.price = price;
-  merged.regular_price = regularPrice;
-  merged.sale_price = salePrice;
+function mergeDimensions(parent: any, variation: any): Record<string, string> {
+  const parentDims = parent.dimensions || {};
+  const varDims = variation.dimensions || {};
+  return {
+    length: mergeWithFallback(varDims.length, parentDims.length) || '',
+    width: mergeWithFallback(varDims.width, parentDims.width) || '',
+    height: mergeWithFallback(varDims.height, parentDims.height) || '',
+  };
+}
 
-  // Weight and Dimensions: Smart merging (already calculated)
-  merged.weight = weight || '';
-  merged.dimensions = dimensions;
-
-  // Images: Variation image as primary, parent images as additional
-  merged.images = mergedImages;
-
-  // Attributes: Merged attributes including variation-specific ones (color, size)
-  merged.attributes = mergedAttributes;
-
-  // Meta data: Merge both arrays (variation meta overrides parent if same key)
+function mergeMetaData(parent: any, variation: any): any[] {
   const parentMeta = parent.meta_data || [];
   const variationMeta = variation.meta_data || [];
   const variationMetaKeys = new Set(variationMeta.map((m: any) => m.key));
-
-  // Keep parent meta that's not overridden by variation, plus all variation meta
-  merged.meta_data = [
+  return [
     ...parentMeta.filter((m: any) => !variationMetaKeys.has(m.key)),
-    ...variationMeta
+    ...variationMeta,
   ];
+}
 
-  // Categories, Tags, Brands: Always inherit from parent (variations don't have these)
-  merged.categories = parent.categories || [];
-  merged.tags = parent.tags || [];
-  merged.brands = parent.brands || [];
+function mergeAttributes(parent: any, variation: any, varAttrs: Record<string, string>): any[] {
+  const SKIP_ATTRS = new Set(['color', 'colour', 'size']);
+  const merged: any[] = [];
+  const addedNames = new Set<string>();
 
-  // Date modified: Use variation's or parent's
-  merged.date_modified = variation.date_modified || parent.date_modified;
+  // Convert parent attributes to variation format
+  for (const attr of parent.attributes || []) {
+    const attrName = attr.name.toLowerCase();
+    if (SKIP_ATTRS.has(attrName)) continue;
+    if (!Array.isArray(attr.options) || attr.options.length === 0) continue;
 
-  // Construct a better product name: "Parent Name - Variation Attributes"
-  // Use parent name + variation name for better display
-  if (parent.name && variation.name) {
-    merged.name = `${parent.name} - ${variation.name}`;
+    const option = varAttrs[attrName] ||
+      (attr.options.length === 1 ? attr.options[0] : attr.options.join(', '));
+
+    merged.push({ id: attr.id || 0, name: attr.name, option });
+    addedNames.add(attrName);
   }
 
-  return transformWooProduct(merged);
+  // Add color attribute
+  const colorValue = varAttrs.color || varAttrs.colour;
+  if (colorValue) {
+    merged.push({ id: 0, name: 'Color', option: colorValue });
+    addedNames.add('color');
+    addedNames.add('colour');
+  }
+
+  // Add size attribute
+  if (varAttrs.size) {
+    merged.push({ id: 0, name: 'Size', option: varAttrs.size });
+    addedNames.add('size');
+  }
+
+  // Add remaining variation-only attributes
+  for (const [attrName, attrValue] of Object.entries(varAttrs)) {
+    if (addedNames.has(attrName) || !attrValue) continue;
+    const originalAttr = variation.attributes?.find((a: any) => a.name.toLowerCase() === attrName);
+    merged.push({
+      id: originalAttr?.id || 0,
+      name: originalAttr?.name || attrName.charAt(0).toUpperCase() + attrName.slice(1),
+      option: attrValue,
+    });
+  }
+
+  return merged;
 }

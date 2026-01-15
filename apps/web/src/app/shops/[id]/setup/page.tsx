@@ -16,24 +16,18 @@ import { useCurrentShop } from '@/hooks/useCurrentShop';
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  // Note: hydrate() is called by AppLayout, no need to call it here
   const { user, hydrated } = useAuth();
-
-  // Get current shop for banner
   const { currentShop } = useCurrentShop();
 
-  // Local UI state
+  // UI state
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Propagation modal state
   const [showPropagationModal, setShowPropagationModal] = useState(false);
   const [skipPropagationModal, setSkipPropagationModal] = useState(false);
   const [pendingChange, setPendingChange] = useState<{ attribute: string; newValue: string | null; overrideCount: number } | null>(null);
 
-  // React Query hooks - these replace all manual data fetching
   const {
     data: mappingsData,
     isLoading: loading,
@@ -63,11 +57,9 @@ export default function SetupPage() {
   const previewProductJson = previewData?.wooData ?? null;
   const previewShopData = previewData?.shopData ?? null;
 
-  // Mutation for updating field mappings
   const updateMappingsMutation = useUpdateFieldMappingsMutation(params?.id);
   const saving = updateMappingsMutation.isPending;
 
-  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (saveErrorTimeoutRef.current) {
@@ -76,33 +68,26 @@ export default function SetupPage() {
     };
   }, []);
 
-  // Redirect if not logged in
   useEffect(() => {
     if (hydrated && !user) {
       router.push('/login');
     }
   }, [hydrated, user, router]);
 
-  // Auto-select first product when products load
   useEffect(() => {
     if (products.length > 0 && !selectedProductId) {
       setSelectedProductId(products[0].id);
     }
   }, [products, selectedProductId]);
 
-  // Save mapping with propagation mode using mutation
   function saveMappingChange(
     attribute: string,
     wooField: string | null,
     propagationMode: 'apply_all' | 'preserve_overrides'
   ) {
-    // Clear any previous errors
     setSaveError(null);
-
-    // Build new mappings with the update
     const newMappings = { ...mappings, [attribute]: wooField };
 
-    // Use mutation (includes optimistic update and rollback)
     updateMappingsMutation.mutate(
       { mappings: newMappings, propagationMode },
       {
@@ -120,33 +105,27 @@ export default function SetupPage() {
     );
   }
 
-  // Handle mapping change - show propagation modal only if products have overrides
   function handleMappingChange(attribute: string, wooField: string | null) {
     if (LOCKED_FIELD_MAPPINGS[attribute]) {
       return;
     }
 
-    // Check if any products have overrides for this field
     const overrideCount = overrideCounts[attribute] || 0;
 
-    // If no products have overrides, save directly with apply_all
     if (overrideCount === 0) {
       saveMappingChange(attribute, wooField, 'apply_all');
       return;
     }
 
-    // If user chose to skip the modal, save with preserve_overrides
     if (skipPropagationModal) {
       saveMappingChange(attribute, wooField, 'preserve_overrides');
       return;
     }
 
-    // Show the propagation modal (products have overrides for this field)
     setPendingChange({ attribute, newValue: wooField, overrideCount });
     setShowPropagationModal(true);
   }
 
-  // Handle propagation modal choice
   function handlePropagationChoice(mode: 'apply_all' | 'preserve_overrides', dontAskAgain: boolean) {
     if (dontAskAgain) {
       setSkipPropagationModal(true);
@@ -159,13 +138,11 @@ export default function SetupPage() {
     }
   }
 
-  // Cancel propagation modal
   function handlePropagationCancel() {
     setShowPropagationModal(false);
     setPendingChange(null);
   }
 
-  // Filter fields based on search - now includes example
   const filteredSpecs = searchQuery
     ? OPENAI_FEED_SPEC.filter(
         (spec) =>
@@ -175,14 +152,12 @@ export default function SetupPage() {
       )
     : OPENAI_FEED_SPEC;
 
-  // Calculate required fields mapping statistics
   const requiredFieldsMapped = REQUIRED_FIELDS.filter(
     (spec) => mappings[spec.attribute] != null && mappings[spec.attribute] !== ''
   ).length;
   const totalRequiredFields = REQUIRED_FIELDS.length;
   const allRequiredFieldsMapped = requiredFieldsMapped === totalRequiredFields;
 
-  // Group by category
   const categories = Object.entries(CATEGORY_CONFIG)
     .map(([id, config]) => ({
       id: id as OpenAIFieldCategory,
@@ -193,7 +168,6 @@ export default function SetupPage() {
     .filter((cat) => cat.fields.length > 0)
     .sort((a, b) => a.order - b.order);
 
-  // Loading state with skeleton
   if (loading || wooFieldsLoading) {
     return (
       <div className="min-h-screen bg-[#F9FAFB]">

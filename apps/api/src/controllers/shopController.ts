@@ -18,6 +18,30 @@ import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { clearOverridesForField, getOverrideCountsByField } from '../services/productReprocessService';
 
+type Shop = Awaited<ReturnType<typeof getShopRecord>>;
+
+// Helper to verify shop ownership. Returns shop if valid, or sends error response and returns null.
+async function verifyShopOwnership(
+  req: Request,
+  res: Response,
+  shopId: string
+): Promise<Shop | null> {
+  const userId = getUserId(req);
+  const shop = await getShopRecord(shopId);
+
+  if (!shop) {
+    res.status(404).json({ error: 'Store not found' });
+    return null;
+  }
+
+  if (shop.userId !== userId) {
+    res.status(403).json({ error: 'Forbidden' });
+    return null;
+  }
+
+  return shop;
+}
+
 const FLAG_FIELDS = new Set(['enable_search', 'enable_checkout']);
 const ALLOWED_MAPPING_ATTRIBUTES = new Set(Object.keys(DEFAULT_FIELD_MAPPINGS));
 const LOCKED_ATTRIBUTES = Array.from(LOCKED_FIELD_SET);
@@ -79,14 +103,11 @@ export async function createShop(req: Request, res: Response) {
 }
 
 export async function getShop(req: Request, res: Response) {
-  const userId = getUserId(req);
-
   try {
-    const shop = await getShopRecord(req.params.id);
-    if (!shop) return res.status(404).json({ error: 'Store not found' });
-    if (shop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    const shop = await verifyShopOwnership(req, res, req.params.id);
+    if (!shop) return;
 
-    logger.info('shops:get', { shopId: shop.id, userId });
+    logger.info('shops:get', { shopId: shop.id, userId: shop.userId });
     return res.json({ shop });
   } catch (err: any) {
     logger.error('shops:get error', err);
@@ -94,7 +115,6 @@ export async function getShop(req: Request, res: Response) {
   }
 }
 
-// Fields that affect auto-fill when changed (used in shop.* mappings)
 const AUTOFILL_AFFECTING_FIELDS = new Set([
   'sellerName',
   'sellerUrl',
@@ -105,8 +125,6 @@ const AUTOFILL_AFFECTING_FIELDS = new Set([
 ]);
 
 export async function updateShop(req: Request, res: Response) {
-  const userId = getUserId(req);
-
   const parse = updateShopSchema.safeParse(req.body);
   if (!parse.success) {
     logger.warn('shops:update invalid', parse.error.flatten());
@@ -114,10 +132,8 @@ export async function updateShop(req: Request, res: Response) {
   }
 
   try {
-    // Verify ownership before updating
-    const existingShop = await getShopRecord(req.params.id);
-    if (!existingShop) return res.status(404).json({ error: 'Store not found' });
-    if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    const existingShop = await verifyShopOwnership(req, res, req.params.id);
+    if (!existingShop) return;
 
     // Check if any auto-fill affecting fields were updated
     const updatedFields = Object.keys(parse.data);
@@ -154,16 +170,12 @@ export async function updateShop(req: Request, res: Response) {
 }
 
 export async function disconnectShop(req: Request, res: Response) {
-  const userId = getUserId(req);
-
   try {
-    // Verify ownership before deleting
-    const existingShop = await getShopRecord(req.params.id);
-    if (!existingShop) return res.status(404).json({ error: 'Store not found' });
-    if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    const existingShop = await verifyShopOwnership(req, res, req.params.id);
+    if (!existingShop) return;
 
     const shop = await deleteShopRecord(req.params.id);
-    logger.info('shops:delete', { shopId: shop?.id, userId });
+    logger.info('shops:delete', { shopId: shop?.id, userId: existingShop.userId });
     return res.json({ shop, message: 'Store deleted successfully' });
   } catch (err: any) {
     logger.error('shops:delete error', err);
@@ -214,14 +226,11 @@ export async function oauthCallback(req: Request, res: Response) {
 }
 
 export async function verifyConnection(req: Request, res: Response) {
-  const userId = getUserId(req);
-
   try {
-    const shop = await getShopRecord(req.params.id);
-    if (!shop) return res.status(404).json({ error: 'Store not found' });
-    if (shop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    const shop = await verifyShopOwnership(req, res, req.params.id);
+    if (!shop) return;
 
-    logger.info('shops:verify', { shopId: shop.id, userId, isConnected: shop.isConnected });
+    logger.info('shops:verify', { shopId: shop.id, userId: shop.userId, isConnected: shop.isConnected });
     return res.json({ shopId: shop.id, verified: true, status: 'connected' });
   } catch (err: any) {
     logger.error('shops:verify error', err);
@@ -230,18 +239,14 @@ export async function verifyConnection(req: Request, res: Response) {
 }
 
 export async function configureOpenAI(req: Request, res: Response) {
-  const userId = getUserId(req);
-
   const parse = openAiConfigSchema.safeParse(req.body);
   if (!parse.success) {
     return res.status(400).json({ error: parse.error.flatten() });
   }
 
   try {
-    // Verify ownership before updating
-    const existingShop = await getShopRecord(req.params.id);
-    if (!existingShop) return res.status(404).json({ error: 'Store not found' });
-    if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    const existingShop = await verifyShopOwnership(req, res, req.params.id);
+    if (!existingShop) return;
 
     const shop = await updateShopRecord(req.params.id, {
       openaiEnabled: parse.data.openaiEnabled,
@@ -249,7 +254,7 @@ export async function configureOpenAI(req: Request, res: Response) {
       openaiMerchantId: parse.data.openaiMerchantId,
     });
 
-    logger.info('shops:configure openai', { shopId: shop?.id, userId, enabled: shop?.openaiEnabled });
+    logger.info('shops:configure openai', { shopId: shop?.id, userId: existingShop.userId, enabled: shop?.openaiEnabled });
     return res.json({ shop });
   } catch (err: any) {
     logger.error('shops:configure openai error', err);
@@ -258,20 +263,11 @@ export async function configureOpenAI(req: Request, res: Response) {
 }
 
 export async function getFieldMappings(req: Request, res: Response) {
-  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
-    const shop = await getShopRecord(id);
-
-    if (!shop) {
-      return res.status(404).json({ error: 'Shop not found' });
-    }
-
-    // Verify ownership
-    if (shop.userId !== userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
 
     // Get default mappings from spec
     const specDefaults = { ...DEFAULT_FIELD_MAPPINGS };
@@ -321,7 +317,7 @@ export async function getFieldMappings(req: Request, res: Response) {
 
     logger.info('shops:field-mappings:get', {
       shopId: id,
-      userId,
+      userId: shop.userId,
       dbMappings: fieldMappings.length,
       userMappings: Object.keys(userMappings).length,
       totalFields: Object.keys(mappings).length,
@@ -341,20 +337,11 @@ export async function getFieldMappings(req: Request, res: Response) {
 }
 
 export async function updateFieldMappings(req: Request, res: Response) {
-  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
-    const shop = await getShopRecord(id);
-
-    if (!shop) {
-      return res.status(404).json({ error: 'Shop not found' });
-    }
-
-    // Verify ownership
-    if (shop.userId !== userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
 
     const parsedBody = z
       .object({
@@ -448,7 +435,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
     );
 
     if (!mappingEntries.length) {
-      logger.info('shops:field-mappings:update', { shopId: id, userId, results, message: 'No field mappings to process' });
+      logger.info('shops:field-mappings:update', { shopId: id, userId: shop.userId, results, message: 'No field mappings to process' });
       return res.json({ success: true, results });
     }
 
@@ -582,7 +569,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
       });
     }
 
-    logger.info('shops:field-mappings:update', { shopId: id, userId, results, propagationMode, overridesCleared });
+    logger.info('shops:field-mappings:update', { shopId: id, userId: shop.userId, results, propagationMode, overridesCleared });
     return res.json({ success: true, results, overridesCleared });
   } catch (err: any) {
     logger.error('shops:field-mappings:update error', err);
@@ -595,29 +582,19 @@ export async function updateFieldMappings(req: Request, res: Response) {
  * POST /api/v1/shops/:id/discover-fields
  */
 export async function discoverWooFields(req: Request, res: Response) {
-  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
-    const shop = await getShopRecord(id);
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
 
-    if (!shop) {
-      return res.status(404).json({ error: 'Shop not found' });
-    }
-
-    // Verify ownership
-    if (shop.userId !== userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    // Trigger field discovery
-    logger.info('shops:discover-fields:start', { shopId: id, userId });
+    logger.info('shops:discover-fields:start', { shopId: id, userId: shop.userId });
 
     const result = await FieldDiscoveryService.discoverFields(id);
 
     logger.info('shops:discover-fields:complete', {
       shopId: id,
-      userId,
+      userId: shop.userId,
       discovered: result.discovered.length,
       saved: result.saved,
       skipped: result.skipped,
@@ -643,25 +620,15 @@ export async function discoverWooFields(req: Request, res: Response) {
  * GET /api/v1/shops/:id/woo-fields
  */
 export async function getWooFields(req: Request, res: Response) {
-  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
-    const shop = await getShopRecord(id);
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
 
-    if (!shop) {
-      return res.status(404).json({ error: 'Shop not found' });
-    }
-
-    // Verify ownership
-    if (shop.userId !== userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    // Get all fields (standard + shop-specific discovered)
     const fields = await FieldDiscoveryService.getShopFields(id);
 
-    logger.info('shops:woo-fields:get', { shopId: id, userId, count: fields.length });
+    logger.info('shops:woo-fields:get', { shopId: id, userId: shop.userId, count: fields.length });
 
     return res.json({ fields });
   } catch (err: any) {
@@ -740,14 +707,11 @@ export async function testWooSettings(req: Request, res: Response) {
  * - Triggers immediate sync flow (product-sync -> feed-generation)
  */
 export async function activateFeed(req: Request, res: Response) {
-  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
-    // Verify ownership
-    const existingShop = await getShopRecord(id);
-    if (!existingShop) return res.status(404).json({ error: 'Store not found' });
-    if (existingShop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    const existingShop = await verifyShopOwnership(req, res, id);
+    if (!existingShop) return;
 
     // Check if already activated
     if (existingShop.openaiEnabled && existingShop.syncEnabled) {
@@ -821,7 +785,7 @@ export async function activateFeed(req: Request, res: Response) {
 
     logger.info('shops:activate-feed', {
       shopId: id,
-      userId,
+      userId: existingShop.userId,
       validProductCount,
     });
 
@@ -841,14 +805,11 @@ export async function activateFeed(req: Request, res: Response) {
  * Returns product counts for feed status display
  */
 export async function getProductStats(req: Request, res: Response) {
-  const userId = getUserId(req);
   const { id } = req.params;
 
   try {
-    // Verify ownership
-    const shop = await getShopRecord(id);
-    if (!shop) return res.status(404).json({ error: 'Store not found' });
-    if (shop.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
 
     // Get counts in parallel for efficiency
     const [total, inFeed, needsAttention, disabled] = await Promise.all([
@@ -866,7 +827,7 @@ export async function getProductStats(req: Request, res: Response) {
 
     logger.info('shops:product-stats', {
       shopId: id,
-      userId,
+      userId: shop.userId,
       total,
       inFeed,
       needsAttention,

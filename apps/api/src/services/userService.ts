@@ -14,9 +14,6 @@ export async function createUser(payload: { email: string; password: string; nam
   });
 }
 
-/**
- * Create a user with email verification pending
- */
 export async function createUserWithVerification(payload: {
   email: string;
   password: string;
@@ -52,9 +49,6 @@ export async function validateUser(email: string, password: string) {
   return valid ? user : null;
 }
 
-/**
- * Mark user's email as verified
- */
 export async function verifyUserEmail(userId: string) {
   return prisma.user.update({
     where: { id: userId },
@@ -62,9 +56,6 @@ export async function verifyUserEmail(userId: string) {
   });
 }
 
-/**
- * Update user profile (firstName, surname)
- */
 export async function updateUserProfile(
   userId: string,
   data: { firstName?: string; surname?: string }
@@ -82,9 +73,6 @@ export async function updateUserProfile(
   });
 }
 
-/**
- * Mark user's onboarding as complete
- */
 export async function completeOnboarding(userId: string) {
   return prisma.user.update({
     where: { id: userId },
@@ -92,9 +80,6 @@ export async function completeOnboarding(userId: string) {
   });
 }
 
-/**
- * Update user's email (after verification)
- */
 export async function updateUserEmail(userId: string, newEmail: string) {
   return prisma.user.update({
     where: { id: userId },
@@ -102,9 +87,6 @@ export async function updateUserEmail(userId: string, newEmail: string) {
   });
 }
 
-/**
- * Update user's password
- */
 export async function updateUserPassword(userId: string, newPassword: string) {
   const passwordHash = await bcrypt.hash(newPassword, 10);
   return prisma.user.update({
@@ -113,9 +95,6 @@ export async function updateUserPassword(userId: string, newPassword: string) {
   });
 }
 
-/**
- * Verify current password matches
- */
 export async function verifyPassword(userId: string, password: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },

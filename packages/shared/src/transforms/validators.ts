@@ -1,8 +1,7 @@
 /**
  * Field Validators
  *
- * Individual validation functions for each OpenAI feed field type.
- * Each validator returns { valid: boolean, error?: string }
+ * Validation functions for OpenAI feed field types.
  */
 
 export interface ValidationResult {
@@ -10,38 +9,36 @@ export interface ValidationResult {
   error?: string;
 }
 
+const VALID_CURRENCIES = new Set([
+  'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'INR', 'BRL', 'MXN',
+  'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'HRK',
+  'RUB', 'TRY', 'ZAR', 'NZD', 'SGD', 'HKD', 'KRW', 'THB', 'MYR', 'IDR',
+  'PHP', 'VND', 'AED', 'SAR', 'EGP', 'NGN', 'KES', 'GHS', 'MAD', 'TND',
+]);
+
+const PRICE_REGEX = /^\d+(\.\d{2})?\s[A-Z]{3}$/;
+
 /**
- * Validate price format: "XX.XX CCC"
- * Must include 2 decimal places and ISO 4217 currency code
+ * Validate price format: "XX.XX CCC" (e.g., "79.99 USD")
  */
 export function validatePrice(value: any): ValidationResult {
   if (value === null || value === undefined) {
-    return { valid: true }; // Null is valid for optional fields
+    return { valid: true };
   }
 
   if (typeof value !== 'string') {
     return { valid: false, error: 'Price must be a string' };
   }
 
-  // Must match format: "79.99 USD"
-  const priceRegex = /^\d+(\.\d{2})?\s[A-Z]{3}$/;
-  if (!priceRegex.test(value)) {
+  if (!PRICE_REGEX.test(value)) {
     return {
       valid: false,
       error: `Invalid price format: "${value}". Expected format: "XX.XX CCC" (e.g., "79.99 USD")`,
     };
   }
 
-  // Extract and validate currency code (ISO 4217)
   const currency = value.split(' ')[1];
-  const validCurrencies = [
-    'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'INR', 'BRL', 'MXN',
-    'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'HRK',
-    'RUB', 'TRY', 'ZAR', 'NZD', 'SGD', 'HKD', 'KRW', 'THB', 'MYR', 'IDR',
-    'PHP', 'VND', 'AED', 'SAR', 'EGP', 'NGN', 'KES', 'GHS', 'MAD', 'TND',
-  ];
-
-  if (!validCurrencies.includes(currency)) {
+  if (!VALID_CURRENCIES.has(currency)) {
     return {
       valid: false,
       error: `Invalid currency code: "${currency}". Must be valid ISO 4217 code (e.g., USD, EUR, GBP)`,
@@ -51,21 +48,19 @@ export function validatePrice(value: any): ValidationResult {
   return { valid: true };
 }
 
+const GTIN_REGEX = /^\d{8,14}$/;
+
 /**
- * Validate GTIN (barcode)
- * Must be 8-14 digits, no dashes or spaces
+ * Validate GTIN (barcode): 8-14 digits, no dashes or spaces
  */
 export function validateGtin(value: any): ValidationResult {
-  if (!value) return { valid: true }; // GTIN is optional
+  if (!value) return { valid: true };
 
   if (typeof value !== 'string') {
     return { valid: false, error: 'GTIN must be a string' };
   }
 
-  const cleaned = value.trim();
-
-  // Must be 8-14 digits only
-  if (!/^\d{8,14}$/.test(cleaned)) {
+  if (!GTIN_REGEX.test(value.trim())) {
     return {
       valid: false,
       error: `Invalid GTIN: "${value}". Must be 8-14 digits with no dashes or spaces`,
@@ -76,11 +71,10 @@ export function validateGtin(value: any): ValidationResult {
 }
 
 /**
- * Validate URL format
- * Must be valid URL, HTTPS preferred
+ * Validate URL format. HTTPS preferred.
  */
 export function validateUrl(value: any, fieldName: string): ValidationResult {
-  if (!value) return { valid: true }; // URL might be optional
+  if (!value) return { valid: true };
 
   if (typeof value !== 'string') {
     return { valid: false, error: `${fieldName} must be a string` };
@@ -89,34 +83,24 @@ export function validateUrl(value: any, fieldName: string): ValidationResult {
   try {
     const url = new URL(value);
 
-    // Check protocol
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      return {
-        valid: false,
-        error: `${fieldName} must use HTTP or HTTPS protocol`,
-      };
+      return { valid: false, error: `${fieldName} must use HTTP or HTTPS protocol` };
     }
 
-    // Warn if not HTTPS (but still valid)
     if (url.protocol === 'http:') {
-      return {
-        valid: true,
-        error: `Warning: ${fieldName} uses HTTP. HTTPS is preferred for security`,
-      };
+      return { valid: true, error: `Warning: ${fieldName} uses HTTP. HTTPS is preferred for security` };
     }
 
     return { valid: true };
-  } catch (err) {
-    return {
-      valid: false,
-      error: `Invalid URL format for ${fieldName}: "${value}"`,
-    };
+  } catch {
+    return { valid: false, error: `Invalid URL format for ${fieldName}: "${value}"` };
   }
 }
 
+const INVALID_CATEGORY_SEPARATORS = [' / ', ' | ', ','];
+
 /**
- * Validate category path
- * Single categories are valid. For hierarchical paths, must use " > " separator.
+ * Validate category path. Use " > " separator for hierarchical paths.
  */
 export function validateCategoryPath(value: any): ValidationResult {
   if (!value) {
@@ -127,80 +111,69 @@ export function validateCategoryPath(value: any): ValidationResult {
     return { valid: false, error: 'Category path must be a string' };
   }
 
-  // Check for incorrect separators (user likely meant to use hierarchy but used wrong separator)
-  if (value.includes(' / ') || value.includes(' | ') || value.includes(',')) {
+  if (INVALID_CATEGORY_SEPARATORS.some(sep => value.includes(sep))) {
     return {
       valid: false,
       error: `Invalid separator in category: "${value}". Use " > " not " / ", " | ", or ","`,
     };
   }
 
-  // Single category (no separator) is valid, e.g., "Apparel"
-  // Hierarchical path with " > " separator is also valid, e.g., "Apparel > Shoes > Sneakers"
+  return { valid: true };
+}
+
+const VALID_AVAILABILITY = ['in_stock', 'out_of_stock', 'preorder'] as const;
+const VALID_CONDITIONS = ['new', 'refurbished', 'used'] as const;
+
+function validateEnumField(
+  value: any,
+  fieldName: string,
+  validValues: readonly string[],
+  required: boolean
+): ValidationResult {
+  if (!value) {
+    return required
+      ? { valid: false, error: `${fieldName} is required` }
+      : { valid: true };
+  }
+
+  if (typeof value !== 'string') {
+    return { valid: false, error: `${fieldName} must be a string` };
+  }
+
+  if (!validValues.includes(value)) {
+    return {
+      valid: false,
+      error: `Invalid ${fieldName.toLowerCase()}: "${value}". Must be one of: ${validValues.join(', ')}`,
+    };
+  }
+
   return { valid: true };
 }
 
 /**
- * Validate availability enum
- * Must be: in_stock, out_of_stock, or preorder
+ * Validate availability enum: in_stock, out_of_stock, preorder
  */
 export function validateAvailability(value: any): ValidationResult {
-  if (!value) {
-    return { valid: false, error: 'Availability is required' };
-  }
-
-  if (typeof value !== 'string') {
-    return { valid: false, error: 'Availability must be a string' };
-  }
-
-  const validValues = ['in_stock', 'out_of_stock', 'preorder'];
-  if (!validValues.includes(value)) {
-    return {
-      valid: false,
-      error: `Invalid availability: "${value}". Must be one of: ${validValues.join(', ')}`,
-    };
-  }
-
-  return { valid: true };
+  return validateEnumField(value, 'Availability', VALID_AVAILABILITY, true);
 }
 
 /**
- * Validate condition enum
- * Must be: new, refurbished, or used
+ * Validate condition enum: new, refurbished, used (optional, defaults to "new")
  */
 export function validateCondition(value: any): ValidationResult {
-  if (!value) return { valid: true }; // Condition is optional, defaults to "new"
-
-  if (typeof value !== 'string') {
-    return { valid: false, error: 'Condition must be a string' };
-  }
-
-  const validValues = ['new', 'refurbished', 'used'];
-  if (!validValues.includes(value)) {
-    return {
-      valid: false,
-      error: `Invalid condition: "${value}". Must be one of: ${validValues.join(', ')}`,
-    };
-  }
-
-  return { valid: true };
+  return validateEnumField(value, 'Condition', VALID_CONDITIONS, false);
 }
 
 /**
- * Validate boolean enum (OpenAI uses string "true"/"false")
- * Must be lowercase string "true" or "false"
+ * Validate boolean enum (OpenAI uses string "true"/"false", not boolean)
  */
 export function validateBooleanEnum(value: any, fieldName: string): ValidationResult {
   if (value === undefined || value === null) {
     return { valid: false, error: `${fieldName} is required` };
   }
 
-  // OpenAI requires string, not boolean
   if (typeof value === 'boolean') {
-    return {
-      valid: false,
-      error: `${fieldName} must be string "true" or "false", not boolean`,
-    };
+    return { valid: false, error: `${fieldName} must be string "true" or "false", not boolean` };
   }
 
   if (typeof value !== 'string') {
@@ -208,29 +181,26 @@ export function validateBooleanEnum(value: any, fieldName: string): ValidationRe
   }
 
   if (value !== 'true' && value !== 'false') {
-    return {
-      valid: false,
-      error: `${fieldName} must be lowercase string "true" or "false"`,
-    };
+    return { valid: false, error: `${fieldName} must be lowercase string "true" or "false"` };
   }
 
   return { valid: true };
 }
 
+const DIMENSIONS_REGEX = /^\d+\.?\d*x\d+\.?\d*x\d+\.?\d*\s\w+$/;
+const WEIGHT_REGEX = /^\d+\.?\d*\s\w+$/;
+
 /**
- * Validate dimensions format
- * Must be "LxWxH unit"
+ * Validate dimensions format: "LxWxH unit" (e.g., "12x8x5 in")
  */
 export function validateDimensions(value: any): ValidationResult {
-  if (!value) return { valid: true }; // Dimensions are optional
+  if (!value) return { valid: true };
 
   if (typeof value !== 'string') {
     return { valid: false, error: 'Dimensions must be a string' };
   }
 
-  // Must match format: "12x8x5 in"
-  const dimensionsRegex = /^\d+\.?\d*x\d+\.?\d*x\d+\.?\d*\s\w+$/;
-  if (!dimensionsRegex.test(value)) {
+  if (!DIMENSIONS_REGEX.test(value)) {
     return {
       valid: false,
       error: `Invalid dimensions format: "${value}". Expected format: "LxWxH unit" (e.g., "12x8x5 in")`,
@@ -241,8 +211,7 @@ export function validateDimensions(value: any): ValidationResult {
 }
 
 /**
- * Validate weight format
- * Must be "XX unit"
+ * Validate weight format: "XX unit" (e.g., "1.5 lb")
  */
 export function validateWeight(value: any): ValidationResult {
   if (!value) {
@@ -253,9 +222,7 @@ export function validateWeight(value: any): ValidationResult {
     return { valid: false, error: 'Weight must be a string' };
   }
 
-  // Must match format: "1.5 lb"
-  const weightRegex = /^\d+\.?\d*\s\w+$/;
-  if (!weightRegex.test(value)) {
+  if (!WEIGHT_REGEX.test(value)) {
     return {
       valid: false,
       error: `Invalid weight format: "${value}". Expected format: "XX unit" (e.g., "1.5 lb")`,
@@ -265,50 +232,42 @@ export function validateWeight(value: any): ValidationResult {
   return { valid: true };
 }
 
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * Validate date format
- * Must be ISO 8601: YYYY-MM-DD
+ * Validate ISO 8601 date format: YYYY-MM-DD
  */
 export function validateDate(value: any, fieldName: string): ValidationResult {
-  if (!value) return { valid: true }; // Date might be optional
+  if (!value) return { valid: true };
 
   if (typeof value !== 'string') {
     return { valid: false, error: `${fieldName} must be a string` };
   }
 
-  // Must match format: YYYY-MM-DD
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(value)) {
+  if (!DATE_REGEX.test(value)) {
     return {
       valid: false,
       error: `Invalid date format for ${fieldName}: "${value}". Expected format: YYYY-MM-DD`,
     };
   }
 
-  // Validate it's a real date
-  const date = new Date(value);
-  if (isNaN(date.getTime())) {
-    return {
-      valid: false,
-      error: `Invalid date for ${fieldName}: "${value}". Not a valid date`,
-    };
+  if (isNaN(new Date(value).getTime())) {
+    return { valid: false, error: `Invalid date for ${fieldName}: "${value}". Not a valid date` };
   }
 
   return { valid: true };
 }
 
 /**
- * Validate date range format
- * Must be "YYYY-MM-DD / YYYY-MM-DD"
+ * Validate date range format: "YYYY-MM-DD / YYYY-MM-DD"
  */
 export function validateDateRange(value: any, fieldName: string): ValidationResult {
-  if (!value) return { valid: true }; // Date range might be optional
+  if (!value) return { valid: true };
 
   if (typeof value !== 'string') {
     return { valid: false, error: `${fieldName} must be a string` };
   }
 
-  // Must match format: "2025-07-01 / 2025-07-15"
   const parts = value.split(' / ');
   if (parts.length !== 2) {
     return {
@@ -317,41 +276,39 @@ export function validateDateRange(value: any, fieldName: string): ValidationResu
     };
   }
 
-  // Validate both dates
   const startValidation = validateDate(parts[0], `${fieldName} start date`);
   if (!startValidation.valid) return startValidation;
 
   const endValidation = validateDate(parts[1], `${fieldName} end date`);
   if (!endValidation.valid) return endValidation;
 
-  // Ensure start is before end
-  const startDate = new Date(parts[0]);
-  const endDate = new Date(parts[1]);
-  if (startDate >= endDate) {
-    return {
-      valid: false,
-      error: `${fieldName} start date must be before end date`,
-    };
+  if (new Date(parts[0]) >= new Date(parts[1])) {
+    return { valid: false, error: `${fieldName} start date must be before end date` };
   }
 
   return { valid: true };
 }
 
+const ALPHANUMERIC_REGEX = /^[a-zA-Z0-9\-_\s]+$/;
+
+function coerceToString(value: any): string | null {
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'string') return value;
+  return null;
+}
+
 /**
- * Validate string length
- * Accepts both strings and numbers (numbers are coerced to strings for alphanumeric fields)
+ * Validate string length. Accepts strings and numbers (coerced to strings).
  */
 export function validateStringLength(
   value: any,
   fieldName: string,
   maxLength: number
 ): ValidationResult {
-  if (!value && value !== 0) return { valid: true }; // Empty is valid for optional fields
+  if (!value && value !== 0) return { valid: true };
 
-  // Coerce numbers to strings (e.g., WooCommerce product IDs are often numeric)
-  const stringValue = typeof value === 'number' ? String(value) : value;
-
-  if (typeof stringValue !== 'string') {
+  const stringValue = coerceToString(value);
+  if (stringValue === null) {
     return { valid: false, error: `${fieldName} must be a string or number` };
   }
 
@@ -366,19 +323,17 @@ export function validateStringLength(
 }
 
 /**
- * Validate alphanumeric string (letters, numbers, and common separators like - and _)
+ * Validate alphanumeric string (letters, numbers, dashes, underscores, spaces)
  */
 export function validateAlphanumericString(
   value: any,
   fieldName: string,
   maxLength: number
 ): ValidationResult {
-  if (!value && value !== 0) return { valid: true }; // Empty is valid for optional fields
+  if (!value && value !== 0) return { valid: true };
 
-  // Coerce numbers to strings
-  const stringValue = typeof value === 'number' ? String(value) : value;
-
-  if (typeof stringValue !== 'string') {
+  const stringValue = coerceToString(value);
+  if (stringValue === null) {
     return { valid: false, error: `${fieldName} must be a string or number` };
   }
 
@@ -389,9 +344,7 @@ export function validateAlphanumericString(
     };
   }
 
-  // Check for alphanumeric characters (letters, numbers, dashes, underscores, spaces)
-  const alphanumericRegex = /^[a-zA-Z0-9\-_\s]+$/;
-  if (!alphanumericRegex.test(stringValue)) {
+  if (!ALPHANUMERIC_REGEX.test(stringValue)) {
     return {
       valid: false,
       error: `${fieldName} must be alphanumeric (letters, numbers, dashes, underscores only)`,
@@ -402,24 +355,19 @@ export function validateAlphanumericString(
 }
 
 /**
- * Validate number is positive
+ * Validate positive number (non-negative)
  */
 export function validatePositiveNumber(value: any, fieldName: string): ValidationResult {
   if (value === null || value === undefined) return { valid: true };
 
   const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+
   if (isNaN(num)) {
-    return {
-      valid: false,
-      error: `${fieldName} must be a valid number`,
-    };
+    return { valid: false, error: `${fieldName} must be a valid number` };
   }
 
   if (num < 0) {
-    return {
-      valid: false,
-      error: `${fieldName} must be a positive number`,
-    };
+    return { valid: false, error: `${fieldName} must be a positive number` };
   }
 
   return { valid: true };
