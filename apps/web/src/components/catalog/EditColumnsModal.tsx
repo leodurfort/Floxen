@@ -5,7 +5,6 @@ import {
   ALL_COLUMNS,
   getDefaultVisibleColumns,
   getColumnsByCategory,
-  getStoredColumns,
   saveStoredColumns,
   type ColumnDefinition,
 } from '@/lib/columnDefinitions';

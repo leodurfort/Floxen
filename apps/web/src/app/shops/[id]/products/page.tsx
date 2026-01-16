@@ -6,7 +6,7 @@ import { BulkUpdateOperation, CurrentFiltersForColumnValues, getItemGroupCount }
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
 import { useCatalogFilters } from '@/hooks/useCatalogFilters';
-import { useProductsQuery, useBulkUpdateMutation, useRefreshFeedMutation } from '@/hooks/useProductsQuery';
+import { useProductsQuery, useBulkUpdateMutation } from '@/hooks/useProductsQuery';
 import { useCurrentShop } from '@/hooks/useCurrentShop';
 import { useProductStats } from '@/hooks/useProductStats';
 import { useActivateFeedMutation } from '@/hooks/useShopsQuery';
