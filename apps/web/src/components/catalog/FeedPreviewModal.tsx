@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import * as api from '@/lib/api';
+import { OPENAI_FEED_SPEC } from '@productsynch/shared';
 
 interface FeedPreviewModalProps {
   isOpen: boolean;
@@ -9,9 +10,22 @@ interface FeedPreviewModalProps {
   shopId: string;
 }
 
-type TabId = 'products' | 'json';
+const ITEMS_PER_PAGE = 50;
 
-const ITEMS_PER_PAGE = 20;
+const renderCellValue = (item: Record<string, unknown>, attribute: string): string => {
+  const value = item[attribute];
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value);
+};
+
+const getColumnWidthClass = (attribute: string): string => {
+  if (attribute === 'description') return 'min-w-[300px] max-w-[400px]';
+  if (['title', 'link', 'image_link', 'additional_image_link', 'video_link', 'model_3d_link', 'seller_url', 'return_policy', 'seller_privacy_policy', 'seller_tos', 'warning_url'].includes(attribute)) {
+    return 'min-w-[200px] max-w-[250px]';
+  }
+  return 'min-w-[100px] max-w-[150px]';
+};
 
 export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalProps) {
   const [loading, setLoading] = useState(true);
@@ -20,7 +34,6 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [hasMore, setHasMore] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>('products');
 
   // Initial load when modal opens
   useEffect(() => {
@@ -40,13 +53,6 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
         .finally(() => setLoading(false));
     }
   }, [isOpen, shopId]);
-
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setActiveTab('products');
-    }
-  }, [isOpen]);
 
   const handleLoadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -92,43 +98,26 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col mx-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[80vh] flex flex-col mx-4">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Your Feed</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl font-light"
-          >
-            &times;
-          </button>
-        </div>
-
-        {/* Tabs */}
-        {items.length > 0 && (
-          <div className="flex border-b border-gray-200 px-4">
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => setActiveTab('products')}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'products'
-                  ? 'border-[#FA7315] text-[#FA7315]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              onClick={handleDownloadJsonl}
+              disabled={downloading || items.length === 0}
+              className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Items
+              {downloading ? 'Preparing...' : 'Download JSONL'}
             </button>
             <button
-              onClick={() => setActiveTab('json')}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'json'
-                  ? 'border-[#FA7315] text-[#FA7315]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-xl font-light"
             >
-              Raw JSONL
+              &times;
             </button>
           </div>
-        )}
+        </div>
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-4">
@@ -144,35 +133,40 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
             </div>
           )}
 
-          {!loading && !error && activeTab === 'products' && (
+          {!loading && !error && (
             <div>
-              {/* Products Table */}
+              {/* Feed Table */}
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 px-3 font-medium text-gray-600">ID</th>
-                      <th className="text-left py-2 px-3 font-medium text-gray-600">Title</th>
-                      <th className="text-right py-2 px-3 font-medium text-gray-600">Price</th>
+                      {OPENAI_FEED_SPEC.map((spec) => (
+                        <th
+                          key={spec.attribute}
+                          className={`text-left py-2 px-3 font-medium text-gray-600 whitespace-nowrap ${getColumnWidthClass(spec.attribute)}`}
+                        >
+                          {spec.attribute}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {items.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="py-8 text-center text-gray-500">
+                        <td colSpan={OPENAI_FEED_SPEC.length} className="py-8 text-center text-gray-500">
                           No items in feed
                         </td>
                       </tr>
                     ) : (
                       items.map((item, index) => (
                         <tr key={index} className="border-b border-gray-100">
-                          <td className="py-2 px-3 text-gray-600">{String(item.id || '-')}</td>
-                          <td className="py-2 px-3 text-gray-900 max-w-xs truncate">
-                            {String(item.title || '-')}
-                          </td>
-                          <td className="py-2 px-3 text-gray-600 text-right">
-                            {String(item.price || '-')}
-                          </td>
+                          {OPENAI_FEED_SPEC.map((spec) => (
+                            <td key={spec.attribute} className="py-2 px-3 text-gray-600">
+                              <div className={`truncate ${getColumnWidthClass(spec.attribute)}`}>
+                                {renderCellValue(item, spec.attribute)}
+                              </div>
+                            </td>
+                          ))}
                         </tr>
                       ))
                     )}
@@ -192,28 +186,6 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
                   </button>
                 </div>
               )}
-            </div>
-          )}
-
-          {!loading && !error && activeTab === 'json' && (
-            <div>
-              <div className="flex justify-end mb-2">
-                <button
-                  onClick={handleDownloadJsonl}
-                  disabled={downloading}
-                  className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {downloading ? 'Preparing download...' : 'Download JSONL'}
-                </button>
-              </div>
-              <pre className="text-xs bg-gray-50 p-4 rounded-lg overflow-auto max-h-96">
-                {items.slice(0, 5).map((item) => JSON.stringify(item)).join('\n')}
-                {items.length > 5 && (
-                  <span className="text-gray-400">
-                    {'\n\n// ... and ' + (items.length - 5) + ' more lines'}
-                  </span>
-                )}
-              </pre>
             </div>
           )}
         </div>
