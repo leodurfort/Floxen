@@ -620,7 +620,6 @@ function CatalogPageContent() {
 
       {/* Page Header - outside the card */}
       <PageHeader
-        label="Products"
         title="Catalog"
         actions={
           <>
