@@ -13,10 +13,10 @@ interface StoreBannerProps {
 export function StoreBanner({ shop }: StoreBannerProps) {
   const config = getFeedStateConfig(shop);
 
-  const displayName =
-    shop.sellerName ||
-    shop.wooStoreUrl?.replace(/^https?:\/\//, '') ||
-    'Unnamed store';
+  const cleanUrl = shop.wooStoreUrl?.replace(/^https?:\/\//, '');
+  const displayName = shop.sellerName
+    ? `${shop.sellerName}${cleanUrl ? ` (${cleanUrl})` : ''}`
+    : cleanUrl || 'Unnamed store';
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center justify-between">

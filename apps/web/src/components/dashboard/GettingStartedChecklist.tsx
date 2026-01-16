@@ -141,7 +141,7 @@ export function GettingStartedChecklist({
     },
     {
       id: 'unlockMoreItems',
-      title: 'Unlock more items',
+      title: 'Publish more products on ChatGPT',
       isComplete: steps.unlockMoreItems,
       content: steps.unlockMoreItems ? (
         <div className="text-sm text-gray-600">Unlimited items unlocked</div>

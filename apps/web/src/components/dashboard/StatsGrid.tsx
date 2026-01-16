@@ -100,8 +100,11 @@ export function StatsGrid({
         <button
           key={card.label}
           onClick={card.onClick}
-          className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm text-left hover:border-[#FA7315] hover:shadow-md transition-all"
+          className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm text-left hover:border-[#FA7315] hover:shadow-md transition-all group relative"
         >
+          <span className="absolute top-4 right-4 text-gray-300 group-hover:text-[#FA7315] transition-colors">
+            →
+          </span>
           <div className="text-sm text-gray-500 mb-1">{card.label}</div>
           <div className={`text-3xl font-bold ${card.valueClass || 'text-gray-900'}`}>
             {card.value}
