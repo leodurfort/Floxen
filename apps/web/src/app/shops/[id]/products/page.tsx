@@ -875,7 +875,7 @@ function CatalogPageContent() {
           <div className="flex-shrink-0 border-t border-gray-100 px-6 py-3 bg-white flex items-center justify-between">
             <div className="text-sm text-gray-600">
               Showing {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of{' '}
-              {totalProducts.toLocaleString()} products
+              <span className="text-[#FA7315] font-medium">{totalProducts.toLocaleString()}</span> products
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
