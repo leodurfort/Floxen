@@ -12,6 +12,7 @@ import { StoreBanner } from '@/components/dashboard/StoreBanner';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { GettingStartedChecklist } from '@/components/dashboard/GettingStartedChecklist';
 import { calculateFieldMappingProgress } from '@/lib/fieldMappingUtils';
+import { PageHeader } from '@/components/ui';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -95,9 +96,7 @@ export default function DashboardPage() {
     <div className="p-4">
       <div className="w-full">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        </div>
+        <PageHeader title="Dashboard" />
 
         {/* Store Banner */}
         {currentShop && (

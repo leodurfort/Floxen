@@ -12,6 +12,7 @@ import { useFieldMappingsQuery, useUpdateFieldMappingsMutation } from '@/hooks/u
 import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';
 import { useProductsQuery } from '@/hooks/useProductsQuery';
 import { useCurrentShop } from '@/hooks/useCurrentShop';
+import { PageHeader, Button, Tooltip } from '@/components/ui';
 
 export default function SetupPage() {
   const params = useParams<{ id: string }>();
@@ -251,36 +252,29 @@ export default function SetupPage() {
           )}
 
           {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Field Mapping Setup</h1>
-                <p className="text-gray-600">
-                  Map OpenAI feed attributes to your WooCommerce product fields. Changes save automatically.
-                </p>
-              </div>
-              <div className="relative group">
-                <button
-                  onClick={() => router.push(`/shops/${params?.id}/products`)}
+          <PageHeader
+            title="Field Mapping Setup"
+            subtitle="Map OpenAI feed attributes to your WooCommerce product fields. Changes save automatically."
+            actions={
+              <Tooltip
+                content={!allRequiredFieldsMapped ? 'Complete all required fields first' : undefined}
+                side="bottom"
+              >
+                <Button
+                  variant={allRequiredFieldsMapped ? 'primary' : 'outline'}
                   disabled={!allRequiredFieldsMapped}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap ${
-                    allRequiredFieldsMapped
-                      ? 'bg-[#FA7315] text-white hover:bg-[#E5650F]'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
+                  onClick={() => router.push(`/shops/${params?.id}/products`)}
                 >
                   View Products
-                </button>
-                {!allRequiredFieldsMapped && (
-                  <div className="absolute right-0 top-full mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                    Complete all required fields first
-                    <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 rotate-45" />
-                  </div>
-                )}
-              </div>
-            </div>
+                </Button>
+              </Tooltip>
+            }
+          />
+
+          {/* Transient status indicators */}
+          <div className="-mt-4 mb-6">
             {saving && (
-              <div className="mt-2 text-sm text-[#FA7315]">
+              <div className="text-sm text-[#FA7315]">
                 Saving changes...
               </div>
             )}

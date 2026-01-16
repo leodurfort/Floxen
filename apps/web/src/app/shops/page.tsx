@@ -11,6 +11,7 @@ import { CompleteShopSetupModal } from '@/components/shops/CompleteShopSetupModa
 import { ConnectShopModal } from '@/components/shops/ConnectShopModal';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
+import { PageHeader, Button } from '@/components/ui';
 import type { Shop } from '@productsynch/shared';
 import {
   useShopsQuery,
@@ -286,24 +287,17 @@ export default function ShopsPage() {
         )}
 
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Your Stores</h1>
-            </div>
-            {!hasShopInFirstSync && (
-              <button
-                onClick={() => setShowConnectModal(true)}
-                className="btn btn--primary"
-              >
+        <PageHeader
+          title="Your Stores"
+          subtitle="Manage your WooCommerce store connections"
+          actions={
+            !hasShopInFirstSync && (
+              <Button variant="primary" onClick={() => setShowConnectModal(true)}>
                 Connect new store
-              </button>
-            )}
-          </div>
-          <p className="text-gray-600 text-sm">
-            Manage your WooCommerce store connections
-          </p>
-        </div>
+              </Button>
+            )
+          }
+        />
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">

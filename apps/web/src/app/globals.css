@@ -148,6 +148,28 @@ body {
   background: #E5650F;
 }
 
+.btn--outline {
+  background: transparent;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+}
+
+.btn--outline:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: #6B7280;
+  border: none;
+}
+
+.btn--ghost:hover {
+  background: #F3F4F6;
+  color: #374151;
+}
+
 .hero-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;

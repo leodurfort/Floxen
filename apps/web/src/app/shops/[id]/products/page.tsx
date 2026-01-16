@@ -24,7 +24,7 @@ import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
 import { ProductTabs, type ProductTabId } from '@/components/catalog/ProductTabs';
 import { FeedPreviewModal } from '@/components/catalog/FeedPreviewModal';
 import { FeedActivationSuccessModal } from '@/components/catalog/FeedActivationSuccessModal';
-import { Tooltip } from '@/components/ui/Tooltip';
+import { Tooltip, PageHeader, Button, FeedStatusBadge } from '@/components/ui';
 import {
   COLUMN_MAP,
   formatColumnValue,
@@ -618,42 +618,41 @@ function CatalogPageContent() {
         <SyncStatusBanner shop={currentShop} />
       )}
 
+      {/* Page Header - outside the card */}
+      <PageHeader
+        label="Products"
+        title="Catalog"
+        actions={
+          <>
+            <FeedStatusBadge
+              label={feedStateConfig.label}
+              variant={
+                feedState === 'active' ? 'success' :
+                feedState === 'paused' ? 'warning' :
+                feedState === 'error' ? 'error' : 'neutral'
+              }
+              showDot
+            />
+            {feedState === 'not_activated' ? (
+              <Button
+                variant="primary"
+                disabled={activateFeedMutation.isPending}
+                onClick={handleActivateFeed}
+              >
+                {activateFeedMutation.isPending ? 'Activating...' : 'Activate Feed'}
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => setShowFeedPreviewModal(true)}>
+                View Feed
+              </Button>
+            )}
+          </>
+        }
+      />
+
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Fixed Header Section (not scrollable) */}
         <div className="p-6 pb-4 space-y-4 flex-shrink-0 border-b border-gray-100">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="uppercase tracking-[0.18em] text-xs text-gray-500">Products</p>
-              <h1 className="text-2xl font-bold text-gray-900">Catalog</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Feed status badge */}
-              <span className={`flex items-center gap-1.5 text-sm font-medium ${feedStateConfig.colorClass}`}>
-                <span className={`w-2 h-2 rounded-full ${feedStateConfig.dotClass}`} />
-                {feedStateConfig.label}
-              </span>
-
-              {/* Conditional buttons based on feed state */}
-              {feedState === 'not_activated' ? (
-                <button
-                  onClick={handleActivateFeed}
-                  disabled={activateFeedMutation.isPending}
-                  className="px-4 py-2 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
-                >
-                  {activateFeedMutation.isPending ? 'Activating...' : 'Activate Feed'}
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowFeedPreviewModal(true)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all text-sm"
-                >
-                  View Feed
-                </button>
-              )}
-            </div>
-          </div>
-
           {/* Product Tabs */}
           <ProductTabs
             activeTab={activeTab}
