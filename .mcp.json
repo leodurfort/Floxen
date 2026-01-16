@@ -6,10 +6,7 @@
     },
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"],
-      "env": {
-        "CDP_HEADLESS": "true"
-      }
+      "args": ["-y", "chrome-devtools-mcp@latest", "--headless"]
     }
   }
 }
