@@ -270,7 +270,7 @@ export function BulkEditModal({
                         : 'bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900'}
                     `}
                   >
-                    Remove Override
+                    Remove Custom Value
                   </button>
                 </div>
               </div>
@@ -405,7 +405,7 @@ export function BulkEditModal({
             {selectedAttribute && overrideType === 'remove' && (
               <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
                 <p className="text-sm text-amber-700">
-                  This will remove any existing override for "{selectedAttribute}" and revert to shop-level defaults.
+                  This will remove any existing custom value for "{selectedAttribute}" and revert to shop-level defaults.
                 </p>
               </div>
             )}

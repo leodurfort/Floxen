@@ -167,7 +167,7 @@ const CUSTOM_COLUMNS: ColumnDefinition[] = [
   },
   {
     id: 'overrides',
-    label: 'Overrides',
+    label: 'Custom Values',
     dataType: 'number',
     sortable: true,
     filterable: true,

@@ -103,7 +103,8 @@ function CatalogPageContent() {
   const selection = useCatalogSelection();
 
   // Helper function to derive active tab from column filters
-  // Tabs are now computed state - they reflect what filters are actually active
+  // Uses "includes" matching - tab stays active when cascade filters are added
+  // Priority order: needsAttention > disabled > inFeed > all
   const deriveTabFromFilters = useCallback((columnFilters: typeof filters.columnFilters): ProductTabId => {
     const filterKeys = Object.keys(columnFilters);
 
@@ -112,32 +113,25 @@ function CatalogPageContent() {
       return 'all';
     }
 
-    // Check for "Ready for Feed" pattern: isValid=true AND enable_search=true
+    // Priority 1: "Needs Attention" - includes isValid=false
+    if (columnFilters.isValid?.values?.[0] === 'false') {
+      return 'needsAttention';
+    }
+
+    // Priority 2: "Disabled" - includes enable_search=false (but not needsAttention)
+    if (columnFilters.enable_search?.values?.[0] === 'false') {
+      return 'disabled';
+    }
+
+    // Priority 3: "In Feed" - includes isValid=true AND enable_search=true
     if (
-      filterKeys.length === 2 &&
       columnFilters.isValid?.values?.[0] === 'true' &&
       columnFilters.enable_search?.values?.[0] === 'true'
     ) {
       return 'inFeed';
     }
 
-    // Check for "Needs Attention" pattern: isValid=false (only)
-    if (
-      filterKeys.length === 1 &&
-      columnFilters.isValid?.values?.[0] === 'false'
-    ) {
-      return 'needsAttention';
-    }
-
-    // Check for "Disabled" pattern: enable_search=false (only)
-    if (
-      filterKeys.length === 1 &&
-      columnFilters.enable_search?.values?.[0] === 'false'
-    ) {
-      return 'disabled';
-    }
-
-    // Custom filters that don't match any tab preset - default to "All"
+    // Custom filters that don't include any tab pattern - default to "All"
     return 'all';
   }, []);
 

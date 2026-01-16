@@ -195,7 +195,7 @@ export default function ProductMappingPage() {
               </h1>
               {overrideCount > 0 && (
                 <span className="text-xs px-2 py-1 rounded bg-[#FA7315]/10 text-[#FA7315] border border-[#FA7315]/30">
-                  {overrideCount} custom override{overrideCount !== 1 ? 's' : ''}
+                  {overrideCount} custom value{overrideCount !== 1 ? 's' : ''}
                 </span>
               )}
               {overridesData?.isValid === false && (
@@ -205,7 +205,7 @@ export default function ProductMappingPage() {
               )}
             </div>
             <p className="text-gray-600">
-              Customize field mappings for this specific product. Overrides take priority over shop-level mappings.
+              Customize field mappings for this specific product. Custom values take priority over shop-level mappings.
             </p>
 
             {/* Validation Errors Banner */}

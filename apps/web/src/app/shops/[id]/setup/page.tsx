@@ -402,7 +402,7 @@ function PropagationModal({
         </h3>
         <p className="text-gray-600 text-sm mb-6">
           You're changing the mapping for <span className="text-[#FA7315] font-medium">{attribute}</span>.
-          {' '}<span className="font-medium">{overrideCount} product{overrideCount !== 1 ? 's have' : ' has'}</span> custom overrides for this field.
+          {' '}<span className="font-medium">{overrideCount} product{overrideCount !== 1 ? 's have' : ' has'}</span> custom values for this field.
         </p>
 
         <div className="space-y-3 mb-6">
@@ -412,7 +412,7 @@ function PropagationModal({
           >
             <div className="text-[#FA7315] font-medium">Apply to All Products</div>
             <div className="text-gray-500 text-sm mt-1">
-              Reset any custom overrides and use this new mapping for all products.
+              Reset any custom values and use this new mapping for all products.
             </div>
           </button>
 
@@ -420,9 +420,9 @@ function PropagationModal({
             onClick={() => onChoice('preserve_overrides', dontAskAgain)}
             className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-left transition-colors"
           >
-            <div className="text-gray-900 font-medium">Preserve Custom Overrides</div>
+            <div className="text-gray-900 font-medium">Preserve Custom Values</div>
             <div className="text-gray-500 text-sm mt-1">
-              Keep existing product-level overrides. Only update products using shop defaults.
+              Keep existing product-level custom values. Only update products using shop defaults.
             </div>
           </button>
         </div>

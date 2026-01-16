@@ -486,7 +486,7 @@ async function getComputedColumnValues(
   });
 
   const formatOverrideLabel = (value: string) =>
-    value === '0' ? 'No overrides' : `${value} override${value === '1' ? '' : 's'}`;
+    value === '0' ? 'No custom values' : `${value} custom value${value === '1' ? '' : 's'}`;
 
   return buildColumnValuesResult(column, valueCounts, limit, search, formatOverrideLabel);
 }
