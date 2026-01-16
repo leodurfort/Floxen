@@ -139,6 +139,13 @@ export function EditColumnsModal({
     setSelectedColumns(new Set(getDefaultVisibleColumns()));
   };
 
+  const handleShowAll = () => {
+    const allSelectableIds = ALL_COLUMNS
+      .filter((col) => col.id !== 'checkbox' && col.id !== 'actions')
+      .map((col) => col.id);
+    setSelectedColumns(new Set(['checkbox', ...allSelectableIds, 'actions']));
+  };
+
   const selectedCount = selectedColumns.size;
   const totalCount = ALL_COLUMNS.filter(
     (col) => col.id !== 'checkbox' && col.id !== 'actions'
@@ -315,12 +322,20 @@ export function EditColumnsModal({
 
         {/* Footer */}
         <div className="p-6 border-t border-gray-200 flex justify-between">
-          <button
-            onClick={handleReset}
-            className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            Reset to Default
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Reset to Default
+            </button>
+            <button
+              onClick={handleShowAll}
+              className="px-4 py-2 text-[#FA7315] hover:text-[#E5650F] transition-colors"
+            >
+              Show All
+            </button>
+          </div>
           <div className="flex gap-3">
             <button
               onClick={onClose}

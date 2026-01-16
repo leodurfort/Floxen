@@ -77,15 +77,26 @@ function isFilterable(spec: OpenAIFieldSpec): boolean {
 }
 
 const DEFAULT_COLUMN_ORDER: string[] = [
-  'checkbox',        // Selection (always first)
-  'id',              // OpenAI: Basic Product Data
-  'image_link',      // OpenAI: Media
-  'title',           // OpenAI: Basic Product Data
-  'enable_search',   // OpenAI: Flags
-  'overrides',       // Custom: Override count
-  'feedStatus',      // Custom: Feed status (In Feed / Issues / Excluded)
-  'updatedAt',       // Custom: Last modified
-  'actions',
+  'checkbox',           // Selection (always first)
+  // Key required OpenAI fields
+  'id',                 // Basic Product Data
+  'image_link',         // Media
+  'title',              // Basic Product Data
+  'description',        // Basic Product Data
+  'link',               // Basic Product Data
+  'product_category',   // Item Information
+  'material',           // Item Information
+  'weight',             // Item Information
+  'price',              // Price & Promotions
+  'availability',       // Availability & Inventory
+  'inventory_quantity', // Availability & Inventory
+  'mpn',                // Identifiers
+  'enable_search',      // Flags
+  // Custom status columns
+  'overrides',          // Custom: Override count
+  'feedStatus',         // Custom: Feed status
+  'updatedAt',          // Custom: Last modified
+  'actions',            // Actions (always last)
 ];
 
 const DEFAULT_VISIBLE_COLUMNS = new Set(DEFAULT_COLUMN_ORDER);
