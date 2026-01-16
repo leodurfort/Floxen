@@ -143,7 +143,7 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
                       {OPENAI_FEED_SPEC.map((spec) => (
                         <th
                           key={spec.attribute}
-                          className={`text-left py-2 px-3 font-medium text-gray-600 whitespace-nowrap ${getColumnWidthClass(spec.attribute)}`}
+                          className="text-left py-2 px-3 font-medium text-gray-600 whitespace-nowrap"
                         >
                           {spec.attribute}
                         </th>
