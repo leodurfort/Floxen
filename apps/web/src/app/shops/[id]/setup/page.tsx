@@ -82,7 +82,7 @@ export default function SetupPage() {
     }
   }, [products, selectedProductId]);
 
-  // Clear stale selection when product no longer exists (Bug 5)
+  // Clear stale selection when selected product no longer exists in the list
   useEffect(() => {
     if (selectedProductId && products.length > 0) {
       const productExists = products.some((p) => p.id === selectedProductId);
@@ -368,11 +368,18 @@ export default function SetupPage() {
                 <div className="w-full px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
                   Loading items...
                 </div>
+              ) : products.length === 0 ? (
+                <div className="w-full px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                  No products available. Products will appear after your first sync.
+                </div>
               ) : (
                 <ProductSelector
                   products={products}
                   value={selectedProductId}
-                  onChange={setSelectedProductId}
+                  onChange={(productId) => {
+                    hasUserSelectedProductRef.current = true;
+                    setSelectedProductId(productId);
+                  }}
                 />
               )
             }
