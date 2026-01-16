@@ -40,7 +40,7 @@ export function Sidebar() {
     { href: '/shops', label: 'Stores', icon: '🏪' },
     ...(currentShop?.isConnected ? [
       { href: `/shops/${currentShop.id}/setup`, label: 'Setup', icon: '⚙️' },
-      { href: `/shops/${currentShop.id}/products`, label: 'Products', icon: '📦' },
+      { href: `/shops/${currentShop.id}/products`, label: 'Catalog', icon: '📦' },
     ] : []),
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
   ];
@@ -101,7 +101,7 @@ export function Sidebar() {
           let isActive = false;
           if (item.label === 'Setup') {
             isActive = pathname.includes('/setup');
-          } else if (item.label === 'Products') {
+          } else if (item.label === 'Catalog') {
             isActive = pathname.includes('/products');
           } else if (item.label === 'Stores') {
             isActive = pathname === '/shops';

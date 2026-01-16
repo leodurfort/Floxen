@@ -4,6 +4,9 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { Sidebar } from './Sidebar';
+import { useCurrentShop } from '@/hooks/useCurrentShop';
+import { useProductStats } from '@/hooks/useProductStats';
+import { FirstSyncSuccessBanner } from './banners/FirstSyncSuccessBanner';
 
 // Pages that don't require authentication
 const AUTH_PAGES = [
@@ -30,6 +33,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, hydrated, hydrate } = useAuth();
+  const { currentShop } = useCurrentShop();
+  const { data: productStats } = useProductStats(currentShop?.id);
 
   useEffect(() => {
     hydrate();
@@ -89,7 +94,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#F9FAFB]">
       <Sidebar />
       <div className="ml-52">
-        <main className="min-h-screen">{children}</main>
+        <main className="min-h-screen">
+          {/* First Sync Success Banner */}
+          {currentShop && (
+            <div className="px-4 pt-4">
+              <FirstSyncSuccessBanner
+                shopId={currentShop.id}
+                totalItems={productStats?.total ?? 0}
+                lastSyncAt={currentShop.lastSyncAt ?? null}
+                syncStatus={currentShop.syncStatus}
+              />
+            </div>
+          )}
+          {children}
+        </main>
       </div>
     </div>
   );
