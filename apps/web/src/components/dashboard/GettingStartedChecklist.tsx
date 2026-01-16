@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 
 interface ChecklistStep {
@@ -31,33 +31,24 @@ interface GettingStartedChecklistProps {
   };
 }
 
-const STORAGE_KEY_PREFIX = 'productsynch:gettingStarted:collapsed:';
-
 export function GettingStartedChecklist({
   shopId,
   steps,
   stepDetails,
 }: GettingStartedChecklistProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [expandedStep, setExpandedStep] = useState<string | null>(null);
-
-  // Load collapsed state from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}${shopId}`);
-    if (stored === 'true') {
-      setIsCollapsed(true);
-    }
-  }, [shopId]);
-
-  // Save collapsed state to localStorage
-  const handleToggleCollapse = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${shopId}`, String(newState));
-  };
+  // Allow multiple steps to be expanded simultaneously
+  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
 
   const handleToggleStep = (stepId: string) => {
-    setExpandedStep(expandedStep === stepId ? null : stepId);
+    setExpandedSteps((prev) => {
+      const next = new Set(prev);
+      if (next.has(stepId)) {
+        next.delete(stepId);
+      } else {
+        next.add(stepId);
+      }
+      return next;
+    });
   };
 
   // Build the checklist steps
@@ -118,7 +109,7 @@ export function GettingStartedChecklist({
               : `${stepDetails.needsAttention.toLocaleString()} items need attention`}
           </div>
           <Link
-            href={`/shops/${shopId}/products`}
+            href={`/shops/${shopId}/products?cf_isValid_v=false`}
             className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F]"
           >
             View Catalog &rarr;
@@ -140,7 +131,7 @@ export function GettingStartedChecklist({
             {stepDetails.inFeed.toLocaleString()} items ready for ChatGPT
           </div>
           <Link
-            href={`/shops/${shopId}/products`}
+            href={`/shops/${shopId}/products?page=1`}
             className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F]"
           >
             Go to Catalog &rarr;
@@ -181,28 +172,12 @@ export function GettingStartedChecklist({
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      {/* Header */}
-      <div
-        className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
-        onClick={handleToggleCollapse}
-      >
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-gray-900">Getting Started</h3>
-          <span className="text-sm text-gray-500">
-            {completedCount}/{totalCount} completed
-          </span>
-        </div>
-        <button className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
-          {isCollapsed ? 'Expand' : 'Collapse'}
-          <svg
-            className={`w-4 h-4 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+      {/* Header - no longer clickable/collapsible */}
+      <div className="p-4 flex items-center gap-3">
+        <h3 className="text-lg font-semibold text-gray-900">Getting Started</h3>
+        <span className="text-sm text-gray-500">
+          {completedCount}/{totalCount} completed
+        </span>
       </div>
 
       {/* Progress bar */}
@@ -213,10 +188,11 @@ export function GettingStartedChecklist({
         />
       </div>
 
-      {/* Steps - only show when not collapsed */}
-      {!isCollapsed && (
-        <div className="divide-y divide-gray-100">
-          {checklistSteps.map((step) => (
+      {/* Steps - always visible */}
+      <div className="divide-y divide-gray-100">
+        {checklistSteps.map((step) => {
+          const isExpanded = expandedSteps.has(step.id);
+          return (
             <div key={step.id} className="p-4">
               {/* Step header */}
               <div
@@ -226,9 +202,7 @@ export function GettingStartedChecklist({
                 {/* Checkbox icon */}
                 <div
                   className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    step.isComplete
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-400'
+                    step.isComplete ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
                   }`}
                 >
                   {step.isComplete ? (
@@ -265,7 +239,7 @@ export function GettingStartedChecklist({
                 {/* Expand indicator */}
                 <svg
                   className={`w-4 h-4 text-gray-400 transition-transform ${
-                    expandedStep === step.id ? 'rotate-180' : ''
+                    isExpanded ? 'rotate-180' : ''
                   }`}
                   fill="none"
                   stroke="currentColor"
@@ -280,12 +254,12 @@ export function GettingStartedChecklist({
                 </svg>
               </div>
 
-              {/* Step content - only show when expanded */}
-              {expandedStep === step.id && <div className="mt-3 ml-8">{step.content}</div>}
+              {/* Step content - show when expanded */}
+              {isExpanded && <div className="mt-3 ml-8">{step.content}</div>}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

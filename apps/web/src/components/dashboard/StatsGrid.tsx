@@ -77,7 +77,8 @@ export function StatsGrid({
     {
       label: 'Total Items',
       value: stats.total.toLocaleString(),
-      onClick: () => router.push(`/shops/${shopId}/products`),
+      // Use page=1 to ensure URL params are present, which prevents localStorage filter restoration
+      onClick: () => router.push(`/shops/${shopId}/products?page=1`),
     },
     {
       label: 'In Feed',
