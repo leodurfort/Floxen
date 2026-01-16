@@ -14,7 +14,7 @@ interface ProductTabsProps {
 export function ProductTabs({ activeTab, onTabChange, stats, isFeedActivated }: ProductTabsProps) {
   // Dynamic tabs - label changes based on feed activation state
   const tabs: { id: ProductTabId; label: string; countKey: keyof ProductStats | 'all' }[] = [
-    { id: 'all', label: 'All Products', countKey: 'total' },
+    { id: 'all', label: 'All Items', countKey: 'total' },
     { id: 'inFeed', label: isFeedActivated ? 'In Feed' : 'Ready for Feed', countKey: 'inFeed' },
     { id: 'needsAttention', label: 'Needs Attention', countKey: 'needsAttention' },
     { id: 'disabled', label: 'Disabled', countKey: 'disabled' },

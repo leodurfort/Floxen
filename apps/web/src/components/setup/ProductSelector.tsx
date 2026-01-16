@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { CatalogProduct } from '@productsynch/shared';
 import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 
@@ -20,12 +20,17 @@ export function ProductSelector({ products, value, onChange }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const filteredProducts = (searchQuery
-    ? products.filter((p) => getProductName(p).toLowerCase().includes(searchQuery.toLowerCase()))
-    : products
-  ).slice().sort((a, b) => getProductName(a).localeCompare(getProductName(b)));
+  const filteredProducts = useMemo(() => {
+    const filtered = searchQuery
+      ? products.filter((p) => getProductName(p).toLowerCase().includes(searchQuery.toLowerCase()))
+      : products;
+    return filtered.slice().sort((a, b) => getProductName(a).localeCompare(getProductName(b)));
+  }, [products, searchQuery]);
 
-  const selectedProduct = products.find((p) => p.id === value);
+  const selectedProduct = useMemo(
+    () => products.find((p) => p.id === value),
+    [products, value]
+  );
 
   useClickOutside(dropdownRef, useCallback(() => {
     setIsOpen(false);

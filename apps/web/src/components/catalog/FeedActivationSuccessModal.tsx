@@ -72,7 +72,7 @@ export function FeedActivationSuccessModal({
 
         {/* Body text */}
         <p className="text-gray-600 text-center mb-8">
-          {productCount.toLocaleString()} products published on ChatGPT.
+          {productCount.toLocaleString()} items published on ChatGPT.
           <br />
           Your product catalog will synchronize automatically.
         </p>

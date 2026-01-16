@@ -148,7 +148,7 @@ export function BulkEditModal({
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Bulk Edit Fields</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Apply changes to {selectedCount.toLocaleString()} selected product{selectedCount !== 1 ? 's' : ''}
+              Apply changes to {selectedCount.toLocaleString()} selected item{selectedCount !== 1 ? 's' : ''}
             </p>
           </div>
           <button
@@ -219,11 +219,11 @@ export function BulkEditModal({
                   onChange={(e) => setEnableSearchValue(e.target.value as 'true' | 'false')}
                   className="w-full px-4 py-3 bg-white text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:border-[#FA7315] focus:ring-2 focus:ring-[#FA7315]/10"
                 >
-                  <option value="true">Enabled (true) - Products appear in ChatGPT search</option>
-                  <option value="false">Disabled (false) - Products hidden from search</option>
+                  <option value="true">Enabled (true) - Items appear in ChatGPT search</option>
+                  <option value="false">Disabled (false) - Items hidden from search</option>
                 </select>
                 <p className="mt-2 text-xs text-gray-500">
-                  This controls whether products can be surfaced in ChatGPT search results.
+                  This controls whether items can be surfaced in ChatGPT search results.
                 </p>
               </div>
             )}
@@ -352,7 +352,7 @@ export function BulkEditModal({
                             `}
                           >
                             <div className="text-sm text-amber-600 font-medium">No mapping (exclude field)</div>
-                            <div className="text-xs text-gray-500 mt-0.5">This field will be empty for selected products</div>
+                            <div className="text-xs text-gray-500 mt-0.5">This field will be empty for selected items</div>
                           </button>
                         )}
 
@@ -388,14 +388,14 @@ export function BulkEditModal({
                 {selectedWooField === null && (
                   <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
                     <p className="text-sm text-amber-700">
-                      This will exclude "{selectedAttribute}" from the feed for all selected products.
+                      This will exclude "{selectedAttribute}" from the feed for all selected items.
                     </p>
                   </div>
                 )}
                 {selectedWooField && (
                   <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-700">
-                      This will map "{selectedAttribute}" to WooCommerce field "{selectedWooField}" for all selected products.
+                      This will map "{selectedAttribute}" to WooCommerce field "{selectedWooField}" for all selected items.
                     </p>
                   </div>
                 )}
@@ -434,7 +434,7 @@ export function BulkEditModal({
                 Processing...
               </>
             ) : (
-              `Apply to ${selectedCount.toLocaleString()} Products`
+              `Apply to ${selectedCount.toLocaleString()} Items`
             )}
           </button>
         </div>

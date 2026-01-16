@@ -207,7 +207,7 @@ export function ProductMappingSelector({
                   }`}
                 >
                   <div className="text-sm text-amber-600 font-medium">No mapping (exclude field)</div>
-                  <div className="text-xs text-gray-500 mt-0.5">This field will be empty for this product</div>
+                  <div className="text-xs text-gray-500 mt-0.5">This field will be empty for this item</div>
                 </button>
               )}
 
@@ -231,7 +231,7 @@ export function ProductMappingSelector({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">Enter a custom value for this product</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Enter a custom value for this item</div>
                   </button>
 
                   {/* Expanded static value input */}

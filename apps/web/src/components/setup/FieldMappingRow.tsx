@@ -49,7 +49,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     previewDisplay = '-';
     previewStyle = 'text-gray-400';
   } else if (!previewProductJson) {
-    previewDisplay = 'Select a product to preview...';
+    previewDisplay = 'Select an item to preview...';
     previewStyle = 'text-gray-400 italic';
   }
 
@@ -66,8 +66,8 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
     if (isEnableSearchField) {
       return (
         <div>
-          <div className="font-semibold mb-1">Customize per product</div>
-          <div>All products are searchable by default. You can disable search for specific products in the Products page.</div>
+          <div className="font-semibold mb-1">Customize per item</div>
+          <div>All items are searchable by default. You can disable search for specific items in the Catalog page.</div>
         </div>
       );
     }
@@ -83,7 +83,7 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
       return (
         <div>
           <div className="font-semibold mb-1">Auto-populated field</div>
-          <div>This value is computed automatically from other product data.</div>
+          <div>This value is computed automatically from other item data.</div>
         </div>
       );
     }

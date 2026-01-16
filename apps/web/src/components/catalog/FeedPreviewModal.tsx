@@ -115,7 +115,7 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              Products
+              Items
             </button>
             <button
               onClick={() => setActiveTab('json')}
@@ -160,7 +160,7 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
                     {items.length === 0 ? (
                       <tr>
                         <td colSpan={3} className="py-8 text-center text-gray-500">
-                          No products in feed
+                          No items in feed
                         </td>
                       </tr>
                     ) : (

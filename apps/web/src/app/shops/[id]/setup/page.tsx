@@ -21,6 +21,7 @@ export default function SetupPage() {
 
   // UI state
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const hasUserSelectedProductRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -74,9 +75,21 @@ export default function SetupPage() {
     }
   }, [hydrated, user, router]);
 
+  // Auto-select first product only if user hasn't manually selected one
   useEffect(() => {
-    if (products.length > 0 && !selectedProductId) {
+    if (products.length > 0 && !selectedProductId && !hasUserSelectedProductRef.current) {
       setSelectedProductId(products[0].id);
+    }
+  }, [products, selectedProductId]);
+
+  // Clear stale selection when product no longer exists (Bug 5)
+  useEffect(() => {
+    if (selectedProductId && products.length > 0) {
+      const productExists = products.some((p) => p.id === selectedProductId);
+      if (!productExists) {
+        setSelectedProductId(null);
+        hasUserSelectedProductRef.current = false;
+      }
     }
   }, [products, selectedProductId]);
 
@@ -353,7 +366,7 @@ export default function SetupPage() {
                 </div>
               ) : productsLoading ? (
                 <div className="w-full px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-500">
-                  Loading products...
+                  Loading items...
                 </div>
               ) : (
                 <ProductSelector
@@ -402,7 +415,7 @@ function PropagationModal({
         </h3>
         <p className="text-gray-600 text-sm mb-6">
           You're changing the mapping for <span className="text-[#FA7315] font-medium">{attribute}</span>.
-          {' '}<span className="font-medium">{overrideCount} product{overrideCount !== 1 ? 's have' : ' has'}</span> custom values for this field.
+          {' '}<span className="font-medium">{overrideCount} item{overrideCount !== 1 ? 's have' : ' has'}</span> custom values for this field.
         </p>
 
         <div className="space-y-3 mb-6">
@@ -410,9 +423,9 @@ function PropagationModal({
             onClick={() => onChoice('apply_all', dontAskAgain)}
             className="w-full px-4 py-3 bg-[#FA7315]/10 hover:bg-[#FA7315]/20 border border-[#FA7315]/30 rounded-lg text-left transition-colors"
           >
-            <div className="text-[#FA7315] font-medium">Apply to All Products</div>
+            <div className="text-[#FA7315] font-medium">Apply to All Items</div>
             <div className="text-gray-500 text-sm mt-1">
-              Reset any custom values and use this new mapping for all products.
+              Reset any custom values and use this new mapping for all items.
             </div>
           </button>
 
@@ -422,7 +435,7 @@ function PropagationModal({
           >
             <div className="text-gray-900 font-medium">Preserve Custom Values</div>
             <div className="text-gray-500 text-sm mt-1">
-              Keep existing product-level custom values. Only update products using shop defaults.
+              Keep existing item-level custom values. Only update items using shop defaults.
             </div>
           </button>
         </div>

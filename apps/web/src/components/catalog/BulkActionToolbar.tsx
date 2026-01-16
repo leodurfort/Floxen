@@ -63,14 +63,14 @@ export function BulkActionToolbar({
 
   const selectAllHandler = hasActiveFilters ? onSelectAllMatching : onSelectAllGlobal;
   const selectAllLabel = hasActiveFilters
-    ? `Select all ${totalMatchingCount.toLocaleString()} matching products`
-    : `Select all ${totalCatalogCount.toLocaleString()} products`;
+    ? `Select all ${totalMatchingCount.toLocaleString()} matching items`
+    : `Select all ${totalCatalogCount.toLocaleString()} items`;
 
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-[#FA7315]/10 border border-[#FA7315]/30 rounded-lg mb-4">
       <div className="flex items-center gap-4">
         <span className="text-[#FA7315] font-medium">
-          {displayCount.toLocaleString()} product{displayCount !== 1 ? 's' : ''} selected
+          {displayCount.toLocaleString()} item{displayCount !== 1 ? 's' : ''} selected
         </span>
 
         {showSelectAllButton && (
@@ -87,25 +87,25 @@ export function BulkActionToolbar({
             onClick={onSelectAllByItemGroup}
             className="text-sm text-gray-600 hover:text-gray-900 underline"
           >
-            Select {itemGroupCount!.toLocaleString()} similar products
+            Select {itemGroupCount!.toLocaleString()} similar items
           </button>
         )}
 
         {selectAllMatching && hasActiveFilters && (
           <span className="text-sm text-gray-600">
-            All products matching current filters are selected
+            All items matching current filters are selected
           </span>
         )}
 
         {selectAllGlobal && (
           <span className="text-sm text-gray-600">
-            All products in catalog are selected
+            All items in catalog are selected
           </span>
         )}
 
         {selectAllByItemGroupId && (
           <span className="text-sm text-gray-600">
-            All similar products are selected
+            All similar items are selected
           </span>
         )}
       </div>

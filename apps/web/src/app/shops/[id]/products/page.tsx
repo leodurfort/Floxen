@@ -664,7 +664,7 @@ function CatalogPageContent() {
 
           {/* Filters Bar */}
           <div className="flex items-center gap-4 flex-wrap">
-            <SearchFilter value={searchInput} onChange={setSearchInput} placeholder="Search products..." />
+            <SearchFilter value={searchInput} onChange={setSearchInput} placeholder="Search items..." />
             <div className="flex-1" />
             <ClearFiltersButton hasActiveFilters={hasActiveFilters} onClear={handleClearFilters} />
             <button
@@ -675,7 +675,7 @@ function CatalogPageContent() {
             </button>
             {/* Persistent Bulk Edit button - disabled state when no selection */}
             {!hasSelection && (
-              <Tooltip content="Select products to bulk edit" side="bottom" delayDuration={200}>
+              <Tooltip content="Select items to bulk edit" side="bottom" delayDuration={200}>
                 <button
                   disabled
                   className="px-3 py-1.5 text-sm text-gray-400 border border-gray-200 rounded-lg cursor-not-allowed flex items-center gap-2 bg-gray-50"
@@ -716,8 +716,8 @@ function CatalogPageContent() {
 
         {/* Scrollable Table Section */}
         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto">
-          {loading && <div className="text-gray-500 p-6">Loading products...</div>}
-          {!loading && !products.length && <div className="text-gray-500 p-6">No products found.</div>}
+          {loading && <div className="text-gray-500 p-6">Loading items...</div>}
+          {!loading && !products.length && <div className="text-gray-500 p-6">No items found.</div>}
           {!loading && products.length > 0 && (
               <table className="catalog-table w-full">
                 <thead>
@@ -830,7 +830,7 @@ function CatalogPageContent() {
           <div className="flex-shrink-0 border-t border-gray-100 px-6 py-3 bg-white flex items-center justify-between">
             <div className="text-sm text-gray-600">
               Showing {(filters.page - 1) * filters.limit + 1}-{Math.min(filters.page * filters.limit, totalProducts)} of{' '}
-              <span className="text-[#FA7315] font-medium">{totalProducts.toLocaleString()}</span> products
+              <span className="text-[#FA7315] font-medium">{totalProducts.toLocaleString()}</span> items
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
