@@ -8,8 +8,8 @@ function serializeFilters(params: ListProductsParams): Record<string, unknown> {
   return {
     page: params.page ?? 1,
     limit: params.limit ?? 50,
-    sortBy: params.sortBy ?? 'updatedAt',
-    sortOrder: params.sortOrder ?? 'desc',
+    sortBy: params.sortBy ?? 'id',
+    sortOrder: params.sortOrder ?? 'asc',
     search: params.search ?? '',
     columnFilters: params.columnFilters ?? {},
   };

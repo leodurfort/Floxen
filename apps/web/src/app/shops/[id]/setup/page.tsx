@@ -43,7 +43,7 @@ export default function SetupPage() {
     data: productsData,
     isLoading: productsLoading,
     error: productsQueryError,
-  } = useProductsQuery(params?.id, { limit: 100 });
+  } = useProductsQuery(params?.id, { limit: 100, sortBy: 'title', sortOrder: 'asc' });
 
   const products = productsData?.products ?? [];
   const productsError = productsQueryError?.message ?? null;
