@@ -166,9 +166,6 @@ function CatalogPageContent() {
   const totalProducts = productsData?.pagination.total ?? 0;
   const error = productsError?.message ?? null;
 
-  // Feed refresh mutation
-  const refreshFeedMutation = useRefreshFeedMutation(params?.id);
-
   // Bulk update mutation
   const bulkUpdateMutation = useBulkUpdateMutation(params?.id);
 
@@ -286,22 +283,6 @@ function CatalogPageContent() {
   // Navigate to product mapping page
   const handleRowClick = (productId: string) => {
     router.push(`/shops/${params.id}/products/${productId}/mapping`);
-  };
-
-  // Helper to format relative time
-  const formatLastSync = (date: string | null): string => {
-    if (!date) return 'never';
-    const now = new Date();
-    const syncDate = new Date(date);
-    const diffMs = now.getTime() - syncDate.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
   };
 
   const handleTabChange = (tab: ProductTabId) => {

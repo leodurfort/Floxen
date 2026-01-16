@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, ReactNode } from 'react';
-import { OpenAIFieldSpec, CATEGORY_CONFIG, OpenAIFieldCategory, ProductFieldOverrides } from '@productsynch/shared';
+import { OpenAIFieldSpec, OpenAIFieldCategory, ProductFieldOverrides } from '@productsynch/shared';
 import { ProductFieldMappingRow } from './ProductFieldMappingRow';
 import { WooCommerceField } from '@/lib/wooCommerceFields';
 

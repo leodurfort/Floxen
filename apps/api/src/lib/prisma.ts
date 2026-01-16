@@ -3,7 +3,6 @@ import { env } from '../config/env';
 import { logger } from './logger';
 
 declare global {
-  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 

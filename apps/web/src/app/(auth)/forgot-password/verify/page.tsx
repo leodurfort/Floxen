@@ -9,7 +9,7 @@ import * as api from '@/lib/api';
 
 export default function ForgotPasswordVerifyPage() {
   const router = useRouter();
-  const { email, step, setStep, setCode: saveCode, setVerified } = useForgotPassword();
+  const { email, setStep, setCode: saveCode, setVerified } = useForgotPassword();
   const [codeInput, setCodeInput] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);

@@ -7,13 +7,12 @@ import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 interface Props {
   value: string | null;
   onChange: (value: string | null) => void;
-  openaiAttribute: string;
   requirement?: 'Required' | 'Recommended' | 'Optional' | 'Conditional';
   fields: WooCommerceField[];
   loading: boolean;
 }
 
-export function WooCommerceFieldSelector({ value, onChange, openaiAttribute, requirement, fields, loading }: Props) {
+export function WooCommerceFieldSelector({ value, onChange, requirement, fields, loading }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);

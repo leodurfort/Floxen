@@ -10,8 +10,6 @@ import {
   findUserByEmail,
   verifyUserEmail,
   updateUserProfile,
-  completeOnboarding,
-  findUserById,
   verifyPassword,
 } from '../services/userService';
 import {

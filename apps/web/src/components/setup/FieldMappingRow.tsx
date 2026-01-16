@@ -162,7 +162,6 @@ export function FieldMappingRow({ spec, currentMapping, isUserSelected, onMappin
           <WooCommerceFieldSelector
             value={currentMapping}
             onChange={(wooField) => onMappingChange(spec.attribute, wooField)}
-            openaiAttribute={spec.attribute}
             requirement={spec.requirement}
             fields={wooFields}
             loading={wooFieldsLoading}

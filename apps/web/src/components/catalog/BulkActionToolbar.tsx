@@ -61,7 +61,6 @@ export function BulkActionToolbar({
     itemGroupCount !== null &&
     itemGroupCount > 1;
 
-  const selectAllTargetCount = hasActiveFilters ? totalMatchingCount : totalCatalogCount;
   const selectAllHandler = hasActiveFilters ? onSelectAllMatching : onSelectAllGlobal;
   const selectAllLabel = hasActiveFilters
     ? `Select all ${totalMatchingCount.toLocaleString()} matching products`

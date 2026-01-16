@@ -14,7 +14,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "lint": "echo \"Lint not yet configured for api\"",
+    "lint": "eslint src --ext .ts,.tsx",
     "format": "echo \"Format via repo root\"",
     "test": "vitest run"
   },
@@ -42,6 +42,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
@@ -51,10 +52,14 @@
     "@types/node": "^20.10.6",
     "@types/node-cron": "^3.0.11",
     "@types/supertest": "^6.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.53.0",
+    "@typescript-eslint/parser": "^8.53.0",
+    "eslint": "^9.39.2",
     "prisma": "^5.16.2",
     "supertest": "^7.0.0",
     "tsx": "^4.7.1",
     "typescript": "^5.4.0",
+    "typescript-eslint": "^8.53.0",
     "vitest": "^2.1.1"
   }
 }
