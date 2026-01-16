@@ -590,7 +590,7 @@ export default function ShopsPage() {
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                                   shop.syncEnabled ? 'bg-green-500' : 'bg-gray-300'
                                 }`}
-                                title={shop.syncEnabled ? 'Auto-sync enabled (every 15 min)' : 'Auto-sync disabled'}
+                                title={shop.syncEnabled ? 'Auto-sync enabled (hourly)' : 'Auto-sync disabled'}
                               >
                                 <span
                                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -599,7 +599,7 @@ export default function ShopsPage() {
                                 />
                               </button>
                               <span className="text-sm text-gray-500">
-                                {shop.syncEnabled ? 'Enabled (every 15 min)' : 'Disabled'}
+                                {shop.syncEnabled ? 'Enabled (hourly)' : 'Disabled'}
                               </span>
                             </div>
 

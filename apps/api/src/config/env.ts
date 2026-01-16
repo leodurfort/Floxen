@@ -140,6 +140,6 @@ export const env = {
   corsOrigin: process.env.CORS_ORIGIN || '*',
   scheduler: {
     enableScheduledSync: process.env.ENABLE_SCHEDULED_SYNC === 'true',
-    syncIntervalMinutes: toNumber(process.env.SYNC_INTERVAL_MINUTES, 15),
+    syncIntervalMinutes: toNumber(process.env.SYNC_INTERVAL_MINUTES, 60),
   },
 };

@@ -11,7 +11,7 @@ export class CronScheduler {
   private isRunning = false;
 
   schedulePeriodicSync() {
-    const job = cron.schedule('*/15 * * * *', async () => {
+    const job = cron.schedule('0 * * * *', async () => {
       logger.info('Cron: Periodic sync triggered');
       await this.triggerAllShopsSync();
     }, {
@@ -19,7 +19,7 @@ export class CronScheduler {
     });
 
     this.jobs.set('periodic-sync', job);
-    logger.info('Cron: Periodic sync scheduled (every 15 minutes)');
+    logger.info('Cron: Periodic sync scheduled (every hour)');
   }
 
   async triggerAllShopsSync() {
