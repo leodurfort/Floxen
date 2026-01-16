@@ -147,7 +147,7 @@ function getFormatFunction(dataType: ColumnDataType): ((value: unknown) => strin
       return (value) => {
         if (!value) return '-';
         try {
-          return new Date(String(value)).toLocaleDateString();
+          return new Date(String(value)).toLocaleString();
         } catch {
           return String(value);
         }
