@@ -78,10 +78,13 @@ function isFilterable(spec: OpenAIFieldSpec): boolean {
 
 const DEFAULT_COLUMN_ORDER: string[] = [
   'checkbox',           // Selection (always first)
-  // Key required OpenAI fields
   'id',                 // Basic Product Data
   'image_link',         // Media
   'title',              // Basic Product Data
+  'enable_search',      // Flags
+  'overrides',          // Custom: Override count
+  'feedStatus',         // Custom: Feed status
+  // Additional required fields
   'description',        // Basic Product Data
   'link',               // Basic Product Data
   'product_category',   // Item Information
@@ -91,10 +94,6 @@ const DEFAULT_COLUMN_ORDER: string[] = [
   'availability',       // Availability & Inventory
   'inventory_quantity', // Availability & Inventory
   'mpn',                // Identifiers
-  'enable_search',      // Flags
-  // Custom status columns
-  'overrides',          // Custom: Override count
-  'feedStatus',         // Custom: Feed status
   'updatedAt',          // Custom: Last modified
   'actions',            // Actions (always last)
 ];
