@@ -605,7 +605,7 @@ function CatalogPageContent() {
 
       case 'enable_search':
         return product.feedEnableSearch ? (
-          <span className="text-green-600">Enabled</span>
+          <span className="text-gray-500">Enabled</span>
         ) : (
           <span className="text-gray-400">Disabled</span>
         );
