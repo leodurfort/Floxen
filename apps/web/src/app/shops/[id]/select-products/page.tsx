@@ -152,7 +152,6 @@ export default function SelectProductsPage() {
     }
   }
 
-  const remainingSlots = limit - selectedIds.size;
   const isOverLimit = selectedIds.size > limit;
 
   // Show loading spinner during initial load or discovery
@@ -190,7 +189,7 @@ export default function SelectProductsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Products</h1>
         <p className="text-gray-600">
-          Choose which products to sync to your OpenAI feed.
+          Choose which products to display in ChatGPT.
           Your plan allows up to <span className="font-semibold">{limit}</span> products.
         </p>
       </div>
@@ -206,15 +205,6 @@ export default function SelectProductsPage() {
             >
               {selectedIds.size}
               <span className="text-gray-400 text-xl font-normal"> / {limit}</span>
-            </div>
-            <div className="text-sm text-gray-500">
-              {remainingSlots > 0 ? (
-                <span>{remainingSlots} slots remaining</span>
-              ) : isOverLimit ? (
-                <span className="text-red-600">Over limit by {Math.abs(remainingSlots)}</span>
-              ) : (
-                <span className="text-green-600">Limit reached</span>
-              )}
             </div>
             <div className="text-sm text-gray-400 border-l border-gray-200 pl-4">
               {total} products in your WooCommerce store
@@ -370,9 +360,9 @@ export default function SelectProductsPage() {
         </>
       )}
 
-      {/* Fixed Bottom Bar - Save Button */}
+      {/* Fixed Bottom Bar - Save Button (starts after sidebar w-52 = 208px) */}
       {products.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-40">
+        <div className="fixed bottom-0 left-52 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-30">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <p className="text-sm text-gray-500">
               {selectedIds.size} of {limit} products selected
