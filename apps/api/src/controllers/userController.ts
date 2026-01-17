@@ -357,7 +357,12 @@ export async function deleteAccount(req: Request, res: Response) {
       where: { userId },
     });
 
-    // 9. Finally delete the user
+    // 9. Delete UserSettings
+    await prisma.userSettings.deleteMany({
+      where: { userId },
+    });
+
+    // 10. Finally delete the user
     await prisma.user.delete({
       where: { id: userId },
     });
