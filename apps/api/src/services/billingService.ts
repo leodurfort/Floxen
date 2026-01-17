@@ -4,7 +4,25 @@ import { logger } from '../lib/logger';
 import { env } from '../config/env';
 import { getTierFromPriceId, getTierLimit, type SubscriptionTier } from '../config/billing';
 
-const stripe = new Stripe(env.stripe.secretKey);
+// Lazy-initialize Stripe client to avoid crashing when key is not configured
+let stripeClient: Stripe | null = null;
+
+function getStripe(): Stripe {
+  if (!stripeClient) {
+    if (!env.stripe.secretKey) {
+      throw new Error('Stripe is not configured. Set STRIPE_SECRET_KEY environment variable.');
+    }
+    stripeClient = new Stripe(env.stripe.secretKey);
+  }
+  return stripeClient;
+}
+
+/**
+ * Check if Stripe billing is configured
+ */
+export function isStripeConfigured(): boolean {
+  return !!env.stripe.secretKey;
+}
 
 /**
  * Create a Stripe Checkout session for subscription upgrade
@@ -40,7 +58,7 @@ export async function createCheckoutSession(
     sessionParams.customer_email = user.email;
   }
 
-  const session = await stripe.checkout.sessions.create(sessionParams);
+  const session = await getStripe().checkout.sessions.create(sessionParams);
 
   logger.info('Stripe checkout session created', {
     userId,
@@ -67,7 +85,7 @@ export async function createPortalSession(
     throw new Error('No active subscription to manage');
   }
 
-  const session = await stripe.billingPortal.sessions.create({
+  const session = await getStripe().billingPortal.sessions.create({
     customer: user.stripeCustomerId,
     return_url: returnUrl,
   });
@@ -87,7 +105,7 @@ export async function handleWebhookEvent(
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       payload,
       signature,
       env.stripe.webhookSecret
@@ -144,7 +162,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   const customerId = session.customer as string;
 
   // Fetch subscription to get price and period
-  const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId) as any;
+  const subscriptionResponse = await getStripe().subscriptions.retrieve(subscriptionId) as any;
   const priceId = subscriptionResponse.items.data[0]?.price.id;
   const tier = getTierFromPriceId(priceId) || 'FREE';
   const productLimit = getTierLimit(tier);
