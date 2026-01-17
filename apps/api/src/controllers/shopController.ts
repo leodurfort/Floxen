@@ -224,6 +224,11 @@ export async function oauthCallback(req: Request, res: Response) {
 
     if (isPro) {
       // PRO tier: Full sync with auto-select all products
+      // Set syncStatus to SYNCING before queueing
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { syncStatus: 'SYNCING' },
+      });
       syncQueue?.add('product-sync', { shopId: shop.id, triggeredBy: 'oauth' }, {
         ...DEFAULT_JOB_OPTIONS,
         priority: JOB_PRIORITIES.MANUAL,
@@ -231,8 +236,12 @@ export async function oauthCallback(req: Request, res: Response) {
       logger.info('shops:oauth callback SUCCESS - PRO tier, full sync queued', { shopId: shop.id });
       return res.json({ shop, message: 'Connection verified, sync queued', needsProductSelection: false });
     } else {
-      // FREE/STARTER tier: Just return immediately, let frontend page trigger discovery
-      // This avoids blocking the OAuth callback for large catalogs
+      // FREE/STARTER tier: Set syncStatus to COMPLETED (no sync pending yet)
+      // User must select products before sync can run - banner won't show
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { syncStatus: 'COMPLETED' },
+      });
       logger.info('shops:oauth callback SUCCESS - credentials stored, discovery will be triggered by frontend', {
         shopId: shop.id,
         tier,

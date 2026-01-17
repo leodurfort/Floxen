@@ -213,13 +213,13 @@ export async function setWooCredentials(shopId: string, consumerKey: string, con
     (settings?.weightUnit && shop.weightUnit !== settings.weightUnit);
 
   // Update shop with credentials and fetched settings
+  // Note: Don't set syncStatus here - let the OAuth callback handle it based on tier
   return prisma.shop.update({
     where: { id: shopId },
     data: {
       wooConsumerKey: encrypt(consumerKey),
       wooConsumerSecret: encrypt(consumerSecret),
       isConnected: true,
-      syncStatus: 'PENDING',
       shopCurrency: settings?.shopCurrency || shop.shopCurrency,
       dimensionUnit: settings?.dimensionUnit,
       weightUnit: settings?.weightUnit,
