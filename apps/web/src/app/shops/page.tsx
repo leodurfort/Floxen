@@ -106,20 +106,32 @@ export default function ShopsPage() {
   useEffect(() => {
     if (isOAuthReturn && shopIdFromUrl && shops.length > 0 && !oauthHandledRef.current) {
       oauthHandledRef.current = true;
-      router.replace('/shops', { scroll: false });
 
       const shop = shops.find((s) => s.id === shopIdFromUrl);
       if (shop?.isConnected) {
-        setToast({ message: 'Store connected successfully! Syncing products...', type: 'success' });
+        // Check if user needs to select products (FREE/STARTER tier)
+        const tier = user?.subscriptionTier || 'FREE';
+        const needsProductSelection = tier !== 'PROFESSIONAL';
+
+        if (needsProductSelection) {
+          // Redirect to product selection page
+          setToast({ message: 'Store connected successfully! Select products to sync.', type: 'success' });
+          router.replace(`/shops/${shop.id}/select-products`);
+        } else {
+          // PRO tier: full sync, stay on shops page
+          router.replace('/shops', { scroll: false });
+          setToast({ message: 'Store connected successfully! Syncing products...', type: 'success' });
+        }
       } else {
         // OAuth was denied or failed - clean up orphaned shop
+        router.replace('/shops', { scroll: false });
         setToast({ message: 'Store connection was cancelled or denied.', type: 'error' });
         if (shop) {
           deleteShopMutation.mutate(shop.id);
         }
       }
     }
-  }, [isOAuthReturn, shopIdFromUrl, shops, router, deleteShopMutation]);
+  }, [isOAuthReturn, shopIdFromUrl, shops, router, deleteShopMutation, user]);
 
   // Local state
   const [showConnectModal, setShowConnectModal] = useState(false);

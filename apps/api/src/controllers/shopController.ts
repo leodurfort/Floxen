@@ -213,12 +213,40 @@ export async function oauthCallback(req: Request, res: Response) {
 
   try {
     const shop = await setWooCredentials(req.params.id, String(consumer_key), String(consumer_secret));
-    syncQueue?.add('product-sync', { shopId: shop.id, triggeredBy: 'oauth' }, {
-      ...DEFAULT_JOB_OPTIONS,
-      priority: JOB_PRIORITIES.MANUAL,
+
+    // Check user's subscription tier to determine post-connection flow
+    const user = await prisma.user.findUnique({
+      where: { id: shop.userId },
+      select: { subscriptionTier: true },
     });
-    logger.info('shops:oauth callback SUCCESS - stored creds', { shopId: shop.id });
-    return res.json({ shop, message: 'Connection verified, sync queued' });
+    const tier = user?.subscriptionTier || 'FREE';
+    const isPro = tier === 'PROFESSIONAL';
+
+    if (isPro) {
+      // PRO tier: Full sync with auto-select all products
+      syncQueue?.add('product-sync', { shopId: shop.id, triggeredBy: 'oauth' }, {
+        ...DEFAULT_JOB_OPTIONS,
+        priority: JOB_PRIORITIES.MANUAL,
+      });
+      logger.info('shops:oauth callback SUCCESS - PRO tier, full sync queued', { shopId: shop.id });
+      return res.json({ shop, message: 'Connection verified, sync queued', needsProductSelection: false });
+    } else {
+      // FREE/STARTER tier: Discover products, user must select which to sync
+      const { discoverWooCommerceProducts } = await import('../services/productDiscoveryService');
+      const discovery = await discoverWooCommerceProducts(shop.id);
+      logger.info('shops:oauth callback SUCCESS - discovered products for selection', {
+        shopId: shop.id,
+        tier,
+        discovered: discovery.discovered,
+        total: discovery.total,
+      });
+      return res.json({
+        shop,
+        message: 'Connection verified, products discovered',
+        needsProductSelection: true,
+        discoveredCount: discovery.total,
+      });
+    }
   } catch (err: any) {
     logger.error('shops:oauth callback ERROR', { shopId: req.params.id, error: err.message, stack: err.stack });
     return res.status(500).json({ error: err.message });
