@@ -1,4 +1,4 @@
-export type SubscriptionTier = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+export type SubscriptionTier = 'FREE' | 'STARTER' | 'PROFESSIONAL';
 
 export type SyncStatus = 'PENDING' | 'SYNCING' | 'COMPLETED' | 'FAILED' | 'PAUSED';
 
@@ -13,6 +13,12 @@ export interface User {
   subscriptionTier: SubscriptionTier;
   createdAt: string;
   updatedAt: string;
+  // Stripe billing fields
+  stripeCustomerId?: string | null;
+  subscriptionId?: string | null;
+  subscriptionStatus?: string | null; // 'active' | 'past_due' | 'canceled'
+  currentPeriodEnd?: string | null;
+  cancelAtPeriodEnd?: boolean;
 }
 
 export interface Shop {
@@ -41,6 +47,9 @@ export interface Shop {
   returnPolicy?: string | null;
   returnWindow?: number | null;
   validProductCount?: number;
+  // Product selection/billing limits
+  productLimit: number;
+  needsProductReselection?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +81,8 @@ export interface ProductStats {
 
 import type { ProductFieldOverrides } from './openai-feed-spec';
 
+export type ProductSyncState = 'discovered' | 'synced';
+
 export interface Product {
   id: string;
   shopId: string;
@@ -99,6 +110,10 @@ export interface Product {
   // Validation status
   isValid?: boolean;
   validationErrors?: Record<string, string[]> | null;
+
+  // Product selection for billing
+  isSelected?: boolean;
+  syncState?: ProductSyncState;
 }
 
 // Minimal product type for catalog listing (matches what API returns)

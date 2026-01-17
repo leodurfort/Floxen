@@ -19,6 +19,11 @@ const settingsNav = [
     description: 'Manage your password and email',
   },
   {
+    href: '/settings/billing',
+    label: 'Billing',
+    description: 'Manage your subscription plan',
+  },
+  {
     href: '/settings/account',
     label: 'Account',
     description: 'Account preferences and deletion',

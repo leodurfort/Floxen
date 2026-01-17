@@ -15,6 +15,9 @@ import {
   testWooSettings,
   activateFeed,
   getProductStats,
+  discoverProducts,
+  getDiscoveredProductsList,
+  updateProductSelection,
 } from '../controllers/shopController';
 import { requireAuth } from '../middleware/auth';
 
@@ -36,5 +39,10 @@ router.get('/:id/woo-fields', requireAuth, getWooFields);
 router.get('/:id/test-woo-settings', requireAuth, testWooSettings);
 router.post('/:id/activate-feed', requireAuth, activateFeed);
 router.get('/:id/product-stats', requireAuth, getProductStats);
+
+// Product discovery and selection for billing
+router.post('/:id/discover', requireAuth, discoverProducts);
+router.get('/:id/products/discovered', requireAuth, getDiscoveredProductsList);
+router.put('/:id/products/selection', requireAuth, updateProductSelection);
 
 export default router;

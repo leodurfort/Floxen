@@ -843,3 +843,100 @@ export async function getProductStats(req: Request, res: Response) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+/**
+ * POST /api/v1/shops/:id/discover
+ * Discover WooCommerce products (parent products only) for selection UI
+ */
+export async function discoverProducts(req: Request, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
+
+    const { discoverWooCommerceProducts } = await import('../services/productDiscoveryService');
+    const result = await discoverWooCommerceProducts(id);
+
+    logger.info('shops:discover-products', {
+      shopId: id,
+      userId: shop.userId,
+      discovered: result.discovered,
+      total: result.total,
+    });
+
+    return res.json(result);
+  } catch (err: any) {
+    logger.error('shops:discover-products error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * GET /api/v1/shops/:id/products/discovered
+ * Get all discovered products for selection UI
+ */
+export async function getDiscoveredProductsList(req: Request, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
+
+    const { getDiscoveredProducts } = await import('../services/productDiscoveryService');
+    const result = await getDiscoveredProducts(id);
+
+    logger.info('shops:discovered-products:list', {
+      shopId: id,
+      userId: shop.userId,
+      total: result.total,
+      selected: result.selected,
+      limit: result.limit,
+    });
+
+    return res.json(result);
+  } catch (err: any) {
+    logger.error('shops:discovered-products:list error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+const updateSelectionSchema = z.object({
+  productIds: z.array(z.string()),
+});
+
+/**
+ * PUT /api/v1/shops/:id/products/selection
+ * Update which products are selected for sync
+ */
+export async function updateProductSelection(req: Request, res: Response) {
+  const { id } = req.params;
+
+  const parse = updateSelectionSchema.safeParse(req.body);
+  if (!parse.success) {
+    return res.status(400).json({ error: parse.error.flatten() });
+  }
+
+  try {
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
+
+    const { updateProductSelection: updateSelection } = await import('../services/productDiscoveryService');
+    const result = await updateSelection(id, parse.data.productIds);
+
+    logger.info('shops:product-selection:update', {
+      shopId: id,
+      userId: shop.userId,
+      selected: result.selected,
+      limit: result.limit,
+    });
+
+    return res.json(result);
+  } catch (err: any) {
+    logger.error('shops:product-selection:update error', err);
+    if (err.message.includes('exceeds tier limit')) {
+      return res.status(400).json({ error: err.message, code: 'LIMIT_EXCEEDED' });
+    }
+    return res.status(500).json({ error: err.message });
+  }
+}

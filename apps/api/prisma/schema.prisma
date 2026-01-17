@@ -11,7 +11,6 @@ enum SubscriptionTier {
   FREE
   STARTER
   PROFESSIONAL
-  ENTERPRISE
 }
 
 enum SyncStatus {
@@ -45,6 +44,13 @@ model User {
   subscriptionTier SubscriptionTier @default(FREE) @map("subscription_tier")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  // Stripe billing fields
+  stripeCustomerId    String?   @unique @map("stripe_customer_id")
+  subscriptionId      String?   @map("subscription_id")
+  subscriptionStatus  String?   @map("subscription_status") // active, past_due, canceled
+  currentPeriodEnd    DateTime? @map("current_period_end")
+  cancelAtPeriodEnd   Boolean   @default(false) @map("cancel_at_period_end")
 
   shops              Shop[]
   settings           UserSettings?
@@ -122,6 +128,11 @@ model Shop {
   fieldMappingsUpdatedAt DateTime? @map("field_mappings_updated_at")
   shopSettingsUpdatedAt DateTime? @map("shop_settings_updated_at")
   productsReprocessedAt DateTime? @map("products_reprocessed_at")
+
+  // Product selection/billing limits
+  productLimit              Int       @default(15) @map("product_limit")
+  needsProductReselection   Boolean   @default(false) @map("needs_product_reselection")
+
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
 
@@ -176,6 +187,10 @@ model Product {
   checksum            String?
   isValid             Boolean       @default(false) @map("is_valid")
   validationErrors    Json?         @map("validation_errors")
+
+  // Product selection for billing (defaults true for backwards compatibility)
+  isSelected          Boolean       @default(true) @map("is_selected")
+  syncState           String        @default("synced") @map("sync_state")  // 'discovered' | 'synced'
 
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")

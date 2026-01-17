@@ -656,3 +656,79 @@ export async function getProductWooData(shopId: string, productId: string) {
     `/api/v1/shops/${shopId}/products/${productId}/woo-data`
   );
 }
+
+// Billing
+
+export interface BillingInfo {
+  tier: string;
+  status: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface BillingPrices {
+  starter: { monthly: string; annual: string };
+  professional: { monthly: string; annual: string };
+}
+
+export async function getBilling() {
+  return requestWithAuth<BillingInfo>('/api/v1/billing');
+}
+
+export async function getBillingPrices() {
+  return requestWithAuth<BillingPrices>('/api/v1/billing/prices');
+}
+
+export async function createCheckoutSession(priceId: string) {
+  return requestWithAuth<{ url: string }>('/api/v1/billing/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ priceId }),
+  });
+}
+
+export async function createPortalSession() {
+  return requestWithAuth<{ url: string }>('/api/v1/billing/portal', {
+    method: 'POST',
+  });
+}
+
+// Product Discovery & Selection
+
+export interface DiscoveredProduct {
+  id: string;
+  wooProductId: number;
+  wooTitle: string;
+  wooPrice: string | null;
+  wooImages: Array<{ src: string }> | null;
+  isSelected: boolean;
+  syncState: string;
+}
+
+export interface DiscoveredProductsResponse {
+  products: DiscoveredProduct[];
+  total: number;
+  selected: number;
+  limit: number;
+}
+
+export async function discoverProducts(shopId: string) {
+  return requestWithAuth<{ message: string; discovered: number }>(`/api/v1/shops/${shopId}/discover`, {
+    method: 'POST',
+  });
+}
+
+export async function getDiscoveredProducts(shopId: string) {
+  return requestWithAuth<DiscoveredProductsResponse>(`/api/v1/shops/${shopId}/products/discovered`);
+}
+
+export async function updateProductSelection(shopId: string, productIds: string[]) {
+  return requestWithAuth<{
+    success: boolean;
+    selected: number;
+    limit: number;
+    message: string;
+  }>(`/api/v1/shops/${shopId}/products/selection`, {
+    method: 'PUT',
+    body: JSON.stringify({ productIds }),
+  });
+}

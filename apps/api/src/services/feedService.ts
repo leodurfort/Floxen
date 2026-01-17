@@ -33,7 +33,7 @@ export function generateFeedPayload(
   };
 
   const items = products
-    .filter(p => p.isValid && p.feedEnableSearch)
+    .filter(p => p.isValid && p.feedEnableSearch && p.isSelected && p.syncState === 'synced')
     .map((p) => {
         const autoFilled = (p.openaiAutoFilled as Record<string, any>) || {};
         const completeItem = buildFeedItem(shop, p, autoFilled);

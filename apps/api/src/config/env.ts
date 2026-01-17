@@ -137,6 +137,16 @@ export const env = {
     accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
   },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    prices: {
+      starterMonthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || '',
+      starterAnnual: process.env.STRIPE_PRICE_STARTER_ANNUAL || '',
+      proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY || '',
+      proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL || '',
+    },
+  },
   corsOrigin: process.env.CORS_ORIGIN || '*',
   scheduler: {
     enableScheduledSync: process.env.ENABLE_SCHEDULED_SYNC === 'true',

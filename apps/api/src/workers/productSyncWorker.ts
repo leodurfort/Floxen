@@ -9,6 +9,7 @@ import { AutoFillService } from '../services/autoFillService';
 import { validateProduct, ProductFieldOverrides } from '@productsynch/shared';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { Shop } from '@prisma/client';
+import { isUnlimitedTier, type SubscriptionTier } from '../config/billing';
 
 interface SyncJobData {
   shopId: string;
@@ -20,8 +21,9 @@ const SHOP_REFRESH_INTERVAL = 50;
 
 /**
  * Process a single product (simple product or merged variation)
+ * @param processAllProducts - If true (PRO tier), sets isSelected=true on all products
  */
-async function processProduct(data: any, shop: Shop, shopId: string, autoFillService: AutoFillService) {
+async function processProduct(data: any, shop: Shop, shopId: string, autoFillService: AutoFillService, processAllProducts: boolean = false) {
   const existing = await prisma.product.findUnique({
     where: { shopId_wooProductId: { shopId, wooProductId: data.wooProductId } },
     select: {
@@ -117,12 +119,18 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
       // Apply shop defaults for enable_search, always false for enable_checkout
       feedEnableSearch: shop.defaultEnableSearch,
       feedEnableCheckout: false,
+      // PRO tier auto-selects all products; others must be pre-selected
+      isSelected: processAllProducts ? true : existing?.id ? undefined : false,
+      syncState: 'synced',
       ...data,
     },
     update: {
       openaiAutoFilled: openaiAutoFilled as any,
       isValid: validation.isValid,
       validationErrors: validation.errors as any,
+      syncState: 'synced',
+      // PRO tier ensures products stay selected
+      ...(processAllProducts ? { isSelected: true } : {}),
       ...data,
       // DON'T update flag fields on sync - preserve user's product-level settings
     },
@@ -140,6 +148,7 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
 /**
  * Process a single WooCommerce product (handles both simple and variable products)
  * For variable products, variations should be pre-fetched and passed in variationsMap
+ * @param processAllProducts - If true (PRO tier), sets isSelected=true on all products
  */
 async function processSingleWooProduct(
   wooProd: any,
@@ -147,7 +156,8 @@ async function processSingleWooProduct(
   shopId: string,
   autoFillService: AutoFillService,
   categoryMap: Map<number, any>,
-  variationsMap: Map<number, any[]>
+  variationsMap: Map<number, any[]>,
+  processAllProducts: boolean
 ) {
   const enrichedProduct = enrichProductCategories(wooProd, categoryMap);
   const isVariable = enrichedProduct.type === 'variable';
@@ -167,7 +177,8 @@ async function processSingleWooProduct(
         mergeParentAndVariation(enrichedProduct, variation),
         shop,
         shopId,
-        autoFillService
+        autoFillService,
+        processAllProducts
       );
     }
 
@@ -181,7 +192,8 @@ async function processSingleWooProduct(
       transformWooProduct(enrichedProduct),
       shop,
       shopId,
-      autoFillService
+      autoFillService,
+      processAllProducts
     );
   }
 }
@@ -197,7 +209,8 @@ async function updateSyncProgress(shopId: string, progress: number) {
 }
 
 /**
- * Full sync - fetch and process all products
+ * Full sync - fetch and process products
+ * Only processes selected products (or all for PRO tier)
  * Uses parallel variation fetching with adaptive concurrency
  */
 async function runFullSync(
@@ -211,16 +224,64 @@ async function runFullSync(
   initConcurrency(shopId);
 
   try {
+    // Get user's subscription tier to determine if we should process all products
+    const user = await prisma.user.findUnique({
+      where: { id: shop.userId },
+      select: { subscriptionTier: true },
+    });
+    const tier = (user?.subscriptionTier || 'FREE') as SubscriptionTier;
+    const processAllProducts = isUnlimitedTier(tier);
+
+    // Get selected product IDs (wooProductId) if not PRO tier
+    let selectedWooProductIds: Set<number> | null = null;
+    if (!processAllProducts) {
+      const selectedProducts = await prisma.product.findMany({
+        where: {
+          shopId,
+          isSelected: true,
+          wooParentId: null, // Only parent products
+        },
+        select: { wooProductId: true },
+      });
+      selectedWooProductIds = new Set(selectedProducts.map(p => p.wooProductId));
+      logger.info('product-sync: selective sync mode', {
+        shopId,
+        tier,
+        selectedCount: selectedWooProductIds.size,
+      });
+    } else {
+      logger.info('product-sync: PRO tier - processing all products', { shopId, tier });
+    }
+
     // Initialize progress to 0
     await updateSyncProgress(shopId, 0);
 
-    const products = await fetchAllProducts(client);
-    logger.info(`product-sync: fetched products`, { shopId, count: products.length });
+    const allProducts = await fetchAllProducts(client);
+    logger.info(`product-sync: fetched products from WooCommerce`, { shopId, count: allProducts.length });
+
+    // Filter to only selected products (or all for PRO)
+    const products = processAllProducts
+      ? allProducts
+      : allProducts.filter((p: any) => {
+          // Include if this product is selected, or if it's a variation of a selected product
+          if (p.parent_id && p.parent_id !== 0) {
+            // This is a variation - include if parent is selected
+            return selectedWooProductIds!.has(p.parent_id);
+          }
+          return selectedWooProductIds!.has(p.id);
+        });
+
+    logger.info(`product-sync: products to process`, {
+      shopId,
+      total: allProducts.length,
+      selected: products.length,
+      skipped: allProducts.length - products.length,
+    });
 
     const categoryMap = await fetchAllCategories(client);
     logger.info(`product-sync: fetched categories`, { shopId, categoryCount: categoryMap.size });
 
-    // Identify variable products that need variation fetching
+    // Identify variable products that need variation fetching (only from selected products)
     const variableProducts = products.filter((p: any) => p.type === 'variable');
     logger.info('product-sync: identified variable products', {
       shopId,
@@ -288,7 +349,7 @@ async function runFullSync(
         }
       }
 
-      await processSingleWooProduct(wooProd, currentShop, shopId, autoFillService, categoryMap, variationsMap);
+      await processSingleWooProduct(wooProd, currentShop, shopId, autoFillService, categoryMap, variationsMap, processAllProducts);
       processedCount++;
 
       // Update progress every 5% or at least every 10 products
@@ -298,6 +359,15 @@ async function runFullSync(
         lastReportedProgress = currentProgress;
       }
     }
+
+    // Update syncState to 'synced' for all processed products
+    await prisma.product.updateMany({
+      where: {
+        shopId,
+        isSelected: true,
+      },
+      data: { syncState: 'synced' },
+    });
 
     // Field discovery only on full sync
     logger.info('product-sync: triggering field discovery', { shopId });
@@ -317,7 +387,7 @@ async function runFullSync(
       });
     }
 
-    logger.info('product-sync: full sync completed', { shopId, productCount: products.length });
+    logger.info('product-sync: sync completed', { shopId, productCount: products.length, tier });
   } finally {
     // Always clean up concurrency tracking
     cleanupConcurrency(shopId);
