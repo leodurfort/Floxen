@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import * as api from '@/lib/api';
 
-const PRODUCTS_PER_PAGE = 48;
+const PAGE_SIZE = 48;
 
 export default function SelectProductsPage() {
   const params = useParams<{ id: string }>();
@@ -16,34 +16,71 @@ export default function SelectProductsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [total, setTotal] = useState(0);
   const [limit, setLimit] = useState(15);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isDiscovering, setIsDiscovering] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [displayCount, setDisplayCount] = useState(PRODUCTS_PER_PAGE);
+  const discoveryAttempted = useRef(false);
 
   const shopId = params?.id;
 
-  // Load discovered products
-  const loadProducts = useCallback(async () => {
+  // Load first page of discovered products
+  const loadProducts = useCallback(async (page = 1, append = false) => {
     if (!shopId) return;
 
     try {
-      setIsLoading(true);
-      const data = await api.getDiscoveredProducts(shopId);
-      setProducts(data.products);
+      if (page === 1) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
+      const data = await api.getDiscoveredProducts(shopId, page, PAGE_SIZE);
+
+      if (append) {
+        setProducts((prev) => [...prev, ...data.products]);
+      } else {
+        setProducts(data.products);
+        // Initialize selected IDs from first page (we'll fetch more as needed)
+        const selected = new Set(
+          data.products.filter((p) => p.isSelected).map((p) => p.id)
+        );
+        setSelectedIds(selected);
+      }
+
       setTotal(data.total);
       setLimit(data.limit);
+      setCurrentPage(data.page);
+      setHasMore(data.hasMore);
 
-      // Initialize selected IDs from existing selections
-      const selected = new Set(
-        data.products.filter((p) => p.isSelected).map((p) => p.id)
-      );
-      setSelectedIds(selected);
+      // If no products found and we haven't tried discovery yet, trigger it
+      if (data.total === 0 && !discoveryAttempted.current) {
+        discoveryAttempted.current = true;
+        setIsDiscovering(true);
+        try {
+          await api.discoverProducts(shopId);
+          // Reload products after discovery
+          const freshData = await api.getDiscoveredProducts(shopId, 1, PAGE_SIZE);
+          setProducts(freshData.products);
+          setTotal(freshData.total);
+          setLimit(freshData.limit);
+          setCurrentPage(freshData.page);
+          setHasMore(freshData.hasMore);
+        } catch (discoverErr) {
+          setError(discoverErr instanceof Error ? discoverErr.message : 'Failed to discover products');
+        } finally {
+          setIsDiscovering(false);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load products');
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   }, [shopId]);
 
@@ -69,7 +106,7 @@ export default function SelectProductsPage() {
 
   function selectAll() {
     const newSelected = new Set<string>();
-    // Select up to limit products
+    // Select up to limit products from currently loaded products
     for (const product of products) {
       if (newSelected.size >= limit) break;
       newSelected.add(product.id);
@@ -82,7 +119,9 @@ export default function SelectProductsPage() {
   }
 
   function loadMore() {
-    setDisplayCount((prev) => Math.min(prev + PRODUCTS_PER_PAGE, products.length));
+    if (!isLoadingMore && hasMore) {
+      loadProducts(currentPage + 1, true);
+    }
   }
 
   async function handleSave() {
@@ -103,9 +142,9 @@ export default function SelectProductsPage() {
         // Sync trigger is best-effort
       }
 
-      // Redirect to catalog after short delay
+      // Redirect to shops after short delay
       setTimeout(() => {
-        router.push(`/shops/${shopId}/products`);
+        router.push('/shops');
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save selection');
@@ -115,20 +154,31 @@ export default function SelectProductsPage() {
 
   const remainingSlots = limit - selectedIds.size;
   const isOverLimit = selectedIds.size > limit;
-  const displayedProducts = products.slice(0, displayCount);
-  const hasMore = displayCount < products.length;
 
-  if (isLoading) {
+  // Show loading spinner during initial load or discovery
+  if (isLoading || isDiscovering) {
     return (
-      <div className="p-4">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
-            {[...Array(12)].map((_, i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
-            ))}
+      <div className="p-4 max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Products</h1>
+          <p className="text-gray-600">
+            {isDiscovering
+              ? 'Discovering products from your WooCommerce store...'
+              : 'Loading products...'}
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center justify-center py-20">
+          {/* Spinner */}
+          <div className="relative w-16 h-16 mb-4">
+            <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-[#FA7315] rounded-full border-t-transparent animate-spin"></div>
           </div>
+          <p className="text-gray-500 text-sm">
+            {isDiscovering
+              ? 'This may take a moment for large catalogs...'
+              : 'Please wait...'}
+          </p>
         </div>
       </div>
     );
@@ -206,26 +256,12 @@ export default function SelectProductsPage() {
       {/* Products Grid */}
       {products.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-          <p className="text-gray-500">No products found. Try running product discovery first.</p>
-          <button
-            onClick={async () => {
-              if (!shopId) return;
-              try {
-                await api.discoverProducts(shopId);
-                loadProducts();
-              } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to discover products');
-              }
-            }}
-            className="mt-4 btn btn--primary"
-          >
-            Discover Products
-          </button>
+          <p className="text-gray-500">No products found in your WooCommerce store.</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {displayedProducts.map((product) => {
+            {products.map((product) => {
               const isSelected = selectedIds.has(product.id);
               const imageUrl = product.wooImages?.[0]?.src;
               const canSelect = isSelected || selectedIds.size < limit;
@@ -314,9 +350,20 @@ export default function SelectProductsPage() {
             <div className="mt-6 text-center">
               <button
                 onClick={loadMore}
-                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                disabled={isLoadingMore}
+                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 disabled:opacity-50"
               >
-                Load more ({products.length - displayCount} remaining)
+                {isLoadingMore ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Loading...
+                  </span>
+                ) : (
+                  `Load more (${total - products.length} remaining)`
+                )}
               </button>
             </div>
           )}

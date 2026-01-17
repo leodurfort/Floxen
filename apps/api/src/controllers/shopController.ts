@@ -231,20 +231,16 @@ export async function oauthCallback(req: Request, res: Response) {
       logger.info('shops:oauth callback SUCCESS - PRO tier, full sync queued', { shopId: shop.id });
       return res.json({ shop, message: 'Connection verified, sync queued', needsProductSelection: false });
     } else {
-      // FREE/STARTER tier: Discover products, user must select which to sync
-      const { discoverWooCommerceProducts } = await import('../services/productDiscoveryService');
-      const discovery = await discoverWooCommerceProducts(shop.id);
-      logger.info('shops:oauth callback SUCCESS - discovered products for selection', {
+      // FREE/STARTER tier: Just return immediately, let frontend page trigger discovery
+      // This avoids blocking the OAuth callback for large catalogs
+      logger.info('shops:oauth callback SUCCESS - credentials stored, discovery will be triggered by frontend', {
         shopId: shop.id,
         tier,
-        discovered: discovery.discovered,
-        total: discovery.total,
       });
       return res.json({
         shop,
-        message: 'Connection verified, products discovered',
+        message: 'Connection verified',
         needsProductSelection: true,
-        discoveredCount: discovery.total,
       });
     }
   } catch (err: any) {
@@ -906,13 +902,15 @@ export async function discoverProducts(req: Request, res: Response) {
  */
 export async function getDiscoveredProductsList(req: Request, res: Response) {
   const { id } = req.params;
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 48));
 
   try {
     const shop = await verifyShopOwnership(req, res, id);
     if (!shop) return;
 
     const { getDiscoveredProducts } = await import('../services/productDiscoveryService');
-    const result = await getDiscoveredProducts(id);
+    const result = await getDiscoveredProducts(id, { page, pageSize });
 
     logger.info('shops:discovered-products:list', {
       shopId: id,
@@ -920,6 +918,8 @@ export async function getDiscoveredProductsList(req: Request, res: Response) {
       total: result.total,
       selected: result.selected,
       limit: result.limit,
+      page,
+      pageSize,
     });
 
     return res.json(result);

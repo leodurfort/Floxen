@@ -111,15 +111,24 @@ export async function discoverWooCommerceProducts(shopId: string): Promise<{
 }
 
 /**
- * Get all discovered products for a shop (for selection UI)
+ * Get discovered products for a shop (for selection UI)
  * Returns parent products only, sorted by title
+ * Supports pagination for better performance
  */
-export async function getDiscoveredProducts(shopId: string): Promise<{
+export async function getDiscoveredProducts(
+  shopId: string,
+  options: { page?: number; pageSize?: number } = {}
+): Promise<{
   products: DiscoveredProduct[];
   total: number;
   selected: number;
   limit: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 }> {
+  const { page = 1, pageSize = 48 } = options;
+
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
     include: { user: true },
@@ -132,7 +141,17 @@ export async function getDiscoveredProducts(shopId: string): Promise<{
   const tier = shop.user.subscriptionTier as SubscriptionTier;
   const limit = getTierLimit(tier);
 
-  // Get all parent products (wooParentId is null)
+  // Get total count and selected count
+  const [total, selected] = await Promise.all([
+    prisma.product.count({
+      where: { shopId, wooParentId: null },
+    }),
+    prisma.product.count({
+      where: { shopId, wooParentId: null, isSelected: true },
+    }),
+  ]);
+
+  // Get paginated products
   const products = await prisma.product.findMany({
     where: {
       shopId,
@@ -149,9 +168,9 @@ export async function getDiscoveredProducts(shopId: string): Promise<{
       syncState: true,
     },
     orderBy: { wooTitle: 'asc' },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
   });
-
-  const selected = products.filter(p => p.isSelected).length;
 
   return {
     products: products.map(p => ({
@@ -164,9 +183,12 @@ export async function getDiscoveredProducts(shopId: string): Promise<{
       isSelected: p.isSelected,
       syncState: p.syncState,
     })),
-    total: products.length,
+    total,
     selected,
     limit,
+    page,
+    pageSize,
+    hasMore: page * pageSize < total,
   };
 }
 

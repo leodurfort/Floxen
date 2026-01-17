@@ -709,6 +709,9 @@ export interface DiscoveredProductsResponse {
   total: number;
   selected: number;
   limit: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 }
 
 export async function discoverProducts(shopId: string) {
@@ -717,8 +720,10 @@ export async function discoverProducts(shopId: string) {
   });
 }
 
-export async function getDiscoveredProducts(shopId: string) {
-  return requestWithAuth<DiscoveredProductsResponse>(`/api/v1/shops/${shopId}/products/discovered`);
+export async function getDiscoveredProducts(shopId: string, page = 1, pageSize = 48) {
+  return requestWithAuth<DiscoveredProductsResponse>(
+    `/api/v1/shops/${shopId}/products/discovered?page=${page}&pageSize=${pageSize}`
+  );
 }
 
 export async function updateProductSelection(shopId: string, productIds: string[]) {
