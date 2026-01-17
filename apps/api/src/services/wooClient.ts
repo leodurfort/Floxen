@@ -40,7 +40,15 @@ async function fetchAllPaginated(
 
   while (true) {
     const response = await api.get(endpoint, { ...params, page, per_page: perPage });
-    all.push(...response.data);
+
+    // Use concat instead of spread to avoid stack overflow with large arrays
+    // The spread operator (...) can cause "Maximum call stack size exceeded"
+    // when the array is very large or has unexpected data structures
+    const data = Array.isArray(response.data) ? response.data : [];
+    for (const item of data) {
+      all.push(item);
+    }
+
     const totalPages = parseInt(response.headers['x-wp-totalpages'] || '1', 10);
     if (page >= totalPages) break;
     page++;
