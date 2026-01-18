@@ -43,7 +43,7 @@ export function SyncStatusBanner({ shop }: SyncStatusBannerProps) {
 
         <div className="flex-1 min-w-0">
           <div className="text-blue-800 text-sm font-medium">
-            Syncing products from your WooCommerce store...
+            Syncing all product details...
           </div>
           <div className="text-blue-600 text-xs mt-1">
             This may take a few minutes depending on your catalog size.
