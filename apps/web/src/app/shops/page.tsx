@@ -29,7 +29,8 @@ function isProfileComplete(shop: Shop): boolean {
 }
 
 function isFirstSync(shop: Shop): boolean {
-  return (shop.syncStatus === 'SYNCING' || shop.syncStatus === 'PENDING') && shop.lastSyncAt === null;
+  // Must be connected AND in sync state AND never synced before
+  return shop.isConnected && (shop.syncStatus === 'SYNCING' || shop.syncStatus === 'PENDING') && shop.lastSyncAt === null;
 }
 
 export default function ShopsPage() {
