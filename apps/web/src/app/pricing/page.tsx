@@ -30,19 +30,43 @@ export default function PricingPage() {
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
 
+  console.debug('[PRICING-PAGE] Component render', {
+    hasUser: !!user,
+    userId: user?.id,
+    userTier: user?.subscriptionTier,
+    currentTier,
+    billingCycle,
+    hasPrices: !!prices,
+  });
+
   useEffect(() => {
     async function loadData() {
+      console.debug('[PRICING-PAGE] loadData() started', {
+        hasUser: !!user,
+        userId: user?.id,
+      });
+
       try {
         const [pricesData, billingData] = await Promise.all([
           api.getBillingPrices(),
           user ? api.getBilling() : Promise.resolve(null),
         ]);
+
+        console.debug('[PRICING-PAGE] loadData() responses', {
+          prices: pricesData,
+          billingData,
+        });
+
         setPrices(pricesData);
         if (billingData) {
+          console.debug('[PRICING-PAGE] Setting currentTier from API', {
+            tier: billingData.tier,
+            status: billingData.status,
+          });
           setCurrentTier(billingData.tier);
         }
       } catch (err) {
-        console.error('Failed to load pricing data:', err);
+        console.error('[PRICING-PAGE] Failed to load pricing data:', err);
       }
     }
     loadData();
@@ -107,17 +131,36 @@ export default function PricingPage() {
   ];
 
   async function handleSelectPlan(plan: Plan) {
+    console.debug('[PRICING-PAGE] handleSelectPlan() called', {
+      planTier: plan.tier,
+      planName: plan.name,
+      currentTier,
+      billingCycle,
+      priceId: plan.priceId[billingCycle],
+      hasUser: !!user,
+    });
+
     if (plan.tier === 'FREE' || plan.tier === currentTier) {
+      console.debug('[PRICING-PAGE] Plan selection blocked (FREE or current)', {
+        planTier: plan.tier,
+        currentTier,
+      });
       return;
     }
 
     if (!user) {
+      console.debug('[PRICING-PAGE] No user, redirecting to login');
       router.push('/login?redirect=/pricing');
       return;
     }
 
     const priceId = plan.priceId[billingCycle];
     if (!priceId) {
+      console.error('[PRICING-PAGE] No priceId available', {
+        planTier: plan.tier,
+        billingCycle,
+        allPriceIds: plan.priceId,
+      });
       setError('Pricing not available. Please try again later.');
       return;
     }
@@ -126,9 +169,18 @@ export default function PricingPage() {
     setError('');
 
     try {
+      console.debug('[PRICING-PAGE] Creating checkout session', {
+        priceId,
+        planTier: plan.tier,
+        billingCycle,
+      });
       const { url } = await api.createCheckoutSession(priceId);
+      console.debug('[PRICING-PAGE] Checkout session created, redirecting', {
+        url,
+      });
       window.location.href = url;
     } catch (err) {
+      console.error('[PRICING-PAGE] Checkout session FAILED', err);
       setError(err instanceof Error ? err.message : 'Failed to start checkout');
       setIsLoading(null);
     }

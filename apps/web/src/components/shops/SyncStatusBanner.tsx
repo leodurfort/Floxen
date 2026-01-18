@@ -9,8 +9,8 @@ interface SyncStatusBannerProps {
 }
 
 export function SyncStatusBanner({ shop }: SyncStatusBannerProps) {
-  // Only show during first sync (syncing/pending with no previous sync)
-  const isFirstSync = (shop.syncStatus === 'SYNCING' || shop.syncStatus === 'PENDING') && shop.lastSyncAt === null;
+  // Only show during active sync (not PENDING, which means awaiting product selection)
+  const isFirstSync = shop.syncStatus === 'SYNCING' && shop.lastSyncAt === null;
 
   if (!isFirstSync) return null;
 

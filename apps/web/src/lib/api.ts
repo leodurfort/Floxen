@@ -211,7 +211,19 @@ export async function forgotPasswordReset(payload: { email: string; code: string
 // User Profile
 
 export async function getProfile() {
-  return requestWithAuth<User>('/api/v1/users/me');
+  console.debug('[API-CLIENT] getProfile() called');
+  try {
+    const result = await requestWithAuth<User>('/api/v1/users/me');
+    console.debug('[API-CLIENT] getProfile() response', {
+      userId: result.id,
+      email: result.email,
+      subscriptionTier: result.subscriptionTier,
+    });
+    return result;
+  } catch (err) {
+    console.error('[API-CLIENT] getProfile() FAILED:', err);
+    throw err;
+  }
 }
 
 export async function updateProfile(payload: { firstName?: string; surname?: string }) {
@@ -676,24 +688,72 @@ export interface BillingPrices {
 }
 
 export async function getBilling() {
-  return requestWithAuth<BillingInfo>('/api/v1/billing');
+  console.debug('[BILLING-CLIENT] getBilling() called');
+  try {
+    const result = await requestWithAuth<BillingInfo>('/api/v1/billing');
+    console.debug('[BILLING-CLIENT] getBilling() response:', {
+      tier: result.tier,
+      status: result.status,
+      currentPeriodEnd: result.currentPeriodEnd,
+      cancelAtPeriodEnd: result.cancelAtPeriodEnd,
+    });
+    return result;
+  } catch (err) {
+    console.error('[BILLING-CLIENT] getBilling() FAILED:', err);
+    throw err;
+  }
 }
 
 export async function getBillingPrices() {
-  return requestWithAuth<BillingPrices>('/api/v1/billing/prices');
+  console.debug('[BILLING-CLIENT] getBillingPrices() called');
+  try {
+    const result = await requestWithAuth<BillingPrices>('/api/v1/billing/prices');
+    console.debug('[BILLING-CLIENT] getBillingPrices() response:', {
+      hasStarterMonthly: !!result.starter?.monthly,
+      hasStarterAnnual: !!result.starter?.annual,
+      hasProMonthly: !!result.professional?.monthly,
+      hasProAnnual: !!result.professional?.annual,
+    });
+    return result;
+  } catch (err) {
+    console.error('[BILLING-CLIENT] getBillingPrices() FAILED:', err);
+    throw err;
+  }
 }
 
 export async function createCheckoutSession(priceId: string) {
-  return requestWithAuth<{ url: string }>('/api/v1/billing/checkout', {
-    method: 'POST',
-    body: JSON.stringify({ priceId }),
-  });
+  console.debug('[BILLING-CLIENT] createCheckoutSession() called', { priceId });
+  try {
+    const result = await requestWithAuth<{ url: string }>('/api/v1/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ priceId }),
+    });
+    console.debug('[BILLING-CLIENT] createCheckoutSession() response:', {
+      hasUrl: !!result.url,
+      urlPreview: result.url?.substring(0, 50),
+    });
+    return result;
+  } catch (err) {
+    console.error('[BILLING-CLIENT] createCheckoutSession() FAILED:', err);
+    throw err;
+  }
 }
 
 export async function createPortalSession() {
-  return requestWithAuth<{ url: string }>('/api/v1/billing/portal', {
-    method: 'POST',
-  });
+  console.debug('[BILLING-CLIENT] createPortalSession() called');
+  try {
+    const result = await requestWithAuth<{ url: string }>('/api/v1/billing/portal', {
+      method: 'POST',
+    });
+    console.debug('[BILLING-CLIENT] createPortalSession() response:', {
+      hasUrl: !!result.url,
+      urlPreview: result.url?.substring(0, 50),
+    });
+    return result;
+  } catch (err) {
+    console.error('[BILLING-CLIENT] createPortalSession() FAILED:', err);
+    throw err;
+  }
 }
 
 // Product Discovery & Selection

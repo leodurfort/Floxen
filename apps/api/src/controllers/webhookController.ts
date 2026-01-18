@@ -10,24 +10,42 @@ import { logger } from '../lib/logger';
  */
 export async function stripeWebhookHandler(req: Request, res: Response) {
   const signature = req.headers['stripe-signature'] as string;
+  const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
+
+  logger.info('[WEBHOOK] Stripe webhook received', {
+    requestId,
+    hasSignature: !!signature,
+    bodyLength: req.body?.length,
+    contentType: req.headers['content-type'],
+  });
 
   if (!signature) {
-    logger.warn('Stripe webhook missing signature header');
+    logger.warn('[WEBHOOK] Missing stripe-signature header', { requestId });
     return res.status(400).json({ error: 'Missing stripe-signature header' });
   }
 
   try {
+    logger.debug('[WEBHOOK] Processing webhook event', { requestId });
+
     await handleWebhookEvent(req.body, signature);
+
+    logger.info('[WEBHOOK] Webhook processed successfully', { requestId });
     res.json({ received: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Webhook handler failed';
 
     if (message === 'Invalid signature') {
+      logger.error('[WEBHOOK] Invalid signature - possible webhook secret mismatch', {
+        requestId,
+        signaturePrefix: signature?.substring(0, 20),
+      });
       return res.status(400).json({ error: 'Invalid signature' });
     }
 
-    logger.error('Stripe webhook handler error', {
+    logger.error('[WEBHOOK] Webhook handler FAILED', {
+      requestId,
       error: err instanceof Error ? err : new Error(String(err)),
+      message,
     });
     res.status(500).json({ error: 'Webhook handler failed' });
   }

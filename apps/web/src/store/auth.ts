@@ -19,34 +19,68 @@ export const useAuth = create<AuthState>((set) => ({
   hydrated: false,
 
   setSession: (user, accessToken, refreshToken) => {
+    console.debug('[AUTH-STORE] setSession() called', {
+      userId: user.id,
+      email: user.email,
+      subscriptionTier: user.subscriptionTier,
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+    });
+
     if (typeof window !== 'undefined') {
       localStorage.setItem('productsynch.user', JSON.stringify(user));
       localStorage.setItem('productsynch.access', accessToken);
       localStorage.setItem('productsynch.refresh', refreshToken);
+      console.debug('[AUTH-STORE] Tokens and user saved to localStorage');
     }
     set({ user, hydrated: true });
+    console.debug('[AUTH-STORE] Zustand state updated with user');
   },
 
   setUser: (user) => {
+    console.debug('[AUTH-STORE] setUser() called', {
+      userId: user.id,
+      email: user.email,
+      subscriptionTier: user.subscriptionTier,
+    });
+
     if (typeof window !== 'undefined') {
       localStorage.setItem('productsynch.user', JSON.stringify(user));
+      console.debug('[AUTH-STORE] User saved to localStorage');
     }
     set({ user, hydrated: true });
+    console.debug('[AUTH-STORE] Zustand state updated with user');
   },
 
   clear: () => {
+    console.debug('[AUTH-STORE] clear() called - logging out user');
     if (typeof window !== 'undefined') {
       localStorage.removeItem('productsynch.user');
       localStorage.removeItem('productsynch.access');
       localStorage.removeItem('productsynch.refresh');
+      console.debug('[AUTH-STORE] All auth data removed from localStorage');
     }
     set({ user: null });
+    console.debug('[AUTH-STORE] Zustand state cleared');
   },
 
   hydrate: () => {
-    if (typeof window === 'undefined') return;
+    console.debug('[AUTH-STORE] hydrate() called');
+    if (typeof window === 'undefined') {
+      console.debug('[AUTH-STORE] SSR environment, skipping hydration');
+      return;
+    }
+
     const userRaw = localStorage.getItem('productsynch.user');
     const user = userRaw ? (JSON.parse(userRaw) as User) : null;
+
+    console.debug('[AUTH-STORE] hydrate() result', {
+      hasUserInStorage: !!userRaw,
+      userId: user?.id,
+      subscriptionTier: user?.subscriptionTier,
+    });
+
     set({ user, hydrated: true });
+    console.debug('[AUTH-STORE] Zustand state hydrated from localStorage');
   },
 }));

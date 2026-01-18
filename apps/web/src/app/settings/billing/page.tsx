@@ -21,28 +21,47 @@ export default function BillingSettingsPage() {
   const successParam = searchParams.get('success');
   const canceledParam = searchParams.get('canceled');
 
+  console.debug('[BILLING-PAGE] Component mounted', {
+    successParam,
+    canceledParam,
+    currentUrl: typeof window !== 'undefined' ? window.location.href : 'SSR',
+  });
+
   useEffect(() => {
     async function loadBilling() {
+      console.debug('[BILLING-PAGE] loadBilling() started');
       try {
         const data = await api.getBilling();
+        console.debug('[BILLING-PAGE] loadBilling() success', {
+          tier: data.tier,
+          status: data.status,
+          currentPeriodEnd: data.currentPeriodEnd,
+          cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+        });
         setBilling(data);
       } catch (err) {
+        console.error('[BILLING-PAGE] loadBilling() FAILED', err);
         setError(err instanceof Error ? err.message : 'Failed to load billing info');
       } finally {
         setIsLoading(false);
+        console.debug('[BILLING-PAGE] loadBilling() completed, isLoading set to false');
       }
     }
     loadBilling();
   }, []);
 
   async function handleManageBilling() {
+    console.debug('[BILLING-PAGE] handleManageBilling() called');
     setIsPortalLoading(true);
     setError('');
 
     try {
+      console.debug('[BILLING-PAGE] Creating portal session...');
       const { url } = await api.createPortalSession();
+      console.debug('[BILLING-PAGE] Portal session created, redirecting to:', url);
       window.location.href = url;
     } catch (err) {
+      console.error('[BILLING-PAGE] handleManageBilling() FAILED', err);
       setError(err instanceof Error ? err.message : 'Failed to open billing portal');
       setIsPortalLoading(false);
     }
