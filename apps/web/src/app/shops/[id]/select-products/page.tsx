@@ -2,15 +2,18 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/store/auth';
 import * as api from '@/lib/api';
 import { SearchFilter } from '@/components/catalog/FilterDropdown';
+import { queryKeys } from '@/lib/queryClient';
 
 const PAGE_SIZE = 48;
 
 export default function SelectProductsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, hydrated } = useAuth();
 
   const [products, setProducts] = useState<api.DiscoveredProduct[]>([]);
@@ -161,6 +164,8 @@ export default function SelectProductsPage() {
       // Trigger a sync after selection
       try {
         await api.triggerProductSync(shopId);
+        // Invalidate shops query so the redirect sees SYNCING status
+        await queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
       } catch {
         // Sync trigger is best-effort
       }
