@@ -716,7 +716,7 @@ function CatalogPageContent() {
         {/* Scrollable Table Section */}
         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto">
           {loading && <div className="text-gray-500 p-6">Loading items...</div>}
-          {!loading && !products.length && (
+          {!loading && !products.length && totalCatalogCount === 0 && (
             <div className="text-center p-12">
               <p className="text-gray-500 mb-4">No products synced yet.</p>
               <Link
@@ -725,6 +725,17 @@ function CatalogPageContent() {
               >
                 Click here to select your products
               </Link>
+            </div>
+          )}
+          {!loading && !products.length && totalCatalogCount > 0 && (
+            <div className="text-center p-12">
+              <p className="text-gray-500 mb-4">No items match your current filters.</p>
+              <button
+                onClick={handleClearFilters}
+                className="text-[#FA7315] hover:underline font-medium"
+              >
+                Clear filters to see all products
+              </button>
             </div>
           )}
           {!loading && products.length > 0 && (
