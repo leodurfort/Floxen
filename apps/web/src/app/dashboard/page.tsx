@@ -49,7 +49,7 @@ export default function DashboardPage() {
   const checklistSteps = {
     connectStore: currentShop?.isConnected ?? false,
     fieldMappings: fieldMappingProgress.isComplete,
-    reviewCatalog: (productStats?.needsAttention ?? 0) === 0,
+    reviewCatalog: (productStats?.total ?? 0) > 0 && (productStats?.needsAttention ?? 0) === 0,
     activateFeed: currentShop?.openaiEnabled ?? false,
     unlockMoreItems: user.subscriptionTier !== 'FREE',
   };

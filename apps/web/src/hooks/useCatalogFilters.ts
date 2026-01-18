@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { useCallback, useMemo, useEffect, useRef } from 'react';
+import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 
 // Types
 
@@ -122,11 +122,13 @@ export function useCatalogFilters(shopId?: string) {
   const hasRestoredFromStorage = useRef(false);
 
   // Track pending filters between router.push() and URL update (async operation)
-  const pendingFiltersRef = useRef<CatalogFilters | null>(null);
+  // Using state instead of ref so UI updates immediately on filter changes
+  const [pendingFilters, setPendingFilters] = useState<CatalogFilters | null>(null);
 
   const searchParamsString = searchParams.toString();
   useEffect(() => {
-    pendingFiltersRef.current = null;
+    // Clear pending filters when URL catches up
+    setPendingFilters(null);
   }, [searchParamsString]);
 
   const hasUrlParams = useMemo(() => {
@@ -139,6 +141,12 @@ export function useCatalogFilters(shopId?: string) {
   }, [searchParams]);
 
   const filters = useMemo<CatalogFilters>(() => {
+    // Pending filters take priority - ensures UI updates immediately
+    // even when URL hasn't changed yet (or won't change for same-URL navigation)
+    if (pendingFilters) {
+      return pendingFilters;
+    }
+
     if (hasUrlParams) {
       hasRestoredFromStorage.current = true;
       return parseFiltersFromParams(searchParams);
@@ -160,7 +168,7 @@ export function useCatalogFilters(shopId?: string) {
     }
 
     return { ...DEFAULT_FILTERS };
-  }, [searchParams, hasUrlParams, shopId]);
+  }, [searchParams, hasUrlParams, shopId, pendingFilters]);
 
   useEffect(() => {
     if (shopId) {
@@ -168,9 +176,10 @@ export function useCatalogFilters(shopId?: string) {
     }
   }, [shopId, filters]);
 
+  // Get current filters - uses pending state if set, otherwise the computed filters
   const getCurrentFilters = useCallback((): CatalogFilters => {
-    return pendingFiltersRef.current ?? parseFiltersFromParams(searchParams);
-  }, [searchParams]);
+    return pendingFilters ?? filters;
+  }, [pendingFilters, filters]);
 
   const setFilters = useCallback((updates: Partial<CatalogFilters>) => {
     const currentFilters = getCurrentFilters();
@@ -180,7 +189,8 @@ export function useCatalogFilters(shopId?: string) {
       newFilters.page = 1;
     }
 
-    pendingFiltersRef.current = newFilters;
+    // Set pending state immediately - this triggers UI update
+    setPendingFilters(newFilters);
 
     const params = new URLSearchParams();
     if (newFilters.search) params.set('search', newFilters.search);

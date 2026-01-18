@@ -19,7 +19,7 @@ export function ShopProfileBanner({ shop, currentPath }: ShopProfileBannerProps)
   // Don't render if profile is complete
   if (isProfileComplete) return null;
 
-  // Don't show "Complete Setup" button if already on shops page
+  // Don't show "Complete Store Profile" button if already on shops page
   const showButton = currentPath !== 'shops';
 
   return (
@@ -35,7 +35,7 @@ export function ShopProfileBanner({ shop, currentPath }: ShopProfileBannerProps)
           href={`/shops?openProfile=${shop.id}`}
           className="px-4 py-1.5 bg-[#FA7315] hover:bg-[#E5650F] text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
         >
-          Complete Setup
+          Complete Store Profile
         </Link>
       )}
     </div>
