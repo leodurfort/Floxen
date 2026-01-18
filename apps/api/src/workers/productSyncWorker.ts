@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { wrapNonRetryableError, classifyError } from '../lib/errors';
 import { initConcurrency, cleanupConcurrency, getConcurrencyStats } from '../lib/adaptiveConcurrency';
-import { createWooClient, fetchAllProducts, fetchStoreCurrency, fetchStoreSettings, fetchAllCategories, enrichProductCategories, fetchVariationsParallel } from '../services/wooClient';
+import { createWooClient, fetchAllProducts, fetchSelectedProducts, fetchStoreCurrency, fetchStoreSettings, fetchAllCategories, enrichProductCategories, fetchVariationsParallel } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
 import { validateProduct, ProductFieldOverrides } from '@productsynch/shared';
@@ -272,27 +272,22 @@ async function runFullSync(
     // Initialize progress to 0
     await updateSyncProgress(shopId, 0);
 
-    const allProducts = await fetchAllProducts(client);
-    logger.info(`product-sync: fetched products from WooCommerce`, { shopId, count: allProducts.length });
-
-    // Filter to only selected products (or all for PRO)
-    const products = processAllProducts
-      ? allProducts
-      : allProducts.filter((p: any) => {
-          // Include if this product is selected, or if it's a variation of a selected product
-          if (p.parent_id && p.parent_id !== 0) {
-            // This is a variation - include if parent is selected
-            return selectedWooProductIds!.has(p.parent_id);
-          }
-          return selectedWooProductIds!.has(p.id);
-        });
-
-    logger.info(`product-sync: products to process`, {
-      shopId,
-      total: allProducts.length,
-      selected: products.length,
-      skipped: allProducts.length - products.length,
-    });
+    // Fetch products - PRO tier fetches all, others fetch only selected (much faster)
+    let products: any[];
+    if (processAllProducts) {
+      products = await fetchAllProducts(client);
+      logger.info(`product-sync: fetched all products from WooCommerce`, { shopId, count: products.length });
+    } else {
+      // Use selective fetch - only fetch the specific products that are selected
+      // This is MUCH faster than fetching all 1000+ products and filtering in memory
+      const selectedIds = Array.from(selectedWooProductIds!);
+      products = await fetchSelectedProducts(client, selectedIds);
+      logger.info(`product-sync: fetched selected products from WooCommerce`, {
+        shopId,
+        requested: selectedIds.length,
+        fetched: products.length,
+      });
+    }
 
     const categoryMap = await fetchAllCategories(client);
     logger.info(`product-sync: fetched categories`, { shopId, categoryCount: categoryMap.size });

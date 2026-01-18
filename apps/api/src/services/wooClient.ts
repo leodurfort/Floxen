@@ -62,6 +62,62 @@ export async function fetchAllProducts(api: WooCommerceRestApi) {
   return fetchAllPaginated(api, 'products', { status: 'publish' }, 'products');
 }
 
+/**
+ * Fetch only specific products by ID using the 'include' parameter
+ * Much faster than fetching all products when only a few are selected
+ *
+ * @param api - WooCommerce REST API client
+ * @param productIds - Array of WooCommerce product IDs to fetch
+ * @returns Array of product objects
+ */
+export async function fetchSelectedProducts(api: WooCommerceRestApi, productIds: number[]): Promise<any[]> {
+  if (productIds.length === 0) {
+    logger.info('woo:fetch selected products - empty list');
+    return [];
+  }
+
+  logger.info('woo:fetch selected products start', { count: productIds.length });
+  const all: any[] = [];
+
+  // WooCommerce 'include' parameter can handle multiple IDs, but we batch
+  // to avoid URL length limits and potential API issues with large lists
+  const BATCH_SIZE = 50;
+
+  for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
+    const batch = productIds.slice(i, i + BATCH_SIZE);
+    const includeParam = batch.join(',');
+
+    // Use include parameter to fetch specific products
+    // Still need to paginate in case batch returns more than per_page
+    let page = 1;
+    const perPage = 100;
+
+    while (true) {
+      const response = await api.get('products', {
+        include: includeParam,
+        status: 'publish',
+        page,
+        per_page: perPage,
+      });
+
+      const data = Array.isArray(response.data) ? response.data : [];
+      for (const item of data) {
+        all.push(item);
+      }
+
+      const totalPages = parseInt(response.headers['x-wp-totalpages'] || '1', 10);
+      if (page >= totalPages) break;
+      page++;
+    }
+  }
+
+  logger.info('woo:fetch selected products complete', {
+    requested: productIds.length,
+    fetched: all.length
+  });
+  return all;
+}
+
 export async function fetchStoreCurrency(api: WooCommerceRestApi) {
   try {
     const response = await api.get('settings/general/woocommerce_currency');
