@@ -420,8 +420,8 @@ export default function ShopsPage() {
                         </div>
                       )}
 
-                      {/* Sync/Feed status - hidden during first sync */}
-                      {!isFirstSync(shop) && (
+                      {/* Sync/Feed status - only for connected shops, hidden during first sync */}
+                      {shop.isConnected && !isFirstSync(shop) && (
                         <>
                           {/* Row 2: Sync status */}
                           <div className="text-sm text-gray-600 mb-1">
