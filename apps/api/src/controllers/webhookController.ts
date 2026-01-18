@@ -10,7 +10,8 @@ import { logger } from '../lib/logger';
  */
 export async function stripeWebhookHandler(req: Request, res: Response) {
   const signature = req.headers['stripe-signature'] as string;
-  const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
+  const rawRequestId = req.headers['x-request-id'];
+  const requestId = Array.isArray(rawRequestId) ? rawRequestId[0] : rawRequestId || `webhook-${Date.now()}`;
 
   logger.info('[WEBHOOK] Stripe webhook received', {
     requestId,

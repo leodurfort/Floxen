@@ -80,6 +80,7 @@ export async function discoverWooCommerceProducts(shopId: string): Promise<{
     }
 
     // Create new discovered product with minimal data
+    // Use shop's defaultEnableSearch setting so products are ready when synced
     await prisma.product.create({
       data: {
         shopId,
@@ -92,7 +93,7 @@ export async function discoverWooCommerceProducts(shopId: string): Promise<{
         syncState: 'discovered',
         isValid: false, // Not validated yet
         openaiAutoFilled: {},
-        feedEnableSearch: false, // Discovered products default to disabled
+        feedEnableSearch: shop.defaultEnableSearch, // Use shop default so products are ready when synced
       },
     });
 
