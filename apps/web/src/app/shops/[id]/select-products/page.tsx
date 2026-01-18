@@ -209,7 +209,7 @@ export default function SelectProductsPage() {
   return (
     <div className="p-4 max-w-7xl mx-auto pb-24">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Products</h1>
         <p className="text-gray-600">
           Choose which products to display in ChatGPT.
@@ -217,48 +217,33 @@ export default function SelectProductsPage() {
         </p>
       </div>
 
-      {/* Search */}
-      <div className="mb-4">
+      {/* Product Counter - minimal inline */}
+      <p className={`text-sm mb-4 ${isOverLimit ? 'text-red-600' : 'text-gray-500'}`}>
+        <span className="font-semibold">{selectedIds.size}</span> / {limit} selected · {total} products in store
+      </p>
+
+      {/* Search and Actions Row */}
+      <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
         <SearchFilter
           value={searchInput}
           onChange={setSearchInput}
           placeholder="Search products..."
         />
-      </div>
-
-      {/* Selection Counter */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div
-              className={`text-3xl font-bold ${
-                isOverLimit ? 'text-red-600' : 'text-gray-900'
-              }`}
-            >
-              {selectedIds.size}
-              <span className="text-gray-400 text-xl font-normal"> / {limit}</span>
-            </div>
-            <div className="text-sm text-gray-400 border-l border-gray-200 pl-4">
-              {total} products in your WooCommerce store
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={deselectAll}
-              disabled={selectedIds.size === 0}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Deselect All
-            </button>
-            <button
-              onClick={selectAll}
-              disabled={selectedIds.size === limit}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Select All (up to limit)
-            </button>
-          </div>
+        <div className="flex gap-2">
+          <button
+            onClick={deselectAll}
+            disabled={selectedIds.size === 0}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Deselect All
+          </button>
+          <button
+            onClick={selectAll}
+            disabled={selectedIds.size === limit}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Select All (up to limit)
+          </button>
         </div>
       </div>
 
