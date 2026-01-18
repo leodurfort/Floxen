@@ -36,6 +36,22 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
     },
   });
 
+  // For variations, look up parent's isSelected to inherit it
+  let parentIsSelected: boolean | null = null;
+  if (data.wooParentId && !existing?.id) {
+    const parent = await prisma.product.findFirst({
+      where: { shopId, wooProductId: data.wooParentId },
+      select: { isSelected: true },
+    });
+    parentIsSelected = parent?.isSelected ?? null;
+    logger.info('product-sync: new variation inheriting parent selection', {
+      shopId,
+      wooProductId: data.wooProductId,
+      wooParentId: data.wooParentId,
+      parentIsSelected,
+    });
+  }
+
   // Check if field mappings or shop settings changed since product was last updated
   const mappingsChangedSinceLastUpdate = shop.fieldMappingsUpdatedAt &&
     existing?.updatedAt &&
@@ -119,8 +135,8 @@ async function processProduct(data: any, shop: Shop, shopId: string, autoFillSer
       // Apply shop defaults for enable_search, always false for enable_checkout
       feedEnableSearch: shop.defaultEnableSearch,
       feedEnableCheckout: false,
-      // PRO tier auto-selects all products; others must be pre-selected
-      isSelected: processAllProducts ? true : existing?.id ? undefined : false,
+      // PRO tier auto-selects all; variations inherit parent selection; others false
+      isSelected: processAllProducts ? true : existing?.id ? undefined : (parentIsSelected ?? false),
       syncState: 'synced',
       ...data,
     },
