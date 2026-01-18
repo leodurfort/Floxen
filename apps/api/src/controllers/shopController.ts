@@ -866,9 +866,19 @@ export async function getProductStats(req: Request, res: Response) {
     const shop = await verifyShopOwnership(req, res, id);
     if (!shop) return;
 
+    // Get parent product IDs to exclude (same filtering as catalog list)
+    const { getParentProductIds } = await import('../services/productService');
+    const parentIds = await getParentProductIds(id);
+
     // Get counts in parallel for efficiency
     // Only count products that are selected AND synced (visible in Catalog)
-    const baseFilter = { shopId: id, isSelected: true, syncState: 'synced' as const };
+    // Exclude parent products (they're just containers for variations)
+    const baseFilter = {
+      shopId: id,
+      isSelected: true,
+      syncState: 'synced' as const,
+      wooProductId: { notIn: parentIds.length > 0 ? parentIds : [0] }
+    };
 
     const [total, inFeed, needsAttention, disabled] = await Promise.all([
       prisma.product.count({ where: baseFilter }),
