@@ -436,7 +436,7 @@ export default function ShopsPage() {
                                   href={`/shops/${shop.id}/select-products`}
                                   className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                                 >
-                                  Select Products
+                                  Update Product Selection
                                 </Link>
                               </>
                             )}
