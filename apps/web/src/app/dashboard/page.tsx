@@ -81,7 +81,7 @@ export default function DashboardPage() {
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No stores connected yet</h3>
             <p className="text-gray-600 mb-6">
-              Connect your first WooCommerce store to start syncing products to OpenAI feeds
+              Connect your first WooCommerce store to start displaying your products in ChatGPT
             </p>
             <Link href="/shops" className="btn btn--primary">
               Connect your first store
