@@ -937,13 +937,14 @@ export async function getDiscoveredProductsList(req: Request, res: Response) {
   const { id } = req.params;
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
   const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 48));
+  const search = (req.query.search as string) || undefined;
 
   try {
     const shop = await verifyShopOwnership(req, res, id);
     if (!shop) return;
 
     const { getDiscoveredProducts } = await import('../services/productDiscoveryService');
-    const result = await getDiscoveredProducts(id, { page, pageSize });
+    const result = await getDiscoveredProducts(id, { page, pageSize, search });
 
     logger.info('shops:discovered-products:list', {
       shopId: id,
@@ -958,6 +959,28 @@ export async function getDiscoveredProductsList(req: Request, res: Response) {
     return res.json(result);
   } catch (err: any) {
     logger.error('shops:discovered-products:list error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * GET /api/v1/shops/:id/products/discovered/ids
+ * Get filtered product IDs for bulk selection
+ */
+export async function getFilteredProductIdsList(req: Request, res: Response) {
+  const { id } = req.params;
+  const search = (req.query.search as string) || undefined;
+
+  try {
+    const shop = await verifyShopOwnership(req, res, id);
+    if (!shop) return;
+
+    const { getFilteredProductIds } = await import('../services/productDiscoveryService');
+    const result = await getFilteredProductIds(id, search);
+
+    return res.json(result);
+  } catch (err: any) {
+    logger.error('shops:filtered-product-ids error', err);
     return res.status(500).json({ error: err.message });
   }
 }

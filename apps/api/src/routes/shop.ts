@@ -18,6 +18,7 @@ import {
   getProductStats,
   discoverProducts,
   getDiscoveredProductsList,
+  getFilteredProductIdsList,
   updateProductSelection,
 } from '../controllers/shopController';
 import { requireAuth } from '../middleware/auth';
@@ -45,6 +46,7 @@ router.get('/:id/product-stats', requireAuth, getProductStats);
 // Product discovery and selection for billing
 router.post('/:id/discover', requireAuth, discoverProducts);
 router.get('/:id/products/discovered', requireAuth, getDiscoveredProductsList);
+router.get('/:id/products/discovered/ids', requireAuth, getFilteredProductIdsList);
 router.put('/:id/products/selection', requireAuth, updateProductSelection);
 
 export default router;

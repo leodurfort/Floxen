@@ -724,10 +724,19 @@ export async function discoverProducts(shopId: string) {
   });
 }
 
-export async function getDiscoveredProducts(shopId: string, page = 1, pageSize = 48) {
+export async function getDiscoveredProducts(shopId: string, page = 1, pageSize = 48, search?: string) {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (search) params.set('search', search);
   return requestWithAuth<DiscoveredProductsResponse>(
-    `/api/v1/shops/${shopId}/products/discovered?page=${page}&pageSize=${pageSize}`
+    `/api/v1/shops/${shopId}/products/discovered?${params}`
   );
+}
+
+export async function getFilteredProductIds(shopId: string, search?: string) {
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  const query = params.toString() ? `?${params}` : '';
+  return requestWithAuth<{ ids: string[]; limit: number }>(`/api/v1/shops/${shopId}/products/discovered/ids${query}`);
 }
 
 export async function updateProductSelection(shopId: string, productIds: string[]) {

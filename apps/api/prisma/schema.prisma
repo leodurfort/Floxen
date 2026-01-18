@@ -201,6 +201,7 @@ model Product {
 
   @@unique([shopId, wooProductId])
   @@index([shopId])
+  @@index([shopId, wooParentId])
 }
 
 model ProductVariant {

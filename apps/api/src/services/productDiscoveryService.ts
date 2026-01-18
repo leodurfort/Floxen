@@ -117,7 +117,7 @@ export async function discoverWooCommerceProducts(shopId: string): Promise<{
  */
 export async function getDiscoveredProducts(
   shopId: string,
-  options: { page?: number; pageSize?: number } = {}
+  options: { page?: number; pageSize?: number; search?: string } = {}
 ): Promise<{
   products: DiscoveredProduct[];
   total: number;
@@ -127,7 +127,7 @@ export async function getDiscoveredProducts(
   pageSize: number;
   hasMore: boolean;
 }> {
-  const { page = 1, pageSize = 48 } = options;
+  const { page = 1, pageSize = 48, search } = options;
 
   const shop = await prisma.shop.findUnique({
     where: { id: shopId },
@@ -141,22 +141,23 @@ export async function getDiscoveredProducts(
   const tier = shop.user.subscriptionTier as SubscriptionTier;
   const limit = getTierLimit(tier);
 
+  const whereClause = {
+    shopId,
+    wooParentId: null,
+    ...(search && {
+      wooTitle: { contains: search, mode: 'insensitive' as const },
+    }),
+  };
+
   // Get total count and selected count
   const [total, selected] = await Promise.all([
-    prisma.product.count({
-      where: { shopId, wooParentId: null },
-    }),
-    prisma.product.count({
-      where: { shopId, wooParentId: null, isSelected: true },
-    }),
+    prisma.product.count({ where: whereClause }),
+    prisma.product.count({ where: { ...whereClause, isSelected: true } }),
   ]);
 
   // Get paginated products
   const products = await prisma.product.findMany({
-    where: {
-      shopId,
-      wooParentId: null, // Only parent products
-    },
+    where: whereClause,
     select: {
       id: true,
       wooProductId: true,
@@ -190,6 +191,42 @@ export async function getDiscoveredProducts(
     pageSize,
     hasMore: page * pageSize < total,
   };
+}
+
+/**
+ * Get filtered product IDs for bulk selection
+ * Returns product IDs matching search criteria, up to tier limit
+ */
+export async function getFilteredProductIds(
+  shopId: string,
+  search?: string
+): Promise<{ ids: string[]; limit: number }> {
+  const shop = await prisma.shop.findUnique({
+    where: { id: shopId },
+    include: { user: true },
+  });
+
+  if (!shop) {
+    throw new Error('Shop not found');
+  }
+
+  const tier = shop.user.subscriptionTier as SubscriptionTier;
+  const limit = getTierLimit(tier);
+
+  const products = await prisma.product.findMany({
+    where: {
+      shopId,
+      wooParentId: null,
+      ...(search && {
+        wooTitle: { contains: search, mode: 'insensitive' as const },
+      }),
+    },
+    select: { id: true },
+    orderBy: { wooTitle: 'asc' },
+    take: limit,
+  });
+
+  return { ids: products.map(p => p.id), limit };
 }
 
 /**

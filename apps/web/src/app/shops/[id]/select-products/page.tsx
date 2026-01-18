@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import * as api from '@/lib/api';
+import { SearchFilter } from '@/components/catalog/FilterDropdown';
 
 const PAGE_SIZE = 48;
 
@@ -24,12 +25,15 @@ export default function SelectProductsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const discoveryAttempted = useRef(false);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const shopId = params?.id;
 
   // Load first page of discovered products
-  const loadProducts = useCallback(async (page = 1, append = false) => {
+  const loadProducts = useCallback(async (page = 1, append = false, search?: string) => {
     if (!shopId) return;
 
     try {
@@ -39,7 +43,7 @@ export default function SelectProductsPage() {
         setIsLoadingMore(true);
       }
 
-      const data = await api.getDiscoveredProducts(shopId, page, PAGE_SIZE);
+      const data = await api.getDiscoveredProducts(shopId, page, PAGE_SIZE, search);
 
       if (append) {
         setProducts((prev) => [...prev, ...data.products]);
@@ -57,8 +61,8 @@ export default function SelectProductsPage() {
       setCurrentPage(data.page);
       setHasMore(data.hasMore);
 
-      // If no products found and we haven't tried discovery yet, trigger it
-      if (data.total === 0 && !discoveryAttempted.current) {
+      // If no products found and we haven't tried discovery yet, trigger it (only when not searching)
+      if (data.total === 0 && !discoveryAttempted.current && !search) {
         discoveryAttempted.current = true;
         setIsDiscovering(true);
         try {
@@ -92,6 +96,23 @@ export default function SelectProductsPage() {
     loadProducts();
   }, [hydrated, user, router, loadProducts]);
 
+  // Debounce search input
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (searchInput === searchQuery) return;
+
+    searchDebounceRef.current = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setCurrentPage(1);
+      setProducts([]);
+      loadProducts(1, false, searchInput);
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchInput, searchQuery, loadProducts]);
+
   function toggleProduct(productId: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -104,14 +125,14 @@ export default function SelectProductsPage() {
     });
   }
 
-  function selectAll() {
-    const newSelected = new Set<string>();
-    // Select up to limit products from currently loaded products
-    for (const product of products) {
-      if (newSelected.size >= limit) break;
-      newSelected.add(product.id);
+  async function selectAll() {
+    if (!shopId) return;
+    try {
+      const { ids } = await api.getFilteredProductIds(shopId, searchQuery || undefined);
+      setSelectedIds(new Set(ids));
+    } catch (err) {
+      setError('Failed to select products');
     }
-    setSelectedIds(newSelected);
   }
 
   function deselectAll() {
@@ -120,7 +141,7 @@ export default function SelectProductsPage() {
 
   function loadMore() {
     if (!isLoadingMore && hasMore) {
-      loadProducts(currentPage + 1, true);
+      loadProducts(currentPage + 1, true, searchQuery);
     }
   }
 
@@ -192,6 +213,15 @@ export default function SelectProductsPage() {
           Choose which products to display in ChatGPT.
           Your plan allows up to <span className="font-semibold">{limit}</span> products.
         </p>
+      </div>
+
+      {/* Search */}
+      <div className="mb-4">
+        <SearchFilter
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder="Search products..."
+        />
       </div>
 
       {/* Selection Counter */}
