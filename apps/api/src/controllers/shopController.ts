@@ -115,6 +115,30 @@ export async function getShop(req: Request, res: Response) {
   }
 }
 
+/**
+ * Get OAuth URL for retrying connection on an unconnected shop
+ */
+export async function getOAuthUrl(req: Request, res: Response) {
+  try {
+    const shop = await verifyShopOwnership(req, res, req.params.id);
+    if (!shop) return;
+
+    // Only allow retry for unconnected shops
+    if (shop.isConnected) {
+      return res.status(400).json({ error: 'Shop is already connected' });
+    }
+
+    const userId = getUserId(req);
+    const authUrl = buildWooAuthUrl(shop.wooStoreUrl, userId, shop.id);
+
+    logger.info('shops:get-oauth-url', { shopId: shop.id, userId });
+    return res.json({ authUrl });
+  } catch (err: any) {
+    logger.error('shops:get-oauth-url error', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
 const AUTOFILL_AFFECTING_FIELDS = new Set([
   'sellerName',
   'sellerUrl',

@@ -5,6 +5,7 @@ import { syncFlowProducer, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES
 import { cleanupExpiredTokens } from './verificationService';
 
 const STUCK_SYNC_TIMEOUT_MS = 5 * 60 * 1000;
+const ORPHANED_SHOP_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
 
 export class CronScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
@@ -154,6 +155,57 @@ export class CronScheduler {
     logger.info('Cron: Token cleanup scheduled (hourly)');
   }
 
+  scheduleOrphanedShopCleanup() {
+    // Run every 15 minutes to clean up shops where OAuth was never completed
+    const job = cron.schedule('*/15 * * * *', async () => {
+      await this.cleanupOrphanedShops();
+    }, {
+      scheduled: false,
+    });
+
+    this.jobs.set('orphaned-shop-cleanup', job);
+    logger.info('Cron: Orphaned shop cleanup scheduled (every 15 minutes)');
+  }
+
+  async cleanupOrphanedShops() {
+    try {
+      const cutoffTime = new Date(Date.now() - ORPHANED_SHOP_TIMEOUT_MS);
+
+      // Find shops that are not connected and were created more than 1 hour ago
+      const orphanedShops = await prisma.shop.findMany({
+        where: {
+          isConnected: false,
+          createdAt: { lt: cutoffTime },
+        },
+        select: { id: true, wooStoreUrl: true, createdAt: true },
+      });
+
+      if (orphanedShops.length === 0) return;
+
+      logger.info(`Cron: Found ${orphanedShops.length} orphaned shops to clean up`, {
+        shopIds: orphanedShops.map(s => s.id),
+      });
+
+      for (const shop of orphanedShops) {
+        await prisma.shop.delete({
+          where: { id: shop.id },
+        });
+
+        logger.info('Cron: Deleted orphaned shop', {
+          shopId: shop.id,
+          wooStoreUrl: shop.wooStoreUrl,
+          createdAt: shop.createdAt,
+        });
+      }
+
+      logger.info(`Cron: Cleaned up ${orphanedShops.length} orphaned shops`);
+    } catch (err) {
+      logger.error('Cron: Failed to cleanup orphaned shops', {
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
+    }
+  }
+
   start() {
     if (this.isRunning) {
       logger.warn('Cron: Scheduler already running');
@@ -163,6 +215,7 @@ export class CronScheduler {
     this.schedulePeriodicSync();
     this.scheduleStuckSyncRecovery();
     this.scheduleTokenCleanup();
+    this.scheduleOrphanedShopCleanup();
 
     this.jobs.forEach((job, name) => {
       job.start();

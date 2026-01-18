@@ -4,6 +4,7 @@ import {
   createShop,
   disconnectShop,
   getShop,
+  getOAuthUrl,
   listShops,
   oauthCallback,
   updateShop,
@@ -30,6 +31,7 @@ router.patch('/:id', requireAuth, updateShop);
 router.delete('/:id', requireAuth, disconnectShop);
 router.get('/:id/oauth/callback', oauthCallback);
 router.post('/:id/oauth/callback', oauthCallback);
+router.get('/:id/oauth-url', requireAuth, getOAuthUrl);
 router.post('/:id/verify', requireAuth, verifyConnection);
 router.put('/:id/openai-config', requireAuth, configureOpenAI);
 router.get('/:id/field-mappings', requireAuth, getFieldMappings);

@@ -279,6 +279,10 @@ export async function deleteShop(shopId: string) {
   });
 }
 
+export async function getShopOAuthUrl(shopId: string) {
+  return requestWithAuth<{ authUrl: string }>(`/api/v1/shops/${shopId}/oauth-url`);
+}
+
 export async function toggleShopSync(shopId: string, syncEnabled: boolean) {
   return requestWithAuth<{ shop: Shop }>(`/api/v1/shops/${shopId}`, {
     method: 'PATCH',

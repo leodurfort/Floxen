@@ -207,6 +207,16 @@ export default function ShopsPage() {
     );
   }
 
+  async function handleRetryOAuth(shopId: string) {
+    if (!user) return;
+    try {
+      const { authUrl } = await import('@/lib/api').then(m => m.getShopOAuthUrl(shopId));
+      window.location.href = authUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get OAuth URL');
+    }
+  }
+
   // Modal save handler
   async function handleModalSave(data: { sellerName: string | null; returnPolicy: string | null; returnWindow: number | null }) {
     if (!modalShop) return;
@@ -372,11 +382,33 @@ export default function ShopsPage() {
                           {shop.isConnected ? (
                             <span className="text-green-600 font-medium">• Connected ✓</span>
                           ) : (
-                            <span className="text-yellow-600 font-medium">• Pending</span>
+                            <span className="text-orange-600 font-medium">• Connection Incomplete</span>
                           )}
                         </div>
 
-                        {/* Right: Action buttons */}
+                        {/* Right: Action buttons - Unconnected shops */}
+                        {!shop.isConnected && (
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                            <button
+                              onClick={() => handleRetryOAuth(shop.id)}
+                              className="bg-[#FA7315] hover:bg-[#E5650F] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                            >
+                              Retry Connection
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this store?')) {
+                                  deleteShopMutation.mutate(shop.id);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg font-medium text-sm transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Right: Action buttons - Connected shops */}
                         {shop.isConnected && (
                           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                             {isFirstSync(shop) ? (
@@ -412,6 +444,15 @@ export default function ShopsPage() {
                           </div>
                         )}
                       </div>
+
+                      {/* Connection Incomplete Banner - shows for unconnected shops */}
+                      {!shop.isConnected && (
+                        <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <p className="text-sm text-orange-800">
+                            WooCommerce authorization was not completed. Click &quot;Retry Connection&quot; to authorize access to your store, or delete this entry to start over.
+                          </p>
+                        </div>
+                      )}
 
                       {/* First Sync Banner - shows during initial sync */}
                       {isFirstSync(shop) && (
