@@ -88,6 +88,9 @@ export function useUpdateFieldMappingsMutation(shopId: string | undefined) {
         // Invalidate column filter values cache (fixes stale filter dropdowns after mapping changes)
         queryClient.invalidateQueries({ queryKey: ['columnValues', shopId], exact: false });
 
+        // Invalidate productStats to refresh tab counts (All Items, Ready for Feed, etc.)
+        queryClient.invalidateQueries({ queryKey: ['shops', shopId, 'product-stats'] });
+
         // Trigger 60-second polling to detect when background reprocessing completes
         useSyncOperations.getState().setFieldMappingsUpdated();
       }
@@ -154,6 +157,8 @@ export function useUpdateProductOverridesMutation(shopId: string | undefined, pr
       );
       queryClient.invalidateQueries({ queryKey: ['products', shopId], exact: false });
       queryClient.invalidateQueries({ queryKey: queryKeys.fieldMappings.shop(shopId) });
+      // Invalidate productStats to refresh tab counts (All Items, Ready for Feed, etc.)
+      queryClient.invalidateQueries({ queryKey: ['shops', shopId, 'product-stats'] });
     },
   });
 }
@@ -173,6 +178,8 @@ export function useUpdateFeedEnableSearchMutation(shopId: string | undefined, pr
       });
       queryClient.invalidateQueries({ queryKey: ['products', shopId], exact: false });
       queryClient.invalidateQueries({ queryKey: ['columnValues', shopId], exact: false });
+      // Invalidate productStats to refresh tab counts (All Items, Ready for Feed, etc.)
+      queryClient.invalidateQueries({ queryKey: ['shops', shopId, 'product-stats'] });
     },
   });
 }

@@ -150,8 +150,10 @@ export function useActivateFeedMutation() {
 
   return useMutation({
     mutationFn: (shopId: string) => api.activateFeed(shopId),
-    onSuccess: () => {
+    onSuccess: (_data, shopId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
+      // Invalidate productStats to refresh tab counts (All Items, Ready for Feed, etc.)
+      queryClient.invalidateQueries({ queryKey: ['shops', shopId, 'product-stats'] });
     },
   });
 }
