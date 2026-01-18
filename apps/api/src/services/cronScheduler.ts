@@ -5,7 +5,7 @@ import { syncFlowProducer, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES
 import { cleanupExpiredTokens } from './verificationService';
 
 const STUCK_SYNC_TIMEOUT_MS = 5 * 60 * 1000;
-const ORPHANED_SHOP_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+const ORPHANED_SHOP_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 export class CronScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
@@ -171,7 +171,7 @@ export class CronScheduler {
     try {
       const cutoffTime = new Date(Date.now() - ORPHANED_SHOP_TIMEOUT_MS);
 
-      // Find shops that are not connected and were created more than 1 hour ago
+      // Find shops that are not connected and were created more than 15 minutes ago
       const orphanedShops = await prisma.shop.findMany({
         where: {
           isConnected: false,
