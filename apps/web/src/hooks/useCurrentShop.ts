@@ -55,6 +55,8 @@ export function useCurrentShop() {
       currentShop?.id
     ) {
       queryClient.invalidateQueries({ queryKey: ['products', currentShop.id] });
+      // Also invalidate productStats so banner shows correct count
+      queryClient.invalidateQueries({ queryKey: ['shops', currentShop.id, 'product-stats'] });
     }
 
     prevSyncStatusRef.current = currentStatus ?? null;

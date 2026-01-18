@@ -18,6 +18,7 @@ export function FirstSyncSuccessBanner({
   syncStatus,
 }: FirstSyncSuccessBannerProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [pendingShow, setPendingShow] = useState(false);
   const prevSyncStatusRef = useRef<string | null>(null);
   const prevLastSyncAtRef = useRef<string | null>(null);
   const prevShopIdRef = useRef<string | null>(null);
@@ -35,6 +36,7 @@ export function FirstSyncSuccessBanner({
       prevSyncStatusRef.current = syncStatus;
       prevLastSyncAtRef.current = lastSyncAt;
       setIsVisible(false);
+      setPendingShow(false);
       return;
     }
 
@@ -48,15 +50,24 @@ export function FirstSyncSuccessBanner({
     const syncAtChanged = lastSyncAt !== prevLastSyncAtRef.current && lastSyncAt !== null;
 
     if (justCompleted && syncAtChanged) {
-      setIsVisible(true);
-      // Mark as shown so it never appears again
-      localStorage.setItem(`${STORAGE_KEY_PREFIX}${shopId}`, 'true');
+      // Mark that we want to show the banner, but wait for stats to be available
+      setPendingShow(true);
     }
 
     // Update refs for next comparison
     prevSyncStatusRef.current = syncStatus;
     prevLastSyncAtRef.current = lastSyncAt;
   }, [shopId, lastSyncAt, syncStatus]);
+
+  // Show the banner once stats are available (totalItems > 0)
+  useEffect(() => {
+    if (pendingShow && totalItems > 0) {
+      setIsVisible(true);
+      setPendingShow(false);
+      // Mark as shown so it never appears again
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${shopId}`, 'true');
+    }
+  }, [pendingShow, totalItems, shopId]);
 
   const handleDismiss = () => {
     setIsVisible(false);
