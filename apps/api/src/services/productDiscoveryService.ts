@@ -281,21 +281,53 @@ export async function updateProductSelection(
   }
 
   // Update selection in a transaction
+  let variationsUpdated = 0;
   await prisma.$transaction(async (tx) => {
-    // Deselect all products first
-    await tx.product.updateMany({
-      where: { shopId, wooParentId: null },
+    // Deselect ALL products first (parents AND variations)
+    // This ensures variations from deselected parents are also deselected
+    const deselected = await tx.product.updateMany({
+      where: { shopId },
       data: { isSelected: false },
     });
 
-    // Select the specified products
+    logger.info('product-selection: deselected all products', {
+      shopId,
+      deselectedCount: deselected.count,
+    });
+
+    // Select the specified parent products
     if (selectedProductIds.length > 0) {
-      await tx.product.updateMany({
+      const selectedParents = await tx.product.updateMany({
         where: {
           id: { in: selectedProductIds },
           shopId,
         },
         data: { isSelected: true },
+      });
+
+      // Also select variations of selected parents
+      // This ensures catalog shows variations when their parent is selected
+      const selectedParentRecords = await tx.product.findMany({
+        where: { id: { in: selectedProductIds } },
+        select: { wooProductId: true },
+      });
+      const selectedWooIds = selectedParentRecords.map(p => p.wooProductId);
+
+      if (selectedWooIds.length > 0) {
+        const variationsResult = await tx.product.updateMany({
+          where: {
+            shopId,
+            wooParentId: { in: selectedWooIds },
+          },
+          data: { isSelected: true },
+        });
+        variationsUpdated = variationsResult.count;
+      }
+
+      logger.info('product-selection: selected parents and variations', {
+        shopId,
+        parentsSelected: selectedParents.count,
+        variationsSelected: variationsUpdated,
       });
     }
 
