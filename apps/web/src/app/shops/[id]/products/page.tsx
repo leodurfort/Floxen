@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, Suspense, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { BulkUpdateOperation, CurrentFiltersForColumnValues, getItemGroupCount } from '@/lib/api';
 import { useAuth } from '@/store/auth';
 import { useCatalogSelection } from '@/store/catalogSelection';
@@ -715,7 +716,17 @@ function CatalogPageContent() {
         {/* Scrollable Table Section */}
         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto">
           {loading && <div className="text-gray-500 p-6">Loading items...</div>}
-          {!loading && !products.length && <div className="text-gray-500 p-6">No items found.</div>}
+          {!loading && !products.length && (
+            <div className="text-center p-12">
+              <p className="text-gray-500 mb-4">No products synced yet.</p>
+              <Link
+                href={`/shops/${params?.id}/select-products`}
+                className="text-[#FA7315] hover:underline font-medium"
+              >
+                Click here to select your products
+              </Link>
+            </div>
+          )}
           {!loading && products.length > 0 && (
               <table className="catalog-table w-full">
                 <thead>

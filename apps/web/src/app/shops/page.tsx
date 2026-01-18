@@ -432,13 +432,12 @@ export default function ShopsPage() {
                                 >
                                   {mappingButtonText}
                                 </Link>
-                                <button
-                                  onClick={() => handleSync(shop.id)}
-                                  disabled={syncDisabled}
-                                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                <Link
+                                  href={`/shops/${shop.id}/select-products`}
+                                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                                 >
-                                  Sync WooCommerce Products
-                                </button>
+                                  Select Products
+                                </Link>
                               </>
                             )}
                           </div>

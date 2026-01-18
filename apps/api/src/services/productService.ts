@@ -162,6 +162,8 @@ function buildWhereClause(
   const where: Prisma.ProductWhereInput = {
     shopId,
     wooProductId: { notIn: parentIds },
+    isSelected: true,
+    syncState: 'synced',
   };
 
   const andConditions: Prisma.ProductWhereInput[] = [];
@@ -213,6 +215,8 @@ function buildRawWhereClause(shopId: string, parentIds: number[], options: ListP
   const whereConditions: string[] = [
     `"shop_id" = '${escapeSqlString(shopId)}'`,
     `"woo_product_id" NOT IN (${parentIds.length > 0 ? parentIds.join(',') : '0'})`,
+    `"is_selected" = true`,
+    `"sync_state" = 'synced'`,
   ];
 
   if (options.search?.trim()) {
@@ -551,7 +555,12 @@ async function fetchProductsForColumnValues(
   }
 
   return prisma.product.findMany({
-    where: { shopId, wooProductId: { notIn: parentIds } },
+    where: {
+      shopId,
+      wooProductId: { notIn: parentIds },
+      isSelected: true,
+      syncState: 'synced',
+    },
     select: { [prismaColumn]: true },
   });
 }

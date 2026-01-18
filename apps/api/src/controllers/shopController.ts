@@ -260,13 +260,13 @@ export async function oauthCallback(req: Request, res: Response) {
       logger.info('shops:oauth callback SUCCESS - PRO tier, full sync queued', { shopId: shop.id });
       return res.json({ shop, message: 'Connection verified, sync queued', needsProductSelection: false });
     } else {
-      // FREE/STARTER tier: Set syncStatus to COMPLETED (no sync pending yet)
-      // User must select products before sync can run - banner won't show
+      // FREE/STARTER tier: Set syncStatus to PENDING (awaiting product selection)
+      // User must select products before sync can run
       await prisma.shop.update({
         where: { id: shop.id },
-        data: { syncStatus: 'COMPLETED' },
+        data: { syncStatus: 'PENDING' },
       });
-      logger.info('shops:oauth callback SUCCESS - credentials stored, discovery will be triggered by frontend', {
+      logger.info('shops:oauth callback SUCCESS - credentials stored, awaiting product selection', {
         shopId: shop.id,
         tier,
       });
@@ -867,16 +867,19 @@ export async function getProductStats(req: Request, res: Response) {
     if (!shop) return;
 
     // Get counts in parallel for efficiency
+    // Only count products that are selected AND synced (visible in Catalog)
+    const baseFilter = { shopId: id, isSelected: true, syncState: 'synced' as const };
+
     const [total, inFeed, needsAttention, disabled] = await Promise.all([
-      prisma.product.count({ where: { shopId: id } }),
+      prisma.product.count({ where: baseFilter }),
       prisma.product.count({
-        where: { shopId: id, isValid: true, feedEnableSearch: true },
+        where: { ...baseFilter, isValid: true, feedEnableSearch: true },
       }),
       prisma.product.count({
-        where: { shopId: id, isValid: false },
+        where: { ...baseFilter, isValid: false },
       }),
       prisma.product.count({
-        where: { shopId: id, feedEnableSearch: false },
+        where: { ...baseFilter, feedEnableSearch: false },
       }),
     ]);
 

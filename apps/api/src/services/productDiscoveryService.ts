@@ -92,6 +92,7 @@ export async function discoverWooCommerceProducts(shopId: string): Promise<{
         syncState: 'discovered',
         isValid: false, // Not validated yet
         openaiAutoFilled: {},
+        feedEnableSearch: false, // Discovered products default to disabled
       },
     });
 
