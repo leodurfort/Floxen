@@ -33,13 +33,13 @@ export default function SelectProductsPage() {
   const shopId = params?.id;
 
   // Load first page of discovered products
-  const loadProducts = useCallback(async (page = 1, append = false, search?: string) => {
+  const loadProducts = useCallback(async (page = 1, append = false, search?: string, showLoading = true) => {
     if (!shopId) return;
 
     try {
-      if (page === 1) {
+      if (page === 1 && showLoading) {
         setIsLoading(true);
-      } else {
+      } else if (page > 1) {
         setIsLoadingMore(true);
       }
 
@@ -49,11 +49,13 @@ export default function SelectProductsPage() {
         setProducts((prev) => [...prev, ...data.products]);
       } else {
         setProducts(data.products);
-        // Initialize selected IDs from first page (we'll fetch more as needed)
-        const selected = new Set(
-          data.products.filter((p) => p.isSelected).map((p) => p.id)
-        );
-        setSelectedIds(selected);
+        // Only initialize selected IDs on initial load, not during search
+        if (showLoading) {
+          const selected = new Set(
+            data.products.filter((p) => p.isSelected).map((p) => p.id)
+          );
+          setSelectedIds(selected);
+        }
       }
 
       setTotal(data.total);
@@ -104,8 +106,8 @@ export default function SelectProductsPage() {
     searchDebounceRef.current = setTimeout(() => {
       setSearchQuery(searchInput);
       setCurrentPage(1);
-      setProducts([]);
-      loadProducts(1, false, searchInput);
+      // Don't clear products or show loading - just replace when new data arrives
+      loadProducts(1, false, searchInput, false);
     }, 300);
 
     return () => {
@@ -196,7 +198,7 @@ export default function SelectProductsPage() {
           </div>
           <p className="text-gray-500 text-sm">
             {isDiscovering
-              ? 'This may take a moment for large catalogs...'
+              ? 'This may take a minute for large catalogs...'
               : 'Please wait...'}
           </p>
         </div>
@@ -276,7 +278,9 @@ export default function SelectProductsPage() {
       {/* Products Grid */}
       {products.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-          <p className="text-gray-500">No products found in your WooCommerce store.</p>
+          <p className="text-gray-500">
+            {searchQuery ? 'No products match your search.' : 'No products found in your WooCommerce store.'}
+          </p>
         </div>
       ) : (
         <>

@@ -186,7 +186,7 @@ interface SearchFilterProps {
 
 export function SearchFilter({ value, onChange, placeholder = 'Search...' }: SearchFilterProps) {
   return (
-    <div className="relative">
+    <div className="relative inline-block">
       <svg
         className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
         fill="none"
