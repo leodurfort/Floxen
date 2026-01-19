@@ -96,7 +96,7 @@ export default function DashboardPage() {
     fieldMappings: fieldMappingProgress.isComplete,
     reviewCatalog: (productStats?.total ?? 0) > 0 && (productStats?.needsAttention ?? 0) === 0,
     activateFeed: isFeedActive,
-    unlockMoreItems: user.subscriptionTier !== 'FREE',
+    unlockMoreItems: user.subscriptionTier === 'PROFESSIONAL',
   };
 
   // Handler to reactivate feed (turn syncEnabled back on)
