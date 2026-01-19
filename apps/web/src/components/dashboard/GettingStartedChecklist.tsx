@@ -266,11 +266,11 @@ export function GettingStartedChecklist({
       </div>
 
       {/* Steps - always visible */}
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-gray-200">
         {checklistSteps.map((step) => {
           const isExpanded = expandedSteps.has(step.id);
           return (
-            <div key={step.id} className="p-4">
+            <div key={step.id} className="p-4 hover:bg-gray-50 transition-colors">
               {/* Step header */}
               <div
                 className="flex items-start gap-3 cursor-pointer"
@@ -315,7 +315,7 @@ export function GettingStartedChecklist({
 
                 {/* Expand indicator */}
                 <svg
-                  className={`w-4 h-4 text-gray-400 transition-transform ${
+                  className={`w-5 h-5 text-gray-500 transition-transform ${
                     isExpanded ? 'rotate-180' : ''
                   }`}
                   fill="none"
