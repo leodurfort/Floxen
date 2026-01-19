@@ -338,8 +338,8 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
   const oldTier = user.subscriptionTier as SubscriptionTier;
   const productLimit = getTierLimit(newTier);
 
-  // Handle case where current_period_end might be missing
-  const currentPeriodEndTimestamp = subscription.current_period_end;
+  // Handle current_period_end - use cancel_at as fallback for cancellation date
+  const currentPeriodEndTimestamp = subscription.current_period_end || subscription.cancel_at;
   const currentPeriodEnd = currentPeriodEndTimestamp
     ? new Date(currentPeriodEndTimestamp * 1000)
     : null;

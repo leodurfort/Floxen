@@ -109,14 +109,22 @@ export default function BillingSettingsPage() {
           </div>
           <span
             className={`px-3 py-1 rounded-full text-sm font-medium ${
-              isPaid && isActive
+              isPaid && isActive && !billing?.cancelAtPeriodEnd
                 ? 'bg-green-100 text-green-800'
+                : isPaid && billing?.cancelAtPeriodEnd
+                ? 'bg-yellow-100 text-yellow-800'
                 : isPaid
                 ? 'bg-yellow-100 text-yellow-800'
                 : 'bg-gray-100 text-gray-800'
             }`}
           >
-            {isPaid ? (isActive ? 'Active' : billing?.status || 'Inactive') : 'Free Plan'}
+            {isPaid
+              ? billing?.cancelAtPeriodEnd
+                ? 'Canceling'
+                : isActive
+                ? 'Active'
+                : billing?.status || 'Inactive'
+              : 'Free Plan'}
           </span>
         </div>
 
