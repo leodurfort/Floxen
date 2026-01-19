@@ -52,7 +52,7 @@ export default function DashboardPage() {
 
   const checklistSteps = {
     connectStore: currentShop?.isConnected ?? false,
-    selectProducts: (productStats?.productCount ?? 0) > 0,
+    selectProducts: (productStats?.selectedProductCount ?? 0) > 0,
     storeProfile: isStoreProfileComplete,
     fieldMappings: fieldMappingProgress.isComplete,
     reviewCatalog: (productStats?.total ?? 0) > 0 && (productStats?.needsAttention ?? 0) === 0,
@@ -63,7 +63,7 @@ export default function DashboardPage() {
   const stepDetails = {
     storeUrl: currentShop?.wooStoreUrl?.replace(/^https?:\/\//, '') ?? '',
     totalItems: productStats?.total ?? 0,
-    productCount: productStats?.productCount ?? 0,
+    selectedProductCount: productStats?.selectedProductCount ?? 0,
     requiredFieldsMapped: fieldMappingProgress.requiredFieldsMapped,
     totalRequiredFields: fieldMappingProgress.totalRequiredFields,
     needsAttention: productStats?.needsAttention ?? 0,

@@ -89,7 +89,7 @@ export function FirstSyncSuccessBanner({
       </div>
       <button
         onClick={handleDismiss}
-        className="text-green-700 hover:text-green-900 text-xl font-medium flex-shrink-0 px-1"
+        className="text-green-700 hover:text-green-900 text-2xl font-medium flex-shrink-0 p-2 -m-2"
         aria-label="Dismiss"
       >
         ×

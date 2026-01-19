@@ -25,7 +25,7 @@ interface GettingStartedChecklistProps {
   stepDetails: {
     storeUrl: string;
     totalItems: number;
-    productCount: number;
+    selectedProductCount: number;
     requiredFieldsMapped: number;
     totalRequiredFields: number;
     needsAttention: number;
@@ -82,7 +82,7 @@ export function GettingStartedChecklist({
       isComplete: steps.selectProducts,
       content: steps.selectProducts ? (
         <div className="text-sm text-gray-600">
-          {stepDetails.productCount.toLocaleString()} products selected
+          {stepDetails.selectedProductCount.toLocaleString()} products selected
         </div>
       ) : (
         <div className="space-y-2">

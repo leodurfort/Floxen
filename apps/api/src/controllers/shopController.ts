@@ -888,6 +888,7 @@ export async function getProductStats(req: Request, res: Response) {
       needsAttention,
       disabled,
       productCount,
+      selectedProductCount,
       productCountInFeedResult,
       productCountNeedsAttentionResult,
     ] = await Promise.all([
@@ -908,6 +909,15 @@ export async function getProductStats(req: Request, res: Response) {
           shopId: id,
           isSelected: true,
           syncState: 'synced' as const,
+          wooParentId: null, // Only top-level products
+        },
+      }),
+      // Count selected products regardless of sync state (for onboarding checklist)
+      // This is > 0 immediately after user saves product selection
+      prisma.product.count({
+        where: {
+          shopId: id,
+          isSelected: true,
           wooParentId: null, // Only top-level products
         },
       }),
@@ -944,6 +954,7 @@ export async function getProductStats(req: Request, res: Response) {
       needsAttention,
       disabled,
       productCount,
+      selectedProductCount,
       productCountInFeed,
       productCountNeedsAttention,
     });
@@ -954,6 +965,7 @@ export async function getProductStats(req: Request, res: Response) {
       needsAttention,
       disabled,
       productCount,
+      selectedProductCount,
       productCountInFeed,
       productCountNeedsAttention,
     });

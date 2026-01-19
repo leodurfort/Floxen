@@ -77,7 +77,8 @@ export interface ProductStats {
   inFeed: number;          // Items that are valid and enabled for feed
   needsAttention: number;  // Items that are invalid
   disabled: number;        // Items disabled from feed
-  productCount: number;    // Number of top-level products (user's selection)
+  productCount: number;    // Number of top-level products (synced)
+  selectedProductCount: number;  // Number of selected products (any sync state, for onboarding)
   // Contextual product counts (how many products have items in each category)
   productCountInFeed: number;          // Products with at least one item in feed
   productCountNeedsAttention: number;  // Products with at least one item needing attention
