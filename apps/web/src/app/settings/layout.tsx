@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { AppLayout } from '@/components/AppLayout';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 
 export default function SettingsRootLayout({
@@ -32,9 +31,5 @@ export default function SettingsRootLayout({
     );
   }
 
-  return (
-    <AppLayout>
-      <SettingsLayout>{children}</SettingsLayout>
-    </AppLayout>
-  );
+  return <SettingsLayout>{children}</SettingsLayout>;
 }
