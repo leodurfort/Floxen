@@ -92,7 +92,7 @@ export default function PricingPage() {
     {
       name: 'Starter',
       tier: 'STARTER',
-      price: { monthly: 29, annual: 290 },
+      price: { monthly: 25, annual: 250 },
       priceId: {
         monthly: prices?.starter.monthly || '',
         annual: prices?.starter.annual || '',
@@ -112,7 +112,7 @@ export default function PricingPage() {
     {
       name: 'Professional',
       tier: 'PROFESSIONAL',
-      price: { monthly: 49, annual: 490 },
+      price: { monthly: 37, annual: 374 },
       priceId: {
         monthly: prices?.professional.monthly || '',
         annual: prices?.professional.annual || '',
