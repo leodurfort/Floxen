@@ -9,6 +9,32 @@ import { SearchFilter } from '@/components/catalog/FilterDropdown';
 import { queryKeys } from '@/lib/queryClient';
 
 const PAGE_SIZE = 48;
+const DISCOVERY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const POLL_INTERVAL = 2000; // 2 seconds
+const STABLE_POLLS_NEEDED = 2; // Consider complete after 2 polls with same count
+
+// SessionStorage helpers for tracking discovery state across navigation
+function getDiscoveryKey(shopId: string) {
+  return `discovery_${shopId}_started`;
+}
+
+function isDiscoveryPending(shopId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const started = sessionStorage.getItem(getDiscoveryKey(shopId));
+  if (!started) return false;
+  const startedAt = parseInt(started, 10);
+  return Date.now() - startedAt < DISCOVERY_TIMEOUT;
+}
+
+function markDiscoveryStarted(shopId: string) {
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(getDiscoveryKey(shopId), String(Date.now()));
+}
+
+function clearDiscoveryFlag(shopId: string) {
+  if (typeof window === 'undefined') return;
+  sessionStorage.removeItem(getDiscoveryKey(shopId));
+}
 
 export default function SelectProductsPage() {
   const params = useParams<{ id: string }>();
@@ -32,6 +58,9 @@ export default function SelectProductsPage() {
   const [searchInput, setSearchInput] = useState('');
   const discoveryAttempted = useRef(false);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastPollCountRef = useRef<number>(-1);
+  const stablePollCountRef = useRef<number>(0);
 
   const shopId = params?.id;
 
@@ -70,8 +99,10 @@ export default function SelectProductsPage() {
       if (data.total === 0 && !discoveryAttempted.current && !search) {
         discoveryAttempted.current = true;
         setIsDiscovering(true);
+        markDiscoveryStarted(shopId);
         try {
           await api.discoverProducts(shopId);
+          clearDiscoveryFlag(shopId);
           // Reload products after discovery
           const freshData = await api.getDiscoveredProducts(shopId, 1, PAGE_SIZE);
           setProducts(freshData.products);
@@ -80,6 +111,7 @@ export default function SelectProductsPage() {
           setCurrentPage(freshData.page);
           setHasMore(freshData.hasMore);
         } catch (discoverErr) {
+          clearDiscoveryFlag(shopId);
           setError(discoverErr instanceof Error ? discoverErr.message : 'Failed to discover products');
         } finally {
           setIsDiscovering(false);
@@ -93,13 +125,74 @@ export default function SelectProductsPage() {
     }
   }, [shopId]);
 
+  // Poll for discovery completion - used when returning to page during discovery
+  const pollForDiscoveryComplete = useCallback(async () => {
+    if (!shopId) return;
+
+    try {
+      const data = await api.getDiscoveredProducts(shopId, 1, PAGE_SIZE);
+
+      // Check if count has stabilized (same count for STABLE_POLLS_NEEDED polls)
+      if (data.total === lastPollCountRef.current && data.total > 0) {
+        stablePollCountRef.current++;
+      } else {
+        stablePollCountRef.current = 0;
+        lastPollCountRef.current = data.total;
+      }
+
+      // Discovery is complete when we have products and count is stable
+      if (data.total > 0 && stablePollCountRef.current >= STABLE_POLLS_NEEDED) {
+        // Stop polling
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        clearDiscoveryFlag(shopId);
+        setIsDiscovering(false);
+        setIsLoading(false);
+        setProducts(data.products);
+        setTotal(data.total);
+        setLimit(data.limit);
+        setCurrentPage(data.page);
+        setHasMore(data.hasMore);
+        const selected = new Set(
+          data.products.filter((p) => p.isSelected).map((p) => p.id)
+        );
+        setSelectedIds(selected);
+      }
+    } catch {
+      // Ignore polling errors, will retry on next interval
+    }
+  }, [shopId]);
+
   useEffect(() => {
     if (hydrated && !user) {
       router.push('/login');
       return;
     }
+
+    // Check if discovery was in progress (user navigated away and came back)
+    if (shopId && isDiscoveryPending(shopId)) {
+      // Show loading state and poll for completion
+      setIsLoading(true);
+      setIsDiscovering(true);
+      lastPollCountRef.current = -1;
+      stablePollCountRef.current = 0;
+
+      // Start polling
+      pollForDiscoveryComplete();
+      pollIntervalRef.current = setInterval(pollForDiscoveryComplete, POLL_INTERVAL);
+
+      return () => {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+      };
+    }
+
     loadProducts();
-  }, [hydrated, user, router, loadProducts]);
+  }, [hydrated, user, router, shopId, loadProducts, pollForDiscoveryComplete]);
 
   // Debounce search input
   useEffect(() => {
