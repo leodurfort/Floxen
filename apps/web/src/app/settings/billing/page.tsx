@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import * as api from '@/lib/api';
+import { useAuth } from '@/store/auth';
 
 const TIER_DISPLAY: Record<string, { name: string; limit: string }> = {
   FREE: { name: 'Free', limit: '15 products' },
@@ -13,6 +14,7 @@ const TIER_DISPLAY: Record<string, { name: string; limit: string }> = {
 
 export default function BillingSettingsPage() {
   const searchParams = useSearchParams();
+  const { setUser } = useAuth();
   const [billing, setBilling] = useState<api.BillingInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,6 +41,16 @@ export default function BillingSettingsPage() {
           cancelAtPeriodEnd: data.cancelAtPeriodEnd,
         });
         setBilling(data);
+
+        // Sync user profile to auth store to update subscription tier across the app
+        try {
+          const freshUser = await api.getProfile();
+          setUser(freshUser);
+          console.debug('[BILLING-PAGE] User profile synced to auth store');
+        } catch {
+          // Silent fail - billing page still works, sync will happen on next visit
+          console.debug('[BILLING-PAGE] User profile sync failed (non-critical)');
+        }
       } catch (err) {
         console.error('[BILLING-PAGE] loadBilling() FAILED', err);
         setError(err instanceof Error ? err.message : 'Failed to load billing info');
@@ -48,7 +60,7 @@ export default function BillingSettingsPage() {
       }
     }
     loadBilling();
-  }, []);
+  }, [setUser]);
 
   async function handleManageBilling() {
     console.debug('[BILLING-PAGE] handleManageBilling() called');
