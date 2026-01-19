@@ -266,6 +266,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     ? new Date(currentPeriodEndTimestamp * 1000)
     : null;
 
+  // Check both cancel_at_period_end AND cancel_at fields
+  const cancelAtPeriodEnd = subscriptionResponse.cancel_at_period_end === true || subscriptionResponse.cancel_at != null;
+
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -274,7 +277,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       subscriptionStatus: subscriptionResponse.status,
       subscriptionTier: tier,
       currentPeriodEnd,
-      cancelAtPeriodEnd: subscriptionResponse.cancel_at_period_end ?? false,
+      cancelAtPeriodEnd,
     },
   });
 
@@ -340,9 +343,12 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
   const currentPeriodEnd = currentPeriodEndTimestamp
     ? new Date(currentPeriodEndTimestamp * 1000)
     : null;
-  const cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
 
-  logger.debug('[BILLING-WEBHOOK] Subscription data analysis', {
+  // Check both cancel_at_period_end AND cancel_at fields
+  // Stripe Portal uses cancel_at (timestamp) instead of cancel_at_period_end (boolean)
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end === true || subscription.cancel_at != null;
+
+  logger.info('[BILLING-WEBHOOK] Subscription data analysis', {
     userId: user.id,
     priceId,
     oldTier,
@@ -351,6 +357,7 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
     cancelAtPeriodEnd,
     currentPeriodEnd: currentPeriodEnd?.toISOString(),
     rawCancelAtPeriodEnd: subscription.cancel_at_period_end,
+    rawCancelAt: subscription.cancel_at,
   });
 
   await prisma.user.update({
