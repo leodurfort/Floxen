@@ -880,7 +880,7 @@ export async function getProductStats(req: Request, res: Response) {
       wooProductId: { notIn: parentIds.length > 0 ? parentIds : [0] }
     };
 
-    const [total, inFeed, needsAttention, disabled] = await Promise.all([
+    const [total, inFeed, needsAttention, disabled, productCount] = await Promise.all([
       prisma.product.count({ where: baseFilter }),
       prisma.product.count({
         where: { ...baseFilter, isValid: true, feedEnableSearch: true },
@@ -891,6 +891,16 @@ export async function getProductStats(req: Request, res: Response) {
       prisma.product.count({
         where: { ...baseFilter, feedEnableSearch: false },
       }),
+      // Count top-level products (simple products + variable products, not variations)
+      // These are what users selected - variations have wooParentId set
+      prisma.product.count({
+        where: {
+          shopId: id,
+          isSelected: true,
+          syncState: 'synced' as const,
+          wooParentId: null, // Only top-level products
+        },
+      }),
     ]);
 
     logger.info('shops:product-stats', {
@@ -900,6 +910,7 @@ export async function getProductStats(req: Request, res: Response) {
       inFeed,
       needsAttention,
       disabled,
+      productCount,
     });
 
     return res.json({
@@ -907,6 +918,7 @@ export async function getProductStats(req: Request, res: Response) {
       inFeed,
       needsAttention,
       disabled,
+      productCount,
     });
   } catch (err: any) {
     logger.error('shops:product-stats error', err);

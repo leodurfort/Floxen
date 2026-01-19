@@ -9,6 +9,7 @@ interface StatsGridProps {
     total: number;
     inFeed: number;
     needsAttention: number;
+    productCount?: number;
   };
   lastFeedGeneratedAt: string | null;
   syncEnabled: boolean;
@@ -73,10 +74,17 @@ export function StatsGrid({
   const router = useRouter();
   const syncStatus = getSyncStatusDisplay(syncEnabled, feedStatus, openaiEnabled);
 
+  // Format product count as subtext (e.g., "(1 product)" or "(3 products)")
+  const formatProductSubtext = (count: number | undefined) => {
+    if (count === undefined) return undefined;
+    return `(${count} ${count === 1 ? 'product' : 'products'})`;
+  };
+
   const clickableCards = [
     {
       label: 'Total Items',
       value: stats.total.toLocaleString(),
+      subtext: formatProductSubtext(stats.productCount),
       // Use page=1 to ensure URL params are present, which prevents localStorage filter restoration
       onClick: () => router.push(`/shops/${shopId}/products?page=1`),
     },
@@ -109,6 +117,9 @@ export function StatsGrid({
           <div className={`text-3xl font-bold ${card.valueClass || 'text-gray-900'}`}>
             {card.value}
           </div>
+          {'subtext' in card && card.subtext && (
+            <div className="text-xs text-gray-400 mt-1">{card.subtext}</div>
+          )}
         </button>
       ))}
 

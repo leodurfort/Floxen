@@ -73,10 +73,11 @@ export function deriveFeedState(
 
 // Product stats for feed status display
 export interface ProductStats {
-  total: number;
-  inFeed: number;
-  needsAttention: number;
-  disabled: number;
+  total: number;           // Total items (simple products + variations)
+  inFeed: number;          // Items that are valid and enabled for feed
+  needsAttention: number;  // Items that are invalid
+  disabled: number;        // Items disabled from feed
+  productCount: number;    // Number of top-level products (user's selection)
 }
 
 import type { ProductFieldOverrides } from './openai-feed-spec';
