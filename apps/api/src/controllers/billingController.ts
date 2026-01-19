@@ -93,7 +93,7 @@ export async function createPortal(req: Request, res: Response) {
 
   try {
     const baseUrl = env.webBaseUrl || 'http://localhost:3000';
-    const returnUrl = `${baseUrl}/settings/billing`;
+    const returnUrl = `${baseUrl}/settings/billing?from_portal=true`;
 
     logger.debug('[BILLING-API] Creating portal session', { userId, returnUrl });
 

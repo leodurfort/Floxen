@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import * as api from '@/lib/api';
 import { useAuth } from '@/store/auth';
+import { PlanChangeModal, type PlanChangeType } from '@/components/billing/PlanChangeModal';
 
 const TIER_DISPLAY: Record<string, { name: string; limit: string }> = {
   FREE: { name: 'Free', limit: '15 products' },
@@ -20,12 +21,19 @@ export default function BillingSettingsPage() {
   const [error, setError] = useState('');
   const [isPortalLoading, setIsPortalLoading] = useState(false);
 
+  // Plan change modal state
+  const [showPlanChangeModal, setShowPlanChangeModal] = useState(false);
+  const [planChangeType, setPlanChangeType] = useState<PlanChangeType | null>(null);
+  const [shopId, setShopId] = useState<string | null>(null);
+
   const successParam = searchParams.get('success');
   const canceledParam = searchParams.get('canceled');
+  const fromPortalParam = searchParams.get('from_portal');
 
   console.debug('[BILLING-PAGE] Component mounted', {
     successParam,
     canceledParam,
+    fromPortalParam,
     currentUrl: typeof window !== 'undefined' ? window.location.href : 'SSR',
   });
 
@@ -51,6 +59,16 @@ export default function BillingSettingsPage() {
           // Silent fail - billing page still works, sync will happen on next visit
           console.debug('[BILLING-PAGE] User profile sync failed (non-critical)');
         }
+
+        // Fetch user's shop for select-products link
+        try {
+          const { shops } = await api.listShops();
+          if (shops.length > 0) {
+            setShopId(shops[0].id);
+          }
+        } catch {
+          console.debug('[BILLING-PAGE] Failed to fetch shops (non-critical)');
+        }
       } catch (err) {
         console.error('[BILLING-PAGE] loadBilling() FAILED', err);
         setError(err instanceof Error ? err.message : 'Failed to load billing info');
@@ -62,10 +80,54 @@ export default function BillingSettingsPage() {
     loadBilling();
   }, [setUser]);
 
+  // Detect plan change when returning from Stripe Portal
+  useEffect(() => {
+    if (fromPortalParam !== 'true' || !billing) return;
+
+    const previousTier = sessionStorage.getItem('previousTier');
+    const previousCancelAtPeriodEnd = sessionStorage.getItem('previousCancelAtPeriodEnd');
+    sessionStorage.removeItem('previousTier');
+    sessionStorage.removeItem('previousCancelAtPeriodEnd');
+
+    // Clean URL without triggering navigation
+    window.history.replaceState({}, '', '/settings/billing');
+
+    if (!previousTier) return;
+
+    // Determine if there was a change
+    const tierChanged = previousTier !== billing.tier;
+    const cancelationChanged = previousCancelAtPeriodEnd !== String(billing.cancelAtPeriodEnd);
+
+    if (tierChanged || (cancelationChanged && billing.cancelAtPeriodEnd)) {
+      // Determine change type
+      const tierOrder: Record<string, number> = { FREE: 0, STARTER: 1, PROFESSIONAL: 2 };
+      const prevOrder = tierOrder[previousTier] ?? 0;
+      const newOrder = tierOrder[billing.tier] ?? 0;
+
+      if (billing.cancelAtPeriodEnd && previousCancelAtPeriodEnd === 'false') {
+        setPlanChangeType('canceled');
+      } else if (newOrder > prevOrder) {
+        setPlanChangeType('upgrade');
+      } else if (newOrder < prevOrder) {
+        setPlanChangeType('downgrade');
+      }
+
+      if (tierChanged || (cancelationChanged && billing.cancelAtPeriodEnd)) {
+        setShowPlanChangeModal(true);
+      }
+    }
+  }, [fromPortalParam, billing]);
+
   async function handleManageBilling() {
     console.debug('[BILLING-PAGE] handleManageBilling() called');
     setIsPortalLoading(true);
     setError('');
+
+    // Store current tier before redirect to detect changes on return
+    if (billing?.tier) {
+      sessionStorage.setItem('previousTier', billing.tier);
+      sessionStorage.setItem('previousCancelAtPeriodEnd', String(billing.cancelAtPeriodEnd ?? false));
+    }
 
     try {
       console.debug('[BILLING-PAGE] Creating portal session...');
@@ -225,6 +287,18 @@ export default function BillingSettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Plan Change Modal */}
+      {planChangeType && (
+        <PlanChangeModal
+          isOpen={showPlanChangeModal}
+          onClose={() => setShowPlanChangeModal(false)}
+          changeType={planChangeType}
+          newTier={billing?.tier || 'FREE'}
+          renewalDate={billing?.currentPeriodEnd}
+          shopId={shopId || undefined}
+        />
+      )}
     </div>
   );
 }
