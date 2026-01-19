@@ -415,6 +415,16 @@ export async function productSyncProcessor(job: Job) {
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) return;
 
+  // Check if shop needs product reselection (downgrade scenario)
+  if (shop.needsProductReselection) {
+    logger.warn('product-sync: skipping - shop needs product reselection', { shopId, triggeredBy });
+    await prisma.shop.update({
+      where: { id: shopId },
+      data: { syncStatus: 'PENDING' },
+    });
+    return;
+  }
+
   // If no Woo credentials, mark sync complete
   if (!shop.wooConsumerKey || !shop.wooConsumerSecret) {
     await prisma.shop.update({

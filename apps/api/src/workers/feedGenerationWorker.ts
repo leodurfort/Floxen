@@ -15,6 +15,12 @@ export async function feedGenerationProcessor(job: Job) {
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) return;
 
+  // Check if shop needs product reselection (downgrade scenario)
+  if (shop.needsProductReselection) {
+    logger.warn('feed-generation: skipping - shop needs product reselection', { shopId });
+    return;
+  }
+
   const parentIds = await getParentProductIds(shopId);
 
   // Get products excluding parent variable products

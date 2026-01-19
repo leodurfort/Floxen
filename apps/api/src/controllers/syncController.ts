@@ -16,6 +16,26 @@ export async function triggerSync(req: Request, res: Response) {
   }
 
   try {
+    // Check if shop exists and needs product reselection
+    const existingShop = await prisma.shop.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, needsProductReselection: true },
+    });
+
+    if (!existingShop) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
+
+    // Block sync if shop needs product reselection (downgrade scenario)
+    if (existingShop.needsProductReselection) {
+      logger.warn('sync:trigger blocked - shop needs product reselection', { shopId: req.params.id });
+      return res.status(400).json({
+        error: 'Product reselection required',
+        code: 'NEEDS_RESELECTION',
+        details: 'Please update your product selection to match your current plan limits.',
+      });
+    }
+
     const shop = await prisma.shop.update({
       where: { id: req.params.id },
       data: { syncStatus: SyncStatus.SYNCING },
@@ -28,7 +48,7 @@ export async function triggerSync(req: Request, res: Response) {
     return res.json({ shopId: shop.id, status: 'QUEUED' });
   } catch (err: any) {
     logger.error('sync:trigger error', err);
-    return res.status(404).json({ error: 'Shop not found' });
+    return res.status(500).json({ error: 'Failed to trigger sync' });
   }
 }
 

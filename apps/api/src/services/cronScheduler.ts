@@ -35,6 +35,7 @@ export class CronScheduler {
           isConnected: true,
           syncEnabled: true,
           openaiEnabled: true,
+          needsProductReselection: false, // Skip shops flagged for product reselection (downgrade)
         },
         select: {
           id: true,

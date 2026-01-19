@@ -784,6 +784,16 @@ export async function activateFeed(req: Request, res: Response) {
       });
     }
 
+    // Block activation if shop needs product reselection (downgrade scenario)
+    if (existingShop.needsProductReselection) {
+      logger.warn('shops:activate-feed blocked - shop needs product reselection', { shopId: id });
+      return res.status(400).json({
+        error: 'Product reselection required',
+        code: 'NEEDS_RESELECTION',
+        details: 'Please update your product selection to match your current plan limits before activating feed.',
+      });
+    }
+
     // Validate store profile is complete
     const profileErrors: string[] = [];
     if (!existingShop.sellerName) profileErrors.push('Store name is required');

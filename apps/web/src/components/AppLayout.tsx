@@ -7,6 +7,7 @@ import { Sidebar } from './Sidebar';
 import { useCurrentShop } from '@/hooks/useCurrentShop';
 import { useProductStats } from '@/hooks/useProductStats';
 import { FirstSyncSuccessBanner } from './banners/FirstSyncSuccessBanner';
+import { ProductReselectionBanner } from './banners/ProductReselectionBanner';
 
 // Pages that don't require authentication
 const AUTH_PAGES = [
@@ -95,6 +96,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className="ml-52">
         <main className="min-h-screen">
+          {/* Product Reselection Banner (shows when downgraded) */}
+          {currentShop && (
+            <div className="px-4 pt-4">
+              <ProductReselectionBanner
+                shopId={currentShop.id}
+                needsProductReselection={currentShop.needsProductReselection}
+              />
+            </div>
+          )}
           {/* First Sync Success Banner */}
           {currentShop && (
             <div className="px-4 pt-4">

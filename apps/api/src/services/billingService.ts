@@ -472,6 +472,23 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
     });
   }
 
+  // If upgrading to unlimited tier (PRO), clear the reselection flag
+  const isUpgradeToUnlimited = newTier === 'PROFESSIONAL' && oldTier !== 'PROFESSIONAL';
+
+  if (isUpgradeToUnlimited) {
+    const clearResult = await prisma.shop.updateMany({
+      where: { userId: user.id },
+      data: { needsProductReselection: false },
+    });
+
+    logger.info('[BILLING-WEBHOOK] User UPGRADED to PRO - cleared reselection flag', {
+      userId: user.id,
+      oldTier,
+      newTier,
+      shopsCleared: clearResult.count,
+    });
+  }
+
   logger.info('[BILLING-WEBHOOK] Subscription updated successfully', {
     userId: user.id,
     oldTier,
