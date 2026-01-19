@@ -1,4 +1,4 @@
-import { Shop, User, ProductFieldOverrides, CatalogProduct } from '@productsynch/shared';
+import { Shop, User, ProductFieldOverrides, CatalogProduct, ProductStats } from '@productsynch/shared';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app';
 
@@ -345,12 +345,7 @@ export async function activateFeed(shopId: string) {
 }
 
 export async function getProductStats(shopId: string) {
-  return requestWithAuth<{
-    total: number;
-    inFeed: number;
-    needsAttention: number;
-    disabled: number;
-  }>(`/api/v1/shops/${shopId}/product-stats`);
+  return requestWithAuth<ProductStats>(`/api/v1/shops/${shopId}/product-stats`);
 }
 
 export interface FeedPreviewResponse {
