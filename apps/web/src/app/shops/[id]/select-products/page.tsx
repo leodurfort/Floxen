@@ -81,12 +81,9 @@ export default function SelectProductsPage() {
         setProducts((prev) => [...prev, ...data.products]);
       } else {
         setProducts(data.products);
-        // Only initialize selected IDs on initial load, not during search
+        // Initialize selected IDs from API response (contains ALL selected IDs, not just current page)
         if (showLoading) {
-          const selected = new Set(
-            data.products.filter((p) => p.isSelected).map((p) => p.id)
-          );
-          setSelectedIds(selected);
+          setSelectedIds(new Set(data.selectedIds));
         }
       }
 
@@ -110,6 +107,7 @@ export default function SelectProductsPage() {
           setLimit(freshData.limit);
           setCurrentPage(freshData.page);
           setHasMore(freshData.hasMore);
+          setSelectedIds(new Set(freshData.selectedIds));
         } catch (discoverErr) {
           clearDiscoveryFlag(shopId);
           setError(discoverErr instanceof Error ? discoverErr.message : 'Failed to discover products');
@@ -155,10 +153,7 @@ export default function SelectProductsPage() {
         setLimit(data.limit);
         setCurrentPage(data.page);
         setHasMore(data.hasMore);
-        const selected = new Set(
-          data.products.filter((p) => p.isSelected).map((p) => p.id)
-        );
-        setSelectedIds(selected);
+        setSelectedIds(new Set(data.selectedIds));
       }
     } catch {
       // Ignore polling errors, will retry on next interval

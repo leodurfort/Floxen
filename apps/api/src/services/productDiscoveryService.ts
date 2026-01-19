@@ -124,6 +124,7 @@ export async function getDiscoveredProducts(
   products: DiscoveredProduct[];
   total: number;
   selected: number;
+  selectedIds: string[]; // All selected product IDs for state initialization
   limit: number;
   page: number;
   pageSize: number;
@@ -151,11 +152,18 @@ export async function getDiscoveredProducts(
     }),
   };
 
-  // Get total count and selected count
-  const [total, selected] = await Promise.all([
+  // Get total count, selected count, and all selected IDs
+  const [total, selected, selectedProducts] = await Promise.all([
     prisma.product.count({ where: whereClause }),
     prisma.product.count({ where: { ...whereClause, isSelected: true } }),
+    // Fetch all selected product IDs for frontend state initialization
+    prisma.product.findMany({
+      where: { shopId, wooParentId: null, isSelected: true },
+      select: { id: true },
+    }),
   ]);
+
+  const selectedIds = selectedProducts.map(p => p.id);
 
   // Get paginated products
   const products = await prisma.product.findMany({
@@ -188,6 +196,7 @@ export async function getDiscoveredProducts(
     })),
     total,
     selected,
+    selectedIds,
     limit,
     page,
     pageSize,

@@ -768,6 +768,7 @@ export interface DiscoveredProductsResponse {
   products: DiscoveredProduct[];
   total: number;
   selected: number;
+  selectedIds: string[]; // All selected product IDs for state initialization
   limit: number;
   page: number;
   pageSize: number;
