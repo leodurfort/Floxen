@@ -32,12 +32,14 @@ interface GettingStartedChecklistProps {
     inFeed: number;
     subscriptionTier: string;
   };
+  onOpenStoreProfile?: () => void;
 }
 
 export function GettingStartedChecklist({
   shopId,
   steps,
   stepDetails,
+  onOpenStoreProfile,
 }: GettingStartedChecklistProps) {
   // Allow multiple steps to be expanded simultaneously
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
@@ -105,12 +107,21 @@ export function GettingStartedChecklist({
       ) : (
         <div className="space-y-2">
           <div className="text-sm text-gray-600">Add your store name and return policy</div>
-          <Link
-            href={`/shops?openProfile=${shopId}`}
-            className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F]"
-          >
-            Complete Profile &rarr;
-          </Link>
+          {onOpenStoreProfile ? (
+            <button
+              onClick={onOpenStoreProfile}
+              className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F]"
+            >
+              Complete Profile &rarr;
+            </button>
+          ) : (
+            <Link
+              href={`/shops?openProfile=${shopId}`}
+              className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F]"
+            >
+              Complete Profile &rarr;
+            </Link>
+          )}
         </div>
       ),
     },

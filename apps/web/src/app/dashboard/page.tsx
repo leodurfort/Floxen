@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { useRouter } from 'next/navigation';
-import { useShopsQuery } from '@/hooks/useShopsQuery';
+import { useShopsQuery, useUpdateShopMutation } from '@/hooks/useShopsQuery';
 import { useCurrentShop } from '@/hooks/useCurrentShop';
 import { useProductStats } from '@/hooks/useProductStats';
 import { useFieldMappingsQuery } from '@/hooks/useFieldMappingsQuery';
 import { StoreBanner } from '@/components/dashboard/StoreBanner';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { GettingStartedChecklist } from '@/components/dashboard/GettingStartedChecklist';
+import { CompleteShopSetupModal } from '@/components/shops/CompleteShopSetupModal';
+import { Toast } from '@/components/catalog/Toast';
 import { calculateFieldMappingProgress } from '@/lib/fieldMappingUtils';
 import { PageHeader } from '@/components/ui';
 
@@ -21,12 +23,39 @@ export default function DashboardPage() {
   const { currentShop } = useCurrentShop();
   const { data: productStats } = useProductStats(currentShop?.id);
   const { data: fieldMappingsData } = useFieldMappingsQuery(currentShop?.id);
+  const updateShopMutation = useUpdateShopMutation();
+
+  // Modal state
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (hydrated && !user) {
       router.push('/login');
     }
   }, [hydrated, user, router]);
+
+  // Handle store profile modal save
+  async function handleProfileSave(data: { sellerName: string | null; returnPolicy: string | null; returnWindow: number | null }) {
+    if (!currentShop) return;
+
+    return new Promise<void>((resolve, reject) => {
+      updateShopMutation.mutate(
+        { shopId: currentShop.id, data },
+        {
+          onSuccess: () => {
+            setIsProfileModalOpen(false);
+            setToast({ message: 'Store profile saved successfully!', type: 'success' });
+            resolve();
+          },
+          onError: (err) => {
+            setToast({ message: err.message, type: 'error' });
+            reject(err);
+          },
+        }
+      );
+    });
+  }
 
   if (!hydrated) {
     return (
@@ -139,9 +168,24 @@ export default function DashboardPage() {
             shopId={currentShop.id}
             steps={checklistSteps}
             stepDetails={stepDetails}
+            onOpenStoreProfile={() => setIsProfileModalOpen(true)}
           />
         )}
       </div>
+
+      {/* Complete Store Profile Modal */}
+      {currentShop && (
+        <CompleteShopSetupModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          shop={currentShop}
+          onSave={handleProfileSave}
+          isSaving={updateShopMutation.isPending}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 }
