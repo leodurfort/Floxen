@@ -5,11 +5,12 @@ export type SubscriptionTier = 'FREE' | 'STARTER' | 'PROFESSIONAL';
 /**
  * Product limits per subscription tier (per shop)
  * Billing is based on WooCommerce PRODUCTS (parents), not items/variants
+ * Note: -1 represents unlimited (Infinity cannot be serialized to JSON)
  */
 export const TIER_LIMITS: Record<SubscriptionTier, number> = {
   FREE: 15,
   STARTER: 500,
-  PROFESSIONAL: Infinity,
+  PROFESSIONAL: -1, // -1 = unlimited (Infinity becomes null in JSON)
 } as const;
 
 /**
@@ -31,10 +32,10 @@ export function getTierLimit(tier: SubscriptionTier): number {
 }
 
 /**
- * Check if a tier has unlimited products
+ * Check if a tier has unlimited products (-1 = unlimited)
  */
 export function isUnlimitedTier(tier: SubscriptionTier): boolean {
-  return tier === 'PROFESSIONAL';
+  return TIER_LIMITS[tier] === -1;
 }
 
 /**

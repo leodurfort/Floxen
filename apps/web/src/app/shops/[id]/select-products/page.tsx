@@ -211,12 +211,15 @@ export default function SelectProductsPage() {
     };
   }, [searchInput, searchQuery, loadProducts]);
 
+  // -1 means unlimited (from PROFESSIONAL tier)
+  const isUnlimited = limit === -1;
+
   function toggleProduct(productId: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(productId)) {
         next.delete(productId);
-      } else if (next.size < limit) {
+      } else if (isUnlimited || next.size < limit) {
         next.add(productId);
       }
       return next;
@@ -273,7 +276,7 @@ export default function SelectProductsPage() {
     }
   }
 
-  const isOverLimit = selectedIds.size > limit;
+  const isOverLimit = !isUnlimited && selectedIds.size > limit;
 
   // Show loading spinner during initial load or discovery
   if (isLoading || isDiscovering) {
@@ -310,17 +313,22 @@ export default function SelectProductsPage() {
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Products</h1>
         <p className="text-gray-600">
-          Choose which products to display in ChatGPT.
-          Your plan allows up to <span className="font-semibold">{limit}</span> products.
+          Choose which products to display in ChatGPT.{' '}
+          {isUnlimited ? (
+            <>Your plan allows <span className="font-semibold">unlimited</span> products.</>
+          ) : (
+            <>Your plan allows up to <span className="font-semibold">{limit}</span> products.</>
+          )}
         </p>
       </div>
 
       {/* Product Counter - minimal inline */}
       <div className="flex items-center gap-4 mb-4">
         <p className={`text-sm ${isOverLimit ? 'text-red-600' : 'text-gray-500'}`}>
-          <span className="font-semibold">{selectedIds.size}</span> / {limit} selected · {total} products in store
+          <span className="font-semibold">{selectedIds.size}</span>
+          {isUnlimited ? '' : ` / ${limit}`} selected · {total} products in store
         </p>
-        {selectedIds.size >= limit && (
+        {!isUnlimited && selectedIds.size >= limit && (
           <a
             href="/pricing"
             className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium"
@@ -348,10 +356,10 @@ export default function SelectProductsPage() {
             </button>
             <button
               onClick={selectAll}
-              disabled={selectedIds.size === limit}
+              disabled={!isUnlimited && selectedIds.size === limit}
               className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Select All (up to limit)
+              {isUnlimited ? 'Select All' : 'Select All (up to limit)'}
             </button>
           </div>
         </div>
@@ -383,7 +391,7 @@ export default function SelectProductsPage() {
             {products.map((product) => {
               const isSelected = selectedIds.has(product.id);
               const imageUrl = product.wooImages?.[0]?.src;
-              const canSelect = isSelected || selectedIds.size < limit;
+              const canSelect = isSelected || isUnlimited || selectedIds.size < limit;
 
               return (
                 <div
@@ -494,7 +502,7 @@ export default function SelectProductsPage() {
         <div className="fixed bottom-0 left-52 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-30">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              {selectedIds.size} of {limit} products selected
+              {selectedIds.size}{isUnlimited ? '' : ` of ${limit}`} products selected
             </p>
             <button
               onClick={handleSave}
