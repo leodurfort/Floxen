@@ -116,7 +116,14 @@ export default function BillingSettingsPage() {
 
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-2xl font-bold text-gray-900">{tierInfo.name}</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {tierInfo.name}
+              {isPaid && billing?.billingInterval && (
+                <span className="text-base font-medium text-gray-500 ml-2">
+                  ({billing.billingInterval === 'year' ? 'Annual' : 'Monthly'})
+                </span>
+              )}
+            </p>
             <p className="text-sm text-gray-500">{tierInfo.limit}</p>
           </div>
           <span

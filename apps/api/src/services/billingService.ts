@@ -301,6 +301,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   });
 
   const priceId = subscriptionResponse.items.data[0]?.price.id;
+  const billingInterval = subscriptionResponse.items.data[0]?.price.recurring?.interval || null;
   const tier = getTierFromPriceId(priceId) || 'FREE';
   const productLimit = getTierLimit(tier);
 
@@ -308,6 +309,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     priceId,
     tier,
     productLimit,
+    billingInterval,
   });
 
   logger.debug('[BILLING-WEBHOOK] Updating user in database', {
@@ -334,6 +336,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       subscriptionId,
       subscriptionStatus: subscriptionResponse.status,
       subscriptionTier: tier,
+      billingInterval,
       currentPeriodEnd,
       cancelAtPeriodEnd,
     },
@@ -392,6 +395,7 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
   }
 
   const priceId = subscription.items.data[0]?.price.id;
+  const billingInterval = subscription.items.data[0]?.price.recurring?.interval || null;
   const newTier = getTierFromPriceId(priceId) || 'FREE';
   const oldTier = user.subscriptionTier as SubscriptionTier;
   const productLimit = getTierLimit(newTier);
@@ -423,6 +427,7 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
     data: {
       subscriptionStatus: subscription.status,
       subscriptionTier: newTier,
+      billingInterval,
       currentPeriodEnd,
       cancelAtPeriodEnd,
     },
@@ -658,6 +663,7 @@ export async function getBillingInfo(userId: string) {
     select: {
       subscriptionTier: true,
       subscriptionStatus: true,
+      billingInterval: true,
       currentPeriodEnd: true,
       cancelAtPeriodEnd: true,
     },
@@ -671,6 +677,7 @@ export async function getBillingInfo(userId: string) {
   const billingInfo = {
     tier: user.subscriptionTier,
     status: user.subscriptionStatus,
+    billingInterval: user.billingInterval,
     currentPeriodEnd: user.currentPeriodEnd,
     cancelAtPeriodEnd: user.cancelAtPeriodEnd,
   };
@@ -679,6 +686,7 @@ export async function getBillingInfo(userId: string) {
     userId,
     tier: billingInfo.tier,
     status: billingInfo.status,
+    billingInterval: billingInfo.billingInterval,
     currentPeriodEnd: billingInfo.currentPeriodEnd?.toISOString(),
     cancelAtPeriodEnd: billingInfo.cancelAtPeriodEnd,
   });

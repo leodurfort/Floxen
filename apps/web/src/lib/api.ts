@@ -673,6 +673,7 @@ export async function getProductWooData(shopId: string, productId: string) {
 export interface BillingInfo {
   tier: string;
   status: string | null;
+  billingInterval: string | null; // 'month' or 'year'
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
 }

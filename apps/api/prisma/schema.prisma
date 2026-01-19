@@ -49,6 +49,7 @@ model User {
   stripeCustomerId    String?   @unique @map("stripe_customer_id")
   subscriptionId      String?   @map("subscription_id")
   subscriptionStatus  String?   @map("subscription_status") // active, past_due, canceled
+  billingInterval     String?   @map("billing_interval") // 'month' or 'year'
   currentPeriodEnd    DateTime? @map("current_period_end")
   cancelAtPeriodEnd   Boolean   @default(false) @map("cancel_at_period_end")
 

@@ -140,8 +140,34 @@ export default function PricingPage() {
       hasUser: !!user,
     });
 
-    if (plan.tier === 'FREE' || plan.tier === currentTier) {
-      console.debug('[PRICING-PAGE] Plan selection blocked (FREE or current)', {
+    // Block if already on this plan
+    if (plan.tier === currentTier) {
+      console.debug('[PRICING-PAGE] Plan selection blocked (current plan)', {
+        planTier: plan.tier,
+        currentTier,
+      });
+      return;
+    }
+
+    // Free plan selected by a paid user - redirect to portal to cancel/downgrade
+    if (plan.tier === 'FREE' && currentTier !== 'FREE') {
+      console.debug('[PRICING-PAGE] Free plan selected by paid user, redirecting to portal');
+      setIsLoading('FREE');
+      setError('');
+      try {
+        const { url } = await api.createPortalSession();
+        window.location.href = url;
+      } catch (err) {
+        console.error('[PRICING-PAGE] Portal session FAILED', err);
+        setError(err instanceof Error ? err.message : 'Failed to open billing portal');
+        setIsLoading(null);
+      }
+      return;
+    }
+
+    // Block free-to-free selection
+    if (plan.tier === 'FREE') {
+      console.debug('[PRICING-PAGE] Plan selection blocked (already on FREE)', {
         planTier: plan.tier,
         currentTier,
       });
@@ -206,14 +232,28 @@ export default function PricingPage() {
       return 'Free Forever';
     }
     if (currentTier !== 'FREE') {
-      // User has a paid subscription, they need to use portal
-      return 'Manage in Portal';
+      // User has a paid subscription
+      // Show "Upgrade Plan" when upgrading (e.g., Starter to Pro)
+      // Show "Manage in Portal" for downgrades
+      const tierOrder = { FREE: 0, STARTER: 1, PROFESSIONAL: 2 };
+      const currentLevel = tierOrder[currentTier as keyof typeof tierOrder] ?? 0;
+      const targetLevel = tierOrder[plan.tier as keyof typeof tierOrder] ?? 0;
+      return targetLevel > currentLevel ? 'Upgrade Plan' : 'Manage in Portal';
     }
     return 'Get Started';
   }
 
   function isButtonDisabled(plan: Plan): boolean {
-    return plan.tier === currentTier || plan.tier === 'FREE';
+    // Disable if it's the current plan
+    // Free plan is now selectable if user has a paid subscription (to downgrade via portal)
+    if (plan.tier === currentTier) {
+      return true;
+    }
+    // Free plan is only disabled if user is already on free tier
+    if (plan.tier === 'FREE' && currentTier === 'FREE') {
+      return true;
+    }
+    return false;
   }
 
   return (
