@@ -25,6 +25,51 @@ export function isStripeConfigured(): boolean {
 }
 
 /**
+ * Check if user has an active (non-free) subscription
+ * Used to prevent duplicate subscriptions and block account deletion
+ */
+export async function hasActiveSubscription(userId: string): Promise<{
+  hasSubscription: boolean;
+  tier: string;
+  status: string | null;
+  cancelAtPeriodEnd: boolean;
+}> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      subscriptionId: true,
+      subscriptionTier: true,
+      subscriptionStatus: true,
+      cancelAtPeriodEnd: true,
+    },
+  });
+
+  // User has active subscription if:
+  // - subscriptionId exists
+  // - tier is not FREE
+  // - status is active, trialing, or past_due (not canceled)
+  const isActive =
+    user?.subscriptionId != null &&
+    user?.subscriptionTier !== 'FREE' &&
+    ['active', 'trialing', 'past_due'].includes(user?.subscriptionStatus || '');
+
+  logger.debug('[BILLING] hasActiveSubscription check', {
+    userId,
+    hasSubscription: isActive,
+    tier: user?.subscriptionTier || 'FREE',
+    status: user?.subscriptionStatus,
+    cancelAtPeriodEnd: user?.cancelAtPeriodEnd,
+  });
+
+  return {
+    hasSubscription: isActive,
+    tier: user?.subscriptionTier || 'FREE',
+    status: user?.subscriptionStatus || null,
+    cancelAtPeriodEnd: user?.cancelAtPeriodEnd || false,
+  };
+}
+
+/**
  * Create a Stripe Checkout session for subscription upgrade
  */
 export async function createCheckoutSession(
@@ -39,6 +84,19 @@ export async function createCheckoutSession(
     successUrl,
     cancelUrl,
   });
+
+  // Check for existing subscription - block checkout if user already has one
+  const existing = await hasActiveSubscription(userId);
+  if (existing.hasSubscription) {
+    logger.warn('[BILLING] Checkout blocked - user has active subscription', {
+      userId,
+      existingTier: existing.tier,
+      existingStatus: existing.status,
+    });
+    throw new Error(
+      'You already have an active subscription. Please use the billing portal to change your plan.'
+    );
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: userId },

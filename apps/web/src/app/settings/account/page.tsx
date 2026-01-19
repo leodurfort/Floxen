@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
@@ -12,6 +12,25 @@ export default function AccountSettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+
+  // Check if user has active subscription (blocks deletion)
+  useEffect(() => {
+    async function checkSubscription() {
+      try {
+        const billing = await api.getBilling();
+        const isActive =
+          billing.tier !== 'FREE' &&
+          billing.status === 'active' &&
+          !billing.cancelAtPeriodEnd;
+        setHasActiveSubscription(isActive);
+      } catch {
+        // If billing check fails, allow deletion (fail open)
+        setHasActiveSubscription(false);
+      }
+    }
+    checkSubscription();
+  }, []);
 
   async function handleDeleteAccount() {
     setError('');
@@ -66,9 +85,26 @@ export default function AccountSettingsPage() {
               </p>
             </div>
 
+            {hasActiveSubscription && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-700">
+                  You have an active subscription. Please{' '}
+                  <Link href="/settings/billing" className="text-amber-800 underline font-medium">
+                    cancel your subscription
+                  </Link>{' '}
+                  before deleting your account.
+                </p>
+              </div>
+            )}
+
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              disabled={hasActiveSubscription}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                hasActiveSubscription
+                  ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100'
+              }`}
             >
               Delete my account
             </button>

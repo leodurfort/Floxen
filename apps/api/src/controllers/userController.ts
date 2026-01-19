@@ -293,6 +293,23 @@ export async function deleteAccount(req: Request, res: Response) {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Check for active subscription - block deletion if user has one
+    const { hasActiveSubscription } = await import('../services/billingService');
+    const subscription = await hasActiveSubscription(userId);
+
+    if (subscription.hasSubscription && !subscription.cancelAtPeriodEnd) {
+      logger.warn('deleteAccount: blocked - user has active subscription', {
+        userId,
+        tier: subscription.tier,
+        status: subscription.status,
+      });
+      return res.status(400).json({
+        error: 'Cannot delete account with active subscription',
+        message:
+          'Please cancel your subscription first via Settings > Billing, then try again.',
+      });
+    }
+
     const userEmail = user.email;
 
     // Import prisma for deletion

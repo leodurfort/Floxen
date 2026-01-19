@@ -169,6 +169,18 @@ export default function PricingPage() {
     setError('');
 
     try {
+      // If user already has a paid subscription, redirect to portal for plan changes
+      if (currentTier !== 'FREE') {
+        console.debug('[PRICING-PAGE] User has subscription, redirecting to portal', {
+          currentTier,
+          targetTier: plan.tier,
+        });
+        const { url } = await api.createPortalSession();
+        window.location.href = url;
+        return;
+      }
+
+      // For FREE users, create a new checkout session
       console.debug('[PRICING-PAGE] Creating checkout session', {
         priceId,
         planTier: plan.tier,
@@ -193,8 +205,9 @@ export default function PricingPage() {
     if (plan.tier === 'FREE') {
       return 'Free Forever';
     }
-    if (currentTier !== 'FREE' && plan.tier !== currentTier) {
-      return 'Change Plan';
+    if (currentTier !== 'FREE') {
+      // User has a paid subscription, they need to use portal
+      return 'Manage in Portal';
     }
     return 'Get Started';
   }

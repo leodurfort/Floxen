@@ -65,6 +65,14 @@ export async function createCheckout(req: Request, res: Response) {
 
     res.json({ url: checkoutUrl });
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to create checkout session';
+
+    // Return 400 for business logic errors (existing subscription)
+    if (message.includes('already have an active subscription')) {
+      logger.warn('[BILLING-API] Checkout blocked - existing subscription', { userId, priceId });
+      return res.status(400).json({ error: message });
+    }
+
     logger.error('[BILLING-API] Failed to create checkout session', {
       error: err instanceof Error ? err : new Error(String(err)),
       userId,
