@@ -37,12 +37,12 @@ export function Sidebar() {
 
   // Build nav items based on current shop from URL
   const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/shops', label: 'Stores', icon: '🏪' },
     ...(currentShop?.isConnected ? [
       { href: `/shops/${currentShop.id}/setup`, label: 'Setup', icon: '⚙️' },
       { href: `/shops/${currentShop.id}/products`, label: 'Catalog', icon: '📦' },
     ] : []),
-    { href: '/dashboard', label: 'Dashboard', icon: '📊' },
   ];
 
   return (
