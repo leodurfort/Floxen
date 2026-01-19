@@ -170,9 +170,9 @@ export default function SelectProductsPage() {
         // Sync trigger is best-effort
       }
 
-      // Redirect to shops after short delay
+      // Redirect to Dashboard for guided setup flow
       setTimeout(() => {
-        router.push('/shops');
+        router.push('/dashboard');
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save selection');
@@ -190,7 +190,7 @@ export default function SelectProductsPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Products</h1>
           <p className="text-gray-600">
             {isDiscovering
-              ? 'Discovering products from your WooCommerce store...'
+              ? 'Connecting to your WooCommerce store...'
               : 'Loading products...'}
           </p>
         </div>
@@ -203,7 +203,7 @@ export default function SelectProductsPage() {
           </div>
           <p className="text-gray-500 text-sm">
             {isDiscovering
-              ? 'This may take a minute for large catalogs...'
+              ? 'Fetching your product catalog. This may take a moment for larger stores.'
               : 'Please wait...'}
           </p>
         </div>
@@ -223,9 +223,19 @@ export default function SelectProductsPage() {
       </div>
 
       {/* Product Counter - minimal inline */}
-      <p className={`text-sm mb-4 ${isOverLimit ? 'text-red-600' : 'text-gray-500'}`}>
-        <span className="font-semibold">{selectedIds.size}</span> / {limit} selected · {total} products in store
-      </p>
+      <div className="flex items-center gap-4 mb-4">
+        <p className={`text-sm ${isOverLimit ? 'text-red-600' : 'text-gray-500'}`}>
+          <span className="font-semibold">{selectedIds.size}</span> / {limit} selected · {total} products in store
+        </p>
+        {selectedIds.size >= limit && (
+          <a
+            href="/pricing"
+            className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium"
+          >
+            Need more? Upgrade →
+          </a>
+        )}
+      </div>
 
       {/* Search and Actions Row */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm">

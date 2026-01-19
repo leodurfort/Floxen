@@ -144,11 +144,15 @@ export function GettingStartedChecklist({
       title: 'Publish more products on ChatGPT',
       isComplete: steps.unlockMoreItems,
       content: steps.unlockMoreItems ? (
-        <div className="text-sm text-gray-600">Unlimited items unlocked</div>
+        <div className="text-sm text-gray-600">Unlimited products unlocked</div>
       ) : (
         <div className="space-y-2">
           <div className="text-sm text-gray-600">
-            Free plan: 500 items max &bull; You have {stepDetails.totalItems.toLocaleString()} items
+            {stepDetails.subscriptionTier === 'FREE' && 'Free plan: 15 products max'}
+            {stepDetails.subscriptionTier === 'STARTER' && 'Starter plan: 500 products max'}
+            {stepDetails.subscriptionTier === 'PROFESSIONAL' && 'Pro plan: Unlimited products'}
+            {!['FREE', 'STARTER', 'PROFESSIONAL'].includes(stepDetails.subscriptionTier) &&
+              'Free plan: 15 products max'}
           </div>
           <Link
             href="/settings/billing"
