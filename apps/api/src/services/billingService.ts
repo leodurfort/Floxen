@@ -333,19 +333,23 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
   const oldTier = user.subscriptionTier as SubscriptionTier;
   const productLimit = getTierLimit(newTier);
 
-  logger.debug('[BILLING-WEBHOOK] Tier change analysis', {
-    userId: user.id,
-    priceId,
-    oldTier,
-    newTier,
-    productLimit,
-  });
-
   // Handle case where current_period_end might be missing
   const currentPeriodEndTimestamp = subscription.current_period_end;
   const currentPeriodEnd = currentPeriodEndTimestamp
     ? new Date(currentPeriodEndTimestamp * 1000)
     : null;
+  const cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
+
+  logger.debug('[BILLING-WEBHOOK] Subscription data analysis', {
+    userId: user.id,
+    priceId,
+    oldTier,
+    newTier,
+    productLimit,
+    cancelAtPeriodEnd,
+    currentPeriodEnd: currentPeriodEnd?.toISOString(),
+    rawCancelAtPeriodEnd: subscription.cancel_at_period_end,
+  });
 
   await prisma.user.update({
     where: { id: user.id },
@@ -353,7 +357,7 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
       subscriptionStatus: subscription.status,
       subscriptionTier: newTier,
       currentPeriodEnd,
-      cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
+      cancelAtPeriodEnd,
     },
   });
 
@@ -361,6 +365,8 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
     userId: user.id,
     newTier,
     status: subscription.status,
+    cancelAtPeriodEnd,
+    currentPeriodEnd: currentPeriodEnd?.toISOString(),
   });
 
   // Update product limits on all user's shops
@@ -399,6 +405,8 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
     oldTier,
     newTier,
     status: subscription.status,
+    cancelAtPeriodEnd,
+    currentPeriodEnd: currentPeriodEnd?.toISOString(),
     isDowngrade,
   });
 }
