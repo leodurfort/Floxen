@@ -159,6 +159,14 @@ export async function updateShop(req: Request, res: Response) {
     const existingShop = await verifyShopOwnership(req, res, req.params.id);
     if (!existingShop) return;
 
+    // Prevent enabling syncEnabled when feed is not activated (openaiEnabled=false)
+    if (parse.data.syncEnabled === true && !existingShop.openaiEnabled) {
+      return res.status(400).json({
+        error: 'Cannot enable auto-sync before feed is activated',
+        code: 'FEED_NOT_ACTIVATED',
+      });
+    }
+
     // Check if any auto-fill affecting fields were updated
     const updatedFields = Object.keys(parse.data);
     const affectsAutofill = updatedFields.some((field) => AUTOFILL_AFFECTING_FIELDS.has(field));

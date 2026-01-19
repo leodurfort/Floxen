@@ -357,16 +357,7 @@ export default function ShopsPage() {
             <div className="space-y-4">
               {shops.map((shop) => {
                 const profileComplete = isProfileComplete(shop);
-                const hasValidProducts = (shop.validProductCount ?? 0) > 0;
                 const isAdvancedExpanded = expandedAdvanced[shop.id] ?? false;
-
-                // Determine button states based on progress
-                // State 1: Profile incomplete - Mapping is gray, Sync is gray
-                // State 2: Profile complete, no valid products - Mapping is orange, Sync is gray (disabled)
-                // State 3: Profile complete, valid products exist - Mapping is gray ("Check Field Mapping"), Sync is gray (enabled)
-                const mappingButtonOrange = profileComplete && !hasValidProducts;
-                const mappingButtonText = profileComplete && hasValidProducts ? 'Check Field Mapping' : 'Complete Mapping Setup';
-                const syncDisabled = triggerSyncMutation.isPending || (profileComplete && !hasValidProducts);
 
                 return (
                   <div key={shop.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -420,25 +411,13 @@ export default function ShopsPage() {
                                 Complete Store Profile
                               </button>
                             ) : (
-                              /* Normal state: Show mapping and sync buttons */
-                              <>
-                                <Link
-                                  href={`/shops/${shop.id}/setup`}
-                                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                                    mappingButtonOrange
-                                      ? 'bg-[#FA7315] hover:bg-[#E5650F] text-white'
-                                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
-                                  }`}
-                                >
-                                  {mappingButtonText}
-                                </Link>
-                                <Link
-                                  href={`/shops/${shop.id}/select-products`}
-                                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-                                >
-                                  Update Product Selection
-                                </Link>
-                              </>
+                              /* Normal state: Show product selection button */
+                              <Link
+                                href={`/shops/${shop.id}/select-products`}
+                                className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                              >
+                                Update Product Selection
+                              </Link>
                             )}
                           </div>
                         )}
@@ -634,19 +613,34 @@ export default function ShopsPage() {
                               <span className="text-sm text-gray-700">Auto-sync & Publish:</span>
                               <button
                                 onClick={() => handleToggleSync(shop.id, shop.syncEnabled)}
+                                disabled={!shop.openaiEnabled}
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                  shop.syncEnabled ? 'bg-green-500' : 'bg-gray-300'
+                                  !shop.openaiEnabled
+                                    ? 'bg-gray-200 cursor-not-allowed'
+                                    : shop.syncEnabled
+                                      ? 'bg-green-500'
+                                      : 'bg-gray-300'
                                 }`}
-                                title={shop.syncEnabled ? 'Auto-sync enabled (hourly)' : 'Auto-sync disabled'}
+                                title={
+                                  !shop.openaiEnabled
+                                    ? 'Activate feed first to enable auto-sync'
+                                    : shop.syncEnabled
+                                      ? 'Auto-sync enabled (hourly)'
+                                      : 'Auto-sync disabled'
+                                }
                               >
                                 <span
                                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                    shop.syncEnabled ? 'translate-x-6' : 'translate-x-1'
+                                    shop.syncEnabled && shop.openaiEnabled ? 'translate-x-6' : 'translate-x-1'
                                   }`}
                                 />
                               </button>
                               <span className="text-sm text-gray-500">
-                                {shop.syncEnabled ? 'Enabled (hourly)' : 'Disabled'}
+                                {!shop.openaiEnabled
+                                  ? 'Requires feed activation'
+                                  : shop.syncEnabled
+                                    ? 'Enabled (hourly)'
+                                    : 'Disabled'}
                               </span>
                             </div>
 
