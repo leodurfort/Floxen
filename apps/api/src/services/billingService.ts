@@ -302,11 +302,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
  * Handle customer.subscription.updated - plan changes, renewals
  */
 async function handleSubscriptionUpdated(subscription: any): Promise<void> {
-  logger.debug('[BILLING-WEBHOOK] handleSubscriptionUpdated started', {
+  logger.info('[BILLING-WEBHOOK] handleSubscriptionUpdated - RAW DATA', {
     subscriptionId: subscription.id,
     status: subscription.status,
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
-    currentPeriodEnd: subscription.current_period_end,
+    cancel_at_period_end: subscription.cancel_at_period_end,
+    current_period_end: subscription.current_period_end,
+    canceled_at: subscription.canceled_at,
+    cancel_at: subscription.cancel_at,
   });
 
   const user = await prisma.user.findFirst({
