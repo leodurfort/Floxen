@@ -110,7 +110,7 @@ export default function PricingPage() {
       popular: true,
     },
     {
-      name: 'Professional',
+      name: 'Pro',
       tier: 'PROFESSIONAL',
       price: { monthly: 37, annual: 374 },
       priceId: {

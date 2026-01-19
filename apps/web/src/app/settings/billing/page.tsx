@@ -9,7 +9,7 @@ import { useAuth } from '@/store/auth';
 const TIER_DISPLAY: Record<string, { name: string; limit: string }> = {
   FREE: { name: 'Free', limit: '15 products' },
   STARTER: { name: 'Starter', limit: '500 products' },
-  PROFESSIONAL: { name: 'Professional', limit: 'Unlimited products' },
+  PROFESSIONAL: { name: 'Pro', limit: 'Unlimited products' },
 };
 
 export default function BillingSettingsPage() {
@@ -202,7 +202,7 @@ export default function BillingSettingsPage() {
           <div className={`p-4 rounded-lg border ${billing?.tier === 'PROFESSIONAL' ? 'border-[#FA7315] bg-[#FA7315]/5' : 'border-gray-200'}`}>
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-semibold text-gray-900">Professional</p>
+                <p className="font-semibold text-gray-900">Pro</p>
                 <p className="text-sm text-gray-500">Unlimited products</p>
               </div>
               <span className="text-gray-700 font-medium">$37/mo</span>
