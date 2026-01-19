@@ -15,6 +15,8 @@ interface GettingStartedChecklistProps {
   shopId: string;
   steps: {
     connectStore: boolean;
+    selectProducts: boolean;
+    storeProfile: boolean;
     fieldMappings: boolean;
     reviewCatalog: boolean;
     activateFeed: boolean;
@@ -23,6 +25,7 @@ interface GettingStartedChecklistProps {
   stepDetails: {
     storeUrl: string;
     totalItems: number;
+    productCount: number;
     requiredFieldsMapped: number;
     totalRequiredFields: number;
     needsAttention: number;
@@ -69,6 +72,44 @@ export function GettingStartedChecklist({
             className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F]"
           >
             Connect Store &rarr;
+          </Link>
+        </div>
+      ),
+    },
+    {
+      id: 'selectProducts',
+      title: 'Select products from your store',
+      isComplete: steps.selectProducts,
+      content: steps.selectProducts ? (
+        <div className="text-sm text-gray-600">
+          {stepDetails.productCount.toLocaleString()} products selected
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="text-sm text-gray-600">Select which products to display in ChatGPT</div>
+          <Link
+            href={`/shops/${shopId}/select-products`}
+            className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F]"
+          >
+            Select Products &rarr;
+          </Link>
+        </div>
+      ),
+    },
+    {
+      id: 'storeProfile',
+      title: 'Complete store profile',
+      isComplete: steps.storeProfile,
+      content: steps.storeProfile ? (
+        <div className="text-sm text-gray-600">Store profile complete</div>
+      ) : (
+        <div className="space-y-2">
+          <div className="text-sm text-gray-600">Add your store name and return policy</div>
+          <Link
+            href={`/shops?openProfile=${shopId}`}
+            className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F]"
+          >
+            Complete Profile &rarr;
           </Link>
         </div>
       ),
