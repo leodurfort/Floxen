@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { useRouter } from 'next/navigation';
-import { useShopsQuery, useUpdateShopMutation } from '@/hooks/useShopsQuery';
+import { useShopsQuery, useUpdateShopMutation, useToggleSyncMutation } from '@/hooks/useShopsQuery';
 import { useCurrentShop } from '@/hooks/useCurrentShop';
 import { useProductStats } from '@/hooks/useProductStats';
 import { useFieldMappingsQuery } from '@/hooks/useFieldMappingsQuery';
@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const { data: productStats } = useProductStats(currentShop?.id);
   const { data: fieldMappingsData } = useFieldMappingsQuery(currentShop?.id);
   const updateShopMutation = useUpdateShopMutation();
+  const toggleSyncMutation = useToggleSyncMutation();
 
   // Modal state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -79,15 +80,36 @@ export default function DashboardPage() {
     currentShop?.sellerName && currentShop?.returnPolicy && currentShop?.returnWindow
   );
 
+  // Feed is truly active only when both openaiEnabled AND syncEnabled are true
+  const isFeedActive = (currentShop?.openaiEnabled && currentShop?.syncEnabled) ?? false;
+  // Feed is paused when openaiEnabled=true but syncEnabled=false
+  const isFeedPaused = (currentShop?.openaiEnabled && !currentShop?.syncEnabled) ?? false;
+
   const checklistSteps = {
     connectStore: currentShop?.isConnected ?? false,
     selectProducts: (productStats?.selectedProductCount ?? 0) > 0,
     storeProfile: isStoreProfileComplete,
     fieldMappings: fieldMappingProgress.isComplete,
     reviewCatalog: (productStats?.total ?? 0) > 0 && (productStats?.needsAttention ?? 0) === 0,
-    activateFeed: currentShop?.openaiEnabled ?? false,
+    activateFeed: isFeedActive,
     unlockMoreItems: user.subscriptionTier !== 'FREE',
   };
+
+  // Handler to reactivate feed (turn syncEnabled back on)
+  function handleReactivateFeed() {
+    if (!currentShop) return;
+    toggleSyncMutation.mutate(
+      { shopId: currentShop.id, syncEnabled: true },
+      {
+        onSuccess: () => {
+          setToast({ message: 'Feed reactivated successfully!', type: 'success' });
+        },
+        onError: (err) => {
+          setToast({ message: err.message, type: 'error' });
+        },
+      }
+    );
+  }
 
   const stepDetails = {
     storeUrl: currentShop?.wooStoreUrl?.replace(/^https?:\/\//, '') ?? '',
@@ -169,6 +191,9 @@ export default function DashboardPage() {
             steps={checklistSteps}
             stepDetails={stepDetails}
             onOpenStoreProfile={() => setIsProfileModalOpen(true)}
+            isFeedPaused={isFeedPaused}
+            onReactivateFeed={handleReactivateFeed}
+            isReactivating={toggleSyncMutation.isPending}
           />
         )}
       </div>

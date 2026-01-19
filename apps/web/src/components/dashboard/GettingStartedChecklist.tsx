@@ -33,6 +33,9 @@ interface GettingStartedChecklistProps {
     subscriptionTier: string;
   };
   onOpenStoreProfile?: () => void;
+  isFeedPaused?: boolean;
+  onReactivateFeed?: () => void;
+  isReactivating?: boolean;
 }
 
 export function GettingStartedChecklist({
@@ -40,6 +43,9 @@ export function GettingStartedChecklist({
   steps,
   stepDetails,
   onOpenStoreProfile,
+  isFeedPaused,
+  onReactivateFeed,
+  isReactivating,
 }: GettingStartedChecklistProps) {
   // Allow multiple steps to be expanded simultaneously
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
@@ -176,6 +182,21 @@ export function GettingStartedChecklist({
       content: steps.activateFeed ? (
         <div className="text-sm text-gray-600">
           {stepDetails.inFeed.toLocaleString()} items published on ChatGPT
+        </div>
+      ) : isFeedPaused ? (
+        <div className="space-y-2">
+          <div className="text-sm text-gray-600">
+            Auto-sync is paused. {stepDetails.inFeed.toLocaleString()} items were published on ChatGPT.
+          </div>
+          {onReactivateFeed && (
+            <button
+              onClick={onReactivateFeed}
+              disabled={isReactivating}
+              className="inline-block text-sm font-medium text-[#FA7315] hover:text-[#E5650F] disabled:opacity-50"
+            >
+              {isReactivating ? 'Reactivating...' : 'Reactivate Feed →'}
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
