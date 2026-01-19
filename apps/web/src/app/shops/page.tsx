@@ -510,24 +510,12 @@ export default function ShopsPage() {
                         <div className="flex justify-between items-center mb-4">
                           <div className="flex items-center gap-3">
                             <span className="font-medium text-gray-900">Store Profile</span>
-                            {/* Button/Edit link */}
-                            {isFirstSync(shop) || !profileComplete ? (
-                              /* During first sync OR profile incomplete: Always show prominent button */
-                              <button
-                                onClick={() => setModalShop(shop)}
-                                className="bg-[#FA7315] hover:bg-[#E5650F] text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-                              >
-                                Complete Store Profile
-                              </button>
-                            ) : (
-                              /* Profile complete and not first sync: Show edit link */
-                              <button
-                                onClick={() => setModalShop(shop)}
-                                className="text-[#FA7315] hover:underline font-medium text-sm"
-                              >
-                                Edit
-                              </button>
-                            )}
+                            <button
+                              onClick={() => setModalShop(shop)}
+                              className="text-[#FA7315] hover:underline font-medium text-sm"
+                            >
+                              Edit
+                            </button>
                           </div>
                         </div>
 
