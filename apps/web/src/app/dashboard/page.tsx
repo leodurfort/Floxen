@@ -46,7 +46,11 @@ export default function DashboardPage() {
         {
           onSuccess: () => {
             setIsProfileModalOpen(false);
-            setToast({ message: 'Store profile saved successfully!', type: 'success' });
+            // Only show success toast if all 3 fields are filled
+            const allFieldsFilled = data.sellerName !== null && data.returnPolicy !== null && data.returnWindow !== null;
+            if (allFieldsFilled) {
+              setToast({ message: 'Store profile saved successfully!', type: 'success' });
+            }
             resolve();
           },
           onError: (err) => {

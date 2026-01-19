@@ -127,9 +127,9 @@ export function StatsGrid({
         </button>
       ))}
 
-      {/* Last Sync - not clickable */}
+      {/* Last Feed generation - not clickable */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <div className="text-sm text-gray-500 mb-1">Last Sync</div>
+        <div className="text-sm text-gray-500 mb-1">Last Feed generation</div>
         <div className="text-3xl font-bold text-gray-900">
           {formatRelativeTime(lastFeedGeneratedAt)}
         </div>
