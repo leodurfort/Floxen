@@ -22,13 +22,11 @@ export function useShopsQuery() {
  */
 export function useShopsSyncPolling(enabled: boolean) {
   const { user, hydrated } = useAuth();
-  const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: [...queryKeys.shops.all, 'polling'],
+    queryKey: queryKeys.shops.all,
     queryFn: async () => {
       const result = await api.listShops();
-      queryClient.setQueryData(queryKeys.shops.all, result.shops);
       return result.shops;
     },
     enabled: hydrated && !!user && enabled,
