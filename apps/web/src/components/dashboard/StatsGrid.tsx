@@ -91,14 +91,14 @@ export function StatsGrid({
       onClick: () => router.push(`/shops/${shopId}/products?page=1`),
     },
     {
-      label: 'In Feed',
+      label: 'Items in Feed',
       value: stats.inFeed.toLocaleString(),
       subtext: formatProductSubtext(stats.productCountInFeed),
       onClick: () =>
         router.push(`/shops/${shopId}/products?cf_isValid_v=true&cf_enable_search_v=true`),
     },
     {
-      label: 'Needs Attention',
+      label: 'Items Needing Attention',
       value: stats.needsAttention.toLocaleString(),
       subtext: formatProductSubtext(stats.productCountNeedsAttention),
       valueClass: stats.needsAttention > 0 ? 'text-amber-600' : undefined,
