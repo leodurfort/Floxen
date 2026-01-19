@@ -880,7 +880,17 @@ export async function getProductStats(req: Request, res: Response) {
       wooProductId: { notIn: parentIds.length > 0 ? parentIds : [0] }
     };
 
-    const [total, inFeed, needsAttention, disabled, productCount] = await Promise.all([
+    // Count items and products in parallel
+    // Use raw SQL for contextual product counts (COALESCE groups variations with their parent)
+    const [
+      total,
+      inFeed,
+      needsAttention,
+      disabled,
+      productCount,
+      productCountInFeedResult,
+      productCountNeedsAttentionResult,
+    ] = await Promise.all([
       prisma.product.count({ where: baseFilter }),
       prisma.product.count({
         where: { ...baseFilter, isValid: true, feedEnableSearch: true },
@@ -901,7 +911,30 @@ export async function getProductStats(req: Request, res: Response) {
           wooParentId: null, // Only top-level products
         },
       }),
+      // Count distinct products with items in feed
+      // COALESCE maps variations to their parent, simple products to themselves
+      prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(DISTINCT COALESCE(woo_parent_id, woo_product_id)) as count
+        FROM products
+        WHERE shop_id = ${id}
+          AND is_selected = true
+          AND sync_state = 'synced'
+          AND is_valid = true
+          AND feed_enable_search = true
+      `,
+      // Count distinct products with items needing attention
+      prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(DISTINCT COALESCE(woo_parent_id, woo_product_id)) as count
+        FROM products
+        WHERE shop_id = ${id}
+          AND is_selected = true
+          AND sync_state = 'synced'
+          AND is_valid = false
+      `,
     ]);
+
+    const productCountInFeed = Number(productCountInFeedResult[0]?.count ?? 0);
+    const productCountNeedsAttention = Number(productCountNeedsAttentionResult[0]?.count ?? 0);
 
     logger.info('shops:product-stats', {
       shopId: id,
@@ -911,6 +944,8 @@ export async function getProductStats(req: Request, res: Response) {
       needsAttention,
       disabled,
       productCount,
+      productCountInFeed,
+      productCountNeedsAttention,
     });
 
     return res.json({
@@ -919,6 +954,8 @@ export async function getProductStats(req: Request, res: Response) {
       needsAttention,
       disabled,
       productCount,
+      productCountInFeed,
+      productCountNeedsAttention,
     });
   } catch (err: any) {
     logger.error('shops:product-stats error', err);

@@ -10,6 +10,8 @@ interface StatsGridProps {
     inFeed: number;
     needsAttention: number;
     productCount?: number;
+    productCountInFeed?: number;
+    productCountNeedsAttention?: number;
   };
   lastFeedGeneratedAt: string | null;
   syncEnabled: boolean;
@@ -74,10 +76,10 @@ export function StatsGrid({
   const router = useRouter();
   const syncStatus = getSyncStatusDisplay(syncEnabled, feedStatus, openaiEnabled);
 
-  // Format product count as subtext (e.g., "(1 product)" or "(3 products)")
+  // Format product count as subtext (e.g., "15 products")
   const formatProductSubtext = (count: number | undefined) => {
     if (count === undefined) return undefined;
-    return `(${count} ${count === 1 ? 'product' : 'products'})`;
+    return `${count} ${count === 1 ? 'product' : 'products'}`;
   };
 
   const clickableCards = [
@@ -91,12 +93,14 @@ export function StatsGrid({
     {
       label: 'In Feed',
       value: stats.inFeed.toLocaleString(),
+      subtext: formatProductSubtext(stats.productCountInFeed),
       onClick: () =>
         router.push(`/shops/${shopId}/products?cf_isValid_v=true&cf_enable_search_v=true`),
     },
     {
       label: 'Needs Attention',
       value: stats.needsAttention.toLocaleString(),
+      subtext: formatProductSubtext(stats.productCountNeedsAttention),
       valueClass: stats.needsAttention > 0 ? 'text-amber-600' : undefined,
       onClick: () => router.push(`/shops/${shopId}/products?cf_isValid_v=false`),
     },
@@ -117,8 +121,8 @@ export function StatsGrid({
           <div className={`text-3xl font-bold ${card.valueClass || 'text-gray-900'}`}>
             {card.value}
           </div>
-          {'subtext' in card && card.subtext && (
-            <div className="text-xs text-gray-400 mt-1">{card.subtext}</div>
+          {card.subtext && (
+            <div className="text-sm text-gray-500 mt-1">{card.subtext}</div>
           )}
         </button>
       ))}

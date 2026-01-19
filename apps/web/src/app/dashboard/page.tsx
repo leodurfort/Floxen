@@ -115,6 +115,8 @@ export default function DashboardPage() {
                 inFeed: productStats.inFeed,
                 needsAttention: productStats.needsAttention,
                 productCount: productStats.productCount,
+                productCountInFeed: productStats.productCountInFeed,
+                productCountNeedsAttention: productStats.productCountNeedsAttention,
               }}
               lastFeedGeneratedAt={currentShop.lastFeedGeneratedAt ?? null}
               syncEnabled={currentShop.syncEnabled}

@@ -78,6 +78,9 @@ export interface ProductStats {
   needsAttention: number;  // Items that are invalid
   disabled: number;        // Items disabled from feed
   productCount: number;    // Number of top-level products (user's selection)
+  // Contextual product counts (how many products have items in each category)
+  productCountInFeed: number;          // Products with at least one item in feed
+  productCountNeedsAttention: number;  // Products with at least one item needing attention
 }
 
 import type { ProductFieldOverrides } from './openai-feed-spec';
