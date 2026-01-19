@@ -223,6 +223,7 @@ export async function getFilteredProductIds(
 
   const tier = shop.user.subscriptionTier as SubscriptionTier;
   const limit = getTierLimit(tier);
+  const unlimited = isUnlimitedTier(tier);
 
   const products = await prisma.product.findMany({
     where: {
@@ -234,7 +235,8 @@ export async function getFilteredProductIds(
     },
     select: { id: true },
     orderBy: { wooTitle: 'asc' },
-    take: limit,
+    // Don't limit results for unlimited tiers (-1 would break Prisma)
+    ...(unlimited ? {} : { take: limit }),
   });
 
   return { ids: products.map(p => p.id), limit };
