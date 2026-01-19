@@ -260,6 +260,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     status: subscriptionResponse.status,
   });
 
+  // Handle case where current_period_end might be missing
+  const currentPeriodEndTimestamp = subscriptionResponse.current_period_end;
+  const currentPeriodEnd = currentPeriodEndTimestamp
+    ? new Date(currentPeriodEndTimestamp * 1000)
+    : null;
+
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -267,8 +273,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       subscriptionId,
       subscriptionStatus: subscriptionResponse.status,
       subscriptionTier: tier,
-      currentPeriodEnd: new Date(subscriptionResponse.current_period_end * 1000),
-      cancelAtPeriodEnd: subscriptionResponse.cancel_at_period_end,
+      currentPeriodEnd,
+      cancelAtPeriodEnd: subscriptionResponse.cancel_at_period_end ?? false,
     },
   });
 
@@ -335,13 +341,19 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
     productLimit,
   });
 
+  // Handle case where current_period_end might be missing
+  const currentPeriodEndTimestamp = subscription.current_period_end;
+  const currentPeriodEnd = currentPeriodEndTimestamp
+    ? new Date(currentPeriodEndTimestamp * 1000)
+    : null;
+
   await prisma.user.update({
     where: { id: user.id },
     data: {
       subscriptionStatus: subscription.status,
       subscriptionTier: newTier,
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      currentPeriodEnd,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
     },
   });
 
