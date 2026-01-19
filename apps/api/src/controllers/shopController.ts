@@ -915,7 +915,7 @@ export async function getProductStats(req: Request, res: Response) {
       // COALESCE maps variations to their parent, simple products to themselves
       prisma.$queryRaw<[{ count: bigint }]>`
         SELECT COUNT(DISTINCT COALESCE(woo_parent_id, woo_product_id)) as count
-        FROM products
+        FROM "Product"
         WHERE shop_id = ${id}
           AND is_selected = true
           AND sync_state = 'synced'
@@ -925,7 +925,7 @@ export async function getProductStats(req: Request, res: Response) {
       // Count distinct products with items needing attention
       prisma.$queryRaw<[{ count: bigint }]>`
         SELECT COUNT(DISTINCT COALESCE(woo_parent_id, woo_product_id)) as count
-        FROM products
+        FROM "Product"
         WHERE shop_id = ${id}
           AND is_selected = true
           AND sync_state = 'synced'
