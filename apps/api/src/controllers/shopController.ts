@@ -17,6 +17,11 @@ import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { clearOverridesForField, getOverrideCountsByField } from '../services/productReprocessService';
+import {
+  buildCatalogBaseWhere,
+  buildFeedEligibilityWhere,
+  getParentProductIds,
+} from '../lib/feedEligibility';
 
 type Shop = Awaited<ReturnType<typeof getShopRecord>>;
 
@@ -885,18 +890,12 @@ export async function getProductStats(req: Request, res: Response) {
     if (!shop) return;
 
     // Get parent product IDs to exclude (same filtering as catalog list)
-    const { getParentProductIds } = await import('../services/productService');
-    const parentIds = await getParentProductIds(id);
+    const parentIds = await getParentProductIds(prisma, id);
 
     // Get counts in parallel for efficiency
-    // Only count products that are selected AND synced (visible in Catalog)
-    // Exclude parent products (they're just containers for variations)
-    const baseFilter = {
-      shopId: id,
-      isSelected: true,
-      syncState: 'synced' as const,
-      wooProductId: { notIn: parentIds.length > 0 ? parentIds : [0] }
-    };
+    // Use centralized feed eligibility filters for consistency
+    const baseFilter = buildCatalogBaseWhere(id, parentIds);
+    const feedFilter = buildFeedEligibilityWhere(id, parentIds);
 
     // Count items and products in parallel
     // Use raw SQL for contextual product counts (COALESCE groups variations with their parent)
@@ -911,9 +910,7 @@ export async function getProductStats(req: Request, res: Response) {
       productCountNeedsAttentionResult,
     ] = await Promise.all([
       prisma.product.count({ where: baseFilter }),
-      prisma.product.count({
-        where: { ...baseFilter, isValid: true, feedEnableSearch: true },
-      }),
+      prisma.product.count({ where: feedFilter }),
       prisma.product.count({
         where: { ...baseFilter, isValid: false },
       }),

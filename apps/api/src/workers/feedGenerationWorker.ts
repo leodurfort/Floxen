@@ -5,7 +5,7 @@ import { prisma } from '../lib/prisma';
 import { generateFeedPayload, toJsonl } from '../services/feedService';
 import { logger } from '../lib/logger';
 import { uploadGzipToStorage } from '../services/storage';
-import { getParentProductIds } from '../services/productService';
+import { buildFeedEligibilityWhere, getParentProductIds } from '../lib/feedEligibility';
 
 const gzipAsync = promisify(gzip);
 
@@ -21,14 +21,12 @@ export async function feedGenerationProcessor(job: Job) {
     return;
   }
 
-  const parentIds = await getParentProductIds(shopId);
+  const parentIds = await getParentProductIds(prisma, shopId);
 
-  // Get products excluding parent variable products
+  // Get feed-eligible products using centralized criteria
+  // This ensures feed generation uses the same filters as preview and stats
   const products = await prisma.product.findMany({
-    where: {
-      shopId,
-      wooProductId: { notIn: parentIds },
-    },
+    where: buildFeedEligibilityWhere(shopId, parentIds),
   });
 
   const payload = generateFeedPayload(shop, products);

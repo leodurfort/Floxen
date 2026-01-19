@@ -5,6 +5,11 @@ import { syncQueue, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from
 import { logger } from '../lib/logger';
 import { generateFeedPayload } from '../services/feedService';
 import { getUserId } from '../utils/request';
+import {
+  buildFeedEligibilityWhere,
+  getParentProductIds,
+  FEED_ELIGIBILITY_SELECT,
+} from '../lib/feedEligibility';
 
 export async function triggerSync(req: Request, res: Response) {
   if (!isQueueAvailable()) {
@@ -157,22 +162,14 @@ export async function previewFeed(req: Request, res: Response) {
       return res.status(404).json({ error: 'Store not found' });
     }
 
-    // Fetch only valid, feed-enabled products with minimal fields
+    // Get parent product IDs to exclude (same as feed generation)
+    const parentIds = await getParentProductIds(prisma, shopId);
+
+    // Fetch feed-eligible products using centralized criteria
+    // This ensures preview matches actual feed generation
     const products = await prisma.product.findMany({
-      where: {
-        shopId,
-        isValid: true,
-        feedEnableSearch: true,
-      },
-      select: {
-        id: true,
-        wooProductId: true,
-        wooTitle: true,
-        wooParentId: true,
-        openaiAutoFilled: true,
-        isValid: true,
-        feedEnableSearch: true,
-      },
+      where: buildFeedEligibilityWhere(shopId, parentIds),
+      select: FEED_ELIGIBILITY_SELECT,
       skip: offset,
       take: limit ? limit + 1 : undefined, // Fetch one extra to determine hasMore (only for pagination)
       orderBy: { wooProductId: 'asc' },

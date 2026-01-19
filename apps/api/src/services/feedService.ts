@@ -1,6 +1,7 @@
 import { Product, Shop } from '@prisma/client';
 import { validateFeedEntry, type FeedValidationResult, OPENAI_FEED_SPEC } from '@productsynch/shared';
 import { logger } from '../lib/logger';
+import { isFeedEligible } from '../lib/feedEligibility';
 
 const VALID_OPENAI_FIELDS = new Set(OPENAI_FEED_SPEC.map(spec => spec.attribute));
 const ALL_OPENAI_FIELDS = OPENAI_FEED_SPEC.map(spec => spec.attribute);
@@ -33,7 +34,7 @@ export function generateFeedPayload(
   };
 
   const items = products
-    .filter(p => p.isValid && p.feedEnableSearch && p.isSelected && p.syncState === 'synced')
+    .filter(isFeedEligible) // Use centralized feed eligibility check
     .map((p) => {
         const autoFilled = (p.openaiAutoFilled as Record<string, any>) || {};
         const completeItem = buildFeedItem(shop, p, autoFilled);
