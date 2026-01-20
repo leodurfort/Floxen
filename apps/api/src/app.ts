@@ -41,6 +41,11 @@ export function createApp() {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
+  // TODO: Remove after testing Sentry
+  app.get('/debug-sentry', () => {
+    throw new Error('Sentry test error - delete this route');
+  });
+
   app.use('/api/v1', routes);
 
   // Sentry error handler must be before other error handlers
