@@ -7,8 +7,12 @@
 
 import { Router } from 'express';
 import { getFeedJson, getFeedHtml, listSnapshots, listShopFeeds } from '../controllers/feedController';
+import { feedLimiter } from '../middleware/rateLimit';
 
 const router = Router();
+
+// Rate limit public feed endpoints: 100 req/min per IP
+router.use(feedLimiter);
 
 // GET /api/v1/feed - List all shops with feed links (admin debug)
 router.get('/', listShopFeeds);

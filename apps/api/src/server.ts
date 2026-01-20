@@ -1,3 +1,6 @@
+// Sentry must be imported first for proper instrumentation
+import './instrument';
+
 import { env } from './config/env';
 import { logger } from './lib/logger';
 import { createApp } from './app';

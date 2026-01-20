@@ -16,8 +16,12 @@ import {
 } from '../controllers/authController';
 import { googleAuth } from '../controllers/googleAuthController';
 import { requireAuth } from '../middleware/auth';
+import { authLimiter } from '../middleware/rateLimit';
 
 const router = Router();
+
+// Rate limit all auth endpoints: 20 req/min per IP
+router.use(authLimiter);
 
 // Google OAuth
 router.post('/google', googleAuth);

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import { NextFunction, Request, Response } from 'express';
 import { logger } from '../lib/logger';
 import { ZodError } from 'zod';
@@ -102,6 +103,18 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
 
   // Include request ID so users can reference it when reporting issues
   errorResponse.requestId = req.requestId;
+
+  // Capture error in Sentry (skip 4xx client errors)
+  if (statusCode >= 500) {
+    Sentry.withScope((scope) => {
+      scope.setTag('requestId', req.requestId || 'unknown');
+      scope.setExtra('requestContext', requestContext);
+      if (requestContext.userId) {
+        scope.setUser({ id: requestContext.userId });
+      }
+      Sentry.captureException(err);
+    });
+  }
 
   res.status(statusCode).json(errorResponse);
 }

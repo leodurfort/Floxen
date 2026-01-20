@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
@@ -41,6 +42,9 @@ export function createApp() {
   });
 
   app.use('/api/v1', routes);
+
+  // Sentry error handler must be before other error handlers
+  Sentry.setupExpressErrorHandler(app);
 
   app.use(notFound);
   app.use(errorHandler);
