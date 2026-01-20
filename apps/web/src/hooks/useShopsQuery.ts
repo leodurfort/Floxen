@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/store/auth';
 import * as api from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
+import { useSyncOperations } from '@/store/syncOperations';
 import type { Shop } from '@productsynch/shared';
 
 export function useShopsQuery() {
@@ -99,9 +100,17 @@ export function useTriggerSyncMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (shopId: string) => api.triggerProductSync(shopId),
+    mutationFn: (shopId: string) => {
+      // Mark as user-initiated before triggering sync
+      useSyncOperations.getState().setUserInitiatedSync(shopId);
+      return api.triggerProductSync(shopId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
+    },
+    onError: (_err, shopId) => {
+      // Clear flag if trigger failed
+      useSyncOperations.getState().clearUserInitiatedSync(shopId);
     },
   });
 }

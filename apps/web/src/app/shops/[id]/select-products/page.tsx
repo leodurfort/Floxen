@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/store/auth';
+import { useSyncOperations } from '@/store/syncOperations';
 import * as api from '@/lib/api';
 import { SearchFilter } from '@/components/catalog/FilterDropdown';
 import { queryKeys } from '@/lib/queryClient';
@@ -254,11 +255,14 @@ export default function SelectProductsPage() {
 
       // Trigger a sync after selection
       try {
+        // Mark as user-initiated before triggering sync
+        useSyncOperations.getState().setUserInitiatedSync(shopId);
         await api.triggerProductSync(shopId);
         // Invalidate shops query so the redirect sees SYNCING status
         await queryClient.invalidateQueries({ queryKey: queryKeys.shops.all });
       } catch {
-        // Sync trigger is best-effort
+        // Sync trigger is best-effort, clear flag on failure
+        useSyncOperations.getState().clearUserInitiatedSync(shopId);
       }
 
       // Redirect to Dashboard for guided setup flow

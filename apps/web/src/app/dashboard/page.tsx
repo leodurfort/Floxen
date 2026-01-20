@@ -9,6 +9,7 @@ import { useCurrentShop } from '@/hooks/useCurrentShop';
 import { useProductStats } from '@/hooks/useProductStats';
 import { useFieldMappingsQuery } from '@/hooks/useFieldMappingsQuery';
 import { StoreBanner } from '@/components/dashboard/StoreBanner';
+import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { GettingStartedChecklist } from '@/components/dashboard/GettingStartedChecklist';
 import { CompleteShopSetupModal } from '@/components/shops/CompleteShopSetupModal';
@@ -166,6 +167,9 @@ export default function DashboardPage() {
             <StoreBanner shop={currentShop} />
           </div>
         )}
+
+        {/* Sync Status Banner */}
+        {currentShop && <SyncStatusBanner shop={currentShop} />}
 
         {/* Stats Grid */}
         {currentShop && productStats && (

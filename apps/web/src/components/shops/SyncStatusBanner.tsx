@@ -1,7 +1,10 @@
 'use client';
 
+import { useUserInitiatedSync } from '@/hooks/useUserInitiatedSync';
+
 interface SyncStatusBannerProps {
   shop: {
+    id: string;
     syncStatus: string;
     syncProgress?: number | null;
     lastSyncAt?: string | null;
@@ -9,10 +12,13 @@ interface SyncStatusBannerProps {
 }
 
 export function SyncStatusBanner({ shop }: SyncStatusBannerProps) {
-  // Only show during active sync (not PENDING, which means awaiting product selection)
-  const isFirstSync = shop.syncStatus === 'SYNCING' && shop.lastSyncAt === null;
+  const { shouldShowBanner } = useUserInitiatedSync(shop);
 
-  if (!isFirstSync) return null;
+  // Don't show banner if not a user-initiated sync
+  if (!shouldShowBanner) return null;
+
+  // Hide on failure (errors shown elsewhere)
+  if (shop.syncStatus === 'FAILED') return null;
 
   // Ensure minimum 5% display for progress bar and text
   const displayProgress = Math.max(shop.syncProgress ?? 0, 5);
