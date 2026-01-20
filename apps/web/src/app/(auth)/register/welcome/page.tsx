@@ -67,6 +67,41 @@ function TrustBadge({ icon, text }: { icon: React.ReactNode; text: string }) {
   );
 }
 
+// Expandable FAQ Component
+function PermissionsFAQ() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="mt-3 border-t border-gray-200 pt-3">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+      >
+        <svg
+          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Why does WooCommerce show other permissions?</span>
+      </button>
+      {isOpen && (
+        <div className="mt-2 ml-5.5 text-sm text-gray-600 bg-white rounded-lg p-3 border border-gray-200">
+          <p className="mb-2">
+            WooCommerce doesn&apos;t offer product-only permissions. Their &quot;read&quot; scope includes access to all store data.
+          </p>
+          <p className="font-medium text-gray-700">
+            Floxen only reads your products — we never access your orders, customers, or coupons.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Connection Modal Component
 function ConnectionModal({
   isOpen,
@@ -116,31 +151,34 @@ function ConnectionModal({
         </div>
 
         {/* Trust Badges */}
-        <div className="flex flex-col gap-2 mb-6 p-3 bg-gray-50 rounded-lg">
-          <TrustBadge
-            icon={
-              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            }
-            text="Read-only product access"
-          />
-          <TrustBadge
-            icon={
-              <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            }
-            text="Uses official WooCommerce OAuth"
-          />
-          <TrustBadge
-            icon={
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
-            text="Takes ~10 seconds"
-          />
+        <div className="mb-6 p-3 bg-gray-50 rounded-lg">
+          <div className="flex flex-col gap-2">
+            <TrustBadge
+              icon={
+                <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              }
+              text="We only sync your products"
+            />
+            <TrustBadge
+              icon={
+                <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              }
+              text="Orders, customers & coupons are never accessed"
+            />
+            <TrustBadge
+              icon={
+                <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              }
+              text="Uses official WooCommerce OAuth"
+            />
+          </div>
+          <PermissionsFAQ />
         </div>
 
         {/* Form */}
