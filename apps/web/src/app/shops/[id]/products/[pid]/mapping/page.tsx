@@ -10,7 +10,7 @@ import {
   ProductFieldOverride,
   ProductFieldOverrides,
   OpenAIFieldCategory,
-} from '@productsynch/shared';
+} from '@floxen/shared';
 import { ProductFieldMappingTable, ProductFieldMappingTableSkeleton } from '@/components/setup/ProductFieldMappingTable';
 import { useFieldMappingsQuery, useProductOverridesQuery, useUpdateProductOverridesMutation, useUpdateFeedEnableSearchMutation } from '@/hooks/useFieldMappingsQuery';
 import { useWooFieldsQuery, useWooProductDataQuery } from '@/hooks/useWooFieldsQuery';

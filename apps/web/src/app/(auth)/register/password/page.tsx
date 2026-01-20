@@ -59,7 +59,7 @@ export default function RegisterPasswordPage() {
     <main className="min-h-screen bg-[#F9FAFB] flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 w-full max-w-md space-y-6">
         <div className="text-center">
-          <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">ProductSynch</p>
+          <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">Floxen</p>
           <h1 className="text-2xl font-bold text-gray-900">Create a password</h1>
           <p className="text-gray-600 mt-2">
             Choose a secure password for your account

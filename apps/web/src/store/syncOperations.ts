@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-const USER_SYNC_KEY_PREFIX = 'productsynch.userSync.';
+const USER_SYNC_KEY_PREFIX = 'floxen.userSync.';
 
 /**
  * Tracks when operations that trigger background reprocessing were initiated.

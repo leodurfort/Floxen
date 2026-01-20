@@ -3,7 +3,7 @@ import { useAuth } from '@/store/auth';
 import * as api from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
 import { useSyncOperations } from '@/store/syncOperations';
-import type { Shop } from '@productsynch/shared';
+import type { Shop } from '@floxen/shared';
 
 export function useShopsQuery() {
   const { user, hydrated } = useAuth();

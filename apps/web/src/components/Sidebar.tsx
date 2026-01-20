@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
 import { useCurrentShop } from '@/hooks/useCurrentShop';
 import { useClickOutside } from '@/hooks/useWooFieldsQuery';
-import type { Shop } from '@productsynch/shared';
+import type { Shop } from '@floxen/shared';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -49,7 +49,7 @@ export function Sidebar() {
     <div className="fixed left-0 top-0 h-screen w-52 bg-[#C05A30] border-r border-white/20 flex flex-col">
       {/* Logo */}
       <div className="p-6">
-        <h1 className="text-xl font-bold text-white">ProductSynch</h1>
+        <h1 className="text-xl font-bold text-white">Floxen</h1>
       </div>
 
       {/* Shop Selector */}

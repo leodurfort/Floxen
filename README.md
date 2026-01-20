@@ -1,6 +1,6 @@
-# ProductSynch Monorepo
+# Floxen Monorepo
 
-This repository follows the ProductSynch technical specification (see `ProductSynch-Technical-Specification.md`). It is organized as a monorepo with a TypeScript Express API and a Next.js App Router frontend. Infra targets Railway (Postgres + Redis), Qdrant for embeddings, and Resend for email.
+This repository follows the Floxen technical specification (see `Floxen-Technical-Specification.md`). It is organized as a monorepo with a TypeScript Express API and a Next.js App Router frontend. Infra targets Railway (Postgres + Redis), Qdrant for embeddings, and Resend for email.
 
 ## Structure
 

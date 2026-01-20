@@ -3,7 +3,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useShopsQuery, useShopsSyncPolling } from './useShopsQuery';
 import { useSyncOperations } from '@/store/syncOperations';
-import type { Shop } from '@productsynch/shared';
+import type { Shop } from '@floxen/shared';
 
 /**
  * Derives the current shop from the URL (single source of truth).

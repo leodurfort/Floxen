@@ -1,5 +1,5 @@
 import { Product, Shop } from '@prisma/client';
-import { validateFeedEntry, type FeedValidationResult, OPENAI_FEED_SPEC } from '@productsynch/shared';
+import { validateFeedEntry, type FeedValidationResult, OPENAI_FEED_SPEC } from '@floxen/shared';
 import { logger } from '../lib/logger';
 import { isFeedEligible } from '../lib/feedEligibility';
 

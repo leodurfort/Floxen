@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { OPENAI_FEED_SPEC } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC } from '@floxen/shared';
 import { SHOP_FIELDS } from '../src/config/shop-fields';
 
 const prisma = new PrismaClient();

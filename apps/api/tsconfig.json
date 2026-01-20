@@ -7,7 +7,7 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@productsynch/shared/*": ["../shared/src/*"]
+      "@floxen/shared/*": ["../shared/src/*"]
     }
   },
   "include": ["src/**/*"]

@@ -3,7 +3,7 @@ import {
   CATEGORY_CONFIG,
   type OpenAIFieldSpec,
   type OpenAIFieldCategory,
-} from '@productsynch/shared';
+} from '@floxen/shared';
 
 export interface ProductData {
   id: string;
@@ -283,7 +283,7 @@ export function formatColumnValue(product: ProductData, columnId: string): strin
   return String(value);
 }
 
-const STORAGE_KEY_PREFIX = 'productsynch:catalog:columns:';
+const STORAGE_KEY_PREFIX = 'floxen:catalog:columns:';
 
 export function getStoredColumns(shopId: string): string[] {
   if (typeof window === 'undefined') {

@@ -11,7 +11,7 @@ import {
   validateStaticValue,
   StaticValueValidationResult,
   isProductEditable,
-} from '@productsynch/shared';
+} from '@floxen/shared';
 import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } from '@/lib/wooCommerceFields';
 import { Tooltip, StatusBadge } from '@/components/ui/Tooltip';
 import { DescriptionPopover } from '@/components/ui/DescriptionPopover';

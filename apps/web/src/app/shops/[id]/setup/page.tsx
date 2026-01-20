@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/store/auth';
-import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS, OpenAIFieldCategory } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC, CATEGORY_CONFIG, REQUIRED_FIELDS, LOCKED_FIELD_MAPPINGS, OpenAIFieldCategory } from '@floxen/shared';
 import { ProductSelector } from '@/components/setup/ProductSelector';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';

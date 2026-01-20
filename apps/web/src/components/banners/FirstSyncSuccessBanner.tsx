@@ -9,7 +9,7 @@ interface FirstSyncSuccessBannerProps {
   syncStatus: string;
 }
 
-const STORAGE_KEY_PREFIX = 'productsynch:firstSyncBanner:shown:';
+const STORAGE_KEY_PREFIX = 'floxen:firstSyncBanner:shown:';
 
 export function FirstSyncSuccessBanner({
   shopId,

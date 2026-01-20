@@ -2,7 +2,7 @@
  * OpenAI Product Feed Specification
  *
  * Defines all 70 OpenAI feed attributes with complete metadata.
- * Based on ProductSynch Technical Specification V2.1
+ * Based on Floxen Technical Specification V2.1
  */
 
 export interface OpenAIFieldSpec {

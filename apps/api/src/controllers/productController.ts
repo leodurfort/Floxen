@@ -8,7 +8,7 @@ import {
   validateStaticValue,
   OPENAI_FEED_SPEC,
   isProductEditable,
-} from '@productsynch/shared';
+} from '@floxen/shared';
 import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, getColumnValues as getColumnValuesService, ListProductsOptions, countProductsByItemGroupId, getProductIdsByItemGroupId } from '../services/productService';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';

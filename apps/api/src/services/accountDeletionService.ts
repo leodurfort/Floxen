@@ -61,7 +61,7 @@ export async function scheduleAccountDeletion(userId: string): Promise<{
 
     await sendEmail({
       to: user.email,
-      subject: 'Account Deletion Scheduled - ProductSynch',
+      subject: 'Account Deletion Scheduled - Floxen',
       html: getDeletionScheduledEmailHtml(deletionDateStr),
     });
 
@@ -102,7 +102,7 @@ export async function cancelAccountDeletion(userId: string): Promise<{
     // Send confirmation email
     await sendEmail({
       to: user.email,
-      subject: 'Account Deletion Cancelled - ProductSynch',
+      subject: 'Account Deletion Cancelled - Floxen',
       html: getDeletionCancelledEmailHtml(),
     });
 

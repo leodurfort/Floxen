@@ -1,4 +1,4 @@
-import { REQUIRED_FIELDS } from '@productsynch/shared';
+import { REQUIRED_FIELDS } from '@floxen/shared';
 
 export interface FieldMappingProgress {
   requiredFieldsMapped: number;

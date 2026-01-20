@@ -7,7 +7,7 @@ The validation layer provides comprehensive validation for OpenAI Product Feed e
 ### 1. Validate a Single Entry
 
 ```typescript
-import { validateFeedEntry } from '@productsynch/shared';
+import { validateFeedEntry } from '@floxen/shared';
 
 const entry = {
   enable_search: 'true',
@@ -31,7 +31,7 @@ if (!result.valid) {
 ### 2. Validate Multiple Entries
 
 ```typescript
-import { validateFeedEntries, getValidationSummary } from '@productsynch/shared';
+import { validateFeedEntries, getValidationSummary } from '@floxen/shared';
 
 const entries = [entry1, entry2, entry3];
 const results = validateFeedEntries(entries);
@@ -52,7 +52,7 @@ summary.commonErrors.forEach(({ error, count }) => {
 ### 3. Validation Options
 
 ```typescript
-import { validateFeedEntry, ValidationOptions } from '@productsynch/shared';
+import { validateFeedEntry, ValidationOptions } from '@floxen/shared';
 
 const options: ValidationOptions = {
   // Skip validation for specific fields
@@ -74,7 +74,7 @@ const result = validateFeedEntry(entry, options);
 
 ```typescript
 // apps/api/src/services/woocommerce/feedBuilder.ts
-import { validateFeedEntry } from '@productsynch/shared';
+import { validateFeedEntry } from '@floxen/shared';
 import { logger } from '../../lib/logger';
 
 export class FeedBuilder {
@@ -135,7 +135,7 @@ export class FeedBuilder {
 ```typescript
 // apps/api/src/routes/validation.ts
 import { Router } from 'express';
-import { validateFeedEntry } from '@productsynch/shared';
+import { validateFeedEntry } from '@floxen/shared';
 
 const router = Router();
 
@@ -189,7 +189,7 @@ export default router;
 
 ```typescript
 // apps/web/src/components/ProductPreview.tsx
-import { validateFeedEntry } from '@productsynch/shared';
+import { validateFeedEntry } from '@floxen/shared';
 
 export function ProductPreview({ entry }: { entry: any }) {
   const validation = validateFeedEntry(entry, {
@@ -247,7 +247,7 @@ export function ProductPreview({ entry }: { entry: any }) {
 ```typescript
 // scripts/validate-feed.ts
 import { PrismaClient } from '@prisma/client';
-import { validateFeedEntries, getValidationSummary } from '@productsynch/shared';
+import { validateFeedEntries, getValidationSummary } from '@floxen/shared';
 import { FeedBuilder } from '../apps/api/src/services/woocommerce/feedBuilder';
 
 async function validateFeed(shopId: string) {
@@ -404,7 +404,7 @@ import {
   validatePrice,
   validateGtin,
   validateUrl
-} from '@productsynch/shared';
+} from '@floxen/shared';
 
 // Validate price before saving
 const priceValidation = validatePrice(product.price);

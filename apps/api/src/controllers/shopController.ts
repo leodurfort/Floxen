@@ -10,7 +10,7 @@ import {
   setWooCredentials,
   updateShop as updateShopRecord,
 } from '../services/shopService';
-import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET } from '@productsynch/shared';
+import { LOCKED_FIELD_MAPPINGS, LOCKED_FIELD_SET } from '@floxen/shared';
 import { DEFAULT_FIELD_MAPPINGS } from '../config/default-field-mappings';
 import { syncQueue, syncFlowProducer, isQueueAvailable, DEFAULT_JOB_OPTIONS, JOB_PRIORITIES } from '../lib/redis';
 import { logger } from '../lib/logger';

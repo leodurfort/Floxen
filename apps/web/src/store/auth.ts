@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User } from '@productsynch/shared';
+import { User } from '@floxen/shared';
 
 // Tokens are stored ONLY in localStorage (not in Zustand state).
 // api.ts reads tokens directly from localStorage for requests.
@@ -28,9 +28,9 @@ export const useAuth = create<AuthState>((set) => ({
     });
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem('productsynch.user', JSON.stringify(user));
-      localStorage.setItem('productsynch.access', accessToken);
-      localStorage.setItem('productsynch.refresh', refreshToken);
+      localStorage.setItem('floxen.user', JSON.stringify(user));
+      localStorage.setItem('floxen.access', accessToken);
+      localStorage.setItem('floxen.refresh', refreshToken);
       console.debug('[AUTH-STORE] Tokens and user saved to localStorage');
     }
     set({ user, hydrated: true });
@@ -45,7 +45,7 @@ export const useAuth = create<AuthState>((set) => ({
     });
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem('productsynch.user', JSON.stringify(user));
+      localStorage.setItem('floxen.user', JSON.stringify(user));
       console.debug('[AUTH-STORE] User saved to localStorage');
     }
     set({ user, hydrated: true });
@@ -55,9 +55,9 @@ export const useAuth = create<AuthState>((set) => ({
   clear: () => {
     console.debug('[AUTH-STORE] clear() called - logging out user');
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('productsynch.user');
-      localStorage.removeItem('productsynch.access');
-      localStorage.removeItem('productsynch.refresh');
+      localStorage.removeItem('floxen.user');
+      localStorage.removeItem('floxen.access');
+      localStorage.removeItem('floxen.refresh');
       console.debug('[AUTH-STORE] All auth data removed from localStorage');
     }
     set({ user: null });
@@ -71,7 +71,7 @@ export const useAuth = create<AuthState>((set) => ({
       return;
     }
 
-    const userRaw = localStorage.getItem('productsynch.user');
+    const userRaw = localStorage.getItem('floxen.user');
     const user = userRaw ? (JSON.parse(userRaw) as User) : null;
 
     console.debug('[AUTH-STORE] hydrate() result', {

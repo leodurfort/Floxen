@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { OpenAIFieldSpec, validateStaticValue } from '@productsynch/shared';
+import { OpenAIFieldSpec, validateStaticValue } from '@floxen/shared';
 import { WooCommerceField, searchWooFields, getWooField } from '@/lib/wooCommerceFields';
 import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 

@@ -66,11 +66,11 @@ export async function createVerificationToken(
 
     switch (type) {
       case 'EMAIL_VERIFICATION':
-        subject = 'Verify your ProductSynch email';
+        subject = 'Verify your Floxen email';
         html = getVerificationEmailHtml(code);
         break;
       case 'PASSWORD_RESET':
-        subject = 'Reset your ProductSynch password';
+        subject = 'Reset your Floxen password';
         html = getPasswordResetEmailHtml(code);
         break;
       case 'EMAIL_CHANGE':

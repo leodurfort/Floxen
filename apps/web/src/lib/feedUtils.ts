@@ -1,4 +1,4 @@
-import { deriveFeedState, type FeedState, type SyncStatus } from '@productsynch/shared';
+import { deriveFeedState, type FeedState, type SyncStatus } from '@floxen/shared';
 
 export { deriveFeedState };
 export type { FeedState, SyncStatus };

@@ -224,7 +224,7 @@ export default function RegisterWelcomePage() {
         // Update localStorage directly (not React state) to avoid race condition
         // where AppLayout redirects to /dashboard before window.location.href executes.
         // When user returns from OAuth, hydrate() will read the correct onboardingComplete: true
-        localStorage.setItem('productsynch.user', JSON.stringify(onboardingResult.user));
+        localStorage.setItem('floxen.user', JSON.stringify(onboardingResult.user));
         // Redirect to WooCommerce OAuth immediately
         window.location.href = result.authUrl;
       } else {

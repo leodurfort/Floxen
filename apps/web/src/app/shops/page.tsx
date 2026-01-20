@@ -12,7 +12,7 @@ import { ConnectShopModal } from '@/components/shops/ConnectShopModal';
 import { ShopProfileBanner } from '@/components/shops/ShopProfileBanner';
 import { SyncStatusBanner } from '@/components/shops/SyncStatusBanner';
 import { PageHeader, Button } from '@/components/ui';
-import type { Shop } from '@productsynch/shared';
+import type { Shop } from '@floxen/shared';
 import {
   useShopsQuery,
   useShopsSyncPolling,

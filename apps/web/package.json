@@ -1,8 +1,8 @@
 {
-  "name": "@productsynch/web",
+  "name": "@floxen/web",
   "version": "1.0.5",
   "private": true,
-  "description": "ProductSynch dashboard (Next.js, App Router)",
+  "description": "Floxen dashboard (Next.js, App Router)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

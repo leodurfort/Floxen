@@ -1,6 +1,6 @@
 'use client';
 
-import type { ProductStats } from '@productsynch/shared';
+import type { ProductStats } from '@floxen/shared';
 
 export type ProductTabId = 'all' | 'inFeed' | 'needsAttention' | 'disabled';
 

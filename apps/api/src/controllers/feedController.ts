@@ -10,7 +10,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import { OPENAI_FEED_SPEC } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC } from '@floxen/shared';
 
 // Helper to get snapshot by ID or latest
 async function getSnapshot<T extends object>(

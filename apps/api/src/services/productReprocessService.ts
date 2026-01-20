@@ -2,7 +2,7 @@
  * Product Reprocess Service - handles re-processing products when field mapping overrides change.
  */
 
-import { ProductFieldOverrides, validateProduct } from '@productsynch/shared';
+import { ProductFieldOverrides, validateProduct } from '@floxen/shared';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { AutoFillService } from './autoFillService';

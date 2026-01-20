@@ -1,9 +1,9 @@
 {
-  "name": "@productsynch/api",
+  "name": "@floxen/api",
   "version": "1.0.17",
   "private": true,
-  "description": "ProductSynch API service (Express + TypeScript)",
-  "author": "ProductSynch",
+  "description": "Floxen API service (Express + TypeScript)",
+  "author": "Floxen",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "scripts": {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useMemo } from 'react';
-import { CatalogProduct } from '@productsynch/shared';
+import { CatalogProduct } from '@floxen/shared';
 import { useClickOutside } from '@/hooks/useWooFieldsQuery';
 
 interface Props {

@@ -1,6 +1,6 @@
 'use client';
 
-import { LOCKED_FIELD_MAPPINGS, OpenAIFieldSpec } from '@productsynch/shared';
+import { LOCKED_FIELD_MAPPINGS, OpenAIFieldSpec } from '@floxen/shared';
 import { WooCommerceFieldSelector } from './WooCommerceFieldSelector';
 import { extractTransformedPreviewValue, formatFieldValue, WooCommerceField } from '@/lib/wooCommerceFields';
 import { Tooltip, StatusBadge } from '@/components/ui/Tooltip';

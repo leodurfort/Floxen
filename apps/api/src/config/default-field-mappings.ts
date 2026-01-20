@@ -16,7 +16,7 @@
  * ✅ Always stays in sync with the specification
  */
 
-import { OPENAI_FEED_SPEC } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC } from '@floxen/shared';
 
 /**
  * Generate default field mappings from the canonical OpenAI Feed Specification.

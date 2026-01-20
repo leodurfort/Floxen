@@ -388,7 +388,7 @@ export async function deleteAccount(req: Request, res: Response) {
 
       await sendEmail({
         to: userEmail,
-        subject: 'Account Deleted - ProductSynch',
+        subject: 'Account Deleted - Floxen',
         html: getAccountDeletedEmailHtml(),
       });
     } catch (emailErr) {

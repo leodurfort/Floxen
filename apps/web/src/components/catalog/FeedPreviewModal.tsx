@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import * as api from '@/lib/api';
-import { OPENAI_FEED_SPEC } from '@productsynch/shared';
+import { OPENAI_FEED_SPEC } from '@floxen/shared';
 
 interface FeedPreviewModalProps {
   isOpen: boolean;

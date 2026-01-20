@@ -14,7 +14,7 @@ import {
   extractFieldValue,
   ProductFieldOverrides,
   STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS,
-} from '@productsynch/shared';
+} from '@floxen/shared';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 

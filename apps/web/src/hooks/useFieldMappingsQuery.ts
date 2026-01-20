@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/store/auth';
 import * as api from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
-import { LOCKED_FIELD_MAPPINGS } from '@productsynch/shared';
+import { LOCKED_FIELD_MAPPINGS } from '@floxen/shared';
 import type { ProductOverridesResponse } from '@/lib/api';
 import { useSyncOperations } from '@/store/syncOperations';
 

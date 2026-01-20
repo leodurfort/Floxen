@@ -31,7 +31,7 @@ const DEFAULT_FILTERS: CatalogFilters = {
 
 // Local Storage Persistence
 
-const STORAGE_KEY_PREFIX = 'productsynch:catalog:filters:';
+const STORAGE_KEY_PREFIX = 'floxen:catalog:filters:';
 
 interface PersistedFilters {
   search: string;

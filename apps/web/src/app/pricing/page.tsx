@@ -82,7 +82,7 @@ export default function PricingPage() {
       price: { monthly: 0, annual: 0 },
       priceId: { monthly: '', annual: '' },
       limit: '5 products',
-      description: 'Perfect for trying out ProductSynch',
+      description: 'Perfect for trying out Floxen',
       features: [
         { text: 'Up to 5 products', included: true },
         { text: 'WooCommerce sync', included: true },
@@ -419,7 +419,7 @@ export default function PricingPage() {
         </p>
         <p className="text-gray-500 text-sm mt-2">
           Questions?{' '}
-          <a href="mailto:support@productsynch.com" className="text-[#FA7315] hover:underline">
+          <a href="mailto:support@floxen.com" className="text-[#FA7315] hover:underline">
             Contact us
           </a>
         </p>

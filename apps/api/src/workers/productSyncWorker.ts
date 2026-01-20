@@ -6,7 +6,7 @@ import { initConcurrency, cleanupConcurrency, getConcurrencyStats } from '../lib
 import { createWooClient, fetchAllProducts, fetchSelectedProducts, fetchStoreCurrency, fetchStoreSettings, fetchAllCategories, enrichProductCategories, fetchVariationsParallel } from '../services/wooClient';
 import { transformWooProduct, mergeParentAndVariation } from '../services/productService';
 import { AutoFillService } from '../services/autoFillService';
-import { validateProduct, ProductFieldOverrides } from '@productsynch/shared';
+import { validateProduct, ProductFieldOverrides } from '@floxen/shared';
 import { FieldDiscoveryService } from '../services/fieldDiscoveryService';
 import { Shop } from '@prisma/client';
 import { isUnlimitedTier, type SubscriptionTier } from '../config/billing';

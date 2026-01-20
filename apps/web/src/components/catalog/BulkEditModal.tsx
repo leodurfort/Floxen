@@ -8,7 +8,7 @@ import {
   validateStaticValue,
   OpenAIFieldCategory,
   OpenAIFieldSpec,
-} from '@productsynch/shared';
+} from '@floxen/shared';
 import { BulkUpdateOperation } from '@/lib/api';
 import { searchWooFields } from '@/lib/wooCommerceFields';
 import { useWooFieldsQuery, useClickOutside } from '@/hooks/useWooFieldsQuery';

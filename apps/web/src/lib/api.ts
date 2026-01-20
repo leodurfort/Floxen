@@ -1,4 +1,4 @@
-import { Shop, User, ProductFieldOverrides, CatalogProduct, ProductStats } from '@productsynch/shared';
+import { Shop, User, ProductFieldOverrides, CatalogProduct, ProductStats } from '@floxen/shared';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app';
 
@@ -9,14 +9,14 @@ let refreshPromise: Promise<string> | null = null;
 
 function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('productsynch.access');
+  return localStorage.getItem('floxen.access');
 }
 
 function clearAuthAndRedirect(): void {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('productsynch.user');
-    localStorage.removeItem('productsynch.access');
-    localStorage.removeItem('productsynch.refresh');
+    localStorage.removeItem('floxen.user');
+    localStorage.removeItem('floxen.access');
+    localStorage.removeItem('floxen.refresh');
     window.location.href = '/login';
   }
 }
@@ -30,7 +30,7 @@ async function refreshAccessToken(): Promise<string> {
   refreshPromise = (async () => {
     try {
       const refreshToken = typeof window !== 'undefined'
-        ? localStorage.getItem('productsynch.refresh')
+        ? localStorage.getItem('floxen.refresh')
         : null;
 
       if (!refreshToken) {
@@ -52,9 +52,9 @@ async function refreshAccessToken(): Promise<string> {
       const newAccessToken = data.tokens.accessToken;
 
       if (typeof window !== 'undefined') {
-        localStorage.setItem('productsynch.access', newAccessToken);
+        localStorage.setItem('floxen.access', newAccessToken);
         if (data.tokens.refreshToken) {
-          localStorage.setItem('productsynch.refresh', data.tokens.refreshToken);
+          localStorage.setItem('floxen.refresh', data.tokens.refreshToken);
         }
       }
 

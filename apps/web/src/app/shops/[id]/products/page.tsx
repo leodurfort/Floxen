@@ -11,7 +11,7 @@ import { useProductsQuery, useBulkUpdateMutation } from '@/hooks/useProductsQuer
 import { useCurrentShop } from '@/hooks/useCurrentShop';
 import { useProductStats } from '@/hooks/useProductStats';
 import { useActivateFeedMutation } from '@/hooks/useShopsQuery';
-import { CatalogProduct } from '@productsynch/shared';
+import { CatalogProduct } from '@floxen/shared';
 import { FEED_STATE_CONFIG, deriveFeedState } from '@/lib/feedUtils';
 import { SearchFilter } from '@/components/catalog/FilterDropdown';
 import { BulkActionToolbar } from '@/components/catalog/BulkActionToolbar';

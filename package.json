@@ -1,8 +1,8 @@
 {
-  "name": "productsynch",
+  "name": "floxen",
   "version": "1.0.0",
   "private": true,
-  "description": "ProductSynch monorepo (API + Web) following the technical specification.",
+  "description": "Floxen monorepo (API + Web) following the technical specification.",
   "license": "ISC",
   "engines": {
     "node": ">=20"

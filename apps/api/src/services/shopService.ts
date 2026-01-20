@@ -10,7 +10,7 @@ async function verifyWooCommerceStore(storeUrl: string): Promise<{ valid: boolea
     const url = storeUrl.replace(/\/$/, '') + '/wp-json/wc/v3/';
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'User-Agent': 'ProductSynch/1.0' },
+      headers: { 'User-Agent': 'Floxen/1.0' },
       signal: AbortSignal.timeout(10000),
     });
 
@@ -176,7 +176,7 @@ export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string
   const returnUrl = `${env.webBaseUrl}/shops?shop=${shopId}&oauth=complete`;
 
   const url = new URL('/wc-auth/v1/authorize', storeUrl);
-  url.searchParams.set('app_name', 'ProductSynch');
+  url.searchParams.set('app_name', 'Floxen');
   url.searchParams.set('scope', 'read_write');
   url.searchParams.set('user_id', userId);
   url.searchParams.set('return_url', returnUrl);

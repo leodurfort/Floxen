@@ -8,7 +8,7 @@
  * - Shop-level fields (seller info, return policy, etc.)
  */
 
-import { TRANSFORMS, extractFieldValue } from '@productsynch/shared';
+import { TRANSFORMS, extractFieldValue } from '@floxen/shared';
 
 // Re-export extractFieldValue from shared package for convenience
 export { extractFieldValue };

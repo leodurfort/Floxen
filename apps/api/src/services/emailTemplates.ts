@@ -25,11 +25,11 @@ function wrapTemplate(content: string): string {
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">ProductSynch</div>
+      <div class="logo">Floxen</div>
     </div>
     ${content}
     <div class="footer">
-      <p>&copy; ${new Date().getFullYear()} ProductSynch. All rights reserved.</p>
+      <p>&copy; ${new Date().getFullYear()} Floxen. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -44,9 +44,9 @@ export function getVerificationEmailHtml(code: string): string {
   return wrapTemplate(`
     <div class="content">
       <h2 style="margin: 0 0 15px 0; color: #1a1d29;">Verify your email</h2>
-      <p>Welcome to ProductSynch! Use the code below to verify your email address:</p>
+      <p>Welcome to Floxen! Use the code below to verify your email address:</p>
       <div class="code">${code}</div>
-      <p class="warning">This code expires in 10 minutes. If you didn't create an account with ProductSynch, you can safely ignore this email.</p>
+      <p class="warning">This code expires in 10 minutes. If you didn't create an account with Floxen, you can safely ignore this email.</p>
     </div>
   `);
 }
@@ -86,7 +86,7 @@ export function getDeletionScheduledEmailHtml(deletionDate: string): string {
   return wrapTemplate(`
     <div class="content">
       <h2 style="margin: 0 0 15px 0; color: #dc2626;">Account deletion scheduled</h2>
-      <p>Your ProductSynch account is scheduled for permanent deletion on:</p>
+      <p>Your Floxen account is scheduled for permanent deletion on:</p>
       <p style="font-size: 18px; font-weight: bold; text-align: center; padding: 15px; background: #fef2f2; border-radius: 8px; color: #dc2626;">${deletionDate}</p>
       <p>After this date, all your data including shops, products, and settings will be permanently removed.</p>
       <p class="warning">If you didn't request this deletion or want to keep your account, log in and cancel the deletion from your settings.</p>
@@ -101,8 +101,8 @@ export function getDeletionCancelledEmailHtml(): string {
   return wrapTemplate(`
     <div class="content">
       <h2 style="margin: 0 0 15px 0; color: #16a34a;">Account deletion cancelled</h2>
-      <p>Good news! Your ProductSynch account deletion has been cancelled.</p>
-      <p>Your account and all your data will remain intact. You can continue using ProductSynch as usual.</p>
+      <p>Good news! Your Floxen account deletion has been cancelled.</p>
+      <p>Your account and all your data will remain intact. You can continue using Floxen as usual.</p>
     </div>
   `);
 }
@@ -113,7 +113,7 @@ export function getDeletionCancelledEmailHtml(): string {
 export function getWelcomeEmailHtml(firstName: string): string {
   return wrapTemplate(`
     <div class="content">
-      <h2 style="margin: 0 0 15px 0; color: #1a1d29;">Welcome to ProductSynch, ${firstName}!</h2>
+      <h2 style="margin: 0 0 15px 0; color: #1a1d29;">Welcome to Floxen, ${firstName}!</h2>
       <p>Your account is now set up and ready to go. Here's what you can do next:</p>
       <ul style="padding-left: 20px;">
         <li><strong>Connect your WooCommerce store</strong> to start syncing products</li>
@@ -132,7 +132,7 @@ export function getAccountDeletedEmailHtml(): string {
   return wrapTemplate(`
     <div class="content">
       <h2 style="margin: 0 0 15px 0; color: #dc2626;">Account deleted</h2>
-      <p>Your ProductSynch account has been permanently deleted.</p>
+      <p>Your Floxen account has been permanently deleted.</p>
       <p>All your data including shops, products, and settings have been removed from our systems.</p>
       <p style="margin-top: 20px;">We're sorry to see you go. If you ever want to return, you're always welcome to create a new account.</p>
     </div>

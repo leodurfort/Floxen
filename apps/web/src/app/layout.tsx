@@ -20,7 +20,7 @@ const body = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: 'ProductSynch',
+  title: 'Floxen',
   description: 'Sync WooCommerce catalogs to OpenAI product feeds with AI enrichment.',
 };
 

@@ -1,5 +1,5 @@
 {
-  "name": "@productsynch/test-generator",
+  "name": "@floxen/test-generator",
   "version": "1.0.0",
   "private": true,
   "description": "WooCommerce Test Data Generator - Generate 500 test products in any WooCommerce store",
