@@ -27,6 +27,7 @@ export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [prices, setPrices] = useState<api.BillingPrices | null>(null);
   const [currentTier, setCurrentTier] = useState<string>('FREE');
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
 
@@ -62,8 +63,10 @@ export default function PricingPage() {
           console.debug('[PRICING-PAGE] Setting currentTier from API', {
             tier: billingData.tier,
             status: billingData.status,
+            cancelAtPeriodEnd: billingData.cancelAtPeriodEnd,
           });
           setCurrentTier(billingData.tier);
+          setCancelAtPeriodEnd(billingData.cancelAtPeriodEnd ?? false);
         }
       } catch (err) {
         console.error('[PRICING-PAGE] Failed to load pricing data:', err);
@@ -154,6 +157,9 @@ export default function PricingPage() {
       console.debug('[PRICING-PAGE] Free plan selected by paid user, redirecting to portal');
       setIsLoading('FREE');
       setError('');
+      // Store current tier before redirect to detect changes on return (billing page reads this)
+      sessionStorage.setItem('previousTier', currentTier);
+      sessionStorage.setItem('previousCancelAtPeriodEnd', String(cancelAtPeriodEnd));
       try {
         const { url } = await api.createPortalSession();
         window.location.href = url;
@@ -201,6 +207,9 @@ export default function PricingPage() {
           currentTier,
           targetTier: plan.tier,
         });
+        // Store current tier before redirect to detect changes on return (billing page reads this)
+        sessionStorage.setItem('previousTier', currentTier);
+        sessionStorage.setItem('previousCancelAtPeriodEnd', String(cancelAtPeriodEnd));
         const { url } = await api.createPortalSession();
         window.location.href = url;
         return;
