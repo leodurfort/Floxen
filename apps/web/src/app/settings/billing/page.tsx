@@ -8,8 +8,8 @@ import { useAuth } from '@/store/auth';
 import { PlanChangeModal, type PlanChangeType } from '@/components/billing/PlanChangeModal';
 
 const TIER_DISPLAY: Record<string, { name: string; limit: string }> = {
-  FREE: { name: 'Free', limit: '15 products' },
-  STARTER: { name: 'Starter', limit: '500 products' },
+  FREE: { name: 'Free', limit: '5 products' },
+  STARTER: { name: 'Starter', limit: '100 products' },
   PROFESSIONAL: { name: 'Pro', limit: 'Unlimited products' },
 };
 
@@ -117,6 +117,19 @@ export default function BillingSettingsPage() {
       }
     }
   }, [fromPortalParam, billing]);
+
+  // Detect upgrade when returning from Stripe Checkout (Free → paid plan)
+  // Checkout flow is only used by Free users, so success=true with a paid tier means upgrade
+  useEffect(() => {
+    if (successParam !== 'true' || !billing || billing.tier === 'FREE') return;
+
+    // Clean URL without triggering navigation
+    window.history.replaceState({}, '', '/settings/billing');
+
+    // Show upgrade modal - checkout is only for Free users upgrading to paid
+    setPlanChangeType('upgrade');
+    setShowPlanChangeModal(true);
+  }, [successParam, billing]);
 
   async function handleManageBilling() {
     console.debug('[BILLING-PAGE] handleManageBilling() called');
@@ -252,7 +265,7 @@ export default function BillingSettingsPage() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="font-semibold text-gray-900">Free</p>
-                <p className="text-sm text-gray-500">15 products</p>
+                <p className="text-sm text-gray-500">5 products</p>
               </div>
               <span className="text-gray-500">$0/mo</span>
             </div>
@@ -262,7 +275,7 @@ export default function BillingSettingsPage() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="font-semibold text-gray-900">Starter</p>
-                <p className="text-sm text-gray-500">500 products</p>
+                <p className="text-sm text-gray-500">100 products</p>
               </div>
               <span className="text-gray-700 font-medium">$25/mo</span>
             </div>
