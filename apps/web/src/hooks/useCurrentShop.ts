@@ -78,6 +78,7 @@ export function useCurrentShop() {
     ) {
       queryClient.invalidateQueries({ queryKey: ['products', currentShop.id] });
       queryClient.invalidateQueries({ queryKey: ['columnValues', currentShop.id], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['shops', currentShop.id, 'product-stats'] });
     }
 
     prevReprocessedAtRef.current = currentReprocessedAt;
