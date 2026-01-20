@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { env } from '../config/env';
-import { getTierFromPriceId, getTierLimit, type SubscriptionTier } from '../config/billing';
+import { getTierFromPriceId, getTierLimit, PRICE_TO_TIER, type SubscriptionTier } from '../config/billing';
 
 // Lazy-initialize Stripe client to avoid crashing when key is not configured
 let stripeClient: Stripe | null = null;
@@ -302,7 +302,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
   const priceId = subscriptionResponse.items.data[0]?.price.id;
   const billingInterval = subscriptionResponse.items.data[0]?.price.recurring?.interval || null;
-  const tier = getTierFromPriceId(priceId) || 'FREE';
+  const tier = getTierFromPriceId(priceId);
+
+  // Reject unknown price IDs to prevent silent downgrades
+  // If price ID is not in our configured map, skip the update entirely
+  if (!tier) {
+    logger.error('[BILLING-WEBHOOK] Unknown priceId in checkout - skipping tier update', {
+      priceId,
+      userId,
+      subscriptionId,
+      configuredPriceIds: Object.keys(PRICE_TO_TIER),
+    });
+    return;
+  }
+
   const productLimit = getTierLimit(tier);
 
   logger.debug('[BILLING-WEBHOOK] Tier determined from priceId', {
@@ -396,7 +409,21 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
 
   const priceId = subscription.items.data[0]?.price.id;
   const billingInterval = subscription.items.data[0]?.price.recurring?.interval || null;
-  const newTier = getTierFromPriceId(priceId) || 'FREE';
+  const newTier = getTierFromPriceId(priceId);
+
+  // Reject unknown price IDs to prevent silent downgrades
+  // If price ID is not in our configured map, skip the update entirely
+  if (!newTier) {
+    logger.error('[BILLING-WEBHOOK] Unknown priceId in subscription update - skipping tier update', {
+      priceId,
+      subscriptionId: subscription.id,
+      userId: user.id,
+      currentTier: user.subscriptionTier,
+      configuredPriceIds: Object.keys(PRICE_TO_TIER),
+    });
+    return;
+  }
+
   const oldTier = user.subscriptionTier as SubscriptionTier;
   const productLimit = getTierLimit(newTier);
 
