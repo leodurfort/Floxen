@@ -6,9 +6,12 @@
  */
 
 import { Router } from 'express';
-import { getFeedJson, getFeedHtml, listSnapshots } from '../controllers/feedController';
+import { getFeedJson, getFeedHtml, listSnapshots, listShopFeeds } from '../controllers/feedController';
 
 const router = Router();
+
+// GET /api/v1/feed - List all shops with feed links (admin debug)
+router.get('/', listShopFeeds);
 
 // GET /api/v1/feed/:shopId - Raw JSON feed (for OpenAI)
 router.get('/:shopId', getFeedJson);

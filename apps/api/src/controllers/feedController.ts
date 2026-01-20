@@ -517,6 +517,97 @@ function buildFeedHtml(
   `;
 }
 
+export async function listShopFeeds(req: Request, res: Response) {
+  try {
+    const shops = await prisma.shop.findMany({
+      select: {
+        id: true,
+        sellerName: true,
+        wooStoreUrl: true,
+        feedStatus: true,
+        lastFeedGeneratedAt: true,
+      },
+      orderBy: { lastFeedGeneratedAt: 'desc' },
+    });
+
+    const rows = shops.map(shop => {
+      const lastGen = shop.lastFeedGeneratedAt
+        ? new Date(shop.lastFeedGeneratedAt).toLocaleString()
+        : '—';
+      const statusColor = shop.feedStatus === 'COMPLETED' ? '#28a745' :
+                          shop.feedStatus === 'FAILED' ? '#dc3545' :
+                          shop.feedStatus === 'SYNCING' ? '#ffc107' : '#6c757d';
+
+      return `<tr>
+        <td><code>${escapeHtml(shop.id)}</code></td>
+        <td>${escapeHtml(shop.sellerName || '—')}</td>
+        <td>${escapeHtml(shop.wooStoreUrl || '—')}</td>
+        <td style="color: ${statusColor}; font-weight: 500;">${shop.feedStatus || '—'}</td>
+        <td>${lastGen}</td>
+        <td>
+          <a href="/api/v1/feed/${shop.id}">JSON</a> |
+          <a href="/api/v1/feed/${shop.id}/view">View</a> |
+          <a href="/api/v1/feed/${shop.id}/snapshots">Snapshots</a>
+        </td>
+      </tr>`;
+    }).join('');
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>All Shop Feeds - Admin Debug</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { color: #1a1a2e; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th { background: #1a1a2e; color: white; padding: 12px; text-align: left; }
+    td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+    tr:hover td { background: #f8f9fa; }
+    code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
+    a { color: #007bff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .count { color: #666; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+  <h1>All Shop Feeds</h1>
+  <p class="count">${shops.length} shop(s) found</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Shop ID</th>
+        <th>Seller Name</th>
+        <th>Store URL</th>
+        <th>Feed Status</th>
+        <th>Last Generated</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows || '<tr><td colspan="6" style="text-align: center; padding: 40px;">No shops found</td></tr>'}
+    </tbody>
+  </table>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html');
+    return res.send(html);
+  } catch (err: any) {
+    logger.error('feed:list error', { error: err.message });
+    return res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Error</title></head>
+      <body style="font-family: system-ui; padding: 40px;">
+        <h1>Error</h1>
+        <p>Failed to list shops: ${err.message}</p>
+      </body>
+      </html>
+    `);
+  }
+}
+
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {
     '&': '&amp;',
