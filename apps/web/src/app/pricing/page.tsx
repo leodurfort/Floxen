@@ -18,7 +18,6 @@ interface Plan {
   limit: string;
   description: string;
   features: PlanFeature[];
-  popular?: boolean;
 }
 
 export default function PricingPage() {
@@ -395,9 +394,6 @@ export default function PricingPage() {
       {/* FAQ or Additional Info */}
       <div className="mt-12 text-center">
         <p className="text-gray-500 text-sm">
-          All plans include WooCommerce integration, OpenAI feed generation, and secure data handling.
-        </p>
-        <p className="text-gray-500 text-sm mt-2">
           Questions?{' '}
           <a href="mailto:support@floxen.com" className="text-[#FA7315] hover:underline">
             Contact us

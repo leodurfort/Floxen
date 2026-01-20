@@ -18,6 +18,7 @@ import {
   checkRateLimit,
 } from '../services/verificationService';
 import { logger } from '../lib/logger';
+import { sanitizeUser } from '../utils/user';
 
 // Helper to normalize email
 function normalizeEmail(email: string): string {
@@ -118,7 +119,7 @@ export async function login(req: Request, res: Response) {
 
     const tokens = signTokens(user);
     logger.info('login: success', { userId: user.id, email: user.email });
-    return res.json({ user, tokens });
+    return res.json({ user: sanitizeUser(user), tokens });
   } catch (err) {
     logger.error('login: error', { error: toError(err) });
     res.status(500).json({ error: toError(err).message });
@@ -159,7 +160,7 @@ export async function me(req: Request, res: Response) {
       return res.status(404).json({ error: 'User not found' });
     }
     logger.info('me: fetched', { userId: user.id });
-    return res.json({ user });
+    return res.json({ user: sanitizeUser(user) });
   } catch (err) {
     logger.error('me: error', { error: toError(err) });
     res.status(500).json({ error: 'Internal error' });

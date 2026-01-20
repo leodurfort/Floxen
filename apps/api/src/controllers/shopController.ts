@@ -221,24 +221,22 @@ export async function disconnectShop(req: Request, res: Response) {
 }
 
 export async function oauthCallback(req: Request, res: Response) {
-  logger.info('shops:oauth callback START', {
-    shopId: req.params.id,
-    query: req.query,
-    body: req.body,
-    headers: req.headers,
-    method: req.method,
-    url: req.url
-  });
-
   // WooCommerce can send credentials in either query params or POST body
   const consumer_key = req.query.consumer_key || req.body?.consumer_key;
   const consumer_secret = req.query.consumer_secret || req.body?.consumer_secret;
 
+  logger.info('shops:oauth callback START', {
+    shopId: req.params.id,
+    method: req.method,
+    hasConsumerKey: !!consumer_key,
+    hasConsumerSecret: !!consumer_secret,
+  });
+
   if (!consumer_key || !consumer_secret || Array.isArray(consumer_key) || Array.isArray(consumer_secret)) {
     logger.warn('shops:oauth callback missing credentials', {
+      shopId: req.params.id,
       hasConsumerKey: !!consumer_key,
       hasConsumerSecret: !!consumer_secret,
-      query: req.query
     });
     return res.status(400).json({ error: 'Missing consumer_key or consumer_secret' });
   }

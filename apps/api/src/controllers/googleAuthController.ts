@@ -10,6 +10,7 @@ import {
   createUserFromGoogle,
 } from '../services/userService';
 import { signTokens } from './authController';
+import { sanitizeUser } from '../utils/user';
 
 const googleAuthSchema = z.object({
   credential: z.string().min(1, 'Google credential is required'),
@@ -78,7 +79,7 @@ export async function googleAuth(req: Request, res: Response) {
       const tokens = signTokens(user);
       logger.info('googleAuth: existing Google user signed in', { userId: user.id });
       return res.json({
-        user,
+        user: sanitizeUser(user),
         tokens,
         isNewUser: false,
       });
@@ -111,7 +112,7 @@ export async function googleAuth(req: Request, res: Response) {
     logger.info('googleAuth: new Google user created', { userId: user.id, email: normalizedEmail });
 
     return res.status(201).json({
-      user,
+      user: sanitizeUser(user),
       tokens,
       isNewUser: true,
     });
