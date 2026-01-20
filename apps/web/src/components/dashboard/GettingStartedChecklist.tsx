@@ -221,11 +221,11 @@ export function GettingStartedChecklist({
       ) : (
         <div className="space-y-2">
           <div className="text-sm text-gray-600">
-            {stepDetails.subscriptionTier === 'FREE' && 'Free plan: 15 products max'}
-            {stepDetails.subscriptionTier === 'STARTER' && 'Starter plan: 500 products max'}
+            {stepDetails.subscriptionTier === 'FREE' && 'Free plan: 5 products max'}
+            {stepDetails.subscriptionTier === 'STARTER' && 'Starter plan: 100 products max'}
             {stepDetails.subscriptionTier === 'PROFESSIONAL' && 'Pro plan: Unlimited products'}
             {!['FREE', 'STARTER', 'PROFESSIONAL'].includes(stepDetails.subscriptionTier) &&
-              'Free plan: 15 products max'}
+              'Free plan: 5 products max'}
           </div>
           <Link
             href="/settings/billing"

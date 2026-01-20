@@ -8,8 +8,8 @@ export type SubscriptionTier = 'FREE' | 'STARTER' | 'PROFESSIONAL';
  * Note: -1 represents unlimited (Infinity cannot be serialized to JSON)
  */
 export const TIER_LIMITS: Record<SubscriptionTier, number> = {
-  FREE: 15,
-  STARTER: 500,
+  FREE: 5,
+  STARTER: 100,
   PROFESSIONAL: -1, // -1 = unlimited (Infinity becomes null in JSON)
 } as const;
 

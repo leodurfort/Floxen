@@ -131,7 +131,7 @@ model Shop {
   productsReprocessedAt DateTime? @map("products_reprocessed_at")
 
   // Product selection/billing limits
-  productLimit              Int       @default(15) @map("product_limit")
+  productLimit              Int       @default(5) @map("product_limit")
   needsProductReselection   Boolean   @default(false) @map("needs_product_reselection")
 
   createdAt         DateTime   @default(now()) @map("created_at")

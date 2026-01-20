@@ -20,8 +20,8 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
 };
 
 const TIER_PRODUCT_LIMITS: Record<string, string> = {
-  FREE: '15 products',
-  STARTER: '500 products',
+  FREE: '5 products',
+  STARTER: '100 products',
   PROFESSIONAL: 'unlimited products',
 };
 
