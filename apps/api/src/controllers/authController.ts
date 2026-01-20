@@ -69,7 +69,7 @@ const forgotPasswordResetSchema = z.object({
   password: z.string().min(8),
 });
 
-function signTokens(user: { id: string; email: string; subscriptionTier: string }) {
+export function signTokens(user: { id: string; email: string; subscriptionTier: string }) {
   const basePayload = { sub: user.id, email: user.email, tier: user.subscriptionTier };
   const accessToken = jwt.sign(
     { ...basePayload, type: 'access' },
@@ -98,6 +98,15 @@ export async function login(req: Request, res: Response) {
     if (!user) {
       logger.warn('login: user not found', { email });
       return res.status(401).json({ error: 'No account found with this email' });
+    }
+
+    // Check if user is Google-only (no password set)
+    if (user.authProvider === 'google' && !user.passwordHash) {
+      logger.warn('login: Google-only user attempted password login', { email });
+      return res.status(401).json({
+        error: 'google_account',
+        message: 'This account uses Google Sign-In. Please sign in with Google.',
+      });
     }
 
     // Verify password
@@ -380,6 +389,13 @@ export async function forgotPassword(req: Request, res: Response) {
     const user = await findUserByEmail(normalizedEmail);
 
     if (user) {
+      // Skip Google-only users - they don't have passwords to reset
+      // Still return success to not reveal email exists
+      if (user.authProvider === 'google' && !user.passwordHash) {
+        logger.info('forgotPassword: skipped Google-only user (not revealed)', { email: normalizedEmail });
+        return res.json({ success: true, message: 'If your email is registered, you will receive a reset code.' });
+      }
+
       // Check rate limit
       const rateLimit = await checkRateLimit(normalizedEmail, 'PASSWORD_RESET');
       if (!rateLimit.allowed) {

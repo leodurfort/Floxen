@@ -135,6 +135,38 @@ export async function login(payload: { email: string; password: string }) {
   });
 }
 
+// Google OAuth
+
+export interface GoogleAuthResponse {
+  user: User;
+  tokens: { accessToken: string; refreshToken: string };
+  isNewUser: boolean;
+}
+
+export interface GoogleAuthError extends Error {
+  error?: 'email_exists' | 'google_account' | string;
+  redirectTo?: string;
+}
+
+export async function googleAuth(payload: { credential: string }): Promise<GoogleAuthResponse> {
+  const res = await fetch(`${API_URL}/api/v1/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: 'unknown', message: res.statusText }));
+    const err = new Error(errData.message || errData.error || res.statusText) as GoogleAuthError;
+    err.error = errData.error;
+    err.redirectTo = errData.redirectTo;
+    throw err;
+  }
+
+  return res.json();
+}
+
 // Multi-step Registration Flow
 
 export async function registerStart(payload: { email: string }) {

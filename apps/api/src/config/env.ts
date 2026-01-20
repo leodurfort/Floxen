@@ -152,4 +152,7 @@ export const env = {
     enableScheduledSync: process.env.ENABLE_SCHEDULED_SYNC === 'true',
     syncIntervalMinutes: toNumber(process.env.SYNC_INTERVAL_MINUTES, 60),
   },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+  },
 };

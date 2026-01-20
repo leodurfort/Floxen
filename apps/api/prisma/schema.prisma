@@ -35,7 +35,9 @@ enum TokenType {
 model User {
   id               String           @id @default(cuid())
   email            String           @unique
-  passwordHash     String           @map("password_hash")
+  passwordHash     String?          @map("password_hash")
+  googleId         String?          @unique @map("google_id")
+  authProvider     String           @default("email") @map("auth_provider")
   name             String?          // Deprecated: use firstName + surname
   firstName        String?          @map("first_name")
   surname          String?

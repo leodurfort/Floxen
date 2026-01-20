@@ -2,6 +2,8 @@ export type SubscriptionTier = 'FREE' | 'STARTER' | 'PROFESSIONAL';
 
 export type SyncStatus = 'PENDING' | 'SYNCING' | 'COMPLETED' | 'FAILED' | 'PAUSED';
 
+export type AuthProvider = 'email' | 'google';
+
 export interface User {
   id: string;
   email: string;
@@ -11,6 +13,9 @@ export interface User {
   emailVerified: boolean;
   onboardingComplete: boolean;
   subscriptionTier: SubscriptionTier;
+  // Auth provider fields
+  authProvider?: AuthProvider;
+  googleId?: string | null;
   createdAt: string;
   updatedAt: string;
   // Stripe billing fields

@@ -10,6 +10,9 @@ type EmailChangeStep = 'idle' | 'verifying';
 export default function SecuritySettingsPage() {
   const { user, setUser } = useAuth();
 
+  // Check if user is Google-only (no password)
+  const isGoogleOnly = user?.authProvider === 'google';
+
   // Email change state
   const [emailStep, setEmailStep] = useState<EmailChangeStep>('idle');
   const [newEmail, setNewEmail] = useState('');
@@ -101,6 +104,23 @@ export default function SecuritySettingsPage() {
 
   return (
     <div className="space-y-8 max-w-xl">
+      {/* Google Account Info Banner */}
+      {isGoogleOnly && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="flex gap-3">
+            <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">Google Account</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                You signed up with Google. Your email and password are managed by your Google account.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Change Email Section */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         <h2 className="text-xl font-bold text-gray-900 mb-2">Email Address</h2>
@@ -108,7 +128,11 @@ export default function SecuritySettingsPage() {
           Current email: <span className="text-gray-900">{user?.email}</span>
         </p>
 
-        {emailStep === 'idle' ? (
+        {isGoogleOnly ? (
+          <p className="text-sm text-gray-500">
+            Email cannot be changed for Google accounts. To use a different email, sign up with email instead.
+          </p>
+        ) : emailStep === 'idle' ? (
           <form onSubmit={handleEmailChange} className="space-y-4">
             <label className="flex flex-col gap-2">
               <span className="text-sm text-gray-600">New email address</span>
@@ -199,76 +223,78 @@ export default function SecuritySettingsPage() {
         )}
       </div>
 
-      {/* Change Password Section */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Change Password</h2>
+      {/* Change Password Section - Hide for Google-only users */}
+      {!isGoogleOnly && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Change Password</h2>
 
-        <form onSubmit={handlePasswordChange} className="space-y-4">
-          <label className="flex flex-col gap-2">
-            <span className="text-sm text-gray-600">Current password</span>
-            <input
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              type="password"
-              placeholder="Enter current password"
-              required
-              autoComplete="current-password"
-              className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
-            />
-          </label>
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <label className="flex flex-col gap-2">
+              <span className="text-sm text-gray-600">Current password</span>
+              <input
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                type="password"
+                placeholder="Enter current password"
+                required
+                autoComplete="current-password"
+                className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
+              />
+            </label>
 
-          <label className="flex flex-col gap-2">
-            <span className="text-sm text-gray-600">New password</span>
-            <input
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              type="password"
-              placeholder="At least 8 characters"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
-            />
-          </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-sm text-gray-600">New password</span>
+              <input
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                type="password"
+                placeholder="At least 8 characters"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
+              />
+            </label>
 
-          <label className="flex flex-col gap-2">
-            <span className="text-sm text-gray-600">Confirm new password</span>
-            <input
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              type="password"
-              placeholder="Re-enter new password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
-            />
-            {confirmPassword && newPassword !== confirmPassword && (
-              <p className="text-xs text-red-600">Passwords do not match</p>
+            <label className="flex flex-col gap-2">
+              <span className="text-sm text-gray-600">Confirm new password</span>
+              <input
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                type="password"
+                placeholder="Re-enter new password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#FA7315] focus:outline-none focus:ring-2 focus:ring-[#FA7315]/10 transition-colors"
+              />
+              {confirmPassword && newPassword !== confirmPassword && (
+                <p className="text-xs text-red-600">Passwords do not match</p>
+              )}
+            </label>
+
+            {passwordError && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                {passwordError}
+              </div>
             )}
-          </label>
 
-          {passwordError && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-              {passwordError}
-            </div>
-          )}
+            {passwordSuccess && (
+              <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                {passwordSuccess}
+              </div>
+            )}
 
-          {passwordSuccess && (
-            <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-              {passwordSuccess}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={passwordLoading || (newPassword !== confirmPassword)}
-            className="btn btn--primary py-2.5 px-6"
-          >
-            {passwordLoading ? 'Updating...' : 'Update password'}
-          </button>
-        </form>
-      </div>
+            <button
+              type="submit"
+              disabled={passwordLoading || (newPassword !== confirmPassword)}
+              className="btn btn--primary py-2.5 px-6"
+            >
+              {passwordLoading ? 'Updating...' : 'Update password'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

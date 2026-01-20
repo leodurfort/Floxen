@@ -155,6 +155,15 @@ export async function changeEmail(req: Request, res: Response) {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Block Google-only users from changing email (they don't have a password)
+    if (user.authProvider === 'google' && !user.passwordHash) {
+      logger.warn('changeEmail: blocked Google-only user', { userId: user.id });
+      return res.status(400).json({
+        error: 'google_account',
+        message: 'Google accounts cannot change email. Your email is managed by Google.',
+      });
+    }
+
     // Verify current password
     const isValidPassword = await verifyPassword(user.id, password);
     if (!isValidPassword) {
@@ -254,6 +263,15 @@ export async function changePassword(req: Request, res: Response) {
     const user = await findUserById(getUserId(req));
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Block Google-only users from changing password (they don't have one)
+    if (user.authProvider === 'google' && !user.passwordHash) {
+      logger.warn('changePassword: blocked Google-only user', { userId: user.id });
+      return res.status(400).json({
+        error: 'google_account',
+        message: 'Google accounts do not have passwords. Use Google to sign in.',
+      });
     }
 
     // Verify current password

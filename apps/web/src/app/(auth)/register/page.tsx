@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useAuth } from '@/store/auth';
 import { useRegistration } from '@/store/registration';
 import * as api from '@/lib/api';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { GoogleOneTap } from '@/components/auth/GoogleOneTap';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -50,11 +52,27 @@ export default function RegisterPage() {
 
   return (
     <main className="min-h-screen bg-[#F9FAFB] flex items-center justify-center px-4">
+      {/* Google One-Tap */}
+      <GoogleOneTap />
+
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 w-full max-w-md space-y-6">
         <div className="text-center">
           <p className="uppercase tracking-[0.15em] text-xs text-gray-500 mb-2">Floxen</p>
           <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-          <p className="text-gray-600 mt-2">Enter your professional email to get started</p>
+          <p className="text-gray-600 mt-2">Get started in seconds</p>
+        </div>
+
+        {/* Google Sign-Up Button */}
+        <GoogleSignInButton text="signup_with" />
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-4 text-gray-500">or continue with email</span>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -82,7 +100,7 @@ export default function RegisterPage() {
             type="submit"
             disabled={isLoading}
           >
-            {isLoading ? 'Sending code...' : 'Continue'}
+            {isLoading ? 'Sending code...' : 'Continue with email'}
           </button>
         </form>
 

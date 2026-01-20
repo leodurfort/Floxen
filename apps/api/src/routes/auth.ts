@@ -14,9 +14,13 @@ import {
   forgotPasswordVerify,
   forgotPasswordReset,
 } from '../controllers/authController';
+import { googleAuth } from '../controllers/googleAuthController';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+
+// Google OAuth
+router.post('/google', googleAuth);
 
 // Multi-step registration flow
 router.post('/register/start', registerStart);

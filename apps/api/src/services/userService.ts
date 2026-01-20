@@ -80,6 +80,34 @@ export async function verifyPassword(userId: string, password: string): Promise<
     where: { id: userId },
     select: { passwordHash: true },
   });
-  if (!user) return false;
+  if (!user || !user.passwordHash) return false;
   return bcrypt.compare(password, user.passwordHash);
+}
+
+export async function findUserByGoogleId(googleId: string) {
+  return prisma.user.findUnique({ where: { googleId } });
+}
+
+export async function createUserFromGoogle(payload: {
+  email: string;
+  googleId: string;
+  firstName?: string;
+  surname?: string;
+}) {
+  return prisma.user.create({
+    data: {
+      email: payload.email.toLowerCase(),
+      googleId: payload.googleId,
+      authProvider: 'google',
+      passwordHash: null,
+      firstName: payload.firstName,
+      surname: payload.surname,
+      name: payload.firstName && payload.surname
+        ? `${payload.firstName} ${payload.surname}`
+        : payload.firstName || payload.surname || null,
+      emailVerified: true,
+      onboardingComplete: false,
+      subscriptionTier: 'FREE',
+    },
+  });
 }

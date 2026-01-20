@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { createQueryClient } from '@/lib/queryClient';
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 /**
  * Client-side providers wrapper
- * Provides React Query context to the entire app
+ * Provides React Query and Google OAuth contexts to the entire app
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   // Create QueryClient once per app instance (not per render)
@@ -15,11 +18,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      {process.env.NODE_ENV === 'development' && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
-    </QueryClientProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        {process.env.NODE_ENV === 'development' && (
+          <ReactQueryDevtools initialIsOpen={false} />
+        )}
+      </QueryClientProvider>
+    </GoogleOAuthProvider>
   );
 }
