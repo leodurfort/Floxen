@@ -81,8 +81,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || res.statusText);
+    const errData = await res.json().catch(() => ({}));
+    const err = new Error(errData.message || errData.error || res.statusText) as Error & { error?: string };
+    err.error = errData.error;
+    throw err;
   }
 
   return res.json();
@@ -119,8 +121,10 @@ async function requestWithAuth<T>(path: string, options: RequestInit = {}, retry
   }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || res.statusText);
+    const errData = await res.json().catch(() => ({}));
+    const err = new Error(errData.message || errData.error || res.statusText) as Error & { error?: string };
+    err.error = errData.error;
+    throw err;
   }
 
   return res.json();

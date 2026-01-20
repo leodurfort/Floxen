@@ -86,10 +86,8 @@ export default function PricingPage() {
       features: [
         { text: 'Up to 5 products', included: true },
         { text: 'WooCommerce sync', included: true },
-        { text: 'OpenAI feed generation', included: true },
-        { text: 'Basic support', included: true },
-        { text: 'Priority support', included: false },
-        { text: 'Unlimited products', included: false },
+        { text: 'ChatGPT feed generation', included: true },
+        { text: 'Chat support', included: true },
       ],
     },
     {
@@ -105,12 +103,10 @@ export default function PricingPage() {
       features: [
         { text: 'Up to 100 products', included: true },
         { text: 'WooCommerce sync', included: true },
-        { text: 'OpenAI feed generation', included: true },
-        { text: 'Basic support', included: true },
-        { text: 'Priority support', included: true },
-        { text: 'Unlimited products', included: false },
+        { text: 'ChatGPT feed generation', included: true },
+        { text: 'Chat support', included: true },
+        { text: 'ChatGPT Analytics (coming soon)', included: true },
       ],
-      popular: true,
     },
     {
       name: 'Pro',
@@ -125,10 +121,9 @@ export default function PricingPage() {
       features: [
         { text: 'Unlimited products', included: true },
         { text: 'WooCommerce sync', included: true },
-        { text: 'OpenAI feed generation', included: true },
-        { text: 'Basic support', included: true },
-        { text: 'Priority support', included: true },
-        { text: 'Auto-sync all products', included: true },
+        { text: 'ChatGPT feed generation', included: true },
+        { text: 'Chat support', included: true },
+        { text: 'ChatGPT Analytics (coming soon)', included: true },
       ],
     },
   ];
@@ -269,9 +264,6 @@ export default function PricingPage() {
     <div className="p-4 max-w-5xl mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Choose Your Plan</h1>
-        <p className="text-gray-600">
-          Scale your WooCommerce store with AI-powered product feeds
-        </p>
       </div>
 
       {/* Billing Cycle Toggle */}
@@ -313,21 +305,11 @@ export default function PricingPage() {
           <div
             key={plan.tier}
             className={`relative bg-white rounded-xl border-2 p-6 ${
-              plan.popular
-                ? 'border-[#FA7315] shadow-lg'
-                : plan.tier === currentTier
+              plan.tier === currentTier
                 ? 'border-green-500'
                 : 'border-gray-200'
             }`}
           >
-            {plan.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-[#FA7315] text-white text-xs font-semibold px-3 py-1 rounded-full">
-                  Most Popular
-                </span>
-              </div>
-            )}
-
             {plan.tier === currentTier && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span className="bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
@@ -401,8 +383,6 @@ export default function PricingPage() {
               className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
                 isButtonDisabled(plan)
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : plan.popular
-                  ? 'bg-[#FA7315] text-white hover:bg-[#E5680D]'
                   : 'bg-gray-900 text-white hover:bg-gray-800'
               }`}
             >
