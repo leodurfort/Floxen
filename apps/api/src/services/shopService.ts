@@ -177,7 +177,7 @@ export function buildWooAuthUrl(storeUrl: string, userId: string, shopId: string
 
   const url = new URL('/wc-auth/v1/authorize', storeUrl);
   url.searchParams.set('app_name', 'Floxen');
-  url.searchParams.set('scope', 'read_write');
+  url.searchParams.set('scope', 'read');
   url.searchParams.set('user_id', userId);
   url.searchParams.set('return_url', returnUrl);
   url.searchParams.set('callback_url', callback);
