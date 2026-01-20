@@ -304,14 +304,44 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   const billingInterval = subscriptionResponse.items.data[0]?.price.recurring?.interval || null;
   const tier = getTierFromPriceId(priceId);
 
-  // Reject unknown price IDs to prevent silent downgrades
-  // If price ID is not in our configured map, skip the update entirely
+  // Handle case where current_period_end might be missing
+  const currentPeriodEndTimestamp = subscriptionResponse.current_period_end;
+  const currentPeriodEnd = currentPeriodEndTimestamp
+    ? new Date(currentPeriodEndTimestamp * 1000)
+    : null;
+
+  // Check both cancel_at_period_end AND cancel_at fields
+  const cancelAtPeriodEnd = subscriptionResponse.cancel_at_period_end === true || subscriptionResponse.cancel_at != null;
+
+  // CRITICAL: Always store Stripe identifiers so user can access billing portal
+  // and future webhooks can find them. Only skip tier/limit updates for unknown prices.
   if (!tier) {
-    logger.error('[BILLING-WEBHOOK] Unknown priceId in checkout - skipping tier update', {
+    logger.error('[BILLING-WEBHOOK] Unknown priceId in checkout - storing Stripe IDs but skipping tier update', {
       priceId,
       userId,
       subscriptionId,
+      customerId,
       configuredPriceIds: Object.keys(PRICE_TO_TIER),
+    });
+
+    // Store critical Stripe identifiers without changing tier
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        stripeCustomerId: customerId,
+        subscriptionId,
+        subscriptionStatus: subscriptionResponse.status,
+        // Keep existing tier - don't change it
+        billingInterval,
+        currentPeriodEnd,
+        cancelAtPeriodEnd,
+      },
+    });
+
+    logger.warn('[BILLING-WEBHOOK] Checkout completed with UNKNOWN PRICE - user can access portal but tier unchanged', {
+      userId,
+      subscriptionId,
+      priceId,
     });
     return;
   }
@@ -332,15 +362,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     customerId,
     status: subscriptionResponse.status,
   });
-
-  // Handle case where current_period_end might be missing
-  const currentPeriodEndTimestamp = subscriptionResponse.current_period_end;
-  const currentPeriodEnd = currentPeriodEndTimestamp
-    ? new Date(currentPeriodEndTimestamp * 1000)
-    : null;
-
-  // Check both cancel_at_period_end AND cancel_at fields
-  const cancelAtPeriodEnd = subscriptionResponse.cancel_at_period_end === true || subscriptionResponse.cancel_at != null;
 
   await prisma.user.update({
     where: { id: userId },
@@ -410,22 +431,7 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
   const priceId = subscription.items.data[0]?.price.id;
   const billingInterval = subscription.items.data[0]?.price.recurring?.interval || null;
   const newTier = getTierFromPriceId(priceId);
-
-  // Reject unknown price IDs to prevent silent downgrades
-  // If price ID is not in our configured map, skip the update entirely
-  if (!newTier) {
-    logger.error('[BILLING-WEBHOOK] Unknown priceId in subscription update - skipping tier update', {
-      priceId,
-      subscriptionId: subscription.id,
-      userId: user.id,
-      currentTier: user.subscriptionTier,
-      configuredPriceIds: Object.keys(PRICE_TO_TIER),
-    });
-    return;
-  }
-
   const oldTier = user.subscriptionTier as SubscriptionTier;
-  const productLimit = getTierLimit(newTier);
 
   // Handle current_period_end - use cancel_at as fallback for cancellation date
   const currentPeriodEndTimestamp = subscription.current_period_end || subscription.cancel_at;
@@ -436,6 +442,41 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
   // Check both cancel_at_period_end AND cancel_at fields
   // Stripe Portal uses cancel_at (timestamp) instead of cancel_at_period_end (boolean)
   const cancelAtPeriodEnd = subscription.cancel_at_period_end === true || subscription.cancel_at != null;
+
+  // CRITICAL: Always update subscription status and billing state so user's
+  // billing info stays current. Only skip tier/limit updates for unknown prices.
+  if (!newTier) {
+    logger.error('[BILLING-WEBHOOK] Unknown priceId in subscription update - updating status but skipping tier change', {
+      priceId,
+      subscriptionId: subscription.id,
+      userId: user.id,
+      currentTier: oldTier,
+      configuredPriceIds: Object.keys(PRICE_TO_TIER),
+    });
+
+    // Update billing state without changing tier
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        subscriptionStatus: subscription.status,
+        // Keep existing tier - don't change it
+        billingInterval,
+        currentPeriodEnd,
+        cancelAtPeriodEnd,
+      },
+    });
+
+    logger.warn('[BILLING-WEBHOOK] Subscription updated with UNKNOWN PRICE - status updated but tier preserved', {
+      userId: user.id,
+      subscriptionId: subscription.id,
+      priceId,
+      preservedTier: oldTier,
+      newStatus: subscription.status,
+    });
+    return;
+  }
+
+  const productLimit = getTierLimit(newTier);
 
   logger.info('[BILLING-WEBHOOK] Subscription data analysis', {
     userId: user.id,
