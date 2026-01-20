@@ -310,12 +310,3 @@ export class AutoFillService {
     return extractFieldValue(wooProduct, path, this.shop);
   }
 }
-
-/**
- * Standalone function to auto-fill a product
- * Useful for one-off operations or testing
- */
-export function autoFillProductFromWoo(wooProduct: any, shop: Shop): Record<string, any> {
-  const service = new AutoFillService(shop);
-  return service.autoFillProduct(wooProduct);
-}

@@ -7,21 +7,19 @@ export const redisConnection = env.redisUrl
   ? new Redis(env.redisUrl, { maxRetriesPerRequest: null })
   : null;
 
-export function createQueue(name: string) {
+// Create shared queue instance for sync jobs
+function createSyncQueue(): Queue | null {
   if (!redisConnection) {
-    logger.warn(`Redis not configured; queue ${name} will be disabled`);
+    logger.warn('Redis not configured; sync queue will be disabled');
     return null;
   }
-  const queue = new Queue(name, { connection: redisConnection });
-  const events = new QueueEvents(name, { connection: redisConnection });
-  events.on('error', (err) => logger.error(`QueueEvents error (${name})`, { error: err instanceof Error ? err : new Error(String(err)) }));
-  return { queue, events };
+  const queue = new Queue('sync', { connection: redisConnection });
+  const events = new QueueEvents('sync', { connection: redisConnection });
+  events.on('error', (err) => logger.error('QueueEvents error (sync)', { error: err instanceof Error ? err : new Error(String(err)) }));
+  return queue;
 }
 
-// Create shared queue instance for sync jobs
-const syncQueueInstance = createQueue('sync');
-
-export const syncQueue = syncQueueInstance?.queue || null;
+export const syncQueue = createSyncQueue();
 
 // FlowProducer for dependent job chains (e.g., product-sync → feed-generation)
 export const syncFlowProducer = redisConnection

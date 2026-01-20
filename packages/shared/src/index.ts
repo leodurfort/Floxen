@@ -66,9 +66,7 @@ export function deriveFeedState(
 ): FeedState {
   if (shop.feedStatus === 'FAILED') return 'error';
   if (!shop.openaiEnabled) return 'not_activated';
-  if (shop.openaiEnabled && shop.syncEnabled) return 'active';
-  if (shop.openaiEnabled && !shop.syncEnabled) return 'paused';
-  return 'not_activated';
+  return shop.syncEnabled ? 'active' : 'paused';
 }
 
 // Product stats for feed status display
@@ -139,7 +137,6 @@ export interface ApiResponse<T> {
 
 // Export OpenAI Feed Specification
 export * from './openai-feed-spec';
-export * from './locked-field-mappings';
 
 // Export Transform Functions
 export * from './transforms';

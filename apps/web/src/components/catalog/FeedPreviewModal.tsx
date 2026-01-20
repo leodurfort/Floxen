@@ -65,8 +65,8 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
       });
       setItems((prev) => [...prev, ...data.items]);
       setHasMore(data.hasMore);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load more items');
     } finally {
       setLoadingMore(false);
     }
@@ -87,8 +87,8 @@ export function FeedPreviewModal({ isOpen, onClose, shopId }: FeedPreviewModalPr
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download feed');
     } finally {
       setDownloading(false);
     }

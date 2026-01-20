@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { env } from '../config/env';
 import { JwtUser } from '../middleware/auth';
-import { getUser } from '../utils/request';
+import { getUser, toError } from '../utils/request';
 import {
   createUserWithVerification,
   findUserByEmail,
@@ -22,11 +22,6 @@ import { logger } from '../lib/logger';
 // Helper to normalize email
 function normalizeEmail(email: string): string {
   return email.toLowerCase().trim();
-}
-
-// Helper to normalize error for logging
-function toError(err: unknown): Error {
-  return err instanceof Error ? err : new Error(String(err));
 }
 
 const loginSchema = z.object({
@@ -115,9 +110,9 @@ export async function login(req: Request, res: Response) {
     const tokens = signTokens(user);
     logger.info('login: success', { userId: user.id, email: user.email });
     return res.json({ user, tokens });
-  } catch (err: any) {
-    logger.error('login: error', err);
-    res.status(500).json({ error: err.message });
+  } catch (err) {
+    logger.error('login: error', { error: toError(err) });
+    res.status(500).json({ error: toError(err).message });
   }
 }
 

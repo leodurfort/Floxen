@@ -1106,9 +1106,6 @@ export const LOCKED_FIELD_SET = new Set(LOCKED_FIELDS.map(f => f.attribute));
 /** Locked fields that allow static value overrides at product level */
 export const STATIC_OVERRIDE_ALLOWED_LOCKED_FIELDS = new Set(['title', 'description', 'product_category', 'brand']);
 
-export const getFieldsByCategory = (category: OpenAIFieldCategory): OpenAIFieldSpec[] =>
-  OPENAI_FEED_SPEC.filter(f => f.category === category);
-
 export const CATEGORY_CONFIG: Record<OpenAIFieldCategory, { label: string; order: number }> = {
   flags: { label: 'OpenAI Flags', order: 1 },
   basic_product_data: { label: 'Basic Product Data', order: 2 },
@@ -1125,16 +1122,6 @@ export const CATEGORY_CONFIG: Record<OpenAIFieldCategory, { label: string; order
   reviews_qanda: { label: 'Reviews & Q&A', order: 13 },
   related_products: { label: 'Related Products', order: 14 },
   geo_tagging: { label: 'Geo Tagging', order: 15 },
-};
-
-export const FIELD_STATS = {
-  total: OPENAI_FEED_SPEC.length,
-  required: REQUIRED_FIELDS.length,
-  locked: LOCKED_FIELDS.length,
-  byCategory: Object.keys(CATEGORY_CONFIG).reduce((acc, cat) => {
-    acc[cat as OpenAIFieldCategory] = getFieldsByCategory(cat as OpenAIFieldCategory).length;
-    return acc;
-  }, {} as Record<OpenAIFieldCategory, number>),
 };
 
 // === PRODUCT-LEVEL EDITABILITY ===

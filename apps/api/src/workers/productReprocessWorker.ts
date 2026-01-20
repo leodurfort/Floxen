@@ -1,7 +1,6 @@
 import { Job } from 'bullmq';
 import { logger } from '../lib/logger';
 import { reprocessAllProducts, reprocessChangedFields } from '../services/productReprocessService';
-import { prisma } from '../lib/prisma';
 
 /**
  * Product Reprocess Worker
@@ -10,14 +9,14 @@ import { prisma } from '../lib/prisma';
  * Uses stored wooRawJson and re-runs AutoFillService + validation.
  *
  * Triggered when:
- * - Field mappings are updated (may include fieldsToClclearOverrides)
+ * - Field mappings are updated (may include fieldsToClearOverrides)
  * - Shop settings change (sellerName, returnPolicy, etc.)
  */
 export async function productReprocessProcessor(job: Job) {
-  const { shopId, reason, fieldsToClclearOverrides, changedFields } = job.data as {
+  const { shopId, reason, fieldsToClearOverrides, changedFields } = job.data as {
     shopId: string;
     reason?: string;
-    fieldsToClclearOverrides?: string[];
+    fieldsToClearOverrides?: string[];
     changedFields?: string[];  // NEW: fields that actually changed (for selective reprocessing)
   };
 
@@ -31,7 +30,7 @@ export async function productReprocessProcessor(job: Job) {
   logger.info('product-reprocess: starting', {
     shopId,
     reason,
-    fieldsToClclearOverrides,
+    fieldsToClearOverrides,
     changedFields,
     selective: useSelectiveReprocess,
     jobId: job.id,
@@ -41,8 +40,8 @@ export async function productReprocessProcessor(job: Job) {
     // Use selective reprocessing if changed fields are provided (optimized path)
     // Otherwise fall back to full reprocessing (backward compatible)
     const result = useSelectiveReprocess
-      ? await reprocessChangedFields(shopId, changedFields, fieldsToClclearOverrides)
-      : await reprocessAllProducts(shopId, fieldsToClclearOverrides);
+      ? await reprocessChangedFields(shopId, changedFields, fieldsToClearOverrides)
+      : await reprocessAllProducts(shopId, fieldsToClearOverrides);
 
     logger.info('product-reprocess: completed', {
       shopId,
@@ -58,7 +57,7 @@ export async function productReprocessProcessor(job: Job) {
     logger.error('product-reprocess: failed', {
       shopId,
       reason,
-      fieldsToClclearOverrides,
+      fieldsToClearOverrides,
       changedFields,
       selective: useSelectiveReprocess,
       error: err instanceof Error ? err : new Error(String(err)),

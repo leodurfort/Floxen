@@ -17,3 +17,10 @@ export function getUserId(req: Request): string {
 export function getUser(req: Request): JwtUser | undefined {
   return (req as Request & { user?: JwtUser }).user;
 }
+
+/**
+ * Normalize unknown error to Error instance for consistent logging.
+ */
+export function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}

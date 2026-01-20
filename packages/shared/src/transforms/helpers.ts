@@ -82,24 +82,3 @@ function extractByPath(obj: any, path: string): any {
 
   return current ?? null;
 }
-
-/**
- * Extract nested value using dot notation (wrapper for backward compatibility)
- */
-export function extractNestedValue(obj: any, path: string): any {
-  return extractFieldValue(obj, path);
-}
-
-/**
- * Extract attribute value by name, case-insensitive (wrapper for backward compatibility)
- */
-export function extractAttributeValue(wooProduct: any, attributeName: string): any {
-  return extractFieldValue(wooProduct, `attributes.${attributeName}`);
-}
-
-/**
- * Extract meta_data value by key (wrapper for backward compatibility)
- */
-export function extractMetaValue(wooProduct: any, metaKey: string): any {
-  return extractFieldValue(wooProduct, `meta_data.${metaKey}`);
-}

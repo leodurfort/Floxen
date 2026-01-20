@@ -36,16 +36,11 @@ export function DescriptionPopover({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen]);
 
+  // Early return for simple case: short description with no extra info
   if (!isTruncated && !example && !values) {
     return (
       <div>
         <p className="text-sm text-gray-600">{description}</p>
-        {example && (
-          <p className="text-xs text-gray-400 mt-1">Example: {example}</p>
-        )}
-        {values && (
-          <p className="text-xs text-gray-400 mt-1">Values: {values}</p>
-        )}
       </div>
     );
   }

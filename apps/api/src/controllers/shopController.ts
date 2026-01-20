@@ -608,7 +608,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
       logger.info('shops:field-mappings:updated-at', { shopId: id });
 
       // Determine which fields need overrides cleared (if propagation mode is 'apply_all')
-      const fieldsToClclearOverrides =
+      const fieldsToClearOverrides =
         propagationMode === 'apply_all' ? actuallyChangedAttributes : [];
 
       // Queue background job to reprocess all products with new mappings
@@ -617,7 +617,7 @@ export async function updateFieldMappings(req: Request, res: Response) {
         await syncQueue!.add('product-reprocess', {
           shopId: id,
           reason: 'field_mappings_updated',
-          fieldsToClclearOverrides,
+          fieldsToClearOverrides,
           changedFields: actuallyChangedAttributes,  // Enable selective reprocessing optimization
         }, {
           ...DEFAULT_JOB_OPTIONS,
@@ -625,13 +625,13 @@ export async function updateFieldMappings(req: Request, res: Response) {
         });
         logger.info('shops:field-mappings:queued-reprocess', {
           shopId: id,
-          fieldsToClclearOverrides,
+          fieldsToClearOverrides,
           propagationMode,
         });
-      } else if (fieldsToClclearOverrides.length > 0) {
+      } else if (fieldsToClearOverrides.length > 0) {
         // FALLBACK: Redis unavailable, clear overrides synchronously
         logger.warn('shops:field-mappings:sync-fallback', { shopId: id });
-        for (const attr of fieldsToClclearOverrides) {
+        for (const attr of fieldsToClearOverrides) {
           await clearOverridesForField(id, attr);
         }
       }

@@ -362,39 +362,3 @@ export async function updateProductSelection(
     message: `Successfully selected ${selectedProductIds.length} products`,
   };
 }
-
-/**
- * Auto-select all products for PRO tier users
- */
-export async function autoSelectAllProducts(shopId: string): Promise<number> {
-  const shop = await prisma.shop.findUnique({
-    where: { id: shopId },
-    include: { user: true },
-  });
-
-  if (!shop) {
-    throw new Error('Shop not found');
-  }
-
-  const tier = shop.user.subscriptionTier as SubscriptionTier;
-
-  if (!isUnlimitedTier(tier)) {
-    throw new Error('Auto-select all is only available for PRO tier');
-  }
-
-  // Select all parent products
-  const result = await prisma.product.updateMany({
-    where: {
-      shopId,
-      wooParentId: null,
-    },
-    data: { isSelected: true },
-  });
-
-  logger.info('product-selection: auto-selected all for PRO tier', {
-    shopId,
-    count: result.count,
-  });
-
-  return result.count;
-}

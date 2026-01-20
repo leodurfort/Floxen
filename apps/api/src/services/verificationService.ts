@@ -198,16 +198,3 @@ export async function cleanupExpiredTokens(): Promise<number> {
 
   return result.count;
 }
-
-export async function invalidateUserTokens(userId: string, type?: TokenType): Promise<void> {
-  await prisma.verificationToken.updateMany({
-    where: {
-      userId,
-      usedAt: null,
-      ...(type && { type }),
-    },
-    data: {
-      usedAt: new Date(),
-    },
-  });
-}

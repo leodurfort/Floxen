@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { env } from '../config/env';
 
-export function getMailer() {
+function getMailer() {
   if (!env.resendApiKey) return null;
   return new Resend(env.resendApiKey);
 }

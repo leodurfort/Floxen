@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { logger } from '../lib/logger';
-import { getUserId } from '../utils/request';
+import { getUserId, toError } from '../utils/request';
 import {
   updateUserProfile,
   updateUserEmail,
@@ -10,11 +10,6 @@ import {
   findUserById,
 } from '../services/userService';
 import { createVerificationToken, verifyToken } from '../services/verificationService';
-
-// Helper to normalize error for logging
-function toError(err: unknown): Error {
-  return err instanceof Error ? err : new Error(String(err));
-}
 
 // User response shape for consistent API responses
 type UserResponse = {

@@ -127,7 +127,7 @@ interface ReprocessResult {
 
 export async function reprocessAllProducts(
   shopId: string,
-  fieldsToClclearOverrides?: string[]
+  fieldsToClearOverrides?: string[]
 ): Promise<ReprocessResult> {
   const shop = await prisma.shop.findUnique({ where: { id: shopId } });
   if (!shop) throw new Error(`Shop not found: ${shopId}`);
@@ -140,7 +140,7 @@ export async function reprocessAllProducts(
   }
 
   let overridesCleared = 0;
-  const fieldsToClear = fieldsToClclearOverrides || [];
+  const fieldsToClear = fieldsToClearOverrides || [];
 
   // BATCH clear overrides in one transaction (if needed)
   if (fieldsToClear.length > 0) {
@@ -190,11 +190,11 @@ interface SelectiveReprocessResult extends ReprocessResult {
 export async function reprocessChangedFields(
   shopId: string,
   changedFields: string[],
-  fieldsToClclearOverrides?: string[]
+  fieldsToClearOverrides?: string[]
 ): Promise<SelectiveReprocessResult> {
   // Fallback: if no specific fields, do full reprocess
   if (!changedFields || changedFields.length === 0) {
-    const result = await reprocessAllProducts(shopId, fieldsToClclearOverrides);
+    const result = await reprocessAllProducts(shopId, fieldsToClearOverrides);
     return { ...result, fieldsUpdated: [] };
   }
 
@@ -210,7 +210,7 @@ export async function reprocessChangedFields(
 
   // Clear overrides first (existing logic)
   let overridesCleared = 0;
-  const fieldsToClear = fieldsToClclearOverrides || [];
+  const fieldsToClear = fieldsToClearOverrides || [];
   if (fieldsToClear.length > 0) {
     overridesCleared = await batchClearOverrides(shopId, fieldsToClear, products);
     // Refetch with updated overrides
@@ -407,18 +407,6 @@ async function fetchProductsForReprocess(shopId: string) {
       productFieldOverrides: true,
     },
   });
-}
-
-export async function getOverrideCountForField(shopId: string, attribute: string): Promise<number> {
-  const products = await prisma.product.findMany({
-    where: { shopId },
-    select: { productFieldOverrides: true },
-  });
-
-  return products.filter(p => {
-    const overrides = (p.productFieldOverrides as unknown as ProductFieldOverrides) || {};
-    return !!overrides[attribute];
-  }).length;
 }
 
 export async function getOverrideCountsByField(shopId: string): Promise<Record<string, number>> {

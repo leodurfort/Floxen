@@ -13,12 +13,7 @@ import { getProduct as getProductRecord, listProducts as listProductsForShop, up
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
-import { getUserId } from '../utils/request';
-
-// Helper to normalize error for logging
-function toError(err: unknown): Error {
-  return err instanceof Error ? err : new Error(String(err));
-}
+import { getUserId, toError } from '../utils/request';
 
 // Helper to get product overrides with type safety
 function getProductOverrides(product: { productFieldOverrides: unknown } | null): ProductFieldOverrides {

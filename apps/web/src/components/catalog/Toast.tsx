@@ -77,30 +77,3 @@ export function Toast({ message, type, duration = 3000, onClose }: ToastProps) {
   );
 }
 
-// Toast container to manage multiple toasts
-interface ToastItem {
-  id: string;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
-
-interface ToastContainerProps {
-  toasts: ToastItem[];
-  onRemove: (id: string) => void;
-}
-
-export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
-  return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
-      {toasts.map((toast, index) => (
-        <div key={toast.id} style={{ transform: `translateY(${index * 8}px)` }}>
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => onRemove(toast.id)}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}

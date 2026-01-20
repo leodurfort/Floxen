@@ -1,18 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { Prisma, SubscriptionTier } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-
-export async function createUser(payload: { email: string; password: string; name?: string; tier?: SubscriptionTier }) {
-  const passwordHash = await bcrypt.hash(payload.password, 10);
-  return prisma.user.create({
-    data: {
-      email: payload.email.toLowerCase(),
-      passwordHash,
-      name: payload.name,
-      subscriptionTier: payload.tier ?? 'FREE',
-    },
-  });
-}
 
 export async function createUserWithVerification(payload: {
   email: string;
@@ -40,13 +27,6 @@ export async function findUserByEmail(email: string) {
 
 export async function findUserById(id: string) {
   return prisma.user.findUnique({ where: { id } });
-}
-
-export async function validateUser(email: string, password: string) {
-  const user = await findUserByEmail(email);
-  if (!user) return null;
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  return valid ? user : null;
 }
 
 export async function verifyUserEmail(userId: string) {
@@ -102,13 +82,4 @@ export async function verifyPassword(userId: string, password: string): Promise<
   });
   if (!user) return false;
   return bcrypt.compare(password, user.passwordHash);
-}
-
-export type UserWithSettings = Prisma.UserGetPayload<{ include: { settings: true } }>;
-
-export async function getUserProfile(userId: string): Promise<UserWithSettings | null> {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    include: { settings: true },
-  });
 }

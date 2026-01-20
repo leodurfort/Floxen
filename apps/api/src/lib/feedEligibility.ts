@@ -31,14 +31,6 @@ export const FEED_ELIGIBILITY_SELECT = {
 } as const satisfies Prisma.ProductSelect;
 
 /**
- * Type for products with all feed eligibility fields.
- * Use this type when passing products to functions that check feed eligibility.
- */
-export type FeedEligibleProduct = Prisma.ProductGetPayload<{
-  select: typeof FEED_ELIGIBILITY_SELECT;
-}>;
-
-/**
  * Build Prisma where clause for feed-eligible products.
  * This is the canonical definition of what makes a product feed-eligible.
  *
@@ -132,52 +124,3 @@ export async function getParentProductIds(
     .filter((id): id is number => id !== null);
 }
 
-/**
- * Helper to get feed-eligible products for a shop.
- * Handles parent ID lookup internally for convenience.
- *
- * @param prisma - Prisma client instance
- * @param shopId - The shop ID
- * @param options - Query options (select, pagination, ordering)
- * @returns Array of feed-eligible products
- */
-export async function getFeedEligibleProducts<
-  T extends Prisma.ProductSelect = typeof FEED_ELIGIBILITY_SELECT,
->(
-  prisma: PrismaClient | Prisma.TransactionClient,
-  shopId: string,
-  options?: {
-    select?: T;
-    skip?: number;
-    take?: number;
-    orderBy?: Prisma.ProductOrderByWithRelationInput;
-  }
-): Promise<Prisma.ProductGetPayload<{ select: T }>[]> {
-  const parentIds = await getParentProductIds(prisma, shopId);
-
-  return (prisma as PrismaClient).product.findMany({
-    where: buildFeedEligibilityWhere(shopId, parentIds),
-    select: (options?.select ?? FEED_ELIGIBILITY_SELECT) as T,
-    skip: options?.skip,
-    take: options?.take,
-    orderBy: options?.orderBy ?? { wooProductId: 'asc' },
-  }) as Promise<Prisma.ProductGetPayload<{ select: T }>[]>;
-}
-
-/**
- * Count feed-eligible products for a shop.
- *
- * @param prisma - Prisma client instance
- * @param shopId - The shop ID
- * @returns Count of feed-eligible products
- */
-export async function countFeedEligibleProducts(
-  prisma: PrismaClient | Prisma.TransactionClient,
-  shopId: string
-): Promise<number> {
-  const parentIds = await getParentProductIds(prisma, shopId);
-
-  return (prisma as PrismaClient).product.count({
-    where: buildFeedEligibilityWhere(shopId, parentIds),
-  });
-}

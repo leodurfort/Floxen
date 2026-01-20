@@ -4,7 +4,7 @@
 
 export * from './types';
 export { TRANSFORMS } from './registry';
-export { extractFieldValue, extractNestedValue, extractAttributeValue, extractMetaValue } from './helpers';
+export { extractFieldValue } from './helpers';
 export * from './functions/basic';
 export * from './functions/category';
 export * from './functions/id-generation';

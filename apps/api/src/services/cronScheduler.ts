@@ -236,22 +236,6 @@ export class CronScheduler {
     this.isRunning = false;
     logger.info('Cron: Scheduler stopped');
   }
-
-  getStatus() {
-    const status: Record<string, boolean> = {};
-    this.jobs.forEach((job, name) => {
-      status[name] = this.isRunning;
-    });
-    return {
-      isRunning: this.isRunning,
-      jobs: status,
-    };
-  }
-
-  async triggerManualSync() {
-    logger.info('Cron: Manual sync triggered');
-    await this.triggerAllShopsSync();
-  }
 }
 
 // Singleton instance
