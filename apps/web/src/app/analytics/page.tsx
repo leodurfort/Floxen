@@ -11,6 +11,7 @@ export default function AnalyticsPage() {
 
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [alreadySignedUp, setAlreadySignedUp] = useState(false);
@@ -28,6 +29,27 @@ export default function AnalyticsPage() {
       setEmail(user.email);
     }
   }, [user]);
+
+  // Check if user is already on waitlist
+  useEffect(() => {
+    async function checkStatus() {
+      if (!hydrated || !user) return;
+
+      try {
+        const status = await api.getAnalyticsWaitlistStatus();
+        if (status.isSignedUp) {
+          setAlreadySignedUp(true);
+          setSuccess('You are already on the waitlist! We will notify you when Analytics launches.');
+        }
+      } catch {
+        // Silently ignore - not critical
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    }
+
+    checkStatus();
+  }, [hydrated, user]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,8 +104,15 @@ export default function AnalyticsPage() {
             </p>
           </div>
 
+          {/* Loading State */}
+          {isCheckingStatus && (
+            <div className="text-center text-gray-500">
+              Loading...
+            </div>
+          )}
+
           {/* Signup Form */}
-          {!alreadySignedUp && (
+          {!isCheckingStatus && !alreadySignedUp && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <label className="flex flex-col gap-2">
                 <span className="text-sm text-gray-600">Email address</span>
@@ -114,7 +143,7 @@ export default function AnalyticsPage() {
           )}
 
           {/* Success State */}
-          {success && (
+          {!isCheckingStatus && success && (
             <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-center">
               {success}
             </div>

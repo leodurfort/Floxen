@@ -82,3 +82,24 @@ export async function signupWaitlist(req: Request, res: Response) {
     return res.status(500).json({ error: 'Failed to join waitlist' });
   }
 }
+
+export async function checkWaitlistStatus(req: Request, res: Response) {
+  const userId = getUserId(req);
+
+  try {
+    const entry = await prisma.analyticsWaitlist.findFirst({
+      where: { userId },
+    });
+
+    return res.json({
+      isSignedUp: !!entry,
+      signedUpAt: entry?.createdAt || null,
+    });
+  } catch (err) {
+    logger.error('Analytics waitlist status check failed', {
+      error: toError(err),
+      userId,
+    });
+    return res.status(500).json({ error: 'Failed to check waitlist status' });
+  }
+}

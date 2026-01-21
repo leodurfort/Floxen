@@ -858,3 +858,12 @@ export async function signupAnalyticsWaitlist(email: string): Promise<WaitlistSi
     body: JSON.stringify({ email }),
   });
 }
+
+export interface WaitlistStatusResponse {
+  isSignedUp: boolean;
+  signedUpAt: string | null;
+}
+
+export async function getAnalyticsWaitlistStatus(): Promise<WaitlistStatusResponse> {
+  return requestWithAuth<WaitlistStatusResponse>('/api/v1/analytics/waitlist/status');
+}
