@@ -14,6 +14,10 @@ import { stripeWebhookHandler } from './controllers/webhookController';
 export function createApp() {
   const app = express();
 
+  // Trust first proxy (Railway runs behind a reverse proxy)
+  // Required for express-rate-limit to correctly identify client IPs
+  app.set('trust proxy', 1);
+
   // Request ID must be first for tracing
   app.use(requestIdMiddleware);
 
