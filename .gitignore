@@ -12,9 +12,3 @@ build
 *.tsbuildinfo
 .DS_Store
 npm-debug.log*
-
-# E2E test artifacts
-**/playwright-report
-**/test-results
-**/playwright/.cache
-test-results.json
