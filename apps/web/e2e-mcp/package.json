@@ -1,0 +1,25 @@
+{
+  "name": "@floxen/e2e-mcp-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:smoke": "vitest run tests/smoke.spec.ts",
+    "test:auth": "vitest run tests/auth",
+    "test:shops": "vitest run tests/shops",
+    "test:manual": "cat RUN-TESTS-NOW.md",
+    "health-check": "tsx scripts/health-check.ts",
+    "test:example": "vitest run examples/example-test-patterns.spec.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@vitest/ui": "^1.2.0",
+    "dotenv": "^16.4.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}

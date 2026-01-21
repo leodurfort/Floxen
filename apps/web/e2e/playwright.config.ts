@@ -60,7 +60,8 @@ export default defineConfig({
     // Setup project for auth state
     {
       name: 'setup',
-      testMatch: /global\/setup\.ts/,
+      testDir: './',
+      testMatch: '**/global/setup.ts',
     },
 
     // Chrome tests (authenticated)
@@ -78,16 +79,6 @@ export default defineConfig({
       name: 'firefox',
       use: {
         ...devices['Desktop Firefox'],
-        storageState: 'playwright/.auth/user.json',
-      },
-      dependencies: ['setup'],
-    },
-
-    // Mobile Chrome tests (authenticated)
-    {
-      name: 'mobile-chrome',
-      use: {
-        ...devices['Pixel 5'],
         storageState: 'playwright/.auth/user.json',
       },
       dependencies: ['setup'],

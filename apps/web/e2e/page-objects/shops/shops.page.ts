@@ -53,7 +53,8 @@ export class ShopsPage extends BasePage {
       '[data-testid="add-shop"], ' +
         'button:has-text("Add Shop"), ' +
         'button:has-text("Connect Shop"), ' +
-        'button:has-text("Add Store")'
+        'button:has-text("Add Store"), ' +
+        'button:has-text("Connect new store")'
     );
     this.connectWooCommerceButton = page.locator(
       '[data-testid="connect-woocommerce"], ' +
@@ -135,7 +136,7 @@ export class ShopsPage extends BasePage {
    * Click add shop button to open connection modal
    */
   async clickAddShop(): Promise<void> {
-    await this.addShopButton.click();
+    await this.addShopButton.first().click();
     await expect(this.connectionModal).toBeVisible({ timeout: 5000 });
   }
 
@@ -237,7 +238,7 @@ export class ShopsPage extends BasePage {
    * Verify on shops page
    */
   async expectShopsPage(): Promise<void> {
-    await expect(this.addShopButton).toBeVisible();
+    await expect(this.addShopButton.first()).toBeVisible();
   }
 
   /**
