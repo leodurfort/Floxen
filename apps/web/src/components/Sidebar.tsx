@@ -36,13 +36,20 @@ export function Sidebar() {
   }
 
   // Build nav items based on current shop from URL
-  const navItems = [
+  const navItems: Array<{
+    href: string;
+    label: string;
+    icon: string;
+    disabled?: boolean;
+    badge?: string;
+  }> = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/shops', label: 'Stores', icon: '🏪' },
     ...(currentShop?.isConnected ? [
       { href: `/shops/${currentShop.id}/setup`, label: 'Setup', icon: '⚙️' },
       { href: `/shops/${currentShop.id}/products`, label: 'Catalog', icon: '📦' },
     ] : []),
+    { href: '/analytics', label: 'Analytics', icon: '📈', disabled: true, badge: 'Coming Soon' },
   ];
 
   return (
@@ -105,9 +112,32 @@ export function Sidebar() {
             isActive = pathname.includes('/products');
           } else if (item.label === 'Stores') {
             isActive = pathname === '/shops';
+          } else if (item.label === 'Analytics') {
+            isActive = pathname === '/analytics';
           } else {
             isActive = pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/');
           }
+
+          // Render disabled items with special styling
+          if (item.disabled) {
+            return (
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/40 opacity-60"
+                >
+                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-sm font-medium">{item.label}</span>
+                  {item.badge && (
+                    <span className="ml-auto bg-white/10 px-2 py-0.5 rounded text-white/60 text-xs">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              </div>
+            );
+          }
+
           return (
             <div key={item.href}>
               <Link

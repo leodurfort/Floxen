@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import analyticsRouter from './analytics';
+import analyticsWaitlistRouter from './analyticsWaitlist';
 import authRouter from './auth';
 import billingRouter from './billing';
 import feedRouter from './feed';
@@ -17,5 +18,6 @@ router.use('/shops', shopRouter);
 router.use('/shops/:id/products', productRouter);
 router.use('/shops/:id/sync', syncRouter);
 router.use('/shops/:id/analytics', analyticsRouter);
+router.use('/analytics', analyticsWaitlistRouter);
 
 export default router;

@@ -843,3 +843,18 @@ export async function updateProductSelection(shopId: string, productIds: string[
     body: JSON.stringify({ productIds }),
   });
 }
+
+// Analytics Waitlist
+
+export interface WaitlistSignupResponse {
+  success: boolean;
+  message: string;
+  alreadySignedUp: boolean;
+}
+
+export async function signupAnalyticsWaitlist(email: string): Promise<WaitlistSignupResponse> {
+  return requestWithAuth<WaitlistSignupResponse>('/api/v1/analytics/waitlist', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}

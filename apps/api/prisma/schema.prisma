@@ -59,6 +59,7 @@ model User {
   settings           UserSettings?
   verificationTokens VerificationToken[]
   accountDeletion    AccountDeletion?
+  analyticsWaitlist  AnalyticsWaitlist?
 }
 
 model UserSettings {
@@ -342,4 +343,15 @@ model FieldMapping {
   @@index([openaiFieldId])
   @@index([wooFieldId])
   @@map("field_mappings")
+}
+
+model AnalyticsWaitlist {
+  id        String   @id @default(cuid())
+  userId    String?  @unique @map("user_id")
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("analytics_waitlist")
 }
