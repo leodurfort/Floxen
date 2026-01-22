@@ -18,16 +18,14 @@ export function HeroSection() {
             </h1>
             <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-xl mx-auto md:mx-0">
               Connect your WooCommerce store and start appearing in ChatGPT
-              shopping results today.
+              shopping results.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start mb-4">
               <Link href="/register" className="btn--landing-primary">
                 Get My Products in ChatGPT
               </Link>
             </div>
-            <p className="text-sm text-gray-500">
-              Free for up to 5 products. No credit card required.
-            </p>
+            <p className="text-sm text-gray-500">No credit card required.</p>
           </div>
 
           {/* Right: Demo Video */}
