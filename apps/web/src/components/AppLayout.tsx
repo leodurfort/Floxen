@@ -45,7 +45,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
 
-    const isAuthPage = AUTH_PAGES.some((p) => pathname.startsWith(p));
+    const isAuthPage = AUTH_PAGES.some((p) => pathname === p);
     const isOnboardingPage = ONBOARDING_PAGES.some((p) => pathname.startsWith(p));
 
     if (!user) {
@@ -76,7 +76,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [hydrated, user, pathname, router]);
 
   // Determine if we should show sidebar
-  const isAuthPage = AUTH_PAGES.some((p) => pathname.startsWith(p));
+  const isAuthPage = AUTH_PAGES.some((p) => pathname === p);
 
   if (!hydrated) {
     return (
