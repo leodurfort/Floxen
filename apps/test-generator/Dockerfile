@@ -31,8 +31,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copy the standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/apps/test-generator/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/test-generator/.next/static ./apps/test-generator/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/apps/test-generator/public ./apps/test-generator/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/test-generator/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/test-generator/public ./public
 
 USER nextjs
 
@@ -41,4 +41,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "apps/test-generator/server.js"]
+CMD ["node", "server.js"]
