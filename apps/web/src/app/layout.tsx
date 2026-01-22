@@ -22,6 +22,10 @@ const body = Manrope({
 export const metadata: Metadata = {
   title: 'Floxen',
   description: 'Sync WooCommerce catalogs to OpenAI product feeds with AI enrichment.',
+  icons: {
+    icon: '/logos/Floxen_logos/favicon_orange-32x32.png',
+    apple: '/logos/Floxen_logos/favicon_orange-32x32.png',
+  },
 };
 
 // Force all pages to be dynamic to prevent SSR issues with Zustand
