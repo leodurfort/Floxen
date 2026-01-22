@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Domain configuration
-const LANDING_DOMAIN = 'www.floxen.ai';
+const LANDING_DOMAIN = 'floxen.ai';
+const WWW_DOMAIN = 'www.floxen.ai';
 const APP_DOMAIN = 'app.floxen.ai';
-const ROOT_DOMAIN = 'floxen.ai';
 
 // Routes that belong to the landing page
 const LANDING_ROUTES = ['/', '/pricing'];
@@ -31,9 +31,14 @@ const PASSTHROUGH_PREFIXES = [
   '/sitemap.xml',
 ];
 
+// Helper to create a clean redirect URL (without internal ports)
+function createRedirectUrl(targetDomain: string, pathname: string, search: string): string {
+  return `https://${targetDomain}${pathname}${search}`;
+}
+
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const hostname = request.headers.get('host') || '';
+  const { pathname, search } = request.nextUrl;
+  const hostname = request.headers.get('host')?.split(':')[0] || '';
 
   // Always allow static assets and API routes
   if (PASSTHROUGH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
@@ -54,16 +59,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Root domain (floxen.ai without www) - redirect to www
-  if (hostname === ROOT_DOMAIN || hostname === `${ROOT_DOMAIN}:443`) {
-    const url = request.nextUrl.clone();
-    url.hostname = LANDING_DOMAIN;
-    url.host = LANDING_DOMAIN;
-    return NextResponse.redirect(url, 301);
+  // www.floxen.ai - redirect to floxen.ai (backup for Cloudflare redirect)
+  if (hostname === WWW_DOMAIN) {
+    return NextResponse.redirect(createRedirectUrl(LANDING_DOMAIN, pathname, search), 301);
   }
 
-  // Landing domain (www.floxen.ai)
-  if (hostname === LANDING_DOMAIN || hostname.startsWith(LANDING_DOMAIN)) {
+  // Landing domain (floxen.ai)
+  if (hostname === LANDING_DOMAIN) {
     // Allow landing routes
     if (LANDING_ROUTES.includes(pathname)) {
       return NextResponse.next();
@@ -71,31 +73,23 @@ export function middleware(request: NextRequest) {
 
     // Redirect app routes to app domain
     if (APP_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
-      const url = request.nextUrl.clone();
-      url.hostname = APP_DOMAIN;
-      url.host = APP_DOMAIN;
-      return NextResponse.redirect(url, 302);
+      return NextResponse.redirect(createRedirectUrl(APP_DOMAIN, pathname, search), 302);
     }
 
-    // For any other route on landing domain, show 404 or redirect to home
+    // For any other route on landing domain, allow through
     return NextResponse.next();
   }
 
   // App domain (app.floxen.ai)
-  if (hostname === APP_DOMAIN || hostname.startsWith(APP_DOMAIN)) {
+  if (hostname === APP_DOMAIN) {
     // Redirect root to dashboard
     if (pathname === '/') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/dashboard';
-      return NextResponse.redirect(url, 302);
+      return NextResponse.redirect(createRedirectUrl(APP_DOMAIN, '/dashboard', search), 302);
     }
 
     // Redirect landing-only routes to landing domain
     if (LANDING_ROUTES.includes(pathname) && pathname !== '/') {
-      const url = request.nextUrl.clone();
-      url.hostname = LANDING_DOMAIN;
-      url.host = LANDING_DOMAIN;
-      return NextResponse.redirect(url, 302);
+      return NextResponse.redirect(createRedirectUrl(LANDING_DOMAIN, pathname, search), 302);
     }
 
     // Allow all app routes
