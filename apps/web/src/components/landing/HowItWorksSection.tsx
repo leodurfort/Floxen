@@ -70,32 +70,34 @@ export function HowItWorksSection() {
           </p>
         </div>
 
-        {/* Steps grid */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto mb-12">
+        {/* Steps grid with arrows */}
+        <div className="grid md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 md:gap-6 max-w-4xl mx-auto mb-12 items-start">
           {howItWorksSteps.map((step, index) => (
-            <div key={index} className="text-center">
-              {/* Step number and icon */}
-              <div className="relative inline-flex items-center justify-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-landing-primary/10 flex items-center justify-center text-landing-primary">
-                  <StepIcon icon={step.icon} />
+            <>
+              <div key={index} className="text-center">
+                {/* Step number and icon */}
+                <div className="relative inline-flex items-center justify-center mb-6">
+                  <div className="w-16 h-16 rounded-full bg-landing-primary/10 flex items-center justify-center text-landing-primary">
+                    <StepIcon icon={step.icon} />
+                  </div>
+                  {/* Step number badge */}
+                  <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-landing-primary text-white text-sm font-bold flex items-center justify-center">
+                    {index + 1}
+                  </span>
                 </div>
-                {/* Step number badge */}
-                <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-landing-primary text-white text-sm font-bold flex items-center justify-center">
-                  {index + 1}
-                </span>
+
+                {/* Step content */}
+                <h3 className="font-display text-xl font-bold text-gray-900 mb-3">
+                  {step.title}
+                </h3>
+                <p className="text-gray-600">{step.description}</p>
               </div>
 
-              {/* Step content */}
-              <h3 className="font-display text-xl font-bold text-gray-900 mb-3">
-                {step.title}
-              </h3>
-              <p className="text-gray-600">{step.description}</p>
-
-              {/* Arrow between steps (desktop only) */}
+              {/* Arrow connector - desktop only */}
               {index < howItWorksSteps.length - 1 && (
-                <div className="hidden md:block absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2">
+                <div className="hidden md:flex items-center justify-center pt-8">
                   <svg
-                    className="w-6 h-6 text-gray-300"
+                    className="w-8 h-8 text-gray-300"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -109,7 +111,7 @@ export function HowItWorksSection() {
                   </svg>
                 </div>
               )}
-            </div>
+            </>
           ))}
         </div>
 

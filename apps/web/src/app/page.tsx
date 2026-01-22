@@ -3,6 +3,7 @@ import { LandingHeader } from '@/components/landing/LandingHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { SocialProofSection } from '@/components/landing/SocialProofSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { CTASection } from '@/components/landing/CTASection';
@@ -83,6 +84,7 @@ export default function LandingPage() {
           <HeroSection />
           <SocialProofSection />
           <HowItWorksSection />
+          <FeaturesSection />
           <PricingSection />
           <FAQSection />
           <CTASection />

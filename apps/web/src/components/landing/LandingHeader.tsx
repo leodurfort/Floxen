@@ -119,7 +119,7 @@ export function LandingHeader() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4">
+          <div className="md:hidden mobile-menu-enter bg-white border-t border-gray-100 px-4 py-4">
             <nav className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <a

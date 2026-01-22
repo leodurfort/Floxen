@@ -339,7 +339,7 @@ textarea::placeholder {
 
 .btn--landing-primary:hover {
   background: #A84E28;
-  transform: translateY(-1px);
+  transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(192, 90, 48, 0.25);
 }
 
@@ -397,6 +397,22 @@ textarea::placeholder {
 /* Smooth scroll behavior */
 html {
   scroll-behavior: smooth;
+}
+
+/* Mobile menu slide-in animation */
+@keyframes slideInDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.mobile-menu-enter {
+  animation: slideInDown 250ms ease-out;
 }
 
 /* Respect reduced motion preference */

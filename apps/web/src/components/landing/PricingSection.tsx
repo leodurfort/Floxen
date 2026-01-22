@@ -49,7 +49,7 @@ export function PricingSection() {
             >
               Annual
               <span className="ml-1.5 text-green-600 text-xs font-semibold">
-                Save 17%
+                - Save 17%
               </span>
             </button>
           </div>

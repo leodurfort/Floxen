@@ -28,6 +28,12 @@ export interface HowItWorksStep {
   description: string;
 }
 
+export interface FeatureCard {
+  icon: string;
+  title: string;
+  description: string;
+}
+
 // Testimonials from spec
 export const testimonials: Testimonial[] = [
   {
@@ -67,6 +73,25 @@ export const howItWorksSteps: HowItWorksStep[] = [
     title: 'Appear in ChatGPT',
     description:
       'Your products are now discoverable by millions of AI shoppers.',
+  },
+];
+
+// Feature cards from spec
+export const featureCards: FeatureCard[] = [
+  {
+    icon: 'store',
+    title: 'Store Connection',
+    description: 'Connect your WooCommerce store in seconds.',
+  },
+  {
+    icon: 'sync',
+    title: 'Auto-Sync',
+    description: 'Products automatically stay up to date.',
+  },
+  {
+    icon: 'feed',
+    title: 'Feed Generation',
+    description: 'ChatGPT-ready product feeds.',
   },
 ];
 
@@ -148,7 +173,6 @@ export const pricingPlans: PricingPlan[] = [
     limit: 'Unlimited',
     features: [
       'Everything in Starter',
-      'Priority support',
     ],
     ctaText: 'Get Started',
   },
