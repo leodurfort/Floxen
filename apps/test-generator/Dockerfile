@@ -1,21 +1,24 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
-# Copy root package files for workspaces
-COPY package*.json ./
+# Copy package files
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 COPY apps/test-generator/package.json ./apps/test-generator/
 
-# Install all dependencies
-RUN npm ci
+# Install dependencies
+RUN pnpm install --frozen-lockfile || pnpm install
 
 # Copy test-generator source
 COPY apps/test-generator ./apps/test-generator
 
 # Build test-generator
 WORKDIR /app/apps/test-generator
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -29,7 +32,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy the standalone output
+# Copy the standalone output (includes node_modules with resolved deps)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/test-generator/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/test-generator/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/test-generator/public ./public
