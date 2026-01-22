@@ -30,36 +30,20 @@ export function HeroSection() {
             </p>
           </div>
 
-          {/* Right: Video/GIF Placeholder */}
+          {/* Right: Demo Video */}
           <div className="relative order-first md:order-last">
             <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden shadow-xl border border-gray-200">
-              {/* Placeholder for video/GIF - replace with actual asset */}
-              <div className="w-full h-full flex flex-col items-center justify-center p-8">
-                <div className="w-16 h-16 mb-4 rounded-full bg-landing-primary/10 flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-landing-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <span className="text-gray-400 text-sm text-center">
-                  Demo video showing products in ChatGPT
-                </span>
-              </div>
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                aria-label="Demo video showing products appearing in ChatGPT shopping results"
+              >
+                <source src="/logos/hero_demo.webm" type="video/webm" />
+                Your browser does not support the video tag.
+              </video>
             </div>
           </div>
         </div>
