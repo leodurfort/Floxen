@@ -1,3 +1,5 @@
+import { FeedType } from './feed';
+
 /**
  * Store information retrieved from WooCommerce
  */
@@ -17,4 +19,5 @@ export interface SessionData {
   consumerSecret: string;
   connectedAt: number;
   storeInfo?: StoreInfo;
+  feedType?: FeedType;
 }

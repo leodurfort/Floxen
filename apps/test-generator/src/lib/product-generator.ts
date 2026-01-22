@@ -13,9 +13,17 @@
 
 import { WooClient } from './woo-client';
 import { getPlaceholderGallery } from './placeholder-images';
-import { CATEGORIES, getCategoriesByHierarchy } from '@/data/categories';
+import { CATEGORIES, getCategoriesByHierarchy, CategoryDefinition } from '@/data/categories';
 import { ALL_PRODUCTS, PRODUCT_COUNTS } from '@/data/products';
 import { BRAND_LIST } from '@/data/brands';
+import {
+  WINTER_SPORTS_CATEGORIES,
+  getWinterSportsCategoriesByHierarchy,
+  ALL_WINTER_SPORTS_PRODUCTS,
+  WINTER_SPORTS_PRODUCT_COUNTS,
+  getWinterSportsBrandList,
+} from '@/data/winter-sports';
+import { FeedType } from '@/types/feed';
 import {
   ProductDefinition,
   SimpleProductDefinition,
@@ -45,6 +53,7 @@ const BRAND_ATTRIBUTE_SLUG = 'pa_brand';
  */
 export class ProductGenerator {
   private wooClient: WooClient;
+  private feedType: FeedType;
   private categoryIdMap: Map<string, number> = new Map();
   private productIdMap: Map<string, number> = new Map(); // SKU -> WooCommerce ID
   private productsWithVariations: Set<number> = new Set(); // Product IDs that already have variations
@@ -85,8 +94,65 @@ export class ProductGenerator {
   private relationshipsSkipped = 0;
   private reviewsSkipped = 0;
 
-  constructor(wooClient: WooClient) {
+  constructor(wooClient: WooClient, feedType: FeedType = 'comprehensive') {
     this.wooClient = wooClient;
+    this.feedType = feedType;
+  }
+
+  /**
+   * Get the products based on feed type
+   */
+  private getProducts(): ProductDefinition[] {
+    if (this.feedType === 'winter-sports') {
+      return ALL_WINTER_SPORTS_PRODUCTS;
+    }
+    return ALL_PRODUCTS;
+  }
+
+  /**
+   * Get categories based on feed type
+   */
+  private getCategories(): CategoryDefinition[] {
+    if (this.feedType === 'winter-sports') {
+      return WINTER_SPORTS_CATEGORIES;
+    }
+    return CATEGORIES;
+  }
+
+  /**
+   * Get categories by hierarchy based on feed type
+   */
+  private getCategoriesByHierarchy(): CategoryDefinition[] {
+    if (this.feedType === 'winter-sports') {
+      return getWinterSportsCategoriesByHierarchy();
+    }
+    return getCategoriesByHierarchy();
+  }
+
+  /**
+   * Get brand list based on feed type
+   */
+  private getBrandList(): { name: string }[] {
+    if (this.feedType === 'winter-sports') {
+      return getWinterSportsBrandList();
+    }
+    return BRAND_LIST;
+  }
+
+  /**
+   * Get product counts based on feed type
+   */
+  private getProductCounts(): { total: number; simple: number; variable: number; grouped: number; variations: number } {
+    if (this.feedType === 'winter-sports') {
+      return {
+        total: WINTER_SPORTS_PRODUCT_COUNTS.total,
+        simple: WINTER_SPORTS_PRODUCT_COUNTS.total, // All are simple for winter-sports
+        variable: 0,
+        grouped: 0,
+        variations: 0,
+      };
+    }
+    return PRODUCT_COUNTS;
   }
 
   /**
@@ -259,7 +325,7 @@ export class ProductGenerator {
    * Creates pa_brand attribute and terms for all brands used in products with taxonomy storage
    */
   private async *generateBrands(): AsyncGenerator<ProgressEvent> {
-    const brands = BRAND_LIST;
+    const brands = this.getBrandList();
     const total = brands.length + 1; // +1 for attribute creation
     let current = 0;
 
@@ -318,7 +384,7 @@ export class ProductGenerator {
    * Skips categories that already exist (resume support)
    */
   private async *generateCategories(): AsyncGenerator<ProgressEvent> {
-    const categories = getCategoriesByHierarchy();
+    const categories = this.getCategoriesByHierarchy();
     const total = categories.length;
     let current = 0;
 
@@ -359,7 +425,7 @@ export class ProductGenerator {
    * Skips products that already exist (resume support)
    */
   private async *generateSimpleProducts(): AsyncGenerator<ProgressEvent> {
-    const simpleProducts = ALL_PRODUCTS.filter(
+    const simpleProducts = this.getProducts().filter(
       (p): p is SimpleProductDefinition => p.type === 'simple'
     );
 
@@ -412,7 +478,7 @@ export class ProductGenerator {
    * Skips products that already exist (resume support)
    */
   private async *generateVariableProducts(): AsyncGenerator<ProgressEvent> {
-    const variableProducts = ALL_PRODUCTS.filter(
+    const variableProducts = this.getProducts().filter(
       (p): p is VariableProductDefinition => p.type === 'variable'
     );
 
@@ -465,7 +531,7 @@ export class ProductGenerator {
    * Skips products that already have variations (resume support)
    */
   private async *generateVariations(): AsyncGenerator<ProgressEvent> {
-    const variableProducts = ALL_PRODUCTS.filter(
+    const variableProducts = this.getProducts().filter(
       (p): p is VariableProductDefinition => p.type === 'variable'
     );
 
@@ -573,7 +639,7 @@ export class ProductGenerator {
    * Skips products that already exist (resume support)
    */
   private async *generateGroupedProducts(): AsyncGenerator<ProgressEvent> {
-    const groupedProducts = ALL_PRODUCTS.filter(
+    const groupedProducts = this.getProducts().filter(
       (p): p is GroupedProductDefinition => p.type === 'grouped'
     );
 
@@ -635,7 +701,7 @@ export class ProductGenerator {
    */
   private async *generateRelationships(): AsyncGenerator<ProgressEvent> {
     // Get products that should have relationships (40% per PRD)
-    const productsToUpdate = ALL_PRODUCTS.filter((p, index) => {
+    const productsToUpdate = this.getProducts().filter((p, index) => {
       // 40% have relationships (indices 0-3 out of each 10)
       if (!(index % 10 < 4) || !this.productIdMap.has(p.sku)) {
         return false;
@@ -649,7 +715,7 @@ export class ProductGenerator {
     });
 
     // Count skipped products for logging
-    const totalEligible = ALL_PRODUCTS.filter((p, index) => index % 10 < 4 && this.productIdMap.has(p.sku)).length;
+    const totalEligible = this.getProducts().filter((p, index) => index % 10 < 4 && this.productIdMap.has(p.sku)).length;
     const skipped = totalEligible - productsToUpdate.length;
     if (skipped > 0) {
       console.log(`[Generator] Skipping ${skipped} products that already have relationships`);
@@ -669,7 +735,7 @@ export class ProductGenerator {
       if (!productId) continue;
 
       // Get other products in the same category for relationships
-      const categoryProducts = ALL_PRODUCTS
+      const categoryProducts = this.getProducts()
         .filter((p) => p.categories.some((c) => product.categories.includes(c)) && p.sku !== product.sku)
         .map((p) => this.productIdMap.get(p.sku))
         .filter((id): id is number => id !== undefined);
@@ -725,7 +791,7 @@ export class ProductGenerator {
    */
   private async *generateReviews(): AsyncGenerator<ProgressEvent> {
     // Get products that should have reviews (5%), excluding those that already have reviews
-    const productsToReview = ALL_PRODUCTS.filter((p, index) => {
+    const productsToReview = this.getProducts().filter((p, index) => {
       // 5% have reviews (1 out of every 20 products)
       if (!(index % 20 === 0) || !this.productIdMap.has(p.sku)) {
         return false;
@@ -739,7 +805,7 @@ export class ProductGenerator {
     });
 
     // Count skipped products for logging
-    const totalEligible = ALL_PRODUCTS.filter((p, index) => index % 20 === 0 && this.productIdMap.has(p.sku)).length;
+    const totalEligible = this.getProducts().filter((p, index) => index % 20 === 0 && this.productIdMap.has(p.sku)).length;
     const skipped = totalEligible - productsToReview.length;
     if (skipped > 0) {
       console.log(`[Generator] Skipping ${skipped} products that already have reviews`);

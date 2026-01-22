@@ -7,10 +7,12 @@ import {
   ValidationStatus,
   MissingItems,
 } from '@/types/validation';
+import { FeedType, FEED_CONFIGS } from '@/types/feed';
 
 type ConnectionState =
   | 'disconnected'
   | 'connecting'
+  | 'selecting-feed'
   | 'connected'
   | 'validating'
   | 'generating'
@@ -30,6 +32,7 @@ interface StatusResponse {
   storeUrl?: string;
   storeInfo?: StoreInfo;
   connectedAt?: number;
+  feedType?: FeedType;
 }
 
 export default function Home() {
@@ -39,6 +42,7 @@ export default function Home() {
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [feedType, setFeedType] = useState<FeedType>('comprehensive');
 
   // Check connection status on mount
   useEffect(() => {
@@ -63,12 +67,26 @@ export default function Home() {
       if (data.connected) {
         setStoreUrl(data.storeUrl || '');
         setStoreInfo(data.storeInfo || null);
-        // Auto-validate on connect
-        setState('validating');
+        // Show feed selector instead of auto-validating
+        setState('selecting-feed');
+        if (data.feedType) {
+          setFeedType(data.feedType);
+        }
       }
     } catch {
       // Not connected
     }
+  };
+
+  const handleFeedSelect = async (selectedFeed: FeedType) => {
+    setFeedType(selectedFeed);
+    // Save feed type to session
+    await fetch('/api/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedType: selectedFeed }),
+    });
+    setState('validating');
   };
 
   const handleConnect = async (e: React.FormEvent) => {
@@ -151,8 +169,17 @@ export default function Home() {
                 isLoading={state === 'connecting'}
                 error={error}
               />
+            ) : state === 'selecting-feed' ? (
+              <FeedSelector
+                storeUrl={storeUrl}
+                storeInfo={storeInfo}
+                selectedFeed={feedType}
+                onSelect={handleFeedSelect}
+                onDisconnect={handleDisconnect}
+              />
             ) : state === 'validating' ? (
               <ValidatingState
+                feedType={feedType}
                 onComplete={handleValidationComplete}
                 onError={(msg) => {
                   setError(msg);
@@ -163,15 +190,18 @@ export default function Home() {
               <ConnectedState
                 storeUrl={storeUrl}
                 storeInfo={storeInfo}
+                feedType={feedType}
                 validationResult={validationResult}
                 onDisconnect={handleDisconnect}
                 onGenerate={() => setState('generating')}
                 onCleanup={() => setState('cleaning')}
                 onRevalidate={handleRevalidate}
                 onFix={handleFix}
+                onChangeFeed={() => setState('selecting-feed')}
               />
             ) : state === 'generating' ? (
               <GeneratingState
+                feedType={feedType}
                 onComplete={() => setState('complete')}
                 onError={(msg) => {
                   setError(msg);
@@ -181,11 +211,13 @@ export default function Home() {
             ) : state === 'complete' ? (
               <CompleteState
                 storeUrl={storeUrl}
+                feedType={feedType}
                 onCleanup={() => setState('cleaning')}
                 onDisconnect={handleDisconnect}
               />
             ) : state === 'cleaning' ? (
               <CleaningState
+                feedType={feedType}
                 onComplete={handleRevalidate}
                 onError={(msg) => {
                   setError(msg);
@@ -194,6 +226,7 @@ export default function Home() {
               />
             ) : state === 'fixing' ? (
               <FixingState
+                feedType={feedType}
                 missingItems={validationResult?.missingItems || null}
                 onComplete={handleFixComplete}
                 onError={(msg) => {
@@ -206,7 +239,7 @@ export default function Home() {
                 error={error}
                 onRetry={() => {
                   setError(null);
-                  setState('validating');
+                  setState('selecting-feed');
                 }}
               />
             ) : null}
@@ -282,25 +315,19 @@ function ConnectForm({
   );
 }
 
-// Connected State Component
-function ConnectedState({
+// Feed Selector Component
+function FeedSelector({
   storeUrl,
   storeInfo,
-  validationResult,
+  selectedFeed,
+  onSelect,
   onDisconnect,
-  onGenerate,
-  onCleanup,
-  onRevalidate,
-  onFix,
 }: {
   storeUrl: string;
   storeInfo: StoreInfo | null;
-  validationResult: ValidationResult | null;
+  selectedFeed: FeedType;
+  onSelect: (feed: FeedType) => void;
   onDisconnect: () => void;
-  onGenerate: () => void;
-  onCleanup: () => void;
-  onRevalidate: () => void;
-  onFix: () => void;
 }) {
   return (
     <div>
@@ -319,6 +346,150 @@ function ConnectedState({
         )}
       </div>
 
+      <h3 className="text-md font-semibold mb-3">Select Feed Type</h3>
+
+      <div className="space-y-3 mb-4">
+        {(Object.keys(FEED_CONFIGS) as FeedType[]).map((feedId) => {
+          const config = FEED_CONFIGS[feedId];
+          const isSelected = selectedFeed === feedId;
+          return (
+            <button
+              key={feedId}
+              onClick={() => onSelect(feedId)}
+              className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                isSelected
+                  ? 'border-accent bg-accent/5'
+                  : 'border-border hover:border-accent/50 bg-surface-bg'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-text-primary">{config.name}</span>
+                    {feedId === 'winter-sports' && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                        NEW
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-text-secondary mt-1">{config.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <span className="px-2 py-0.5 text-xs bg-surface-card border border-border rounded">
+                      {config.productCount} products
+                    </span>
+                    {config.categories.slice(0, 3).map((cat) => (
+                      <span
+                        key={cat}
+                        className="px-2 py-0.5 text-xs bg-surface-card border border-border rounded"
+                      >
+                        {cat}
+                      </span>
+                    ))}
+                    {config.categories.length > 3 && (
+                      <span className="px-2 py-0.5 text-xs bg-surface-card border border-border rounded">
+                        +{config.categories.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-3 ${
+                    isSelected ? 'border-accent bg-accent' : 'border-border'
+                  }`}
+                >
+                  {isSelected && (
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              {isSelected && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-xs font-medium text-text-secondary mb-1">Features:</p>
+                  <ul className="text-xs text-text-muted space-y-0.5">
+                    {config.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-center gap-1">
+                        <span className="text-success">✓</span> {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        onClick={onDisconnect}
+        className="w-full text-text-muted hover:text-text-secondary font-medium py-2 px-4 transition-colors"
+      >
+        Disconnect
+      </button>
+    </div>
+  );
+}
+
+// Connected State Component
+function ConnectedState({
+  storeUrl,
+  storeInfo,
+  feedType,
+  validationResult,
+  onDisconnect,
+  onGenerate,
+  onCleanup,
+  onRevalidate,
+  onFix,
+  onChangeFeed,
+}: {
+  storeUrl: string;
+  storeInfo: StoreInfo | null;
+  feedType: FeedType;
+  validationResult: ValidationResult | null;
+  onDisconnect: () => void;
+  onGenerate: () => void;
+  onCleanup: () => void;
+  onRevalidate: () => void;
+  onFix: () => void;
+  onChangeFeed: () => void;
+}) {
+  const feedConfig = FEED_CONFIGS[feedType];
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-2 h-2 bg-success rounded-full" />
+        <h2 className="text-lg font-semibold">Connected</h2>
+      </div>
+
+      <div className="mb-4 p-3 bg-surface-bg rounded-md">
+        <p className="text-sm text-text-secondary">Store</p>
+        <p className="font-medium truncate">{storeUrl}</p>
+        {storeInfo && (
+          <p className="text-xs text-text-muted mt-1">
+            {storeInfo.currency} | {storeInfo.weightUnit} | {storeInfo.dimensionUnit}
+          </p>
+        )}
+      </div>
+
+      {/* Feed Type Info */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-blue-800">{feedConfig.name}</p>
+            <p className="text-xs text-blue-600">{feedConfig.productCount} products</p>
+          </div>
+          <button
+            onClick={onChangeFeed}
+            className="text-xs text-blue-700 hover:text-blue-900 underline"
+          >
+            Change
+          </button>
+        </div>
+      </div>
+
       {/* Validation Dashboard */}
       {validationResult && (
         <ValidationDashboard
@@ -330,7 +501,10 @@ function ConnectedState({
 
       <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
         <p className="text-sm text-amber-800">
-          <strong>~500 products</strong> will be generated including categories, simple products, variable products with variations, and grouped products.
+          <strong>{feedConfig.productCount} products</strong> will be generated
+          {feedType === 'comprehensive'
+            ? ' including categories, simple products, variable products with variations, and grouped products.'
+            : ' - simple products with all required feed fields.'}
         </p>
       </div>
 
@@ -360,16 +534,18 @@ function ConnectedState({
 
 // Generating State Component
 function GeneratingState({
+  feedType,
   onComplete,
   onError,
 }: {
+  feedType: FeedType;
   onComplete: () => void;
   onError: (msg: string) => void;
 }) {
   const [progress, setProgress] = useState({ phase: 'Starting...', current: 0, total: 0, message: '' });
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/generate');
+    const eventSource = new EventSource(`/api/generate?feedType=${feedType}`);
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -430,13 +606,16 @@ function GeneratingState({
 // Complete State Component
 function CompleteState({
   storeUrl,
+  feedType,
   onCleanup,
   onDisconnect,
 }: {
   storeUrl: string;
+  feedType: FeedType;
   onCleanup: () => void;
   onDisconnect: () => void;
 }) {
+  const feedConfig = FEED_CONFIGS[feedType];
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
@@ -449,7 +628,7 @@ function CompleteState({
       </div>
 
       <p className="text-text-secondary mb-4">
-        All test products have been created in your WooCommerce store.
+        {feedConfig.productCount} {feedConfig.name.toLowerCase()} products have been created in your WooCommerce store.
       </p>
 
       <div className="space-y-2">
@@ -480,16 +659,18 @@ function CompleteState({
 
 // Cleaning State Component
 function CleaningState({
+  feedType,
   onComplete,
   onError,
 }: {
+  feedType: FeedType;
   onComplete: () => void;
   onError: (msg: string) => void;
 }) {
   const [progress, setProgress] = useState({ phase: 'Finding products...', current: 0, total: 0 });
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/cleanup');
+    const eventSource = new EventSource(`/api/cleanup?feedType=${feedType}`);
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -577,16 +758,18 @@ function ErrorState({
 
 // Validating State Component
 function ValidatingState({
+  feedType,
   onComplete,
   onError,
 }: {
+  feedType: FeedType;
   onComplete: (result: ValidationResult) => void;
   onError: (msg: string) => void;
 }) {
   const [progress, setProgress] = useState({ phase: 'Initializing...', current: 0, total: 0, message: '' });
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/validate');
+    const eventSource = new EventSource(`/api/validate?feedType=${feedType}`);
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -765,10 +948,12 @@ function ValidationDashboard({
 
 // Fixing State Component
 function FixingState({
+  feedType,
   missingItems,
   onComplete,
   onError,
 }: {
+  feedType: FeedType;
   missingItems: MissingItems | null;
   onComplete: () => void;
   onError: (msg: string) => void;
@@ -786,7 +971,7 @@ function FixingState({
     fetch('/api/fix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(missingItems),
+      body: JSON.stringify({ ...missingItems, feedType }),
       signal: controller.signal,
     })
       .then(async (response) => {

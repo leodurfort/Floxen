@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession, isSessionValid } from '@/lib/session';
 import { createWooClientFromSession } from '@/lib/woo-client';
 import { ValidationService } from '@/lib/validation-service';
 import { ERROR_CODES } from '@/types/api';
+import { FeedType } from '@/types/feed';
 
 const HEARTBEAT_INTERVAL_MS = 30000; // 30 seconds
 
@@ -10,7 +11,7 @@ const HEARTBEAT_INTERVAL_MS = 30000; // 30 seconds
  * GET /api/validate
  * Runs store validation and streams progress via SSE
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
 
@@ -27,8 +28,11 @@ export async function GET() {
       );
     }
 
+    // Get feedType from query parameter
+    const feedType = (request.nextUrl.searchParams.get('feedType') || 'comprehensive') as FeedType;
+
     const wooClient = createWooClientFromSession(session);
-    const validationService = new ValidationService(wooClient);
+    const validationService = new ValidationService(wooClient, feedType);
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({

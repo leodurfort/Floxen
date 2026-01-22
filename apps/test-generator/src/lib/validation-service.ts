@@ -11,9 +11,17 @@
 
 import { WooClient } from './woo-client';
 import { ALL_PRODUCTS, PRODUCTS_BY_CATEGORY, PRODUCT_COUNTS } from '@/data/products';
-import { CATEGORIES } from '@/data/categories';
+import { CATEGORIES, CategoryDefinition } from '@/data/categories';
 import { BRAND_LIST } from '@/data/brands';
 import { getEdgeCaseOverride, getEdgeCaseKeys } from '@/data/products/edge-cases';
+import {
+  WINTER_SPORTS_CATEGORIES,
+  ALL_WINTER_SPORTS_PRODUCTS,
+  WINTER_SPORTS_PRODUCT_COUNTS,
+  getWinterSportsBrandList,
+} from '@/data/winter-sports';
+import { FeedType } from '@/types/feed';
+import { ProductDefinition } from '@/types/product';
 import {
   ValidationResult,
   ValidationCategory,
@@ -30,6 +38,7 @@ const GENERATOR_META_VALUE = 'woo-test-generator';
 
 export class ValidationService {
   private wooClient: WooClient;
+  private feedType: FeedType;
   private startTime: number = 0;
 
   // Fetched store data
@@ -39,8 +48,54 @@ export class ValidationService {
   private storeBrands: Set<string> = new Set();
   private productsWithVariations: Map<number, number> = new Map();
 
-  constructor(wooClient: WooClient) {
+  constructor(wooClient: WooClient, feedType: FeedType = 'comprehensive') {
     this.wooClient = wooClient;
+    this.feedType = feedType;
+  }
+
+  /**
+   * Get products based on feed type
+   */
+  private getProducts(): ProductDefinition[] {
+    if (this.feedType === 'winter-sports') {
+      return ALL_WINTER_SPORTS_PRODUCTS;
+    }
+    return ALL_PRODUCTS;
+  }
+
+  /**
+   * Get categories based on feed type
+   */
+  private getCategories(): CategoryDefinition[] {
+    if (this.feedType === 'winter-sports') {
+      return WINTER_SPORTS_CATEGORIES;
+    }
+    return CATEGORIES;
+  }
+
+  /**
+   * Get brand list based on feed type
+   */
+  private getBrandList(): { name: string }[] {
+    if (this.feedType === 'winter-sports') {
+      return getWinterSportsBrandList();
+    }
+    return BRAND_LIST;
+  }
+
+  /**
+   * Get product counts based on feed type
+   */
+  private getProductCounts(): { total: number; simple: number; variable: number; grouped: number } {
+    if (this.feedType === 'winter-sports') {
+      return {
+        total: WINTER_SPORTS_PRODUCT_COUNTS.total,
+        simple: WINTER_SPORTS_PRODUCT_COUNTS.total,
+        variable: 0,
+        grouped: 0,
+      };
+    }
+    return PRODUCT_COUNTS;
   }
 
   /**
@@ -141,29 +196,32 @@ export class ValidationService {
    */
   private validateCounts(): ValidationCategory {
     const checks: ValidationCheck[] = [];
+    const productCounts = this.getProductCounts();
+    const categories = this.getCategories();
+    const brandList = this.getBrandList();
 
     // Total products
-    checks.push(this.createCheck('Total Products', PRODUCT_COUNTS.total, this.storeProducts.length));
+    checks.push(this.createCheck('Total Products', productCounts.total, this.storeProducts.length));
 
     // Simple products
     const simpleActual = this.storeProducts.filter((p) => p.type === 'simple').length;
-    checks.push(this.createCheck('Simple Products', PRODUCT_COUNTS.simple, simpleActual));
+    checks.push(this.createCheck('Simple Products', productCounts.simple, simpleActual));
 
     // Variable products
     const variableActual = this.storeProducts.filter((p) => p.type === 'variable').length;
-    checks.push(this.createCheck('Variable Products', PRODUCT_COUNTS.variable, variableActual));
+    checks.push(this.createCheck('Variable Products', productCounts.variable, variableActual));
 
     // Grouped products
     const groupedActual = this.storeProducts.filter((p) => p.type === 'grouped').length;
-    checks.push(this.createCheck('Grouped Products', PRODUCT_COUNTS.grouped, groupedActual));
+    checks.push(this.createCheck('Grouped Products', productCounts.grouped, groupedActual));
 
     // Categories
-    const categoriesExpected = CATEGORIES.length;
-    const categoriesActual = CATEGORIES.filter((c) => this.storeCategories.has(c.slug)).length;
+    const categoriesExpected = categories.length;
+    const categoriesActual = categories.filter((c) => this.storeCategories.has(c.slug)).length;
     checks.push(this.createCheck('Categories', categoriesExpected, categoriesActual));
 
     // Brands
-    const brandsExpected = BRAND_LIST.length;
+    const brandsExpected = brandList.length;
     const brandsActual = this.storeBrands.size;
     checks.push(this.createCheck('Brands', brandsExpected, brandsActual));
 
@@ -514,39 +572,47 @@ export class ValidationService {
   }
 
   private calculateMissingItems(): MissingItems {
-    const missingBrands = BRAND_LIST.filter((b) => !this.storeBrands.has(b.name)).map((b) => b.name);
+    const brandList = this.getBrandList();
+    const categories = this.getCategories();
+    const products = this.getProducts();
 
-    const missingCategories = CATEGORIES.filter((c) => !this.storeCategories.has(c.slug)).map((c) => c.slug);
+    const missingBrands = brandList.filter((b) => !this.storeBrands.has(b.name)).map((b) => b.name);
+
+    const missingCategories = categories.filter((c) => !this.storeCategories.has(c.slug)).map((c) => c.slug);
 
     const existingSkus = new Set(this.productsBySku.keys());
 
-    const missingSimple = ALL_PRODUCTS.filter((p) => p.type === 'simple' && !existingSkus.has(p.sku)).map((p) => p.sku);
+    const missingSimple = products.filter((p) => p.type === 'simple' && !existingSkus.has(p.sku)).map((p) => p.sku);
 
-    const missingVariable = ALL_PRODUCTS.filter((p) => p.type === 'variable' && !existingSkus.has(p.sku)).map(
+    const missingVariable = products.filter((p) => p.type === 'variable' && !existingSkus.has(p.sku)).map(
       (p) => p.sku
     );
 
-    const missingGrouped = ALL_PRODUCTS.filter((p) => p.type === 'grouped' && !existingSkus.has(p.sku)).map(
+    const missingGrouped = products.filter((p) => p.type === 'grouped' && !existingSkus.has(p.sku)).map(
       (p) => p.sku
     );
 
-    // Products that need relationships (40% should have them)
-    const productsNeedingRelationships = ALL_PRODUCTS.filter((p, i) => i % 10 < 4)
-      .filter((p) => {
-        const storeProduct = this.productsBySku.get(p.sku);
-        if (!storeProduct) return false;
-        return !storeProduct.cross_sell_ids?.length && !storeProduct.upsell_ids?.length;
-      })
-      .map((p) => p.sku);
+    // Products that need relationships (40% should have them) - only for comprehensive feed
+    const productsNeedingRelationships = this.feedType === 'comprehensive'
+      ? products.filter((p, i) => i % 10 < 4)
+          .filter((p) => {
+            const storeProduct = this.productsBySku.get(p.sku);
+            if (!storeProduct) return false;
+            return !storeProduct.cross_sell_ids?.length && !storeProduct.upsell_ids?.length;
+          })
+          .map((p) => p.sku)
+      : [];
 
-    // Products that need reviews (5% should have them)
-    const productsNeedingReviews = ALL_PRODUCTS.filter((p, i) => i % 20 === 0)
-      .filter((p) => {
-        const storeProduct = this.productsBySku.get(p.sku);
-        if (!storeProduct) return false;
-        return !storeProduct.rating_count || storeProduct.rating_count === 0;
-      })
-      .map((p) => p.sku);
+    // Products that need reviews (5% should have them) - only for comprehensive feed
+    const productsNeedingReviews = this.feedType === 'comprehensive'
+      ? products.filter((p, i) => i % 20 === 0)
+          .filter((p) => {
+            const storeProduct = this.productsBySku.get(p.sku);
+            if (!storeProduct) return false;
+            return !storeProduct.rating_count || storeProduct.rating_count === 0;
+          })
+          .map((p) => p.sku)
+      : [];
 
     return {
       brands: missingBrands,

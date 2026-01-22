@@ -1,3 +1,5 @@
+import { FeedType } from './feed';
+
 /**
  * API response types
  */
@@ -38,6 +40,7 @@ export interface StatusResponse {
     weightUnit: string;
   };
   connectedAt?: number;
+  feedType?: FeedType;
 }
 
 /**

@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { StatusResponse } from '@/types/api';
 import { getAnyPendingCredentials } from '@/lib/pending-credentials';
+import { FeedType } from '@/types/feed';
 
 /**
  * Check if session has valid credentials
@@ -40,6 +41,7 @@ export async function GET() {
             }
           : undefined,
         connectedAt: session.connectedAt,
+        feedType: session.feedType,
       };
 
       return NextResponse.json(response);
@@ -82,5 +84,27 @@ export async function GET() {
     console.error('[Status] Error:', error);
     // Return healthy status for health checks even on error
     return NextResponse.json({ connected: false });
+  }
+}
+
+/**
+ * POST /api/status
+ * Updates session with feedType selection
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getSession();
+    const body = await request.json();
+
+    if (body.feedType) {
+      session.feedType = body.feedType as FeedType;
+      await session.save();
+      console.log('[Status] Feed type saved to session:', body.feedType);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[Status] POST Error:', error);
+    return NextResponse.json({ success: false }, { status: 500 });
   }
 }
