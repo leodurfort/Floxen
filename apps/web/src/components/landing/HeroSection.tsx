@@ -32,13 +32,13 @@ export function HeroSection() {
 
           {/* Right: Demo Video */}
           <div className="relative order-first md:order-last">
-            <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden shadow-xl border border-gray-200">
+            <div className="aspect-video bg-white overflow-hidden shadow-xl border-4 border-landing-primary">
               <video
                 autoPlay
                 loop
                 muted
                 playsInline
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 aria-label="Demo video showing products appearing in ChatGPT shopping results"
               >
                 <source src="/logos/hero_demo.webm" type="video/webm" />

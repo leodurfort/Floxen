@@ -384,7 +384,7 @@ textarea::placeholder {
 }
 
 .landing-container {
-  @apply max-w-6xl mx-auto;
+  @apply max-w-[86rem] mx-auto;
 }
 
 /* Sticky header states */
