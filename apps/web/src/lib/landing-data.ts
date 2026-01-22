@@ -201,7 +201,7 @@ export const structuredData = {
         'Connect your WooCommerce store to ChatGPT shopping. Get your products discovered by AI shoppers.',
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
-      url: 'https://floxen.ai',
+      url: 'https://www.floxen.ai',
       offers: {
         '@type': 'Offer',
         price: '0',
@@ -223,8 +223,8 @@ export const structuredData = {
     {
       '@type': 'Organization',
       name: 'Floxen',
-      url: 'https://floxen.ai',
-      logo: 'https://floxen.ai/logos/Floxen_logos/logo_orange.png',
+      url: 'https://www.floxen.ai',
+      logo: 'https://www.floxen.ai/logos/Floxen_logos/logo_orange.png',
     },
   ],
 };
