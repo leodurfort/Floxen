@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { SocialProofSection } from '@/components/landing/SocialProofSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { PricingSection } from '@/components/landing/PricingSection';
@@ -82,7 +81,6 @@ export default function LandingPage() {
         <LandingHeader />
         <main>
           <HeroSection />
-          <SocialProofSection />
           <HowItWorksSection />
           <FeaturesSection />
           <PricingSection />

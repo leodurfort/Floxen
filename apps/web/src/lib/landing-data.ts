@@ -17,6 +17,7 @@ export interface PricingPlan {
   monthlyPrice: number;
   annualPrice: number;
   limit: string;
+  description: string;
   features: string[];
   highlighted?: boolean;
   ctaText: string;
@@ -145,7 +146,9 @@ export const pricingPlans: PricingPlan[] = [
     monthlyPrice: 0,
     annualPrice: 0,
     limit: '5 products',
+    description: 'Perfect for trying out Floxen',
     features: [
+      'Up to 5 products',
       'WooCommerce sync',
       'ChatGPT feed generation',
       'Chat support',
@@ -158,8 +161,12 @@ export const pricingPlans: PricingPlan[] = [
     monthlyPrice: 25,
     annualPrice: 250,
     limit: '100 products',
+    description: 'For growing stores',
     features: [
-      'Everything in Free',
+      'Up to 100 products',
+      'WooCommerce sync',
+      'ChatGPT feed generation',
+      'Chat support',
       'Analytics (coming soon)',
     ],
     highlighted: true,
@@ -171,8 +178,13 @@ export const pricingPlans: PricingPlan[] = [
     monthlyPrice: 37,
     annualPrice: 374,
     limit: 'Unlimited',
+    description: 'For large catalogs',
     features: [
-      'Everything in Starter',
+      'Unlimited products',
+      'WooCommerce sync',
+      'ChatGPT feed generation',
+      'Chat support',
+      'Analytics (coming soon)',
     ],
     ctaText: 'Get Started',
   },

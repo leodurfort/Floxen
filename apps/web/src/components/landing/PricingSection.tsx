@@ -66,10 +66,10 @@ export function PricingSection() {
             return (
               <div
                 key={plan.tier}
-                className={`bg-white rounded-xl p-6 relative ${
+                className={`bg-white rounded-xl p-6 relative transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
                   plan.highlighted
                     ? 'border-2 border-landing-primary shadow-lg'
-                    : 'border border-gray-200'
+                    : 'border-2 border-gray-200'
                 }`}
               >
                 {/* Popular badge */}
@@ -83,9 +83,10 @@ export function PricingSection() {
 
                 {/* Plan header */}
                 <div className="text-center mb-6 pt-2">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">
                     {plan.name}
                   </h3>
+                  <p className="text-sm text-gray-500 mb-4">{plan.description}</p>
                   <div className="mb-2">
                     <span className="text-4xl font-bold text-gray-900">
                       ${price}
@@ -93,11 +94,11 @@ export function PricingSection() {
                     <span className="text-gray-500">/mo</span>
                   </div>
                   {billingCycle === 'annual' && plan.annualPrice > 0 && (
-                    <p className="text-xs text-gray-500">
-                      ${plan.annualPrice}/year billed annually
+                    <p className="text-sm text-gray-500">
+                      ${plan.annualPrice}/year
                     </p>
                   )}
-                  <p className="text-sm font-semibold text-landing-primary mt-2">
+                  <p className="text-sm font-medium text-landing-primary mt-2">
                     {plan.limit}
                   </p>
                 </div>
@@ -107,7 +108,7 @@ export function PricingSection() {
                   {plan.features.map((feature, idx) => (
                     <li
                       key={idx}
-                      className="flex items-start text-sm text-gray-600"
+                      className="flex items-center text-sm"
                     >
                       <svg
                         className="w-5 h-5 text-green-500 mr-2 flex-shrink-0"
@@ -122,7 +123,7 @@ export function PricingSection() {
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      {feature}
+                      <span className="text-gray-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
