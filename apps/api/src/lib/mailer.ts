@@ -9,6 +9,6 @@ function getMailer() {
 export async function sendEmail(params: { to: string; subject: string; html: string }) {
   const client = getMailer();
   if (!client) throw new Error('Resend not configured');
-  const from = env.resendFrom || 'no-reply@floxen.dev';
+  const from = env.resendFrom || 'no-reply@floxen.ai';
   return client.emails.send({ from, ...params });
 }
