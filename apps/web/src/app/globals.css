@@ -311,3 +311,105 @@ textarea::placeholder {
   border-collapse: separate;
   border-spacing: 0;
 }
+
+/* ==========================================
+   Landing Page Styles
+   ========================================== */
+
+/* Landing page background */
+.landing-page {
+  background: #FFFFFF;
+}
+
+/* Landing Primary Button - uses #C05A30 */
+.btn--landing-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #C05A30;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn--landing-primary:hover {
+  background: #A84E28;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(192, 90, 48, 0.25);
+}
+
+.btn--landing-primary:focus-visible {
+  outline: 2px solid #C05A30;
+  outline-offset: 2px;
+}
+
+/* Landing Secondary/Outline Button */
+.btn--landing-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  background: transparent;
+  color: #C05A30;
+  border: 2px solid #C05A30;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn--landing-outline:hover {
+  background: #C05A30;
+  color: #FFFFFF;
+}
+
+.btn--landing-outline:focus-visible {
+  outline: 2px solid #C05A30;
+  outline-offset: 2px;
+}
+
+/* Landing section containers */
+.landing-section {
+  @apply px-4 py-16 md:py-24;
+}
+
+.landing-section--alt {
+  background: #F9FAFB;
+}
+
+.landing-container {
+  @apply max-w-6xl mx-auto;
+}
+
+/* Sticky header states */
+.landing-header--scrolled {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .landing-page *,
+  .landing-page *::before,
+  .landing-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

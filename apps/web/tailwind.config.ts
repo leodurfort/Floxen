@@ -34,6 +34,13 @@ const config: Config = {
 
         // Status colors
         amber: '#f2c94c',
+
+        // Landing page colors (separate from app colors)
+        landing: {
+          primary: '#C05A30',
+          'primary-hover': '#A84E28',
+          'primary-light': '#FDF4F1',
+        },
       },
       fontFamily: {
         display: ['var(--font-display)', 'Inter', 'system-ui', 'sans-serif'],

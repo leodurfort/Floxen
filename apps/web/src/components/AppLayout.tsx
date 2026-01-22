@@ -11,6 +11,7 @@ import { ProductReselectionBanner } from './banners/ProductReselectionBanner';
 
 // Pages that don't require authentication
 const AUTH_PAGES = [
+  '/',
   '/login',
   '/register',
   '/register/verify',
