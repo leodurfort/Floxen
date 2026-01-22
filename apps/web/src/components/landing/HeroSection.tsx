@@ -29,7 +29,7 @@ export function HeroSection() {
           </div>
 
           {/* Right: Demo Video */}
-          <div className="relative order-first md:order-last">
+          <div className="relative">
             {/* Outer frame with rounded corners and brand color */}
             <div className="bg-landing-primary rounded-2xl p-3 shadow-xl">
               {/* Inner video container with sharp corners */}
