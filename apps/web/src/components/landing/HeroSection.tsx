@@ -32,18 +32,22 @@ export function HeroSection() {
 
           {/* Right: Demo Video */}
           <div className="relative order-first md:order-last">
-            <div className="aspect-video bg-white overflow-hidden shadow-xl border-4 border-landing-primary">
-              <video
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-contain"
-                aria-label="Demo video showing products appearing in ChatGPT shopping results"
-              >
-                <source src="/logos/hero_demo.webm" type="video/webm" />
-                Your browser does not support the video tag.
-              </video>
+            {/* Outer frame with rounded corners and brand color */}
+            <div className="bg-landing-primary rounded-2xl p-3 shadow-xl">
+              {/* Inner video container with sharp corners */}
+              <div className="aspect-video bg-white overflow-hidden">
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-contain"
+                  aria-label="Demo video showing products appearing in ChatGPT shopping results"
+                >
+                  <source src="/logos/hero_demo.webm" type="video/webm" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
             </div>
           </div>
         </div>
