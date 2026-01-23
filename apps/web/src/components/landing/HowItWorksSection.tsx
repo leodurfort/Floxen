@@ -58,7 +58,7 @@ function StepIcon({ icon }: { icon: string }) {
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="landing-section">
+    <section id="how-it-works" className="landing-section landing-section--alt">
       <div className="landing-container">
         {/* Section header */}
         <div className="text-center mb-12">
