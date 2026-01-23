@@ -48,7 +48,8 @@ export function GoogleSignInButton({ text = 'continue_with', onError }: GoogleSi
           theme="outline"
           size="large"
           shape="rectangular"
-          width="100%"
+          width={300}
+          use_fedcm_for_prompt
         />
       </div>
       {errorMessage && (

@@ -38,6 +38,7 @@ export function GoogleOneTap({ disabled = false }: GoogleOneTapProps) {
     },
     disabled: shouldDisable,
     cancel_on_tap_outside: true,
+    use_fedcm_for_prompt: true,
   });
 
   // This component doesn't render anything - One-Tap is a popup
