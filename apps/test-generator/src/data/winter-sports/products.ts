@@ -13,11 +13,44 @@
  * - price
  * - availability (stock_status)
  * - inventory_quantity
+ * - gtin (100% coverage - EAN-13 format, stored via global_unique_id)
  */
 
-import { SimpleProductDefinition, BrandStorageMethod, Gender } from '@/types/product';
+import { SimpleProductDefinition, BrandStorageMethod, Gender, GtinStorageMethod, GtinType } from '@/types/product';
 import { getWinterSportsBrand } from './brands';
 import { getWinterSportsGallery } from './images';
+
+// ============================================================================
+// GTIN GENERATION (EAN-13 for all products)
+// ============================================================================
+
+/**
+ * Calculate GTIN check digit using the standard algorithm
+ */
+function calculateGtinCheckDigit(digits: string): string {
+  let sum = 0;
+  const len = digits.length;
+  for (let i = 0; i < len; i++) {
+    const digit = parseInt(digits[i], 10);
+    // For GTIN, odd positions (from right, 1-indexed) multiply by 3
+    sum += (len - i) % 2 === 1 ? digit : digit * 3;
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return checkDigit.toString();
+}
+
+/**
+ * Generate a valid EAN-13 for winter sports products
+ * Uses prefix 4006381 (fictional GS1 prefix for test data)
+ */
+function generateWinterSportsEAN13(category: 'skis' | 'snowboards', index: number): string {
+  // Different prefix segment for skis vs snowboards
+  const categoryCode = category === 'skis' ? '1' : '2';
+  const prefix = `400638${categoryCode}`; // 7 digits
+  const item = String(index).padStart(5, '0'); // 5 digits
+  const base = prefix + item; // 12 digits
+  return base + calculateGtinCheckDigit(base); // 13 digits total
+}
 
 // ============================================================================
 // SKI PRODUCT DEFINITIONS
@@ -279,6 +312,10 @@ function generateSkiProducts(): SimpleProductDefinition[] {
       dimensions: generateSkiDimensions(i),
       gender: getGender(i, name),
       ageGroup: name.toLowerCase().includes('junior') ? 'kids' : 'adult',
+      // GTIN - 100% coverage with EAN-13
+      gtin: generateWinterSportsEAN13('skis', i),
+      gtinType: 'EAN-13' as GtinType,
+      gtinStorageMethod: 'global_unique_id' as GtinStorageMethod,
       // Product images (cycles through 14 available images)
       images: getWinterSportsGallery(i, 1),
     });
@@ -322,6 +359,10 @@ function generateSnowboardProducts(): SimpleProductDefinition[] {
       dimensions: generateSnowboardDimensions(i),
       gender: getGender(i, name),
       ageGroup: name.toLowerCase().includes('youth') ? 'kids' : 'adult',
+      // GTIN - 100% coverage with EAN-13
+      gtin: generateWinterSportsEAN13('snowboards', i),
+      gtinType: 'EAN-13' as GtinType,
+      gtinStorageMethod: 'global_unique_id' as GtinStorageMethod,
       // Product images (cycles through 14 available images, offset by 25 to vary from skis)
       images: getWinterSportsGallery(i + 25, 1),
     });
