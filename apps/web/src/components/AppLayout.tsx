@@ -46,10 +46,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const isAuthPage = AUTH_PAGES.some((p) => pathname === p);
     const isOnboardingPage = ONBOARDING_PAGES.some((p) => pathname.startsWith(p));
 
+    const isShopsRoute = pathname === '/shops' || pathname.startsWith('/shops/');
+
     console.debug('[APP-LAYOUT] Auth check', {
       pathname,
       isAuthPage,
       isOnboardingPage,
+      isShopsRoute,
       hasUser: !!user,
       emailVerified: user?.emailVerified,
       onboardingComplete: user?.onboardingComplete,
@@ -73,7 +76,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (user.emailVerified && !user.onboardingComplete && !isOnboardingPage) {
+    if (user.emailVerified && !user.onboardingComplete && !isOnboardingPage && !isShopsRoute) {
       // Email verified but onboarding not complete - redirect to shops
       console.debug('[APP-LAYOUT] Redirecting to /shops (onboarding incomplete)');
       router.push('/shops');
