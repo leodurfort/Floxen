@@ -228,7 +228,10 @@ export async function registerVerify(req: Request, res: Response) {
   try {
     const result = await verifyToken(normalizedEmail, code, 'EMAIL_VERIFICATION');
     if (!result.valid) {
-      return res.status(400).json({ error: result.error || 'Invalid verification code.' });
+      return res.status(400).json({
+        error: result.error || 'Invalid verification code.',
+        code: result.errorCode,
+      });
     }
 
     logger.info('registerVerify: email verified', { email: normalizedEmail });
@@ -436,7 +439,10 @@ export async function forgotPasswordVerify(req: Request, res: Response) {
     // Just verify the code is valid, don't consume it yet (consume=false)
     const result = await verifyToken(normalizedEmail, code, 'PASSWORD_RESET', false);
     if (!result.valid) {
-      return res.status(400).json({ error: result.error || 'Invalid or expired code.' });
+      return res.status(400).json({
+        error: result.error || 'Invalid or expired code.',
+        code: result.errorCode,
+      });
     }
 
     logger.info('forgotPasswordVerify: code verified', { email: normalizedEmail });

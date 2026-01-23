@@ -40,7 +40,15 @@ export default function ForgotPasswordVerifyPage() {
       setStep('reset');
       router.push('/forgot-password/reset');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid verification code');
+      const error = err as Error & { code?: string };
+
+      if (error.code === 'CODE_EXPIRED') {
+        setError('Your code has expired. Click "Resend" below to receive a new one.');
+      } else if (error.code === 'CODE_INVALID') {
+        setError('That code doesn\'t match. Please check and try again.');
+      } else {
+        setError(error.message || 'Verification failed. Please try again.');
+      }
       setCodeInput('');
     } finally {
       setIsLoading(false);

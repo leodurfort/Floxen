@@ -97,36 +97,53 @@ export async function createVerificationToken(
   }
 }
 
+export type VerificationErrorCode = 'CODE_EXPIRED' | 'CODE_INVALID' | 'CODE_NOT_FOUND';
+
 export async function verifyToken(
   email: string,
   code: string,
   type: TokenType,
   consume: boolean = true
-): Promise<{ valid: boolean; userId?: string; error?: string }> {
+): Promise<{ valid: boolean; userId?: string; error?: string; errorCode?: VerificationErrorCode }> {
   try {
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Find all unused, non-expired tokens for this email and type
+    // Find all unused tokens for this email and type (including expired)
     const tokens = await prisma.verificationToken.findMany({
       where: {
         email: normalizedEmail,
         type,
         usedAt: null,
-        expiresAt: {
-          gt: new Date(),
-        },
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
+    // No tokens found at all
     if (tokens.length === 0) {
-      return { valid: false, error: 'No valid verification code found. Please request a new one.' };
+      return {
+        valid: false,
+        error: 'No verification code found. Please request a new one.',
+        errorCode: 'CODE_NOT_FOUND',
+      };
     }
 
-    // Try to verify against the most recent token
-    for (const token of tokens) {
+    // Check if the most recent token is expired
+    const latestToken = tokens[0];
+    if (latestToken.expiresAt < new Date()) {
+      return {
+        valid: false,
+        error: 'Your verification code has expired. Please request a new one.',
+        errorCode: 'CODE_EXPIRED',
+      };
+    }
+
+    // Filter to only non-expired tokens for verification
+    const validTokens = tokens.filter((t) => t.expiresAt >= new Date());
+
+    // Try to verify against valid tokens
+    for (const token of validTokens) {
       const isValid = await verifyCodeHash(code, token.code);
       if (isValid) {
         // Only mark token as used if consume is true
@@ -141,7 +158,11 @@ export async function verifyToken(
       }
     }
 
-    return { valid: false, error: 'Invalid verification code.' };
+    return {
+      valid: false,
+      error: 'Invalid verification code. Please check and try again.',
+      errorCode: 'CODE_INVALID',
+    };
   } catch (error) {
     console.error('Failed to verify token:', error);
     return {
