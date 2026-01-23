@@ -1,10 +1,10 @@
 # Floxen Monorepo
 
-This repository follows the Floxen technical specification (see `Floxen-Technical-Specification.md`). It is organized as a monorepo with a TypeScript Express API and a Next.js App Router frontend. Infra targets Railway (Postgres + Redis), Qdrant for embeddings, and Resend for email.
+This repository follows the Floxen technical specification (see `Floxen-Technical-Specification.md`). It is organized as a monorepo with a TypeScript Express API and a Next.js App Router frontend. Infra targets Railway (Postgres + Redis) and Resend for email.
 
 ## Structure
 
-- `apps/api` — Express + TypeScript API with Prisma schema, JWT auth, WooCommerce connection placeholders, sync/feed/analytics endpoints, queue stubs, and OpenAI/Qdrant/Resend hooks.
+- `apps/api` — Express + TypeScript API with Prisma schema, JWT auth, WooCommerce connection, sync/feed/analytics endpoints, queue processing, and OpenAI/Resend integrations.
 - `apps/web` — Next.js 14 dashboard shell (Tailwind CSS) with hero, auth pages, basic dashboard wired to API for shops/products, and feed summary inspired by the spec.
 - `packages/shared` — Shared types (User, Shop, Product, enums) consumed by both apps.
 - `tsconfig.base.json` — Base TS config and path aliases.

@@ -124,8 +124,6 @@ export const env = {
   redisUrl: process.env.REDIS_URL || '',
   redisPublicUrl: process.env.REDIS_PUBLIC_URL || '',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
-  qdrantUrl: process.env.QDRANT_URL || '',
-  qdrantApiKey: process.env.QDRANT_API_KEY || '',
   resendApiKey: process.env.RESEND_API_KEY || '',
   resendFrom: process.env.RESEND_FROM || '',
   wooRedirectUri: process.env.WOO_REDIRECT_URI || '',
