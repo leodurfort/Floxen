@@ -11,9 +11,6 @@ export function CTASection() {
           <Link href="/register" className="btn--landing-primary">
             Get My Products in ChatGPT
           </Link>
-          <p className="text-sm text-gray-500 mt-4">
-            Free for up to 5 products. No credit card required.
-          </p>
         </div>
       </div>
     </section>

@@ -169,7 +169,6 @@ export const pricingPlans: PricingPlan[] = [
       'Chat support',
       'Analytics (coming soon)',
     ],
-    highlighted: true,
     ctaText: 'Get Started',
   },
   {

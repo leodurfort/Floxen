@@ -60,26 +60,35 @@ export function PricingSection() {
                 ? plan.monthlyPrice
                 : Math.round(plan.annualPrice / 12);
 
+            // Tier-based styling
+            const borderClass =
+              plan.tier === 'PRO'
+                ? 'border-2 border-landing-primary'
+                : plan.tier === 'STARTER'
+                  ? 'border-2 border-[#6366F1]'
+                  : 'border-2 border-gray-200';
+
+            const buttonClass =
+              plan.tier === 'PRO'
+                ? 'bg-landing-primary text-white hover:bg-landing-primary/90'
+                : plan.tier === 'STARTER'
+                  ? 'bg-[#6366F1] text-white hover:bg-[#6366F1]/90'
+                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200';
+
+            const limitColor =
+              plan.tier === 'PRO'
+                ? 'text-landing-primary'
+                : plan.tier === 'STARTER'
+                  ? 'text-[#6366F1]'
+                  : 'text-gray-600';
+
             return (
               <div
                 key={plan.tier}
-                className={`bg-white rounded-xl p-6 relative transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
-                  plan.highlighted
-                    ? 'border-2 border-landing-primary shadow-lg'
-                    : 'border-2 border-gray-200'
-                }`}
+                className={`bg-white rounded-xl p-6 flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${borderClass}`}
               >
-                {/* Popular badge */}
-                {plan.highlighted && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-landing-primary text-white text-xs font-semibold px-3 py-1 rounded-full">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-
                 {/* Plan header */}
-                <div className="text-center mb-6 pt-2">
+                <div className="text-center mb-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-1">
                     {plan.name}
                   </h3>
@@ -95,18 +104,15 @@ export function PricingSection() {
                       ${plan.annualPrice}/year
                     </p>
                   )}
-                  <p className="text-sm font-medium text-landing-primary mt-2">
+                  <p className={`text-sm font-medium mt-2 ${limitColor}`}>
                     {plan.limit}
                   </p>
                 </div>
 
                 {/* Features list */}
-                <ul className="space-y-3 mb-6">
+                <ul className="space-y-3 mb-6 flex-grow">
                   {plan.features.map((feature, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-center text-sm"
-                    >
+                    <li key={idx} className="flex items-center text-sm">
                       <svg
                         className="w-5 h-5 text-green-500 mr-2 flex-shrink-0"
                         fill="none"
@@ -125,14 +131,10 @@ export function PricingSection() {
                   ))}
                 </ul>
 
-                {/* CTA */}
+                {/* CTA - aligned at bottom */}
                 <Link
                   href="/register"
-                  className={`block text-center py-3 rounded-lg font-medium transition-colors ${
-                    plan.highlighted
-                      ? 'btn--landing-primary w-full'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
+                  className={`block text-center py-3 rounded-lg font-medium transition-colors mt-auto ${buttonClass}`}
                 >
                   {plan.ctaText}
                 </Link>
