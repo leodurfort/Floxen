@@ -17,7 +17,6 @@ const AUTH_PAGES = [
   '/register/verify',
   '/register/password',
   '/register/profile',
-  '/register/welcome',
   '/forgot-password',
   '/forgot-password/verify',
   '/forgot-password/reset',
@@ -28,7 +27,6 @@ const ONBOARDING_PAGES = [
   '/register/verify',
   '/register/password',
   '/register/profile',
-  '/register/welcome',
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -64,8 +62,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     if (user.emailVerified && !user.onboardingComplete && !isOnboardingPage) {
-      // Email verified but onboarding not complete - redirect to welcome
-      router.push('/register/welcome');
+      // Email verified but onboarding not complete - redirect to shops
+      router.push('/shops');
       return;
     }
 

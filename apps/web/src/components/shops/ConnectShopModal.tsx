@@ -10,6 +10,64 @@ interface ConnectShopModalProps {
   error?: string | null;
 }
 
+// WooCommerce Logo Component
+function WooCommerceLogo({ className = "h-8" }: { className?: string }) {
+  return (
+    <a href="https://woocommerce.com" target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+      <img
+        src="/logos/woocommerce.png"
+        alt="WooCommerce"
+        className={className}
+      />
+    </a>
+  );
+}
+
+// Trust Badge Component
+function TrustBadge({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-gray-600">
+      <span className="flex-shrink-0">{icon}</span>
+      <span>{text}</span>
+    </div>
+  );
+}
+
+// Expandable FAQ Component
+function PermissionsFAQ() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="mt-3 border-t border-gray-200 pt-3">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+      >
+        <svg
+          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Why does WooCommerce show other permissions?</span>
+      </button>
+      {isOpen && (
+        <div className="mt-2 ml-5.5 text-sm text-gray-600 bg-white rounded-lg p-3 border border-gray-200">
+          <p className="mb-2">
+            WooCommerce doesn&apos;t offer product-only permissions. Their &quot;read&quot; scope includes access to all store data.
+          </p>
+          <p className="font-medium text-gray-700">
+            Floxen only reads your products — we never access your orders, customers, or coupons.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ConnectShopModal({
   isOpen,
   onClose,
@@ -37,14 +95,17 @@ export function ConnectShopModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-xl overflow-hidden">
-        {/* Header */}
+        {/* Header with WooCommerce Logo */}
         <div className="p-8 pb-0">
           <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Connect WooCommerce Store</h2>
-              <p className="text-sm text-gray-600 mt-2">
-                Enter your store URL to start the connection process.
-              </p>
+            <div className="flex items-center gap-3">
+              <WooCommerceLogo className="h-10" />
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Connect your store</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Securely connect your WooCommerce store
+                </p>
+              </div>
             </div>
             <button
               onClick={onClose}
@@ -58,8 +119,41 @@ export function ConnectShopModal({
           </div>
         </div>
 
-        {/* Body */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-5">
+        {/* Trust Badges Section */}
+        <div className="px-8 py-4">
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <div className="flex flex-col gap-2">
+              <TrustBadge
+                icon={
+                  <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                }
+                text="We only sync your products"
+              />
+              <TrustBadge
+                icon={
+                  <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                }
+                text="Orders, customers & coupons are never accessed"
+              />
+              <TrustBadge
+                icon={
+                  <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                }
+                text="Uses official WooCommerce OAuth"
+              />
+            </div>
+            <PermissionsFAQ />
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-8 pb-6 space-y-5">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
@@ -81,36 +175,34 @@ export function ConnectShopModal({
             />
           </div>
 
-          {/* Footer */}
-          <div className="pt-3 space-y-3">
-            <button
-              type="submit"
-              disabled={isConnecting || !storeUrl.trim()}
-              className="w-full px-6 py-3 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-            >
-              {isConnecting ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Connecting...
-                </>
-              ) : (
-                'Connect'
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isConnecting}
-              className="w-full text-center text-gray-500 hover:text-gray-700 text-sm py-2 transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          </div>
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isConnecting || !storeUrl.trim()}
+            className="w-full px-6 py-3 bg-[#FA7315] text-white font-medium rounded-lg hover:bg-[#E5650F] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {isConnecting ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Connecting...
+              </>
+            ) : (
+              'Connect & preview my products'
+            )}
+          </button>
         </form>
+
+        {/* OAuth Reassurance */}
+        <div className="px-8 pb-6">
+          <p className="text-center text-sm text-gray-500">
+            You&apos;ll be redirected to WooCommerce to approve access.
+            <br />
+            No changes will be made to your store.
+          </p>
+        </div>
       </div>
     </div>
   );

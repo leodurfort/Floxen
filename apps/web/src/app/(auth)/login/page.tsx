@@ -40,7 +40,7 @@ export default function LoginPage() {
       if (!user.emailVerified) {
         router.push('/register/verify');
       } else if (!user.onboardingComplete) {
-        router.push('/register/welcome');
+        router.push('/shops');
       } else {
         router.push('/dashboard');
       }

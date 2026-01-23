@@ -19,7 +19,7 @@ export function useLoginMutation() {
       if (!data.user.emailVerified) {
         router.push('/register/verify');
       } else if (!data.user.onboardingComplete) {
-        router.push('/register/welcome');
+        router.push('/shops');
       } else {
         router.push('/dashboard');
       }

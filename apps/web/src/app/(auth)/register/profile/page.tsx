@@ -54,9 +54,17 @@ export default function RegisterProfilePage() {
 
       // Update session with complete user data
       setSession(result.user, result.tokens.accessToken, result.tokens.refreshToken);
+
+      // CRITICAL: Complete onboarding and update localStorage BEFORE redirect
+      // This prevents AppLayout from redirecting back to onboarding
+      const onboardingResult = await api.completeOnboarding();
+      localStorage.setItem('floxen.user', JSON.stringify(onboardingResult.user));
+
       setStep('welcome');
       reset(); // Clear registration store
-      router.push('/register/welcome');
+
+      // Redirect to shops page (will auto-open connect modal for first-time users)
+      router.push('/shops');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to complete profile');
     } finally {
