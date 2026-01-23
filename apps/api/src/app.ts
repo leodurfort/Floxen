@@ -31,7 +31,25 @@ export function createApp() {
       },
     },
   }));
-  app.use(cors({ origin: env.corsOrigin, credentials: true }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+
+        // Allow all origins if configured with '*'
+        if (env.corsOrigins.includes('*')) return callback(null, true);
+
+        // Check if origin is in the allowed list
+        if (env.corsOrigins.includes(origin)) {
+          return callback(null, origin);
+        }
+
+        callback(new Error(`CORS: Origin ${origin} not allowed`));
+      },
+      credentials: true,
+    })
+  );
 
   // Stripe webhook needs raw body for signature verification - must be BEFORE express.json()
   app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);

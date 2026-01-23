@@ -147,7 +147,10 @@ export const env = {
       proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL || '',
     },
   },
-  corsOrigin: process.env.CORS_ORIGIN || '*',
+  // CORS_ORIGIN supports comma-separated origins: "https://app.floxen.ai,https://floxen.ai"
+  corsOrigins: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : ['*'],
   scheduler: {
     enableScheduledSync: process.env.ENABLE_SCHEDULED_SYNC === 'true',
     syncIntervalMinutes: toNumber(process.env.SYNC_INTERVAL_MINUTES, 60),
