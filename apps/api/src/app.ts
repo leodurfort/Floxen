@@ -13,6 +13,7 @@ import { stripeWebhookHandler } from './controllers/webhookController';
 
 export function createApp() {
   const app = express();
+  // Force rebuild: multiple CORS origins support
 
   // Trust first proxy (Railway runs behind a reverse proxy)
   // Required for express-rate-limit to correctly identify client IPs
