@@ -46,9 +46,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const isAuthPage = AUTH_PAGES.some((p) => pathname === p);
     const isOnboardingPage = ONBOARDING_PAGES.some((p) => pathname.startsWith(p));
 
+    console.debug('[APP-LAYOUT] Auth check', {
+      pathname,
+      isAuthPage,
+      isOnboardingPage,
+      hasUser: !!user,
+      emailVerified: user?.emailVerified,
+      onboardingComplete: user?.onboardingComplete,
+      subscriptionTier: user?.subscriptionTier,
+    });
+
     if (!user) {
       // Not logged in - redirect to login if not on auth page
       if (!isAuthPage) {
+        console.debug('[APP-LAYOUT] Redirecting to /login (no user)');
         router.push('/login');
       }
       return;
@@ -57,18 +68,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     // User is logged in - check verification and onboarding status
     if (!user.emailVerified && !isOnboardingPage) {
       // Email not verified - redirect to verification
+      console.debug('[APP-LAYOUT] Redirecting to /register/verify (email not verified)');
       router.push('/register/verify');
       return;
     }
 
     if (user.emailVerified && !user.onboardingComplete && !isOnboardingPage) {
       // Email verified but onboarding not complete - redirect to shops
+      console.debug('[APP-LAYOUT] Redirecting to /shops (onboarding incomplete)');
       router.push('/shops');
       return;
     }
 
     // Fully onboarded user on onboarding page - redirect to dashboard
     if (user.emailVerified && user.onboardingComplete && isOnboardingPage) {
+      console.debug('[APP-LAYOUT] Redirecting to /dashboard (onboarded user on onboarding page)');
       router.push('/dashboard');
     }
   }, [hydrated, user, pathname, router]);
