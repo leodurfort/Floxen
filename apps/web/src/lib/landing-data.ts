@@ -71,7 +71,7 @@ export const howItWorksSteps: HowItWorksStep[] = [
   },
   {
     icon: 'robot',
-    title: 'Validate your feed',
+    title: 'Get Discovered',
     description:
       'Your products are now discoverable by millions of ChatGPT users.',
   },
@@ -130,7 +130,7 @@ export const pricingPlans: PricingPlan[] = [
     description: 'Perfect for trying out Floxen',
     features: [
       'Up to 5 products',
-      'Hourly WooCommerce sync',
+      'Auto-sync every hour',
       'ChatGPT feed generation',
       'Chat support',
     ],
@@ -145,7 +145,7 @@ export const pricingPlans: PricingPlan[] = [
     description: 'For growing stores',
     features: [
       'Up to 100 products',
-      'Hourly WooCommerce sync',
+      'Auto-sync every hour',
       'ChatGPT feed generation',
       'Chat support',
       'Analytics (coming soon)',
@@ -161,7 +161,7 @@ export const pricingPlans: PricingPlan[] = [
     description: 'For large catalogs',
     features: [
       'Unlimited products',
-      'Hourly WooCommerce sync',
+      'Auto-sync every hour',
       'ChatGPT feed generation',
       'Chat support',
       'Analytics (coming soon)',
