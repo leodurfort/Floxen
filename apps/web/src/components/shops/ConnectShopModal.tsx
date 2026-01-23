@@ -38,7 +38,7 @@ function PermissionsFAQ() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="mt-3 border-t border-gray-200 pt-3">
+    <div>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -96,26 +96,19 @@ export function ConnectShopModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-xl overflow-hidden">
         {/* Header with WooCommerce Logo */}
-        <div className="p-8 pb-0">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <WooCommerceLogo className="h-10" />
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Connect your store</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Securely connect your WooCommerce store
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              disabled={isConnecting}
-              className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 -mt-1 -mr-1"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        <div className="p-8 pb-0 relative">
+          <button
+            onClick={onClose}
+            disabled={isConnecting}
+            className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="flex flex-col items-center gap-3">
+            <WooCommerceLogo className="h-7" />
+            <h2 className="text-xl font-semibold text-gray-900">Connect your store</h2>
           </div>
         </div>
 
@@ -148,7 +141,6 @@ export function ConnectShopModal({
                 text="Uses official WooCommerce OAuth"
               />
             </div>
-            <PermissionsFAQ />
           </div>
         </div>
 
@@ -196,12 +188,17 @@ export function ConnectShopModal({
         </form>
 
         {/* OAuth Reassurance */}
-        <div className="px-8 pb-6">
+        <div className="px-8 pb-4">
           <p className="text-center text-sm text-gray-500">
             You&apos;ll be redirected to WooCommerce to approve access.
             <br />
             No changes will be made to your store.
           </p>
+        </div>
+
+        {/* FAQ at bottom */}
+        <div className="px-8 pb-6">
+          <PermissionsFAQ />
         </div>
       </div>
     </div>
