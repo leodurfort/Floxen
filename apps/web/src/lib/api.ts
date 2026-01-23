@@ -1,6 +1,6 @@
 import { Shop, User, ProductFieldOverrides, CatalogProduct, ProductStats } from '@floxen/shared';
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-6a74.up.railway.app';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.floxen.ai';
 
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
