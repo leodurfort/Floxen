@@ -14,12 +14,12 @@ export function FeaturesSection() {
 
         {/* Gradient box with video */}
         <div className="max-w-6xl mx-auto">
-          <div className="relative rounded-2xl p-8 md:p-12 overflow-hidden">
+          <div className="relative rounded-2xl p-0 md:p-12 overflow-hidden">
             {/* Gradient background with opacity */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#C05A30] via-[#E87B5A] to-[#9B4DCA] opacity-70" />
 
             {/* Video container */}
-            <div className="relative z-10 max-w-5xl mx-auto">
+            <div className="relative z-10 md:max-w-5xl mx-auto">
               <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
                 <video
                   autoPlay
