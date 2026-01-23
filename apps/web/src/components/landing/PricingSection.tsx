@@ -65,21 +65,21 @@ export function PricingSection() {
               plan.tier === 'PRO'
                 ? 'border-2 border-landing-primary'
                 : plan.tier === 'STARTER'
-                  ? 'border-2 border-[#6366F1]'
+                  ? 'border-2 border-[#7E4162]'
                   : 'border-2 border-gray-200';
 
             const buttonClass =
               plan.tier === 'PRO'
                 ? 'bg-landing-primary text-white hover:bg-landing-primary/90'
                 : plan.tier === 'STARTER'
-                  ? 'bg-[#6366F1] text-white hover:bg-[#6366F1]/90'
+                  ? 'bg-[#7E4162] text-white hover:bg-[#7E4162]/90'
                   : 'bg-gray-100 text-gray-900 hover:bg-gray-200';
 
             const limitColor =
               plan.tier === 'PRO'
                 ? 'text-landing-primary'
                 : plan.tier === 'STARTER'
-                  ? 'text-[#6366F1]'
+                  ? 'text-[#7E4162]'
                   : 'text-gray-600';
 
             return (

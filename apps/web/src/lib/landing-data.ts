@@ -62,7 +62,7 @@ export const howItWorksSteps: HowItWorksStep[] = [
   {
     icon: 'link',
     title: 'Connect Your Store',
-    description: 'Paste your store URL. No plugin required. Takes 30 seconds.',
+    description: 'Paste your store URL. No plugin. Takes 30 seconds.',
   },
   {
     icon: 'check',
@@ -73,7 +73,7 @@ export const howItWorksSteps: HowItWorksStep[] = [
     icon: 'robot',
     title: 'Appear in ChatGPT',
     description:
-      'Your products are now discoverable by millions of AI shoppers.',
+      'Your products are now discoverable by millions of ChatGPT users.',
   },
 ];
 
@@ -176,7 +176,7 @@ export const pricingPlans: PricingPlan[] = [
     tier: 'PRO',
     monthlyPrice: 37,
     annualPrice: 374,
-    limit: 'Unlimited',
+    limit: 'Unlimited products',
     description: 'For large catalogs',
     features: [
       'Unlimited products',

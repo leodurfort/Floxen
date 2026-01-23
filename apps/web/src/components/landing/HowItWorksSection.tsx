@@ -66,7 +66,7 @@ export function HowItWorksSection() {
             How It Works
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Get your products in front of AI shoppers in three simple steps.
+            Get your products in front of ChatGPT users in three simple steps.
           </p>
         </div>
 
