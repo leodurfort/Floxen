@@ -94,6 +94,9 @@ export async function createUserFromGoogle(payload: {
   firstName?: string;
   surname?: string;
 }) {
+  // Auto-complete onboarding if Google provides both firstName and surname
+  const hasCompleteProfile = !!(payload.firstName && payload.surname);
+
   return prisma.user.create({
     data: {
       email: payload.email.toLowerCase(),
@@ -106,7 +109,7 @@ export async function createUserFromGoogle(payload: {
         ? `${payload.firstName} ${payload.surname}`
         : payload.firstName || payload.surname || null,
       emailVerified: true,
-      onboardingComplete: false,
+      onboardingComplete: hasCompleteProfile,
       subscriptionTier: 'FREE',
     },
   });

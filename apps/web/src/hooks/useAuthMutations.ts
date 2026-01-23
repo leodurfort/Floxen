@@ -42,11 +42,12 @@ export function useGoogleAuthMutation() {
       setSession(data.user, data.tokens.accessToken, data.tokens.refreshToken);
 
       // Redirect based on user state
-      // New Google users skip email verification (already verified by Google)
-      if (data.isNewUser || !data.user.onboardingComplete) {
-        router.push('/register/profile');
+      if (data.user.onboardingComplete) {
+        // Fully onboarded - go to dashboard (returning users) or shops (new users)
+        router.push(data.isNewUser ? '/shops' : '/dashboard');
       } else {
-        router.push('/dashboard');
+        // Onboarding incomplete - need to complete profile
+        router.push('/register/profile');
       }
     },
   });
