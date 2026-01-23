@@ -1205,9 +1205,10 @@ export class ProductGenerator {
       stock_status: product.stockStatus || 'instock',
       categories: categoryIds.map((id) => ({ id, name: '', slug: '' })),
       attributes: attributes.length > 0 ? attributes : undefined,
-      // Handle EC-IMG-04: Product with no images
-      images: product.images !== undefined && product.images.length === 0
-        ? []
+      // Handle images: use product's images if defined, otherwise use placeholders
+      // EC-IMG-04: Product with no images (empty array)
+      images: product.images !== undefined
+        ? product.images.map((src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' }))
         : getPlaceholderGallery(product.sku, product.categories[0], 2).map(
             (src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' })
           ),
@@ -1282,9 +1283,12 @@ export class ProductGenerator {
       short_description: product.shortDescription,
       categories: categoryIds.map((id) => ({ id, name: '', slug: '' })),
       attributes,
-      images: getPlaceholderGallery(product.sku, product.categories[0], 2).map(
-        (src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' })
-      ),
+      // Handle images: use product's images if defined, otherwise use placeholders
+      images: product.images !== undefined
+        ? product.images.map((src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' }))
+        : getPlaceholderGallery(product.sku, product.categories[0], 2).map(
+            (src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' })
+          ),
       meta_data,
     };
 
@@ -1338,9 +1342,12 @@ export class ProductGenerator {
       categories: categoryIds.map((id) => ({ id, name: '', slug: '' })),
       grouped_products: groupedIds,
       attributes: attributes.length > 0 ? attributes : undefined,
-      images: getPlaceholderGallery(product.sku, product.categories[0], 1).map(
-        (src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' })
-      ),
+      // Handle images: use product's images if defined, otherwise use placeholders
+      images: product.images !== undefined
+        ? product.images.map((src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' }))
+        : getPlaceholderGallery(product.sku, product.categories[0], 1).map(
+            (src) => ({ id: 0, src, name: '', alt: product.name, date_created: '', date_modified: '' })
+          ),
       meta_data,
     };
   }
