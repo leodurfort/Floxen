@@ -6,8 +6,9 @@ const LANDING_DOMAIN = 'floxen.ai';
 const WWW_DOMAIN = 'www.floxen.ai';
 const APP_DOMAIN = 'app.floxen.ai';
 
-// Routes that belong to the landing page
-const LANDING_ROUTES = ['/', '/pricing'];
+// Routes that belong to the landing page only (root handled separately)
+// Note: /pricing is NOT redirected - app has its own pricing page with Stripe integration
+const LANDING_ROUTES = ['/'];
 
 // Routes that belong to the app
 const APP_ROUTE_PREFIXES = [

@@ -4,7 +4,7 @@ export function HeroSection() {
   return (
     <section
       id="hero"
-      className="landing-section pt-24 md:pt-32 md:min-h-[calc(100vh-80px)] flex items-center"
+      className="landing-section pt-32 md:pt-32 md:min-h-[calc(100vh-80px)] flex items-center"
     >
       <div className="landing-container">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
