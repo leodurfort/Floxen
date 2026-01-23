@@ -99,27 +99,13 @@ export const featureCards: FeatureCard[] = [
 // FAQ items from spec
 export const faqItems: FAQItem[] = [
   {
-    question: 'What is ChatGPT shopping?',
-    answer:
-      'ChatGPT now helps users discover and buy products through conversation. When someone asks "What\'s the best espresso machine under $200?", ChatGPT can recommend your products — if you\'re listed.',
-  },
-  {
     question: 'How does Floxen work?',
     answer:
       'Floxen connects to your WooCommerce store, reads your product catalog, and generates a feed that ChatGPT can understand. Your products become discoverable in AI conversations.',
   },
   {
-    question: 'Do I need technical skills?',
-    answer:
-      'No. If you can copy your store URL and click "Authorize," you can set up Floxen in under 2 minutes.',
-  },
-  {
     question: 'How long until my products appear?',
     answer: 'Most stores see results within a few days after syncing.',
-  },
-  {
-    question: 'What WooCommerce versions are supported?',
-    answer: 'Floxen works with WooCommerce 5.0 and above.',
   },
   {
     question: 'Can I choose which products to sync?',
@@ -127,14 +113,9 @@ export const faqItems: FAQItem[] = [
       'Yes. You can sync your entire catalog or select specific products. Paid plans allow unlimited product selection.',
   },
   {
-    question: 'Will this slow down my store?',
+    question: 'Does Floxen work with other ecommerce CMS?',
     answer:
-      'No. Floxen syncs in the background using the WooCommerce REST API. Your storefront is unaffected.',
-  },
-  {
-    question: 'What if I want to cancel?',
-    answer:
-      'Cancel anytime from your dashboard. You can downgrade to the Free plan (5 products) at any time.',
+      'Right now, Floxen is only available for WooCommerce stores. We are adding more CMS promptly. Leave us a message with your preferred platform, we will reach out when available.',
   },
 ];
 
@@ -149,7 +130,7 @@ export const pricingPlans: PricingPlan[] = [
     description: 'Perfect for trying out Floxen',
     features: [
       'Up to 5 products',
-      'WooCommerce sync',
+      'Hourly WooCommerce sync',
       'ChatGPT feed generation',
       'Chat support',
     ],
@@ -164,7 +145,7 @@ export const pricingPlans: PricingPlan[] = [
     description: 'For growing stores',
     features: [
       'Up to 100 products',
-      'WooCommerce sync',
+      'Hourly WooCommerce sync',
       'ChatGPT feed generation',
       'Chat support',
       'Analytics (coming soon)',
@@ -180,7 +161,7 @@ export const pricingPlans: PricingPlan[] = [
     description: 'For large catalogs',
     features: [
       'Unlimited products',
-      'WooCommerce sync',
+      'Hourly WooCommerce sync',
       'ChatGPT feed generation',
       'Chat support',
       'Analytics (coming soon)',
