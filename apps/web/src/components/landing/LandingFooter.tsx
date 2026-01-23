@@ -17,8 +17,8 @@ export function LandingFooter() {
               />
             </Link>
             <p className="text-gray-600 text-sm max-w-sm">
-              Sync your WooCommerce catalog to ChatGPT and get your products
-              discovered by millions of AI shoppers.
+              Synchronize in real time your WooCommerce catalog to ChatGPT and
+              get your products discovered by millions of shoppers.
             </p>
           </div>
 

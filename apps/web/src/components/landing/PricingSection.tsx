@@ -6,7 +6,7 @@ import { pricingPlans } from '@/lib/landing-data';
 
 export function PricingSection() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
-    'monthly'
+    'annual'
   );
 
   return (
@@ -17,9 +17,6 @@ export function PricingSection() {
           <h2 className="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-4">
             Simple, Transparent Pricing
           </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Start free, upgrade when you need more products.
-          </p>
         </div>
 
         {/* Billing Toggle */}

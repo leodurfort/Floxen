@@ -8,7 +8,7 @@ export function FeaturesSection() {
             See Floxen in Action
           </h2>
           <p className="text-white/70 max-w-2xl mx-auto">
-            Watch how easy it is to get your products discovered by AI shoppers.
+            Watch how easy it is to get your products discovered by ChatGPT users.
           </p>
         </div>
 
