@@ -105,36 +105,15 @@ export default function ShopsPage() {
 
   // Handle OAuth return - check if connection succeeded or was denied
   useEffect(() => {
-    console.debug('[OAUTH-RETURN] Effect triggered', {
-      isOAuthReturn,
-      shopIdFromUrl,
-      shopsLength: shops.length,
-      oauthHandled: oauthHandledRef.current,
-      hydrated,
-      hasUser: !!user,
-      userTier: user?.subscriptionTier,
-    });
-
     if (isOAuthReturn && shopIdFromUrl && shops.length > 0 && !oauthHandledRef.current) {
       oauthHandledRef.current = true;
 
       const shop = shops.find((s) => s.id === shopIdFromUrl);
-      console.debug('[OAUTH-RETURN] Found shop', {
-        shopId: shop?.id,
-        isConnected: shop?.isConnected,
-      });
 
       if (shop?.isConnected) {
         // Check if user needs to select products (FREE/STARTER tier)
         const tier = user?.subscriptionTier || 'FREE';
         const needsProductSelection = tier !== 'PROFESSIONAL';
-
-        console.debug('[OAUTH-RETURN] Tier check', {
-          rawTier: user?.subscriptionTier,
-          resolvedTier: tier,
-          needsProductSelection,
-          redirectTo: needsProductSelection ? `/shops/${shop.id}/select-products` : '/shops',
-        });
 
         if (needsProductSelection) {
           // Redirect to product selection page
@@ -147,7 +126,6 @@ export default function ShopsPage() {
         }
       } else {
         // OAuth was denied or failed - clean up orphaned shop
-        console.debug('[OAUTH-RETURN] Shop not connected, cleaning up');
         router.replace('/shops', { scroll: false });
         setToast({ message: 'Store connection was cancelled or denied.', type: 'error' });
         if (shop) {

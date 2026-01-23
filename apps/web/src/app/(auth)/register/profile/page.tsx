@@ -9,7 +9,7 @@ import * as api from '@/lib/api';
 export default function RegisterProfilePage() {
   const router = useRouter();
   const { email, setStep, reset } = useRegistration();
-  const { user, setSession } = useAuth();
+  const { user, setSession, setUser } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
   const [error, setError] = useState('');
@@ -55,12 +55,11 @@ export default function RegisterProfilePage() {
       // Update session with complete user data
       setSession(result.user, result.tokens.accessToken, result.tokens.refreshToken);
 
-      // CRITICAL: Complete onboarding and update localStorage BEFORE redirect
+      // CRITICAL: Complete onboarding and update BOTH localStorage AND Zustand BEFORE redirect
       // This prevents AppLayout from redirecting back to onboarding
       const onboardingResult = await api.completeOnboarding();
-      localStorage.setItem('floxen.user', JSON.stringify(onboardingResult.user));
+      setUser(onboardingResult.user); // Updates both localStorage and Zustand state
 
-      setStep('welcome');
       reset(); // Clear registration store
 
       // Redirect to shops page (will auto-open connect modal for first-time users)

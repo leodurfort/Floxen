@@ -43,13 +43,6 @@ export default function SelectProductsPage() {
   const queryClient = useQueryClient();
   const { user, hydrated } = useAuth();
 
-  console.debug('[SELECT-PRODUCTS] Page mounted', {
-    shopId: params?.id,
-    hydrated,
-    hasUser: !!user,
-    userTier: user?.subscriptionTier,
-  });
-
   const [products, setProducts] = useState<api.DiscoveredProduct[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [total, setTotal] = useState(0);
