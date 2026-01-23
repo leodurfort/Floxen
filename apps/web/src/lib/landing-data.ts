@@ -71,7 +71,7 @@ export const howItWorksSteps: HowItWorksStep[] = [
   },
   {
     icon: 'robot',
-    title: 'Appear in ChatGPT',
+    title: 'Validate your feed',
     description:
       'Your products are now discoverable by millions of ChatGPT users.',
   },
