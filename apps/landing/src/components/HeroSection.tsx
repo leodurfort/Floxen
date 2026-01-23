@@ -1,12 +1,10 @@
-import { getAppUrl } from '@/lib/auth';
+import Link from 'next/link';
 
 export function HeroSection() {
-  const appUrl = getAppUrl();
-
   return (
     <section
       id="hero"
-      className="landing-section pt-24 md:pt-32 md:min-h-[calc(100vh-80px)] flex items-center"
+      className="landing-section pt-32 md:pt-32 flex items-center"
     >
       <div className="landing-container">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
@@ -23,9 +21,9 @@ export function HeroSection() {
               shopping results.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start mb-4">
-              <a href={`${appUrl}/register`} className="btn--landing-primary">
+              <Link href="/register" className="btn--landing-primary">
                 Get My Products in ChatGPT
-              </a>
+              </Link>
             </div>
             <p className="text-sm text-gray-500">No credit card required.</p>
           </div>

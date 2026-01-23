@@ -1,8 +1,6 @@
-import { getAppUrl } from '@/lib/auth';
+import Link from 'next/link';
 
 export function CTASection() {
-  const appUrl = getAppUrl();
-
   return (
     <section id="cta" className="landing-section landing-section--alt">
       <div className="landing-container">
@@ -10,9 +8,9 @@ export function CTASection() {
           <h2 className="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-6">
             Ready to reach ChatGPT users?
           </h2>
-          <a href={`${appUrl}/register`} className="btn--landing-primary">
+          <Link href="/register" className="btn--landing-primary">
             Get My Products in ChatGPT
-          </a>
+          </Link>
         </div>
       </div>
     </section>

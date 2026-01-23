@@ -1,5 +1,5 @@
+import Link from 'next/link';
 import { howItWorksSteps } from '@/lib/landing-data';
-import { getAppUrl } from '@/lib/auth';
 
 function StepIcon({ icon }: { icon: string }) {
   switch (icon) {
@@ -57,8 +57,6 @@ function StepIcon({ icon }: { icon: string }) {
 }
 
 export function HowItWorksSection() {
-  const appUrl = getAppUrl();
-
   return (
     <section id="how-it-works" className="landing-section landing-section--alt">
       <div className="landing-container">
@@ -119,9 +117,9 @@ export function HowItWorksSection() {
 
         {/* CTA */}
         <div className="text-center">
-          <a href={`${appUrl}/register`} className="btn--landing-outline">
+          <Link href="/register" className="btn--landing-outline">
             Get My Products in ChatGPT
-          </a>
+          </Link>
         </div>
       </div>
     </section>

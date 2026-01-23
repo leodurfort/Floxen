@@ -1,15 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { pricingPlans } from '@/lib/landing-data';
-import { getAppUrl } from '@/lib/auth';
 
 export function PricingSection() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
     'annual'
   );
-
-  const appUrl = getAppUrl();
 
   return (
     <section id="pricing" className="landing-section landing-section--alt">
@@ -89,8 +87,8 @@ export function PricingSection() {
                 key={plan.tier}
                 className={`bg-white rounded-xl p-6 flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${borderClass}`}
               >
-                {/* Plan header */}
-                <div className="text-center mb-6">
+                {/* Plan header - fixed height for alignment */}
+                <div className="text-center mb-6 h-[180px]">
                   <h3 className="text-xl font-bold text-gray-900 mb-1">
                     {plan.name}
                   </h3>
@@ -101,11 +99,11 @@ export function PricingSection() {
                     </span>
                     <span className="text-gray-500">/mo</span>
                   </div>
-                  {billingCycle === 'annual' && plan.annualPrice > 0 && (
-                    <p className="text-sm text-gray-500">
-                      ${plan.annualPrice}/year
-                    </p>
-                  )}
+                  <p className="text-sm text-gray-500 h-5">
+                    {billingCycle === 'annual' && plan.annualPrice > 0
+                      ? `$${plan.annualPrice}/year`
+                      : '\u00A0'}
+                  </p>
                   <p className={`text-sm font-medium mt-2 ${limitColor}`}>
                     {plan.limit}
                   </p>
@@ -134,12 +132,12 @@ export function PricingSection() {
                 </ul>
 
                 {/* CTA - aligned at bottom */}
-                <a
-                  href={`${appUrl}/register`}
+                <Link
+                  href="/register"
                   className={`block text-center py-3 rounded-lg font-medium transition-colors mt-auto ${buttonClass}`}
                 >
                   {plan.ctaText}
-                </a>
+                </Link>
               </div>
             );
           })}

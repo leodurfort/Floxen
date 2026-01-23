@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export function LandingFooter() {
   const currentYear = new Date().getFullYear();
 
@@ -7,13 +9,13 @@ export function LandingFooter() {
         <div className="grid md:grid-cols-4 gap-8">
           {/* Logo and description */}
           <div className="md:col-span-2">
-            <a href="/" className="inline-block mb-4">
+            <Link href="/" className="inline-block mb-4">
               <img
                 src="/logos/Floxen_logos/logo_orange.png"
                 alt="Floxen"
                 className="h-8 w-auto"
               />
-            </a>
+            </Link>
             <p className="text-gray-600 text-sm max-w-sm">
               Synchronize in real time your WooCommerce catalog to ChatGPT and
               get your products discovered by millions of shoppers.
@@ -51,17 +53,25 @@ export function LandingFooter() {
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Legal links */}
           <div>
-            <h4 className="font-semibold text-gray-900 mb-4">Contact</h4>
+            <h4 className="font-semibold text-gray-900 mb-4">Legal</h4>
             <ul className="space-y-2">
               <li>
-                <a
-                  href="mailto:support@floxen.ai"
+                <Link
+                  href="/privacy"
                   className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
                 >
-                  support@floxen.ai
-                </a>
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
+                  Terms of Service
+                </Link>
               </li>
             </ul>
           </div>
