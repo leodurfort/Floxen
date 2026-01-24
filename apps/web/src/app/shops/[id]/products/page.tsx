@@ -642,9 +642,17 @@ function CatalogPageContent() {
                 {activateFeedMutation.isPending ? 'Activating...' : 'Activate Feed'}
               </Button>
             ) : (
-              <Button variant="outline" onClick={() => setShowFeedPreviewModal(true)}>
-                View Feed
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => setShowFeedPreviewModal(true)}>
+                  View Feed
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => window.location.href = 'https://app.floxen.ai/pricing'}
+                >
+                  Synch more products
+                </Button>
+              </>
             )}
           </>
         }
