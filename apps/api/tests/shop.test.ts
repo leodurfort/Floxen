@@ -459,22 +459,6 @@ describe('Shop Connection (WooCommerce OAuth)', () => {
         expect(res.status).toBe(403);
       });
     });
-
-    describe('POST /api/v1/shops/:id/verify', () => {
-      it('should verify connection for connected shop', async () => {
-        const connectedShop = createTestShop(testUser.id, { isConnected: true });
-
-        mockPrisma.shop.findUnique.mockResolvedValue(connectedShop);
-
-        const res = await request(app)
-          .post(`/api/v1/shops/${connectedShop.id}/verify`)
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.verified).toBe(true);
-        expect(res.body.status).toBe('connected');
-      });
-    });
   });
 
   // ===========================================

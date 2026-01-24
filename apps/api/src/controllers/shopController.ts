@@ -66,12 +66,6 @@ const updateShopSchema = z.object({
   returnWindow: z.number().int().positive().nullable().optional(),
 });
 
-const openAiConfigSchema = z.object({
-  openaiEnabled: z.boolean(),
-  openaiEndpoint: z.string().url().optional(),
-  openaiMerchantId: z.string().optional(),
-});
-
 export async function listShops(req: Request, res: Response) {
   const userId = getUserId(req);
 
@@ -289,43 +283,6 @@ export async function oauthCallback(req: Request, res: Response) {
     }
   } catch (err: any) {
     logger.error('shops:oauth callback ERROR', { shopId: req.params.id, error: err.message, stack: err.stack });
-    return res.status(500).json({ error: err.message });
-  }
-}
-
-export async function verifyConnection(req: Request, res: Response) {
-  try {
-    const shop = await verifyShopOwnership(req, res, req.params.id);
-    if (!shop) return;
-
-    logger.info('shops:verify', { shopId: shop.id, userId: shop.userId, isConnected: shop.isConnected });
-    return res.json({ shopId: shop.id, verified: true, status: 'connected' });
-  } catch (err: any) {
-    logger.error('shops:verify error', err);
-    return res.status(500).json({ error: err.message });
-  }
-}
-
-export async function configureOpenAI(req: Request, res: Response) {
-  const parse = openAiConfigSchema.safeParse(req.body);
-  if (!parse.success) {
-    return res.status(400).json({ error: parse.error.flatten() });
-  }
-
-  try {
-    const existingShop = await verifyShopOwnership(req, res, req.params.id);
-    if (!existingShop) return;
-
-    const shop = await updateShopRecord(req.params.id, {
-      openaiEnabled: parse.data.openaiEnabled,
-      openaiEndpoint: parse.data.openaiEndpoint,
-      openaiMerchantId: parse.data.openaiMerchantId,
-    });
-
-    logger.info('shops:configure openai', { shopId: shop?.id, userId: existingShop.userId, enabled: shop?.openaiEnabled });
-    return res.json({ shop });
-  } catch (err: any) {
-    logger.error('shops:configure openai error', err);
     return res.status(500).json({ error: err.message });
   }
 }
