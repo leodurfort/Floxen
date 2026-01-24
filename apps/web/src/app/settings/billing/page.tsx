@@ -277,7 +277,7 @@ export default function BillingSettingsPage() {
                 <p className="font-semibold text-gray-900">Starter</p>
                 <p className="text-sm text-gray-500">100 products</p>
               </div>
-              <span className="text-gray-700 font-medium">$25/mo</span>
+              <span className="text-gray-700 font-medium">$20/mo</span>
             </div>
           </div>
 
@@ -287,7 +287,7 @@ export default function BillingSettingsPage() {
                 <p className="font-semibold text-gray-900">Pro</p>
                 <p className="text-sm text-gray-500">Unlimited products</p>
               </div>
-              <span className="text-gray-700 font-medium">$37/mo</span>
+              <span className="text-gray-700 font-medium">$29/mo</span>
             </div>
           </div>
         </div>

@@ -139,8 +139,8 @@ export const pricingPlans: PricingPlan[] = [
   {
     name: 'Starter',
     tier: 'STARTER',
-    monthlyPrice: 25,
-    annualPrice: 250,
+    monthlyPrice: 20,
+    annualPrice: 192,
     limit: '100 products',
     description: 'For growing stores',
     features: [
@@ -155,8 +155,8 @@ export const pricingPlans: PricingPlan[] = [
   {
     name: 'Pro',
     tier: 'PRO',
-    monthlyPrice: 37,
-    annualPrice: 374,
+    monthlyPrice: 29,
+    annualPrice: 276,
     limit: 'Unlimited products',
     description: 'For large catalogs',
     features: [

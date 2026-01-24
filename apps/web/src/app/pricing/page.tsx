@@ -92,7 +92,7 @@ export default function PricingPage() {
     {
       name: 'Starter',
       tier: 'STARTER',
-      price: { monthly: 25, annual: 250 },
+      price: { monthly: 20, annual: 192 },
       priceId: {
         monthly: prices?.starter.monthly || '',
         annual: prices?.starter.annual || '',
@@ -110,7 +110,7 @@ export default function PricingPage() {
     {
       name: 'Pro',
       tier: 'PROFESSIONAL',
-      price: { monthly: 37, annual: 374 },
+      price: { monthly: 29, annual: 276 },
       priceId: {
         monthly: prices?.professional.monthly || '',
         annual: prices?.professional.annual || '',
@@ -287,7 +287,7 @@ export default function PricingPage() {
             }`}
           >
             Annual
-            <span className="ml-1 text-green-600 text-xs">Save 17%</span>
+            <span className="ml-1 text-green-600 text-xs">Save 20%</span>
           </button>
         </div>
       </div>
