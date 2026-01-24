@@ -1,6 +1,6 @@
 {
   "name": "@floxen/landing",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Floxen landing site (floxen.ai)",
   "scripts": {
