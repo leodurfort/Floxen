@@ -156,4 +156,7 @@ export const env = {
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
   },
+  intercom: {
+    identitySecret: process.env.INTERCOM_IDENTITY_SECRET || '',
+  },
 };

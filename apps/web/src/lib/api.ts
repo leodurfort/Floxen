@@ -869,3 +869,9 @@ export interface WaitlistStatusResponse {
 export async function getAnalyticsWaitlistStatus(): Promise<WaitlistStatusResponse> {
   return requestWithAuth<WaitlistStatusResponse>('/api/v1/analytics/waitlist/status');
 }
+
+// Intercom
+
+export async function getIntercomToken() {
+  return requestWithAuth<{ token: string }>('/api/v1/intercom/token');
+}

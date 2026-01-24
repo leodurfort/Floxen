@@ -4,6 +4,7 @@ import analyticsWaitlistRouter from './analyticsWaitlist';
 import authRouter from './auth';
 import billingRouter from './billing';
 import feedRouter from './feed';
+import intercomRouter from './intercom';
 import productRouter from './product';
 import shopRouter from './shop';
 import syncRouter from './sync';
@@ -14,6 +15,7 @@ router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/billing', billingRouter);
 router.use('/feed', feedRouter); // Public feed endpoints (no auth)
+router.use('/intercom', intercomRouter);
 router.use('/shops', shopRouter);
 router.use('/shops/:id/products', productRouter);
 router.use('/shops/:id/sync', syncRouter);
