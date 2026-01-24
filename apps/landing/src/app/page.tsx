@@ -24,22 +24,6 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
-  openGraph: {
-    title: 'Get Your Products in ChatGPT | Floxen',
-    description:
-      'Get your ecommerce products discovered in ChatGPT results. Show your products to hundreds of millions of AI shoppers.',
-    url: 'https://floxen.ai/',
-    siteName: 'Floxen',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Floxen - Show your products in ChatGPT',
-      },
-    ],
-    type: 'website',
-  },
   robots: {
     index: true,
     follow: true,
