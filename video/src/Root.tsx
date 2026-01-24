@@ -1,7 +1,6 @@
 import { Composition, Folder } from "remotion";
 import { HelloWorld, myCompSchema } from "./HelloWorld";
 import { Logo, myCompSchema2 } from "./HelloWorld/Logo";
-import { FloxenPromo, FLOXEN_PROMO_DURATION } from "./FloxenPromo";
 import { FloxenPromoV2, FLOXEN_PROMO_V2_DURATION } from "./FloxenPromoV2";
 
 export const RemotionRoot: React.FC = () => {
@@ -12,14 +11,6 @@ export const RemotionRoot: React.FC = () => {
           id="FloxenPromoV2"
           component={FloxenPromoV2}
           durationInFrames={FLOXEN_PROMO_V2_DURATION}
-          fps={30}
-          width={1920}
-          height={1080}
-        />
-        <Composition
-          id="FloxenPromo"
-          component={FloxenPromo}
-          durationInFrames={FLOXEN_PROMO_DURATION}
           fps={30}
           width={1920}
           height={1080}
