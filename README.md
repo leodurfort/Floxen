@@ -26,7 +26,7 @@ Base path: `/api/v1`
 - Auth: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`
 - Shops: `GET/POST /shops`, `GET/PATCH/DELETE /shops/:id`, `POST /shops/:id/oauth/callback`, `POST /shops/:id/verify`
 - Products: `GET /shops/:id/products`, `GET/PATCH /shops/:id/products/:pid`, `POST /shops/:id/products/:pid/enrich`, `GET /shops/:id/products/:pid/preview-feed`, `POST /shops/:id/products/bulk`
-- Sync: `POST /shops/:id/sync`, `GET /shops/:id/sync/status`, `GET /shops/:id/sync/history`, `POST /shops/:id/sync/push`, `GET /shops/:id/sync/feed/preview`, `GET /shops/:id/sync/feed/download`
+- Sync: `POST /shops/:id/sync`, `GET /shops/:id/sync/history`, `POST /shops/:id/sync/push`, `GET /shops/:id/sync/feed/preview`, `GET /shops/:id/sync/feed/download`
 - Analytics: `GET /shops/:id/analytics/overview`, `GET /shops/:id/analytics/products`, `GET /shops/:id/analytics/timeline`
 - Webhooks: `POST /webhooks/woocommerce/:shopId`
 

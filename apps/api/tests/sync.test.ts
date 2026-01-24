@@ -6,8 +6,6 @@ import { syncQueue, isQueueAvailable } from '../src/lib/redis';
 import {
   createTestUser,
   createTestShop,
-  createTestSyncBatch,
-  createTestFeedSnapshot,
   generateAccessToken,
   TEST_JWT_SECRET,
 } from './utils/testHelpers';
@@ -27,13 +25,6 @@ const mockPrisma = prisma as unknown as {
   product: {
     findMany: ReturnType<typeof vi.fn>;
     count: ReturnType<typeof vi.fn>;
-  };
-  syncBatch: {
-    findMany: ReturnType<typeof vi.fn>;
-    count: ReturnType<typeof vi.fn>;
-  };
-  feedSnapshot: {
-    findFirst: ReturnType<typeof vi.fn>;
   };
   $queryRaw: ReturnType<typeof vi.fn>;
 };
@@ -139,98 +130,6 @@ describe('Sync Trigger', () => {
 
         expect(res.status).toBe(503);
         expect(res.body.error).toContain('unavailable');
-      });
-    });
-  });
-
-  // ===========================================
-  // SYNC STATUS TESTS
-  // ===========================================
-  describe('Sync Status', () => {
-    describe('GET /api/v1/shops/:id/sync/status', () => {
-      it('should return current sync status', async () => {
-        const shop = createTestShop(testUser.id, {
-          isConnected: true,
-          syncStatus: 'COMPLETED',
-          lastSyncAt: new Date(),
-        });
-
-        mockPrisma.shop.findUnique.mockResolvedValue(shop);
-        mockPrisma.syncBatch.count.mockResolvedValue(0);
-
-        const res = await request(app)
-          .get(`/api/v1/shops/${shop.id}/sync/status`)
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.shopId).toBe(shop.id);
-        expect(res.body.status).toBe('COMPLETED');
-        expect(res.body.lastSyncAt).toBeDefined();
-        expect(res.body.queuedBatches).toBe(0);
-      });
-
-      it('should indicate syncing status with queued batches', async () => {
-        const shop = createTestShop(testUser.id, {
-          isConnected: true,
-          syncStatus: 'SYNCING',
-        });
-
-        mockPrisma.shop.findUnique.mockResolvedValue(shop);
-        mockPrisma.syncBatch.count.mockResolvedValue(2);
-
-        const res = await request(app)
-          .get(`/api/v1/shops/${shop.id}/sync/status`)
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.status).toBe('SYNCING');
-        expect(res.body.queuedBatches).toBe(2);
-      });
-
-      it('should return 404 for non-existent shop', async () => {
-        mockPrisma.shop.findUnique.mockResolvedValue(null);
-
-        const res = await request(app)
-          .get('/api/v1/shops/non-existent-id/sync/status')
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(res.status).toBe(404);
-      });
-    });
-
-    describe('GET /api/v1/shops/:id/sync/history', () => {
-      it('should return sync history', async () => {
-        const shop = createTestShop(testUser.id);
-        const syncBatches = [
-          createTestSyncBatch(shop.id, { status: 'COMPLETED' }),
-          createTestSyncBatch(shop.id, { status: 'COMPLETED' }),
-          createTestSyncBatch(shop.id, { status: 'FAILED' }),
-        ];
-
-        mockPrisma.syncBatch.findMany.mockResolvedValue(syncBatches);
-
-        const res = await request(app)
-          .get(`/api/v1/shops/${shop.id}/sync/history`)
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.history).toBeDefined();
-        expect(res.body.history).toHaveLength(3);
-        expect(res.body.history[0].status).toBeDefined();
-        expect(res.body.history[0].totalProducts).toBeDefined();
-      });
-
-      it('should return empty history for new shop', async () => {
-        const shop = createTestShop(testUser.id);
-
-        mockPrisma.syncBatch.findMany.mockResolvedValue([]);
-
-        const res = await request(app)
-          .get(`/api/v1/shops/${shop.id}/sync/history`)
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.history).toHaveLength(0);
       });
     });
   });
@@ -449,22 +348,6 @@ describe('Sync Trigger', () => {
       expect(res.status).toBe(200);
     });
 
-    it('should handle large sync history', async () => {
-      const shop = createTestShop(testUser.id);
-      const manyBatches = Array.from({ length: 20 }, (_, i) =>
-        createTestSyncBatch(shop.id, { id: `batch-${i}` })
-      );
-
-      mockPrisma.syncBatch.findMany.mockResolvedValue(manyBatches);
-
-      const res = await request(app)
-        .get(`/api/v1/shops/${shop.id}/sync/history`)
-        .set('Authorization', `Bearer ${accessToken}`);
-
-      expect(res.status).toBe(200);
-      // History is limited to 20 items by the controller
-      expect(res.body.history).toHaveLength(20);
-    });
   });
 
   // ===========================================

@@ -95,10 +95,9 @@ This document outlines the testing strategy for the Floxen API, covering authent
 | Trigger sync when reselection needed | `POST /shops/:id/sync` | Returns 400 with NEEDS_RESELECTION |
 | Trigger sync (Redis unavailable) | `POST /shops/:id/sync` | Returns 503 |
 
-#### 3.2 Sync Status
+#### 3.2 Sync History
 | Test Case | Endpoint | Expected Behavior |
 |-----------|----------|-------------------|
-| Get sync status | `GET /shops/:id/sync/status` | Returns status + lastSyncAt |
 | Get sync history | `GET /shops/:id/sync/history` | Returns array of sync batches |
 
 #### 3.3 Feed Operations
