@@ -17,6 +17,7 @@ const body = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://floxen.ai'),
   title: 'Floxen - Get Your Products in ChatGPT',
   description:
     'Connect your WooCommerce store to ChatGPT shopping. Sync your product catalog and reach millions of AI shoppers.',
@@ -28,6 +29,14 @@ export const metadata: Metadata = {
     title: 'Floxen - Get Your Products in ChatGPT',
     description:
       'Connect your WooCommerce store to ChatGPT shopping. Sync your product catalog and reach millions of AI shoppers.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Floxen - Show your products in ChatGPT',
+      },
+    ],
     type: 'website',
   },
 };

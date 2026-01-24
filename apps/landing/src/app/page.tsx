@@ -21,7 +21,6 @@ export const metadata: Metadata = {
     'AI product discovery',
     'chatgpt product feed generator',
   ],
-  metadataBase: new URL('https://www.floxen.ai'),
   alternates: {
     canonical: '/',
   },
@@ -29,7 +28,7 @@ export const metadata: Metadata = {
     title: 'Get Your Products in ChatGPT | Floxen',
     description:
       'Get your ecommerce products discovered in ChatGPT results. Show your products to hundreds of millions of AI shoppers.',
-    url: 'https://www.floxen.ai/',
+    url: 'https://floxen.ai/',
     siteName: 'Floxen',
     images: [
       {

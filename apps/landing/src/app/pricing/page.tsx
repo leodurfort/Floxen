@@ -9,7 +9,6 @@ export const metadata: Metadata = {
   title: 'Pricing | Floxen',
   description:
     'Simple, transparent pricing for Floxen. Get your products in ChatGPT for free with up to 5 products. Scale with our Starter and Pro plans.',
-  metadataBase: new URL('https://www.floxen.ai'),
   alternates: {
     canonical: '/pricing',
   },
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
     title: 'Pricing | Floxen',
     description:
       'Simple, transparent pricing for Floxen. Get your products in ChatGPT for free with up to 5 products.',
-    url: 'https://www.floxen.ai/pricing',
+    url: 'https://floxen.ai/pricing',
     siteName: 'Floxen',
     images: [
       {

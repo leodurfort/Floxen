@@ -4,7 +4,6 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Terms of Service | Floxen',
   description: 'Terms of Service for Floxen - WooCommerce to ChatGPT integration',
-  metadataBase: new URL('https://www.floxen.ai'),
   alternates: {
     canonical: '/terms',
   },
