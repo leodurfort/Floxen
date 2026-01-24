@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 export function HeroSection() {
   return (
     <section
@@ -21,9 +19,9 @@ export function HeroSection() {
               shopping results.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start mb-4">
-              <Link href="/register" className="btn--landing-primary">
+              <a href="https://app.floxen.ai/register" className="btn--landing-primary">
                 Get My Products in ChatGPT
-              </Link>
+              </a>
             </div>
             <p className="text-sm text-gray-500">No credit card required.</p>
           </div>

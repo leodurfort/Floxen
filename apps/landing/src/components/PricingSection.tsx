@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { pricingPlans } from '@/lib/landing-data';
 
 export function PricingSection() {
@@ -132,12 +131,12 @@ export function PricingSection() {
                 </ul>
 
                 {/* CTA - aligned at bottom */}
-                <Link
-                  href="/register"
+                <a
+                  href="https://app.floxen.ai/register"
                   className={`block text-center py-3 rounded-lg font-medium transition-colors mt-auto ${buttonClass}`}
                 >
                   {plan.ctaText}
-                </Link>
+                </a>
               </div>
             );
           })}

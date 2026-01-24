@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { howItWorksSteps } from '@/lib/landing-data';
 
 function StepIcon({ icon }: { icon: string }) {
@@ -117,9 +116,9 @@ export function HowItWorksSection() {
 
         {/* CTA */}
         <div className="text-center">
-          <Link href="/register" className="btn--landing-outline">
+          <a href="https://app.floxen.ai/register" className="btn--landing-outline">
             Get My Products in ChatGPT
-          </Link>
+          </a>
         </div>
       </div>
     </section>
