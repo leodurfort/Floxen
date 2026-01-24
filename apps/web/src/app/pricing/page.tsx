@@ -87,7 +87,6 @@ export default function PricingPage() {
         { text: 'Auto-sync every hour', included: true },
         { text: 'ChatGPT feed generation', included: true },
         { text: 'Chat support', included: true },
-        { text: 'Analytics (coming soon)', included: false },
       ],
     },
     {
