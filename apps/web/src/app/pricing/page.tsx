@@ -84,9 +84,10 @@ export default function PricingPage() {
       description: 'Perfect for trying out Floxen',
       features: [
         { text: 'Up to 5 products', included: true },
-        { text: 'WooCommerce sync', included: true },
+        { text: 'Auto-sync every hour', included: true },
         { text: 'ChatGPT feed generation', included: true },
         { text: 'Chat support', included: true },
+        { text: 'Analytics (coming soon)', included: false },
       ],
     },
     {
@@ -101,10 +102,10 @@ export default function PricingPage() {
       description: 'For growing stores',
       features: [
         { text: 'Up to 100 products', included: true },
-        { text: 'WooCommerce sync', included: true },
+        { text: 'Auto-sync every hour', included: true },
         { text: 'ChatGPT feed generation', included: true },
         { text: 'Chat support', included: true },
-        { text: 'ChatGPT Analytics (coming soon)', included: true },
+        { text: 'Analytics (coming soon)', included: true },
       ],
     },
     {
@@ -119,10 +120,10 @@ export default function PricingPage() {
       description: 'For large catalogs',
       features: [
         { text: 'Unlimited products', included: true },
-        { text: 'WooCommerce sync', included: true },
+        { text: 'Auto-sync every hour', included: true },
         { text: 'ChatGPT feed generation', included: true },
         { text: 'Chat support', included: true },
-        { text: 'ChatGPT Analytics (coming soon)', included: true },
+        { text: 'Analytics (coming soon)', included: true },
       ],
     },
   ];
@@ -243,7 +244,7 @@ export default function PricingPage() {
       const targetLevel = tierOrder[plan.tier as keyof typeof tierOrder] ?? 0;
       return targetLevel > currentLevel ? 'Upgrade Plan' : 'Manage in Portal';
     }
-    return 'Get Started';
+    return 'Upgrade';
   }
 
   function isButtonDisabled(plan: Plan): boolean {
@@ -303,7 +304,7 @@ export default function PricingPage() {
         {plans.map((plan) => (
           <div
             key={plan.tier}
-            className={`relative bg-white rounded-xl border-2 p-6 ${
+            className={`relative bg-white rounded-xl border-2 p-6 flex flex-col ${
               plan.tier === currentTier
                 ? 'border-green-500'
                 : 'border-gray-200'
@@ -337,7 +338,7 @@ export default function PricingPage() {
               <p className="text-sm font-medium text-[#FA7315] mt-2">{plan.limit}</p>
             </div>
 
-            <ul className="space-y-3 mb-6">
+            <ul className="space-y-3 mb-6 flex-grow">
               {plan.features.map((feature, idx) => (
                 <li key={idx} className="flex items-center text-sm">
                   {feature.included ? (
@@ -379,7 +380,7 @@ export default function PricingPage() {
             <button
               onClick={() => handleSelectPlan(plan)}
               disabled={isButtonDisabled(plan) || isLoading === plan.tier}
-              className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+              className={`w-full py-3 px-4 rounded-lg font-medium transition-colors mt-auto ${
                 isButtonDisabled(plan)
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-gray-900 text-white hover:bg-gray-800'
