@@ -18,6 +18,10 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 
+# Accept build-time arguments for Next.js public env vars
+ARG NEXT_PUBLIC_INTERCOM_APP_ID
+ENV NEXT_PUBLIC_INTERCOM_APP_ID=$NEXT_PUBLIC_INTERCOM_APP_ID
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
