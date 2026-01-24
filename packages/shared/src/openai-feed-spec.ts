@@ -1139,4 +1139,3 @@ export function isProductEditable(spec: OpenAIFieldSpec): boolean {
 }
 
 export const PRODUCT_EDITABLE_FIELDS = OPENAI_FEED_SPEC.filter(isProductEditable);
-export const PRODUCT_EDITABLE_FIELD_SET = new Set(PRODUCT_EDITABLE_FIELDS.map(f => f.attribute));

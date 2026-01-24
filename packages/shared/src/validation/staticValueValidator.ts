@@ -171,15 +171,3 @@ function validateString(value: string, validationRules: string[]): StaticValueVa
   return { isValid: true };
 }
 
-/**
- * Get validation info for UI display
- */
-export function getValidationInfo(attribute: string) {
-  const spec = OPENAI_FEED_SPEC.find(s => s.attribute === attribute);
-  return spec ? {
-    dataType: spec.dataType,
-    supportedValues: spec.supportedValues,
-    validationRules: spec.validationRules,
-    example: spec.example,
-  } : null;
-}
