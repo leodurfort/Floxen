@@ -19,7 +19,6 @@ import {
   useCreateShopMutation,
   useDeleteShopMutation,
   useToggleSyncMutation,
-  useTriggerSyncMutation,
   useUpdateShopMutation,
 } from '@/hooks/useShopsQuery';
 import { isValidUrl, formatTimestamp } from '@/lib/validation';
@@ -100,7 +99,6 @@ export default function ShopsPage() {
   const createShopMutation = useCreateShopMutation();
   const deleteShopMutation = useDeleteShopMutation();
   const toggleSyncMutation = useToggleSyncMutation();
-  const triggerSyncMutation = useTriggerSyncMutation();
   const updateShopMutation = useUpdateShopMutation();
 
   // Handle OAuth return - check if connection succeeded or was denied
@@ -186,19 +184,6 @@ export default function ShopsPage() {
   function handleDeleteShop(shopId: string) {
     if (!user || !confirm('Are you sure you want to delete this store? This action cannot be undone.')) return;
     deleteShopMutation.mutate(shopId, {
-      onError: (err) => {
-        setError(err.message);
-      },
-    });
-  }
-
-  function handleSync(shopId: string) {
-    if (!user) return;
-    triggerSyncMutation.mutate(shopId, {
-      onSuccess: () => {
-        setError(null);
-        setToast({ message: 'Sync triggered successfully', type: 'success' });
-      },
       onError: (err) => {
         setError(err.message);
       },
@@ -328,7 +313,7 @@ export default function ShopsPage() {
           subtitle="Manage your WooCommerce store connections"
           actions={
             !hasShopInFirstSync && (
-              <Button variant="primary" onClick={() => setShowConnectModal(true)}>
+              <Button variant="outline" onClick={() => setShowConnectModal(true)}>
                 Connect new store
               </Button>
             )
@@ -432,7 +417,7 @@ export default function ShopsPage() {
                               /* Normal state: Show product selection button */
                               <Link
                                 href={`/shops/${shop.id}/select-products`}
-                                className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                                className="btn btn--primary text-sm px-4 py-2"
                               >
                                 Update Product Selection
                               </Link>

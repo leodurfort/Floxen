@@ -307,63 +307,68 @@ export default function SelectProductsPage() {
   }
 
   return (
-    <div className="p-4 max-w-7xl mx-auto pb-24">
-      {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Products</h1>
-        <p className="text-gray-600">
-          Choose which products to display in ChatGPT.{' '}
-          {isUnlimited ? (
-            <>Your plan allows <span className="font-semibold">unlimited</span> products.</>
-          ) : (
-            <>Your plan allows up to <span className="font-semibold">{limit}</span> products.</>
+    <div className="max-w-7xl mx-auto pb-24">
+      {/* Sticky Header Section */}
+      <div className="sticky top-0 z-20 bg-[#F9FAFB] px-4 pt-4 pb-2">
+        {/* Header */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Products</h1>
+          <p className="text-gray-600">
+            Choose which products to display in ChatGPT.{' '}
+            {isUnlimited ? (
+              <>Your plan allows <span className="font-semibold">unlimited</span> products.</>
+            ) : (
+              <>Your plan allows up to <span className="font-semibold">{limit}</span> products.</>
+            )}
+          </p>
+        </div>
+
+        {/* Product Counter - minimal inline */}
+        <div className="flex items-center gap-4 mb-4">
+          <p className={`text-sm ${isOverLimit ? 'text-red-600' : 'text-gray-500'}`}>
+            <span className="font-semibold">{selectedIds.size}</span>
+            {isUnlimited ? '' : ` / ${limit}`} selected · {total} products in store
+          </p>
+          {!isUnlimited && selectedIds.size >= limit && (
+            <a
+              href="/pricing"
+              className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium"
+            >
+              Need more? Upgrade →
+            </a>
           )}
-        </p>
-      </div>
+        </div>
 
-      {/* Product Counter - minimal inline */}
-      <div className="flex items-center gap-4 mb-4">
-        <p className={`text-sm ${isOverLimit ? 'text-red-600' : 'text-gray-500'}`}>
-          <span className="font-semibold">{selectedIds.size}</span>
-          {isUnlimited ? '' : ` / ${limit}`} selected · {total} products in store
-        </p>
-        {!isUnlimited && selectedIds.size >= limit && (
-          <a
-            href="/pricing"
-            className="text-sm text-[#FA7315] hover:text-[#E5650F] font-medium"
-          >
-            Need more? Upgrade →
-          </a>
-        )}
-      </div>
-
-      {/* Search and Actions Row */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <SearchFilter
-            value={searchInput}
-            onChange={setSearchInput}
-            placeholder="Search products..."
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={deselectAll}
-              disabled={selectedIds.size === 0}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Deselect All
-            </button>
-            <button
-              onClick={selectAll}
-              disabled={!isUnlimited && selectedIds.size === limit}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isUnlimited ? 'Select All' : 'Select All (up to limit)'}
-            </button>
+        {/* Search and Actions Row */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <SearchFilter
+              value={searchInput}
+              onChange={setSearchInput}
+              placeholder="Search products..."
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={deselectAll}
+                disabled={selectedIds.size === 0}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Deselect All
+              </button>
+              <button
+                onClick={selectAll}
+                disabled={!isUnlimited && selectedIds.size === limit}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUnlimited ? 'Select All' : 'Select All (up to limit)'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Scrollable Content */}
+      <div className="px-4 pt-4">
       {/* Error/Success Messages */}
       {error && (
         <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -495,6 +500,7 @@ export default function SelectProductsPage() {
           )}
         </>
       )}
+      </div>
 
       {/* Fixed Bottom Bar - Save Button (starts after sidebar w-52 = 208px) */}
       {products.length > 0 && (
