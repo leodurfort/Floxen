@@ -28,33 +28,12 @@ if (!result.valid) {
 }
 ```
 
-### 2. Validate Multiple Entries
+### 2. Validation Options
 
 ```typescript
-import { validateFeedEntries, getValidationSummary } from '@floxen/shared';
+import { validateFeedEntry } from '@floxen/shared';
 
-const entries = [entry1, entry2, entry3];
-const results = validateFeedEntries(entries);
-
-// Get summary statistics
-const summary = getValidationSummary(results);
-console.log(`Validated ${entries.length} entries`);
-console.log(`Invalid: ${summary.invalid}`);
-console.log(`Total errors: ${summary.totalErrors}`);
-console.log(`Total warnings: ${summary.totalWarnings}`);
-
-// Most common errors
-summary.commonErrors.forEach(({ error, count }) => {
-  console.log(`  ${count}x: ${error}`);
-});
-```
-
-### 3. Validation Options
-
-```typescript
-import { validateFeedEntry, ValidationOptions } from '@floxen/shared';
-
-const options: ValidationOptions = {
+const result = validateFeedEntry(entry, {
   // Skip validation for specific fields
   skipFields: ['video_link', 'model_3d_link'],
 
@@ -63,9 +42,7 @@ const options: ValidationOptions = {
 
   // Validate optional fields too
   validateOptional: true,
-};
-
-const result = validateFeedEntry(entry, options);
+});
 ```
 
 ## Integration Examples
@@ -158,30 +135,6 @@ router.post('/entry', async (req, res) => {
   }
 });
 
-/**
- * POST /api/v1/validation/batch
- * Validate multiple feed entries
- */
-router.post('/batch', async (req, res) => {
-  try {
-    const entries = req.body.entries;
-    const results = validateFeedEntries(entries);
-    const summary = getValidationSummary(results);
-
-    res.json({
-      summary,
-      results: Array.from(results.entries()).map(([index, result]) => ({
-        index,
-        valid: result.valid,
-        errors: result.errors,
-        warnings: result.warnings,
-      })),
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Batch validation failed' });
-  }
-});
-
 export default router;
 ```
 
@@ -242,90 +195,13 @@ export function ProductPreview({ entry }: { entry: any }) {
 }
 ```
 
-### Example 4: Pre-Deployment Validation Script
-
-```typescript
-// scripts/validate-feed.ts
-import { PrismaClient } from '@prisma/client';
-import { validateFeedEntries, getValidationSummary } from '@floxen/shared';
-import { FeedBuilder } from '../apps/api/src/services/woocommerce/feedBuilder';
-
-async function validateFeed(shopId: string) {
-  const prisma = new PrismaClient();
-
-  try {
-    const shop = await prisma.shop.findUnique({ where: { id: shopId } });
-    if (!shop) throw new Error('Shop not found');
-
-    const products = await prisma.product.findMany({
-      where: { shopId, status: 'APPROVED' },
-    });
-
-    console.log(`Validating feed for shop: ${shop.shopName}`);
-    console.log(`Products to validate: ${products.length}`);
-
-    const feedBuilder = new FeedBuilder(shop);
-    const feed = await feedBuilder.buildFeed(products, shop);
-
-    // Validate entire feed
-    const results = validateFeedEntries(feed);
-    const summary = getValidationSummary(results);
-
-    // Print summary
-    console.log('\n=== Validation Summary ===');
-    console.log(`Total entries: ${feed.length}`);
-    console.log(`Invalid entries: ${summary.invalid}`);
-    console.log(`Total errors: ${summary.totalErrors}`);
-    console.log(`Total warnings: ${summary.totalWarnings}`);
-
-    // Show most common errors
-    if (summary.commonErrors.length > 0) {
-      console.log('\n=== Most Common Errors ===');
-      summary.commonErrors.slice(0, 5).forEach(({ error, count }) => {
-        console.log(`  ${count}x: ${error}`);
-      });
-    }
-
-    // Show detailed errors for first few invalid entries
-    if (summary.invalid > 0) {
-      console.log('\n=== Sample Invalid Entries ===');
-      let count = 0;
-      for (const [index, result] of results.entries()) {
-        if (count >= 3) break;
-        console.log(`\nEntry ${index}:`);
-        result.errors.forEach(error => {
-          console.log(`  ⚠️  ${error.field}: ${error.error}`);
-        });
-        count++;
-      }
-    }
-
-    // Exit with error code if validation failed
-    process.exit(summary.invalid > 0 ? 1 : 0);
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-// Run validation
-const shopId = process.argv[2];
-if (!shopId) {
-  console.error('Usage: ts-node validate-feed.ts <shopId>');
-  process.exit(1);
-}
-
-validateFeed(shopId);
-```
-
 ## Best Practices
 
 ### 1. When to Validate
 
-- ✅ **Before feed generation**: Catch errors before sending to OpenAI
-- ✅ **During product import**: Validate as products are synced
-- ✅ **In development**: Validate during testing
-- ✅ **In CI/CD**: Add validation to deployment pipeline
-- ❌ **Not on every API request**: Too expensive, cache results
+- **Before feed generation**: Catch errors before sending to OpenAI
+- **During product import**: Validate as products are synced
+- **In development**: Validate during testing
 
 ### 2. Error Handling
 
@@ -352,27 +228,7 @@ if (!result.valid) {
 }
 ```
 
-### 3. Performance Considerations
-
-```typescript
-// For large feeds, validate in batches
-const BATCH_SIZE = 100;
-const allEntries = [...]; // Large array
-
-for (let i = 0; i < allEntries.length; i += BATCH_SIZE) {
-  const batch = allEntries.slice(i, i + BATCH_SIZE);
-  const results = validateFeedEntries(batch);
-
-  // Process results
-  for (const [index, result] of results.entries()) {
-    if (!result.valid) {
-      // Handle invalid entry
-    }
-  }
-}
-```
-
-### 4. Logging
+### 3. Logging
 
 ```typescript
 // Good: Structured logging for debugging
@@ -395,38 +251,10 @@ if (!result.valid) {
 }
 ```
 
-## Custom Validators
-
-You can also use individual validators for specific needs:
-
-```typescript
-import {
-  validatePrice,
-  validateGtin,
-  validateUrl
-} from '@floxen/shared';
-
-// Validate price before saving
-const priceValidation = validatePrice(product.price);
-if (!priceValidation.valid) {
-  throw new Error(priceValidation.error);
-}
-
-// Validate GTIN on input
-const gtinValidation = validateGtin(input.gtin);
-if (!gtinValidation.valid) {
-  return res.status(400).json({ error: gtinValidation.error });
-}
-```
-
 ## Conclusion
 
 The validation layer provides:
-- ✅ Early error detection
-- ✅ Detailed error messages
-- ✅ Field-specific validation
-- ✅ Batch validation support
-- ✅ Flexible validation options
-- ✅ Performance-friendly
-
-Integrate it into your feed generation pipeline to ensure high-quality data before sending to OpenAI!
+- Early error detection
+- Detailed error messages
+- Field-specific validation
+- Flexible validation options

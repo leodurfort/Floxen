@@ -292,69 +292,7 @@ export function validateFeedEntry(
   };
 }
 
-/**
- * Validate multiple feed entries. Returns a map of index to result for entries with issues.
- */
-export function validateFeedEntries(
-  entries: Array<Record<string, any>>,
-  options: ValidationOptions = {}
-): Map<number, FeedValidationResult> {
-  const results = new Map<number, FeedValidationResult>();
-
-  entries.forEach((entry, index) => {
-    const result = validateFeedEntry(entry, options);
-    if (!result.valid || result.warnings.length > 0) {
-      results.set(index, result);
-    }
-  });
-
-  return results;
-}
-
-/**
- * Get summary statistics from validation results
- */
-export function getValidationSummary(results: Map<number, FeedValidationResult>): {
-  total: number;
-  invalid: number;
-  withWarnings: number;
-  totalErrors: number;
-  totalWarnings: number;
-  commonErrors: Array<{ error: string; count: number }>;
-} {
-  let invalid = 0;
-  let withWarnings = 0;
-  let totalErrors = 0;
-  let totalWarnings = 0;
-  const errorCounts = new Map<string, number>();
-
-  results.forEach((result) => {
-    if (!result.valid) invalid++;
-    if (result.warnings.length > 0) withWarnings++;
-    totalErrors += result.errors.length;
-    totalWarnings += result.warnings.length;
-
-    result.errors.forEach((error) => {
-      errorCounts.set(error.error, (errorCounts.get(error.error) || 0) + 1);
-    });
-  });
-
-  const commonErrors = Array.from(errorCounts.entries())
-    .map(([error, count]) => ({ error, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-
-  return {
-    total: results.size,
-    invalid,
-    withWarnings,
-    totalErrors,
-    totalWarnings,
-    commonErrors,
-  };
-}
-
-export interface ApiValidationResult {
+interface ApiValidationResult {
   isValid: boolean;
   errors: Record<string, string[]>;
   warnings: Record<string, string[]>;
@@ -363,7 +301,7 @@ export interface ApiValidationResult {
 /**
  * Convert FeedValidationResult to API-compatible format (errors grouped by field)
  */
-export function toApiValidationResult(result: FeedValidationResult): ApiValidationResult {
+function toApiValidationResult(result: FeedValidationResult): ApiValidationResult {
   const groupByField = (items: FieldValidationError[]): Record<string, string[]> => {
     const grouped: Record<string, string[]> = {};
     for (const item of items) {
