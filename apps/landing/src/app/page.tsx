@@ -41,13 +41,6 @@ export const metadata: Metadata = {
     ],
     type: 'website',
   },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Get Your Products in ChatGPT | Floxen',
-    description:
-      'Get your ecommerce products discovered in ChatGPT results. Show your products to hundreds of millions of AI shoppers.',
-    images: ['/og-image.png'],
-  },
   robots: {
     index: true,
     follow: true,

@@ -19,6 +19,14 @@ export const metadata: Metadata = {
       'Simple, transparent pricing for Floxen. Get your products in ChatGPT for free with up to 5 products.',
     url: 'https://www.floxen.ai/pricing',
     siteName: 'Floxen',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Floxen - Show your products in ChatGPT',
+      },
+    ],
     type: 'website',
   },
 };

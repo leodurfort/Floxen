@@ -4,6 +4,10 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Privacy Policy | Floxen',
   description: 'Privacy Policy for Floxen - WooCommerce to ChatGPT integration',
+  metadataBase: new URL('https://www.floxen.ai'),
+  alternates: {
+    canonical: '/privacy',
+  },
 };
 
 export default function PrivacyPage() {
@@ -25,7 +29,7 @@ export default function PrivacyPage() {
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
-        <p className="text-gray-500 mb-8">Last updated: January 2025</p>
+        <p className="text-gray-500 mb-8">Last updated: January 2026</p>
 
         <div className="prose prose-gray max-w-none">
           <p className="text-gray-600 mb-6">
