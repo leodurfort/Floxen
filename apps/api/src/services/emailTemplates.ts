@@ -80,34 +80,6 @@ export function getEmailChangeEmailHtml(code: string, newEmail: string): string 
 }
 
 /**
- * Account deletion scheduled template
- */
-export function getDeletionScheduledEmailHtml(deletionDate: string): string {
-  return wrapTemplate(`
-    <div class="content">
-      <h2 style="margin: 0 0 15px 0; color: #dc2626;">Account deletion scheduled</h2>
-      <p>Your Floxen account is scheduled for permanent deletion on:</p>
-      <p style="font-size: 18px; font-weight: bold; text-align: center; padding: 15px; background: #fef2f2; border-radius: 8px; color: #dc2626;">${deletionDate}</p>
-      <p>After this date, all your data including shops, products, and settings will be permanently removed.</p>
-      <p class="warning">If you didn't request this deletion or want to keep your account, log in and cancel the deletion from your settings.</p>
-    </div>
-  `);
-}
-
-/**
- * Account deletion cancelled template
- */
-export function getDeletionCancelledEmailHtml(): string {
-  return wrapTemplate(`
-    <div class="content">
-      <h2 style="margin: 0 0 15px 0; color: #16a34a;">Account deletion cancelled</h2>
-      <p>Good news! Your Floxen account deletion has been cancelled.</p>
-      <p>Your account and all your data will remain intact. You can continue using Floxen as usual.</p>
-    </div>
-  `);
-}
-
-/**
  * Welcome email after completing registration
  */
 export function getWelcomeEmailHtml(firstName: string): string {
