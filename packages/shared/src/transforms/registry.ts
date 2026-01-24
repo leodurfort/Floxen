@@ -7,21 +7,19 @@
 import type { TransformRegistry } from './types';
 import { stripHtml, cleanVariationTitle } from './functions/basic';
 import { buildCategoryPath } from './functions/category';
-import { generateStableId, generateGroupId, generateOfferId, formatRelatedIds } from './functions/id-generation';
+import { generateGroupId, formatRelatedIds } from './functions/id-generation';
 import { formatPriceWithCurrency, formatSaleDateRange } from './functions/pricing';
 import { formatDimensions, addUnit, addWeightUnit } from './functions/dimensions';
 import { extractAdditionalImages } from './functions/media';
-import { extractGtin, extractBrand, extractCustomVariant, extractCustomVariantOption, buildShippingString, calculatePopularityScore, formatQAndA } from './functions/product-data';
+import { extractGtin } from './functions/product-data';
 import { mapStockStatus } from './functions/availability';
-import { defaultToNew, defaultToZero } from './functions/defaults';
+import { defaultToZero } from './functions/defaults';
 
 export const TRANSFORMS: TransformRegistry = {
   stripHtml,
   cleanVariationTitle,
   buildCategoryPath,
-  generateStableId,
   generateGroupId,
-  generateOfferId,
   formatRelatedIds,
   formatPriceWithCurrency,
   formatSaleDateRange,
@@ -30,13 +28,6 @@ export const TRANSFORMS: TransformRegistry = {
   addWeightUnit,
   extractAdditionalImages,
   extractGtin,
-  extractBrand,
-  extractCustomVariant,
-  extractCustomVariantOption,
-  buildShippingString,
-  calculatePopularityScore,
-  formatQAndA,
   mapStockStatus,
-  defaultToNew,
   defaultToZero,
 };
