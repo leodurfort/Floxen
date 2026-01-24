@@ -9,7 +9,7 @@ import {
   OPENAI_FEED_SPEC,
   isProductEditable,
 } from '@floxen/shared';
-import { getProduct as getProductRecord, listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, getColumnValues as getColumnValuesService, ListProductsOptions, countProductsByItemGroupId, getProductIdsByItemGroupId } from '../services/productService';
+import { listProducts as listProductsForShop, updateProduct as updateProductRecord, getFilteredProductIds, getColumnValues as getColumnValuesService, ListProductsOptions, countProductsByItemGroupId, getProductIdsByItemGroupId } from '../services/productService';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { reprocessProduct } from '../services/productReprocessService';
@@ -209,31 +209,6 @@ export async function listProducts(req: Request, res: Response) {
       error: toError(err),
       shopId: id,
       options,
-      userId: getUserId(req),
-    });
-    return res.status(500).json({ error: toError(err).message });
-  }
-}
-
-export async function getProduct(req: Request, res: Response) {
-  const { id, pid } = req.params;
-
-  try {
-    const product = await getProductRecord(id, pid);
-    if (!product) {
-      logger.warn('Product not found', { shopId: id, productId: pid });
-      return res.status(404).json({ error: 'Product not found' });
-    }
-    logger.info('Product retrieved successfully', {
-      shopId: id,
-      productId: pid,
-    });
-    return res.json({ product });
-  } catch (err) {
-    logger.error('Failed to get product', {
-      error: toError(err),
-      shopId: id,
-      productId: pid,
       userId: getUserId(req),
     });
     return res.status(500).json({ error: toError(err).message });
@@ -774,67 +749,6 @@ export async function updateProductFieldOverrides(req: Request, res: Response) {
       productId,
     });
     res.status(500).json({ error: 'Failed to update field overrides' });
-  }
-}
-
-export async function deleteProductFieldOverride(req: Request, res: Response) {
-  const { id: shopId, pid: productId, attribute } = req.params;
-
-  try {
-    const product = await prisma.product.findFirst({
-      where: { shopId, id: productId },
-      select: {
-        id: true,
-        productFieldOverrides: true,
-      },
-    });
-
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-
-    const overrides = getProductOverrides(product);
-
-    if (!overrides[attribute]) {
-      return res.status(404).json({ error: 'No override found for this field' });
-    }
-
-    delete overrides[attribute];
-
-    await prisma.product.update({
-      where: { id: productId },
-      data: { productFieldOverrides: overrides as unknown as Prisma.InputJsonValue },
-    });
-
-    await reprocessProduct(productId);
-
-    const updatedProduct = await prisma.product.findUnique({
-      where: { id: productId },
-      select: {
-        productFieldOverrides: true,
-        openaiAutoFilled: true,
-      },
-    });
-
-    logger.info('Product field override deleted', {
-      shopId,
-      productId,
-      attribute,
-    });
-
-    res.json({
-      success: true,
-      overrides: updatedProduct?.productFieldOverrides || {},
-      resolvedValues: updatedProduct?.openaiAutoFilled || {},
-    });
-  } catch (err) {
-    logger.error('Failed to delete product field override', {
-      error: toError(err),
-      shopId,
-      productId,
-      attribute,
-    });
-    res.status(500).json({ error: 'Failed to delete field override' });
   }
 }
 

@@ -397,10 +397,6 @@ export async function getFilteredProductIds(
   return products.map(p => p.id);
 }
 
-export async function getProduct(shopId: string, productId: string) {
-  return prisma.product.findFirst({ where: { id: productId, shopId } });
-}
-
 export async function updateProduct(
   shopId: string,
   productId: string,

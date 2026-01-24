@@ -57,54 +57,6 @@ export async function triggerSync(req: Request, res: Response) {
   }
 }
 
-export async function getSyncStatus(req: Request, res: Response) {
-  try {
-    const shop = await prisma.shop.findUnique({ where: { id: req.params.id } });
-    if (!shop) return res.status(404).json({ error: 'Shop not found' });
-
-    const pendingBatches = await prisma.syncBatch.count({
-      where: { shopId: shop.id, status: { in: ['PENDING', 'SYNCING'] } },
-    });
-
-    logger.info('sync:status', { shopId: shop.id, status: shop.syncStatus });
-    return res.json({
-      shopId: shop.id,
-      status: shop.syncStatus,
-      lastSyncAt: shop.lastSyncAt,
-      queuedBatches: pendingBatches,
-    });
-  } catch (err: any) {
-    logger.error('sync:status error', err);
-    return res.status(500).json({ error: err.message });
-  }
-}
-
-export async function getSyncHistory(req: Request, res: Response) {
-  try {
-    const history = await prisma.syncBatch.findMany({
-      where: { shopId: req.params.id },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      select: {
-        id: true,
-        status: true,
-        syncType: true,
-        totalProducts: true,
-        syncedProducts: true,
-        failedProducts: true,
-        startedAt: true,
-        completedAt: true,
-      },
-    });
-
-    logger.info('sync:history', { shopId: req.params.id, count: history.length });
-    return res.json({ history });
-  } catch (err: any) {
-    logger.error('sync:history error', err);
-    return res.status(500).json({ error: err.message });
-  }
-}
-
 export async function pushFeed(req: Request, res: Response) {
   if (!isQueueAvailable()) {
     logger.error('feed:push failed - Redis unavailable', { shopId: req.params.id });
