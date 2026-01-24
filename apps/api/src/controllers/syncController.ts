@@ -205,22 +205,3 @@ export async function previewFeed(req: Request, res: Response) {
     return res.status(500).json({ error: 'Failed to generate preview' });
   }
 }
-
-export async function latestFeed(req: Request, res: Response) {
-  try {
-    const snapshot = await prisma.feedSnapshot.findFirst({
-      where: { shopId: req.params.id, feedFileUrl: { not: null } },
-      orderBy: { generatedAt: 'desc' },
-    });
-    if (!snapshot) return res.status(404).json({ error: 'No feed found' });
-    logger.info('feed:latest', { shopId: snapshot.shopId, feedUrl: snapshot.feedFileUrl });
-    return res.json({
-      feedUrl: snapshot.feedFileUrl,
-      generatedAt: snapshot.generatedAt,
-      productCount: snapshot.productCount,
-    });
-  } catch (err: any) {
-    logger.error('feed:latest error', err);
-    return res.status(500).json({ error: err.message });
-  }
-}

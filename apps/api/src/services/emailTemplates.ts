@@ -80,24 +80,6 @@ export function getEmailChangeEmailHtml(code: string, newEmail: string): string 
 }
 
 /**
- * Welcome email after completing registration
- */
-export function getWelcomeEmailHtml(firstName: string): string {
-  return wrapTemplate(`
-    <div class="content">
-      <h2 style="margin: 0 0 15px 0; color: #1a1d29;">Welcome to Floxen, ${firstName}!</h2>
-      <p>Your account is now set up and ready to go. Here's what you can do next:</p>
-      <ul style="padding-left: 20px;">
-        <li><strong>Connect your WooCommerce store</strong> to start syncing products</li>
-        <li><strong>Configure field mappings</strong> to customize how your products appear</li>
-        <li><strong>Generate your product feed</strong> for ChatGPT integration</li>
-      </ul>
-      <p>If you have any questions, our support team is here to help.</p>
-    </div>
-  `);
-}
-
-/**
  * Account deleted confirmation template
  */
 export function getAccountDeletedEmailHtml(): string {

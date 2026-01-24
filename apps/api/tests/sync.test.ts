@@ -384,37 +384,6 @@ describe('Sync Trigger', () => {
       });
     });
 
-    describe('GET /api/v1/shops/:id/sync/feed/latest', () => {
-      it('should return latest feed URL', async () => {
-        const shop = createTestShop(testUser.id);
-        const feedSnapshot = createTestFeedSnapshot(shop.id, {
-          feedFileUrl: 'https://cdn.example.com/feeds/latest.json',
-          productCount: 50,
-        });
-
-        mockPrisma.feedSnapshot.findFirst.mockResolvedValue(feedSnapshot);
-
-        const res = await request(app)
-          .get(`/api/v1/shops/${shop.id}/sync/feed/latest`)
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.feedUrl).toBe(feedSnapshot.feedFileUrl);
-        expect(res.body.productCount).toBe(50);
-        expect(res.body.generatedAt).toBeDefined();
-      });
-
-      it('should return 404 when no feed exists', async () => {
-        mockPrisma.feedSnapshot.findFirst.mockResolvedValue(null);
-
-        const res = await request(app)
-          .get('/api/v1/shops/shop-id/sync/feed/latest')
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(res.status).toBe(404);
-        expect(res.body.error).toContain('No feed found');
-      });
-    });
   });
 
   // ===========================================

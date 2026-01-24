@@ -18,13 +18,6 @@ function getStripe(): Stripe {
 }
 
 /**
- * Check if Stripe billing is configured
- */
-export function isStripeConfigured(): boolean {
-  return !!env.stripe.secretKey;
-}
-
-/**
  * Check if user has an active (non-free) subscription
  * Used to prevent duplicate subscriptions and block account deletion
  */

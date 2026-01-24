@@ -1,11 +1,5 @@
 // Landing page static data
 
-export interface Testimonial {
-  name: string;
-  role: string;
-  quote: string;
-}
-
 export interface FAQItem {
   question: string;
   answer: string;
@@ -34,28 +28,6 @@ export interface FeatureCard {
   title: string;
   description: string;
 }
-
-// Testimonials from spec
-export const testimonials: Testimonial[] = [
-  {
-    name: 'Marcus T.',
-    role: 'WooCommerce Store Owner',
-    quote:
-      'Set up took 3 minutes. My products showed up in ChatGPT within an hour.',
-  },
-  {
-    name: 'Jessica R.',
-    role: 'Online Boutique Owner',
-    quote:
-      "I had no idea ChatGPT had shopping. Floxen got me listed before my competitors.",
-  },
-  {
-    name: 'Daniel K.',
-    role: 'E-commerce Manager',
-    quote:
-      'Finally, a simple way to get into AI search without hiring a developer.',
-  },
-];
 
 // How It Works steps from spec
 export const howItWorksSteps: HowItWorksStep[] = [

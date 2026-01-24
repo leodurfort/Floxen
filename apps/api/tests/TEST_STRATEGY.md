@@ -107,8 +107,6 @@ This document outlines the testing strategy for the Floxen API, covering authent
 | Push feed generation | `POST /shops/:id/sync/push` | Returns pushed=true |
 | Push feed during sync | `POST /shops/:id/sync/push` | Returns 409 conflict |
 | Preview feed | `GET /shops/:id/sync/feed/preview` | Returns feed items |
-| Get latest feed | `GET /shops/:id/sync/feed/latest` | Returns feed URL |
-| Get latest feed (none exists) | `GET /shops/:id/sync/feed/latest` | Returns 404 |
 
 ## Test Infrastructure
 

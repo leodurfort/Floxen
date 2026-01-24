@@ -312,10 +312,6 @@ export async function listShops() {
   return requestWithAuth<{ shops: Shop[] }>('/api/v1/shops');
 }
 
-export async function getShop(shopId: string) {
-  return requestWithAuth<{ shop: Shop }>(`/api/v1/shops/${shopId}`);
-}
-
 export async function createShop(payload: { storeUrl: string; shopName?: string; shopCurrency?: string }) {
   return requestWithAuth<{ shop: Shop; authUrl: string }>('/api/v1/shops', {
     method: 'POST',
@@ -360,12 +356,6 @@ export async function triggerProductSync(shopId: string) {
   return requestWithAuth<{ shopId: string; status: string }>(`/api/v1/shops/${shopId}/sync`, {
     method: 'POST',
   });
-}
-
-export async function latestFeed(shopId: string) {
-  return requestWithAuth<{ feedUrl: string; generatedAt: string; productCount: number }>(
-    `/api/v1/shops/${shopId}/sync/feed/latest`
-  );
 }
 
 // Feed Activation and Stats
