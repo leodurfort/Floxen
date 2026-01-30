@@ -115,18 +115,6 @@ Base path: `/api/v1`
 | Shops | CRUD, OAuth callback, field mappings, feed activation, product discovery | Protected |
 | Products | List, detail, update, selection management | Protected |
 | Sync | Trigger sync, push feed, preview | Protected (rate limited) |
-| Feed | JSON feed per shop, snapshots, HTML debug view | **Public** (rate limited) |
+| Feed | JSON feed per shop, snapshots, HTML debug view | Protected (rate limited) |
 | Analytics | Product & shop-level metrics | Protected |
 | Billing | Stripe subscription management | Protected |
-
-## Key Design Decisions
-
-**Shared transformation layer** - WooCommerce and OpenAI schemas don't overlap cleanly. A declarative mapping registry in `packages/shared` handles all transformations in one place. Both API and web consume the same spec.
-
-**Two-tier field mapping** - Shop-level defaults + product-level overrides. Merchants get automation by default and per-product control when they need it. Bulk edit applies across selections.
-
-**Hourly sync over real-time webhooks** - MVP trades real-time freshness for operational simplicity. Webhook-based sync is architected (BullMQ + Redis infrastructure is in place) but not shipped yet. Hourly is sufficient for most merchant inventory velocity.
-
-**Public feed endpoints** - `/feed/:shopId` serves the JSON feed without authentication. OpenAI fetches it directly. Rate-limited at 100 req/min.
-
-**No AI enrichment on product data** - Floxen transforms and validates, it doesn't rewrite. Keeps the pipeline fast, cheap, and deterministic. Merchants own their content.
