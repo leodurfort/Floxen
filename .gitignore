@@ -18,11 +18,4 @@ build
 .DS_Store
 npm-debug.log*
 
-# Remotion video project (keep source, ignore large assets)
-video/assets/
-video/public/*.mov
-video/out/
-video/analysis-frames/
-video/ChatGPT Interface/
-video/Floxen screenshot*/
-video/*.mov
+video/
