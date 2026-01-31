@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "next dev -p 3004",
     "build": "next build",
-    "postbuild": "cp -r public .next/standalone/apps/product-checker/public && cp -r .next/static .next/standalone/apps/product-checker/.next/static",
-    "start": "node .next/standalone/apps/product-checker/server.js",
+    "start": "next start",
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {

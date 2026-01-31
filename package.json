@@ -27,6 +27,7 @@
     "start": "node scripts/start.js",
     "start:api": "npm --workspace apps/api run start",
     "start:landing": "npm --workspace apps/landing run start",
+    "start:product-checker": "npm --workspace apps/product-checker run start",
     "migrate:deploy": "cd apps/api && npx prisma migrate deploy",
     "lint": "npm --workspaces run lint",
     "format": "npm --workspaces run format",

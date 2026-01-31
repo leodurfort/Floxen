@@ -1,0 +1,5 @@
+[phases.build]
+cmds = ["npm ci", "npm run build:shared", "npm run build:product-checker"]
+
+[start]
+cmd = "npm run start:product-checker"
